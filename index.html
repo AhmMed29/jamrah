@@ -350,7 +350,6 @@
   var endBtn = document.getElementById('endBtn');
 
   timerText.textContent = formatTime(remainingSeconds);
-  progressRing.style.opacity = '0';
 
   function initStats() {
     var stats = JSON.parse(localStorage.getItem(STATS_KEY));
@@ -436,7 +435,6 @@
     totalSeconds = minutes * 60;
     remainingSeconds = totalSeconds;
     timerText.textContent = formatTime(remainingSeconds);
-    if (progressRing) progressRing.style.opacity = '0';
     document.getElementById('timePopup').classList.add('hidden');
   };
 
@@ -458,7 +456,6 @@
     if (endBtn) endBtn.classList.remove('hidden');
     if (isFresh) {
       progressRing.style.transition = 'none';
-      progressRing.style.opacity = '1';
       progressRing.style.strokeDashoffset = DASHARRAY;
       void progressRing.offsetHeight;
       progressRing.style.transition = '';
@@ -512,7 +509,6 @@
     saveFocusMinutes(elapsedMinutes);
     remainingSeconds = totalSeconds;
     timerText.textContent = formatTime(remainingSeconds);
-    if (progressRing) progressRing.style.opacity = '0';
     document.getElementById('endPopup').classList.add('hidden');
   };
 
@@ -577,6 +573,13 @@
     return h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
   }
 
+  function hexToRgb(hex) {
+    var r = parseInt(hex.slice(1,3), 16);
+    var g = parseInt(hex.slice(3,5), 16);
+    var b = parseInt(hex.slice(5,7), 16);
+    return r + ',' + g + ',' + b;
+  }
+
   function renderTimeline() {
     var container = document.getElementById('focusTimeline');
     if (!container) return;
@@ -600,7 +603,7 @@
         var allTags = getTags();
         var tag = allTags.find(function(t) { return t.id === activeSession.tagId; });
         if (tag) {
-          tagHtml = '<span class="tag-bubble" style="background:' + tag.color + '20;color:' + tag.color + ';border:1px solid ' + tag.color + '40">#' + tag.name + '</span>';
+          tagHtml = '<span class="tag-bubble" style="background:' + 'rgba(' + hexToRgb(tag.color) + ',0.12);color:' + tag.color + ';border:1px solid rgba(' + hexToRgb(tag.color) + ',0.25)">#' + tag.name + '</span>';
         }
       }
 
@@ -759,10 +762,10 @@
 
   renderTimeline();
 
-  // Event delegation for timeline entries (robust click handling)
-  document.getElementById('focusTimeline').addEventListener('click', function(e) {
+  // Event delegation for timeline entries
+  document.addEventListener('click', function(e) {
     var el = e.target.closest('[data-sid]');
-    if (el) {
+    if (el && document.getElementById('focusTimeline').contains(el)) {
       var sid = el.getAttribute('data-sid');
       if (sid) window.openSessionPopup(sid);
     }
@@ -784,6 +787,8 @@
 
   var _origCompleteTimer = completeTimer;
   completeTimer = function() {
+    document.getElementById('sessionPopup').classList.add('hidden');
+    document.getElementById('tagDropdown').classList.add('hidden');
     var elapsedSec = totalSeconds - remainingSeconds;
     if (activeSession && activeSession.lastResumeTime) {
       activeSession.accumulatedMs += Date.now() - activeSession.lastResumeTime;
@@ -795,6 +800,8 @@
 
   var _origConfirmEnd = window.confirmEnd;
   window.confirmEnd = function() {
+    document.getElementById('sessionPopup').classList.add('hidden');
+    document.getElementById('tagDropdown').classList.add('hidden');
     var elapsedSec = totalSeconds - remainingSeconds;
     if (activeSession && activeSession.lastResumeTime) {
       activeSession.accumulatedMs += Date.now() - activeSession.lastResumeTime;
@@ -927,7 +934,7 @@
       var tags = getTags();
       var tag = tags.find(function(t) { return t.id === editingTagForSession; });
       if (tag) {
-        container.innerHTML = '<span class="tag-bubble" style="background:' + tag.color + '20;color:' + tag.color + ';border:1px solid ' + tag.color + '40">#' + tag.name + ' <span style="cursor:pointer;margin-left:4px" onclick="window.clearSessionTag()">✕</span></span>';
+        container.innerHTML = '<span class="tag-bubble" style="background:' + 'rgba(' + hexToRgb(tag.color) + ',0.12);color:' + tag.color + ';border:1px solid rgba(' + hexToRgb(tag.color) + ',0.25)">#' + tag.name + ' <span style="cursor:pointer;margin-left:4px" onclick="window.clearSessionTag()">✕</span></span>';
         return;
       }
     }
@@ -1028,7 +1035,7 @@
       var tags = getTags();
       var tag = tags.find(function(t) { return t.id === addSessionTagId; });
       if (tag) {
-        container.innerHTML = '<span class="tag-bubble" style="background:' + tag.color + '20;color:' + tag.color + ';border:1px solid ' + tag.color + '40">#' + tag.name + ' <span style="cursor:pointer;margin-left:4px" onclick="window.clearAddSessionTag()">✕</span></span>';
+        container.innerHTML = '<span class="tag-bubble" style="background:' + 'rgba(' + hexToRgb(tag.color) + ',0.12);color:' + tag.color + ';border:1px solid rgba(' + hexToRgb(tag.color) + ',0.25)">#' + tag.name + ' <span style="cursor:pointer;margin-left:4px" onclick="window.clearAddSessionTag()">✕</span></span>';
         return;
       }
     }

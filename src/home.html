@@ -23,9 +23,9 @@
 </div>
 </div>
 <div class="flex flex-1 overflow-hidden">
-<nav aria-label="Main Navigation" class="w-[56px] bg-[#D4CDFB] h-full flex flex-col items-center py-4 justify-between" id="navSidebar">
+<nav aria-label="Main Navigation" class="w-[56px] h-full flex flex-col items-center py-4 justify-between" id="navSidebar">
 <div class="flex flex-col items-center gap-6 w-full">
-<button aria-label="Home" class="text-white relative">
+<button aria-label="Home" class="text-white relative" onclick="window.electronAPI.navigate('home.html')">
 <div class="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r"></div>
 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
 </button>
@@ -54,6 +54,7 @@
 </main>
 </div>
 
+<script src="js/theme.js"></script>
 <script>
 function updateClock() {
   var now = new Date();

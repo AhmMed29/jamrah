@@ -45,7 +45,7 @@
 </div>
 </div>
 <div class="flex flex-1 overflow-hidden">
-<nav aria-label="Main Navigation" class="w-[56px] bg-[#C1B9F9] h-full flex flex-col items-center py-4 justify-between shrink-0" id="navSidebar">
+<nav aria-label="Main Navigation" class="w-[56px] h-full flex flex-col items-center py-4 justify-between shrink-0" id="navSidebar">
 <div class="flex flex-col items-center gap-6 w-full">
 <button aria-label="Home" class="text-white/70 hover:text-white transition-colors" onclick="window.electronAPI.navigate('home.html')">
 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
@@ -335,6 +335,7 @@
 <!-- END: Bottom Footer / Navigation -->
 </div>
 </div>
+<script src="js/theme.js"></script>
 <script>
 document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && (e.key === '=' || e.key === '+')) { e.preventDefault(); window.electronAPI.zoomIn(); }

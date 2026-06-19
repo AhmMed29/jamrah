@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const database = require('./database')
@@ -32,6 +32,30 @@ function createWindow () {
     }
   })
   win.loadFile('src/index.html')
+
+  checkForUpdates()
+}
+
+function versionGt(a, b) {
+  var va = a.replace(/^v/, '').split('.').map(Number)
+  var vb = b.replace(/^v/, '').split('.').map(Number)
+  for (var i = 0; i < 3; i++) {
+    if ((va[i] || 0) > (vb[i] || 0)) return true
+    if ((va[i] || 0) < (vb[i] || 0)) return false
+  }
+  return false
+}
+
+function checkForUpdates() {
+  var url = 'https://raw.githubusercontent.com/AhmMed29/My-Productivity-App/main/update.json'
+  fetch(url)
+    .then(function(r) { return r.json() })
+    .then(function(data) {
+      if (win && versionGt(data.version, app.getVersion())) {
+        win.webContents.send('update-available', data)
+      }
+    })
+    .catch(function() {})
 }
 
 app.whenReady().then(() => {
@@ -131,6 +155,10 @@ ipcMain.on('db:get-total-stats', (e) => {
 
 ipcMain.on('db:get-path', (e) => {
   e.returnValue = database.getPath()
+})
+
+ipcMain.handle('open-url', async (e, url) => {
+  shell.openExternal(url)
 })
 
 ipcMain.handle('db:set-path', async (e, newPath) => {

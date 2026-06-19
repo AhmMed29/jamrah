@@ -12,7 +12,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readFile: (fp) => ipcRenderer.invoke('read-file', fp),
   writeFile: (fp, data) => ipcRenderer.invoke('write-file', fp, data),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
-  getDefaultPath: () => ipcRenderer.invoke('get-default-path')
+  getDefaultPath: () => ipcRenderer.invoke('get-default-path'),
+  openUrl: (url) => ipcRenderer.invoke('open-url', url),
+  onUpdateAvailable: (callback) => {
+    ipcRenderer.on('update-available', (_, data) => callback(data))
+  }
 })
 
 contextBridge.exposeInMainWorld('db', {

@@ -1,20 +1,43 @@
 {
   "name": "my-productivity-app",
   "version": "1.0.0",
-  "description": "",
+  "description": "My Productivity App - Pomodoro timer, habits tracker & more",
   "main": "main.js",
+  "author": "AhmMed29",
+  "license": "ISC",
   "scripts": {
     "postinstall": "npx @electron/rebuild",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-builder",
+    "dist": "electron-builder --win"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "build": {
+    "appId": "com.ahmmed.myproductivityapp",
+    "productName": "My Productivity App",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "database.js",
+      "update.json",
+      "src/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
   "type": "commonjs",
   "devDependencies": {
     "@electron/rebuild": "^4.0.4",
-    "electron": "^42.4.0"
+    "electron": "^42.4.0",
+    "electron-builder": "^25.1.8"
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1"

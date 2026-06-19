@@ -495,6 +495,24 @@ if (e.target === addModal) addModal.classList.remove('open');
   </div>
 </div>
 
+<div id="updateModal" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.3);align-items:center;justify-content:center;padding:20px;display:none" onclick="closeUpdateModal(event)">
+  <div style="background:white;border-radius:16px;padding:24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative">
+    <button onclick="closeUpdateModal(event)" style="position:absolute;top:16px;right:16px;width:28px;height:28px;border-radius:50%;border:none;background:#F3F4F6;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6B7280">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+    <h3 style="font-size:20px;font-weight:600;margin-bottom:4px;color:#1F2937">Update Available</h3>
+    <p style="font-size:13px;color:#6B7280;margin-bottom:16px">New version: <span id="updateVersion" style="font-weight:600;color:#374151"></span></p>
+    <label style="font-size:13px;color:#6B7280;margin-bottom:8px;display:block">Release Notes</label>
+    <div id="updateReleaseNotes" style="font-size:13px;color:#4B5563;background:#F9FAFB;border-radius:12px;padding:12px;max-height:120px;overflow-y:auto;margin-bottom:20px;white-space:pre-line;line-height:1.5"></div>
+    <div style="display:flex;justify-content:flex-end;gap:12px">
+      <button onclick="closeUpdateModal(event)" style="padding:10px 24px;border:1px solid #E5E7EB;border-radius:12px;font-size:13px;color:#4B5563;background:white;cursor:pointer;font-weight:500">Cancel</button>
+      <button onclick="downloadUpdate()" style="padding:10px 24px;background:#3B82F6;color:white;border:none;border-radius:12px;font-size:13px;cursor:pointer;font-weight:500">Download</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/storage.js"></script>
 <script src="js/stats.js"></script>
 <script src="js/timer.js"></script>
@@ -545,6 +563,30 @@ function updateClock() {
 }
 updateClock();
 setInterval(updateClock, 1000);
+
+/* ── Update system ── */
+var APP_VERSION = '1.0.0'; /* keep in sync with package.json */
+var updateData = null;
+
+window.electronAPI.onUpdateAvailable(function(data) {
+  updateData = data;
+  document.getElementById('updateVersion').textContent = data.version;
+  document.getElementById('updateReleaseNotes').textContent = data.releaseNotes || '';
+  document.getElementById('updateModal').style.display = 'flex';
+});
+
+window.downloadUpdate = function() {
+  if (updateData && updateData.downloadUrl) {
+    window.electronAPI.openUrl(updateData.downloadUrl);
+  }
+  document.getElementById('updateModal').style.display = 'none';
+};
+
+window.closeUpdateModal = function(e) {
+  if (!e || e.target === e.currentTarget) {
+    document.getElementById('updateModal').style.display = 'none';
+  }
+};
 
 showPage('pomodoro');
 </script>

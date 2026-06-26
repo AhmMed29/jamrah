@@ -176,21 +176,36 @@ ipcMain.on('db:get-path', (e) => {
 ipcMain.handle('install-update', async (e, url) => {
   var installerPath = path.join(app.getPath('temp'), 'jamrah-setup.exe')
   return new Promise(function(resolve, reject) {
-    var file = fs.createWriteStream(installerPath)
-    https.get(url, function(res) {
-      res.pipe(file)
-      file.on('finish', function() {
-        file.close(function() {
-          exec('"' + installerPath + '" /S', function(err) {
-            if (err) { reject(err); return }
-            app.quit()
+    function download(currentUrl) {
+      https.get(currentUrl, function(res) {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          download(res.headers.location)
+          return
+        }
+        if (res.statusCode !== 200) {
+          reject(new Error('HTTP ' + res.statusCode))
+          return
+        }
+        var file = fs.createWriteStream(installerPath)
+        res.pipe(file)
+        file.on('finish', function() {
+          file.close(function() {
+            exec('"' + installerPath + '" /S', function(err) {
+              if (err) { reject(err); return }
+              app.quit()
+            })
           })
         })
+        file.on('error', function(err) {
+          fs.unlink(installerPath, function() {})
+          reject(err)
+        })
+      }).on('error', function(err) {
+        fs.unlink(installerPath, function() {})
+        reject(err)
       })
-    }).on('error', function(err) {
-      fs.unlink(installerPath, function() {})
-      reject(err)
-    })
+    }
+    download(url)
   })
 })
 

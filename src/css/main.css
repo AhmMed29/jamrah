@@ -159,3 +159,6 @@
 .timer-circle-wrapper { position: relative; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.3s ease; }
 .timer-circle-wrapper:hover { transform: scale(1.03); }
 #pomoShaderCanvas { border-radius: 50%; }
+
+.pomo-preset-btn:hover, .pomo-adjust-btn:hover { border-color: rgba(255,255,255,0.3) !important; color: rgba(255,255,255,0.85) !important; }
+.pomo-end-btn:hover { border-color: rgba(239,68,68,0.6) !important; color: rgba(239,68,68,0.9) !important; }

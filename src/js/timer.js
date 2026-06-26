@@ -229,6 +229,23 @@ window.setTimer = function() {};
 window.openTimePopup = function() {};
 window.closeTimePopup = function() {};
 
+// Preset & time adjustment
+window.setPreset = function(minutes) {
+  window.db.setSetting('workMinutes', minutes);
+  if (phase === 'idle') {
+    setPhaseTime('work');
+    updateUI();
+  }
+};
+
+window.adjustTime = function(delta) {
+  if (phase === 'idle') return;
+  var adj = delta * 60;
+  totalSeconds = Math.max(60, totalSeconds + adj);
+  remainingSeconds = Math.max(0, remainingSeconds + adj);
+  updateUI();
+};
+
 // End popup
 window.confirmEnd = function() {
   stopTimer();

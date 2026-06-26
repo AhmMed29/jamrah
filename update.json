@@ -1,5 +1,5 @@
 {
-  "version": "1.1.1",
+  "version": "1.2.0",
   "downloadUrl": "https://github.com/AhmMed29/My-Productivity-App/releases/latest",
-  "releaseNotes": "v1.1.1 — Update System Fix\n\n## 🐛 Bug Fixes\n- Fixed update check failing silently in packaged app: replaced fetch() with https.get() for reliable network requests\n- Added error logging to help diagnose future update issues\n- Added 10-second timeout to prevent hanging"
+  "releaseNotes": "v1.2.0 — Preset Timer Controls\n\n## ✨ New Features\n- Added preset time buttons (25m, 50m, Custom) below the timer for quick duration switching\n- Added +/- buttons to adjust remaining time by 5 minutes during a session\n- Added dedicated End button to end the current session early"
 }

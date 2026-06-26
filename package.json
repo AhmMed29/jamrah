@@ -21,17 +21,17 @@
       "main.js",
       "preload.js",
       "database.js",
+      "Jamrah-Icon.png",
       "src/**/*"
     ],
     "win": {
       "target": "nsis",
-      "icon": "Jamrah-Icon.svg"
+      "icon": "Jamrah-Icon.png"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "differential": true
+      "allowToChangeInstallationDirectory": true
     },
     "publish": {
       "provider": "github",

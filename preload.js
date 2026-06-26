@@ -14,13 +14,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   getDefaultPath: () => ipcRenderer.invoke('get-default-path'),
   openUrl: (url) => ipcRenderer.invoke('open-url', url),
+  onOldDataFound: (callback) => {
+    ipcRenderer.on('old-data-found', (_, data) => callback(data))
+  },
+  restoreOldData: () => ipcRenderer.invoke('restore-old-data'),
+  skipOldData: () => ipcRenderer.invoke('skip-old-data'),
   onUpdateAvailable: (callback) => {
     ipcRenderer.on('update-available', (_, data) => callback(data))
   },
-  installUpdate: (url) => ipcRenderer.invoke('install-update', url),
   onUpdateProgress: (callback) => {
     ipcRenderer.on('update-progress', (_, pct) => callback(pct))
-  }
+  },
+  onUpdateDownloaded: (callback) => {
+    ipcRenderer.on('update-downloaded', () => callback())
+  },
+  startDownload: () => ipcRenderer.invoke('start-download'),
+  quitAndInstall: () => ipcRenderer.invoke('quit-and-install')
 })
 
 contextBridge.exposeInMainWorld('db', {

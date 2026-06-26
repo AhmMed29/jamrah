@@ -1,12 +1,30 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
-const https = require('https')
-const { exec } = require('child_process')
 const database = require('./database')
+const { autoUpdater } = require('electron-updater')
 
 let win
 let storagePath = null
+
+autoUpdater.autoDownload = false
+autoUpdater.autoInstallOnAppQuit = false
+
+autoUpdater.on('update-available', function(info) {
+  if (win) win.webContents.send('update-available', info)
+})
+
+autoUpdater.on('download-progress', function(progress) {
+  if (win) win.webContents.send('update-progress', Math.round(progress.percent))
+})
+
+autoUpdater.on('update-downloaded', function() {
+  if (win) win.webContents.send('update-downloaded')
+})
+
+autoUpdater.on('error', function(err) {
+  console.error('[AutoUpdater] error:', err.message)
+})
 
 function determineStoragePath() {
   var defaultPath = path.join(app.getPath('userData'), 'data')
@@ -24,6 +42,29 @@ function determineStoragePath() {
   return defaultPath
 }
 
+function findOldDataPath() {
+  var base = path.dirname(app.getPath('userData'))
+  var candidates = [
+    path.join(base, 'my-productivity-app', 'data'),
+    path.join(base, 'Electron', 'data')
+  ]
+  for (var i = 0; i < candidates.length; i++) {
+    var sessionsPath = path.join(candidates[i], 'pomodoro-sessions.json')
+    if (fs.existsSync(sessionsPath)) {
+      try {
+        var data = JSON.parse(fs.readFileSync(sessionsPath, 'utf-8'))
+        if (Object.keys(data).length > 0) return candidates[i]
+      } catch (e) {}
+    }
+  }
+  return null
+}
+
+function proceedWithStartup() {
+  database.migrateFromJson(storagePath)
+  autoUpdater.checkForUpdates()
+}
+
 function createWindow () {
   win = new BrowserWindow({
     width: 1200,
@@ -34,47 +75,19 @@ function createWindow () {
     }
   })
   win.loadFile('src/index.html').then(function() {
-    checkForUpdates()
+    var oldPath = findOldDataPath()
+    if (oldPath) {
+      win.webContents.send('old-data-found', { path: oldPath })
+    } else {
+      proceedWithStartup()
+    }
   })
-}
-
-function versionGt(a, b) {
-  var va = a.replace(/^v/, '').split('.').map(Number)
-  var vb = b.replace(/^v/, '').split('.').map(Number)
-  for (var i = 0; i < 3; i++) {
-    if ((va[i] || 0) > (vb[i] || 0)) return true
-    if ((va[i] || 0) < (vb[i] || 0)) return false
-  }
-  return false
-}
-
-function checkForUpdates() {
-  var url = 'https://raw.githubusercontent.com/AhmMed29/My-Productivity-App/main/update.json'
-  var http = url.startsWith('https') ? require('https') : require('http')
-  var req = http.get(url, { timeout: 10000 }, function(res) {
-    var body = ''
-    res.on('data', function(c) { body += c })
-    res.on('error', function(e) { console.error('[Update] response error:', e.message) })
-    res.on('end', function() {
-      try {
-        var data = JSON.parse(body)
-        if (win && versionGt(data.version, app.getVersion())) {
-          win.webContents.send('update-available', data)
-        }
-      } catch (e) {
-        console.error('[Update] parse error:', e)
-      }
-    })
-  })
-  req.on('error', function(e) { console.error('[Update] network error:', e.message) })
-  req.on('timeout', function() { console.error('[Update] timeout'); req.destroy() })
 }
 
 app.whenReady().then(() => {
   storagePath = determineStoragePath()
   var defaultPath = path.join(app.getPath('userData'), 'data')
   database.init(storagePath, defaultPath)
-  database.migrateFromJson(storagePath)
   createWindow()
 })
 
@@ -113,6 +126,36 @@ ipcMain.handle('select-folder', async () => {
 
 ipcMain.handle('get-default-path', async () => {
   return path.join(app.getPath('userData'), 'data')
+})
+
+// ---- Data Restore IPC ----
+
+ipcMain.handle('restore-old-data', async () => {
+  database.migrateFromJson(storagePath)
+  proceedWithStartup()
+  return true
+})
+
+ipcMain.handle('skip-old-data', async () => {
+  database.setSetting('_migrated', 'true')
+  proceedWithStartup()
+  return true
+})
+
+// ---- AutoUpdater IPC ----
+
+ipcMain.handle('start-download', async () => {
+  try {
+    await autoUpdater.downloadUpdate()
+    return true
+  } catch (e) {
+    console.error('[Download] error:', e.message)
+    return false
+  }
+})
+
+ipcMain.handle('quit-and-install', () => {
+  autoUpdater.quitAndInstall()
 })
 
 // ---- SQLite Database IPC ----
@@ -173,51 +216,6 @@ ipcMain.on('db:get-path', (e) => {
   e.returnValue = database.getPath()
 })
 
-ipcMain.handle('install-update', async (e, url) => {
-  var installerPath = path.join(app.getPath('temp'), 'jamrah-setup.exe')
-  return new Promise(function(resolve, reject) {
-    function download(currentUrl) {
-      https.get(currentUrl, function(res) {
-        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          download(res.headers.location)
-          return
-        }
-        if (res.statusCode !== 200) {
-          reject(new Error('HTTP ' + res.statusCode))
-          return
-        }
-        var total = parseInt(res.headers['content-length'] || 0)
-        var downloaded = 0
-        var file = fs.createWriteStream(installerPath)
-        res.on('data', function(chunk) {
-          downloaded += chunk.length
-          if (total && win) {
-            win.webContents.send('update-progress', Math.round(downloaded / total * 100))
-          }
-        })
-        res.pipe(file)
-        file.on('finish', function() {
-          file.close(function() {
-            if (win) win.webContents.send('update-progress', 100)
-            exec('"' + installerPath + '" /S', function(err) {
-              if (err) { reject(err); return }
-              app.quit()
-            })
-          })
-        })
-        file.on('error', function(err) {
-          fs.unlink(installerPath, function() {})
-          reject(err)
-        })
-      }).on('error', function(err) {
-        fs.unlink(installerPath, function() {})
-        reject(err)
-      })
-    }
-    download(url)
-  })
-})
-
 ipcMain.handle('open-url', async (e, url) => {
   shell.openExternal(url)
 })
@@ -241,7 +239,6 @@ ipcMain.handle('db:get-goals', async () => {
 });
 
 ipcMain.handle('db:create-goal', async (e, goal) => {
-  // Auto-create a tag with the goal's name and color
   var tags = database.getTags();
   var existingTag = null;
   for (var i = 0; i < tags.length; i++) {

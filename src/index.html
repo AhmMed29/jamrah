@@ -595,6 +595,22 @@ window.tailwind={ config: {
   </div>
 </div>
 
+<!-- Restore old data modal -->
+<div id="restoreModal" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.3);align-items:center;justify-content:center;padding:20px;display:none">
+  <div style="background:white;border-radius:16px;padding:28px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative;text-align:center">
+    <div style="font-size:40px;margin-bottom:12px">📂</div>
+    <h3 style="font-size:20px;font-weight:700;color:#1F2937;margin-bottom:8px">Old Data Found</h3>
+    <p style="font-size:14px;color:#6B7280;line-height:1.6;margin-bottom:24px">
+      We found saved data from a previous version.<br>
+      Would you like to restore it or start fresh?
+    </p>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button onclick="skipOldData()" style="padding:10px 24px;border:1px solid #D1D5DB;border-radius:10px;font-size:13px;color:#6B7280;background:white;cursor:pointer;font-weight:500">Start Fresh</button>
+      <button onclick="restoreOldData()" style="padding:10px 24px;background:#3B82F6;color:white;border:none;border-radius:10px;font-size:13px;cursor:pointer;font-weight:600">Restore</button>
+    </div>
+  </div>
+</div>
+
 <!-- Welcome popup (shown once after update) -->
 <div id="welcomeModal" style="position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.3);align-items:center;justify-content:center;padding:20px;display:none">
   <div style="background:white;border-radius:16px;padding:28px;width:100%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative">

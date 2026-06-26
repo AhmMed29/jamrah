@@ -65,9 +65,27 @@ setInterval(updateClock, 1000);
   });
 })();
 
-/* ── Update system ── */
+/* ── Old Data Restore ── */
+window.electronAPI.onOldDataFound(function(data) {
+  document.getElementById('restoreModal').style.display = 'flex';
+});
+
+window.restoreOldData = function() {
+  window.electronAPI.restoreOldData().then(function() {
+    document.getElementById('restoreModal').style.display = 'none';
+  });
+};
+
+window.skipOldData = function() {
+  window.electronAPI.skipOldData().then(function() {
+    document.getElementById('restoreModal').style.display = 'none';
+  });
+};
+
+/* ── Update system (electron-updater) ── */
 var APP_VERSION = '1.2.2';
 var updateData = null;
+var updateDownloaded = false;
 
 function renderReleaseNotes(text) {
   if (!text) return '';
@@ -81,13 +99,16 @@ function renderReleaseNotes(text) {
 
 window.electronAPI.onUpdateAvailable(function(data) {
   updateData = data;
+  updateDownloaded = false;
   document.getElementById('updateVersion').textContent = data.version;
-  document.getElementById('updateReleaseNotes').innerHTML = renderReleaseNotes(data.releaseNotes);
+  var notes = data.releaseNotes || data.releaseNotes;
+  document.getElementById('updateReleaseNotes').innerHTML = renderReleaseNotes(typeof notes === 'string' ? notes : '');
+  var btn = document.querySelector('#updateModal .flex.justify-end button:last-child');
+  if (btn) { btn.textContent = 'Download'; btn.disabled = false; btn.onclick = startUpdateDownload; }
   document.getElementById('updateModal').style.display = 'flex';
 });
 
-window.downloadUpdate = function() {
-  if (!updateData || !updateData.downloadUrl) return;
+window.startUpdateDownload = function() {
   var wrap = document.getElementById('updateProgressWrap');
   var bar = document.getElementById('updateProgressBar');
   var status = document.getElementById('updateStatus');
@@ -95,12 +116,14 @@ window.downloadUpdate = function() {
   if (wrap) wrap.style.display = 'block';
   if (status) { status.style.display = 'block'; status.textContent = 'Starting download...'; }
   if (btn) { btn.disabled = true; btn.textContent = 'Downloading...'; }
-  window.electronAPI.installUpdate(updateData.downloadUrl).then(function() {
-    if (status) status.textContent = 'Installing...';
-  }).catch(function(err) {
-    console.error('Update failed:', err);
-    if (status) status.textContent = 'Update failed. Please try again.';
-    if (btn) { btn.disabled = false; btn.textContent = 'Retry'; }
+  window.electronAPI.startDownload().then(function(success) {
+    if (success) {
+      if (status) status.textContent = 'Download complete! Installing...';
+      window.electronAPI.quitAndInstall();
+    } else {
+      if (status) status.textContent = 'Update failed. Please try again.';
+      if (btn) { btn.disabled = false; btn.textContent = 'Retry'; }
+    }
   });
 };
 
@@ -110,6 +133,16 @@ window.electronAPI.onUpdateProgress(function(pct) {
   if (bar) bar.style.width = pct + '%';
   if (status) status.textContent = pct < 100 ? 'Downloading... ' + pct + '%' : 'Download complete! Installing...';
 });
+
+window.electronAPI.onUpdateDownloaded(function() {
+  updateDownloaded = true;
+  var status = document.getElementById('updateStatus');
+  var btn = document.querySelector('#updateModal .flex.justify-end button:last-child');
+  if (status) status.textContent = 'Ready to install!';
+  if (btn) { btn.disabled = false; btn.textContent = 'Install & Restart'; btn.onclick = function() { window.electronAPI.quitAndInstall(); }; }
+});
+
+window.downloadUpdate = window.startUpdateDownload;
 
 window.closeUpdateModal = function(e) {
   if (!e || e.target === e.currentTarget) {
@@ -137,10 +170,13 @@ window.closeWelcomeModal = function() {
 
 /* ── Settings Page ── */
 function selectStoragePath() {
-  window.electronAPI.selectStoragePath().then(function(newPath) {
+  window.electronAPI.selectFolder().then(function(newPath) {
     if (newPath) {
-      window.db.setSetting('storagePath', newPath);
-      document.getElementById('storagePathDisplay').textContent = newPath;
+      window.db.setPath(newPath).then(function(result) {
+        if (result) {
+          document.getElementById('storagePathDisplay').textContent = result;
+        }
+      });
     }
   });
 }

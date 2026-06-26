@@ -21,17 +21,22 @@
       "main.js",
       "preload.js",
       "database.js",
-      "update.json",
       "src/**/*"
     ],
     "win": {
       "target": "nsis",
-      "icon": "jamrah-icon.png"
+      "icon": "Jamrah-Icon.svg"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "differential": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "AhmMed29",
+      "repo": "My-Productivity-App"
     }
   },
   "type": "commonjs",
@@ -42,6 +47,7 @@
     "sharp": "^0.35.2"
   },
   "dependencies": {
-    "better-sqlite3": "^12.11.1"
+    "better-sqlite3": "^12.11.1",
+    "electron-updater": "^6.3.9"
   }
 }

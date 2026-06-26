@@ -1,0 +1,11 @@
+/* Font definitions */
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:wght@400;500&family=Inter:wght@400;500&display=swap');
+
+/* Fallback font definitions */
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Instrument Serif', serif;
+}

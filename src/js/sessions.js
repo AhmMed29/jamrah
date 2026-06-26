@@ -3,11 +3,17 @@
 var activeSession = null;
 var editingSessionId = null;
 var editingTagForSession = null;
+var editingGoalForSession = null;
 var addSessionTagId = null;
+var addSessionGoalId = null;
 var selectedTagColor = '#3B82F6';
 
 function getTags() {
   try { return window.db.getTags() || []; } catch(e) { return []; }
+}
+
+function getTagsWithGoals() {
+  try { return window.db.getTagsWithGoals() || { tags: [], goals: [] }; } catch(e) { return { tags: [], goals: [] }; }
 }
 
 function saveTags(tags) {
@@ -163,6 +169,7 @@ function onSessionStart() {
     lastResumeTime: Date.now(),
     taskName: '',
     tagId: null,
+    goalId: null,
     status: 'running'
   };
   renderTimeline();
@@ -203,7 +210,8 @@ function onSessionComplete(focusMinutes, plannedMinutes) {
     focusMinutes: focusMinutes,
     taskName: activeSession.taskName || '',
     note: activeSession.note || '',
-    tagId: activeSession.tagId || null
+    tagId: activeSession.tagId || null,
+    goalId: activeSession.goalId || null
   };
   window.db.saveSession(session);
   activeSession = null;
@@ -290,8 +298,22 @@ window.selectSessionTag = function(tagId) {
   if (td) td.classList.add('hidden');
 };
 
+window.selectSessionGoal = function(goalId) {
+  editingGoalForSession = goalId;
+  renderSessionTagDisplay();
+  var td = document.getElementById('tagDropdown');
+  if (td) td.classList.add('hidden');
+};
+
 window.selectAddSessionTag = function(tagId) {
   addSessionTagId = tagId;
+  renderAddSessionTagDisplay();
+  var td = document.getElementById('addTagDropdown');
+  if (td) td.classList.add('hidden');
+};
+
+window.selectAddSessionGoal = function(goalId) {
+  addSessionGoalId = goalId;
   renderAddSessionTagDisplay();
   var td = document.getElementById('addTagDropdown');
   if (td) td.classList.add('hidden');
@@ -300,19 +322,31 @@ window.selectAddSessionTag = function(tagId) {
 function renderTagList(listId, mode) {
   var container = document.getElementById(listId);
   if (!container) return;
-  var tags = getTags();
-  if (tags.length === 0) {
-    container.innerHTML = '<div class="text-xs text-gray-400 px-3 py-2">No tags yet</div>';
-    return;
-  }
-  var html = '';
+  var data = getTagsWithGoals();
+  var tags = data.tags || [];
+  var goals = data.goals || [];
   var fn = mode === 'edit' ? 'selectSessionTag' : 'selectAddSessionTag';
+  var goalFn = mode === 'edit' ? 'selectSessionGoal' : 'selectAddSessionGoal';
+  var html = '';
   for (var i = 0; i < tags.length; i++) {
     var t = tags[i];
     html += '<div class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer text-sm" onclick="window.' + fn + '(\'' + t.id + '\')">';
     html += '<span class="w-3 h-3 rounded-full" style="background:' + t.color + '"></span>';
     html += '<span class="text-gray-700">' + t.name + '</span>';
     html += '</div>';
+  }
+  if (goals.length > 0) {
+    html += '<div class="text-xs text-gray-400 px-3 py-1.5 border-t border-gray-100 mt-1 pt-1.5">Goals</div>';
+    for (var j = 0; j < goals.length; j++) {
+      var g = goals[j];
+      html += '<div class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer text-sm" onclick="window.' + goalFn + '(\'' + g.goalId + '\')">';
+      html += '<span class="w-3 h-3 rounded-full" style="background:' + g.color + '"></span>';
+      html += '<span class="text-gray-700">' + g.name + '</span>';
+      html += '</div>';
+    }
+  }
+  if (tags.length === 0 && goals.length === 0) {
+    html = '<div class="text-xs text-gray-400 px-3 py-2">No tags or goals yet</div>';
   }
   container.innerHTML = html;
 }
@@ -359,6 +393,7 @@ window.openSessionPopup = function(sessionId) {
   var input = document.getElementById('sessionTaskInput');
   if (input) input.value = session.taskName || '';
   editingTagForSession = session.tagId || null;
+  editingGoalForSession = session.goalId || null;
   renderSessionTagDisplay();
   var popup = document.getElementById('sessionPopup');
   if (popup) popup.classList.remove('hidden');
@@ -378,13 +413,14 @@ window.saveSessionEdit = function() {
   if (activeSession && activeSession.id === editingSessionId) {
     activeSession.taskName = taskName;
     activeSession.tagId = editingTagForSession;
+    activeSession.goalId = editingGoalForSession;
     renderTimeline();
     renderSessionTimeline();
     var popup = document.getElementById('sessionPopup');
     if (popup) popup.classList.add('hidden');
     return;
   }
-  window.db.updateSession(editingSessionId, taskName, editingTagForSession, '');
+  window.db.updateSession(editingSessionId, taskName, editingTagForSession, '', editingGoalForSession);
   renderTimeline();
   renderSessionTimeline();
   var popup = document.getElementById('sessionPopup');
@@ -394,19 +430,33 @@ window.saveSessionEdit = function() {
 function renderSessionTagDisplay() {
   var container = document.getElementById('sessionTagDisplay');
   if (!container) return;
+  var parts = [];
   if (editingTagForSession) {
     var tags = getTags();
     var tag = tags.find(function(t) { return t.id === editingTagForSession; });
     if (tag) {
-      container.innerHTML = '<span class="tag-bubble" style="background:' + 'rgba(' + hexToRgb(tag.color) + ',0.12);color:' + tag.color + ';border:1px solid rgba(' + hexToRgb(tag.color) + ',0.25)">#' + tag.name + ' <span style="cursor:pointer;margin-left:4px" onclick="window.clearSessionTag()">✕</span></span>';
-      return;
+      parts.push('<span class="tag-bubble" style="background:rgba(' + hexToRgb(tag.color) + ',0.12);color:' + tag.color + ';border:1px solid rgba(' + hexToRgb(tag.color) + ',0.25)">#' + tag.name + ' <span style="cursor:pointer;margin-left:4px" onclick="window.clearSessionTag()">✕</span></span>');
     }
   }
-  container.innerHTML = '<span class="text-xs text-gray-400">None selected</span>';
+  if (editingGoalForSession) {
+    var gw = getTagsWithGoals();
+    var goal = (gw.goals || []).find(function(g) { return g.goalId === editingGoalForSession; });
+    if (goal) {
+      parts.push('<span class="tag-bubble" style="background:rgba(' + hexToRgb(goal.color) + ',0.12);color:' + goal.color + ';border:1px solid rgba(' + hexToRgb(goal.color) + ',0.25)">' + goal.name + ' <span style="cursor:pointer;margin-left:4px" onclick="window.clearSessionGoal()">✕</span></span>');
+    }
+  }
+  container.innerHTML = parts.length > 0 ? parts.join(' ') : '<span class="text-xs text-gray-400">None selected</span>';
 }
 
 window.clearSessionTag = function() {
   editingTagForSession = null;
+  renderSessionTagDisplay();
+  var td = document.getElementById('tagDropdown');
+  if (td) td.classList.add('hidden');
+};
+
+window.clearSessionGoal = function() {
+  editingGoalForSession = null;
   renderSessionTagDisplay();
   var td = document.getElementById('tagDropdown');
   if (td) td.classList.add('hidden');
@@ -469,6 +519,7 @@ window.openAddSessionPopup = function() {
   if (inp1) inp1.value = '';
   if (inp2) inp2.value = '25';
   addSessionTagId = null;
+  addSessionGoalId = null;
   renderAddSessionTagDisplay();
   var popup = document.getElementById('addSessionPopup');
   if (popup) popup.classList.remove('hidden');
@@ -495,7 +546,8 @@ window.saveAddSession = function() {
     focusMinutes: duration,
     taskName: taskName,
     note: '',
-    tagId: addSessionTagId || null
+    tagId: addSessionTagId || null,
+    goalId: addSessionGoalId || null
   };
   window.db.saveSession(session);
   renderTimeline();
@@ -507,15 +559,22 @@ window.saveAddSession = function() {
 function renderAddSessionTagDisplay() {
   var container = document.getElementById('addSessionTagDisplay');
   if (!container) return;
+  var parts = [];
   if (addSessionTagId) {
     var tags = getTags();
     var tag = tags.find(function(t) { return t.id === addSessionTagId; });
     if (tag) {
-      container.innerHTML = '<span class="tag-bubble" style="background:' + 'rgba(' + hexToRgb(tag.color) + ',0.12);color:' + tag.color + ';border:1px solid rgba(' + hexToRgb(tag.color) + ',0.25)">#' + tag.name + ' <span style="cursor:pointer;margin-left:4px" onclick="window.clearAddSessionTag()">✕</span></span>';
-      return;
+      parts.push('<span class="tag-bubble" style="background:rgba(' + hexToRgb(tag.color) + ',0.12);color:' + tag.color + ';border:1px solid rgba(' + hexToRgb(tag.color) + ',0.25)">#' + tag.name + ' <span style="cursor:pointer;margin-left:4px" onclick="window.clearAddSessionTag()">✕</span></span>');
     }
   }
-  container.innerHTML = '<span class="text-xs text-gray-400">None selected</span>';
+  if (addSessionGoalId) {
+    var gw = getTagsWithGoals();
+    var goal = (gw.goals || []).find(function(g) { return g.goalId === addSessionGoalId; });
+    if (goal) {
+      parts.push('<span class="tag-bubble" style="background:rgba(' + hexToRgb(goal.color) + ',0.12);color:' + goal.color + ';border:1px solid rgba(' + hexToRgb(goal.color) + ',0.25)">' + goal.name + ' <span style="cursor:pointer;margin-left:4px" onclick="window.clearAddSessionGoal()">✕</span></span>');
+    }
+  }
+  container.innerHTML = parts.length > 0 ? parts.join(' ') : '<span class="text-xs text-gray-400">None selected</span>';
 }
 
 window.clearAddSessionTag = function() {
@@ -524,6 +583,109 @@ window.clearAddSessionTag = function() {
   var td = document.getElementById('addTagDropdown');
   if (td) td.classList.add('hidden');
 };
+
+window.clearAddSessionGoal = function() {
+  addSessionGoalId = null;
+  renderAddSessionTagDisplay();
+  var td = document.getElementById('addTagDropdown');
+  if (td) td.classList.add('hidden');
+};
+
+/* ═══════════════════════════════════════
+   Task dropdown for session editing
+*/
+function getTaskList() {
+  try { return window.db.getTasks() || []; } catch(e) { return []; }
+}
+
+function getGoalName(goalId, goals) {
+  if (!goalId || !goals) return '';
+  for (var gi = 0; gi < goals.length; gi++) {
+    if (goals[gi].id === goalId || goals[gi].goalId === goalId) return goals[gi].name;
+  }
+  return '';
+}
+
+function renderTaskList(taskListEl, inputEl, goalVarSetter) {
+  var tasks = getTaskList();
+  var gw = getTagsWithGoals();
+  var goals = gw.goals || [];
+  if (tasks.length === 0) {
+    taskListEl.innerHTML = '<div class="text-sm text-gray-400 text-center py-4">No tasks yet</div>';
+    return;
+  }
+  var html = '';
+  for (var ti = 0; ti < tasks.length; ti++) {
+    var t = tasks[ti];
+    var gName = getGoalName(t.goalId, goals);
+    var safeName = (t.name || '').replace(/'/g, "\\'");
+    var safeGoalId = (t.goalId || '').replace(/'/g, "\\'");
+    var safeGName = gName.replace(/'/g, "\\'");
+    html += '<div class="px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg cursor-pointer flex items-center justify-between" onclick="selectTaskFromList(\'' + safeName + '\',\'' + safeGoalId + '\',\'' + safeGName + '\')">' +
+      '<span>' + (t.name || '') + '</span>' +
+      (gName ? '<span class="text-xs text-gray-400">' + gName + '</span>' : '') +
+    '</div>';
+  }
+  taskListEl.innerHTML = html;
+}
+
+window.toggleSessionTaskDropdown = function(e) {
+  if (e) e.stopPropagation();
+  var dd = document.getElementById('sessionTaskDropdown');
+  var list = document.getElementById('sessionTaskList');
+  if (!dd || !list) return;
+  if (dd.classList.contains('hidden')) {
+    renderTaskList(list, document.getElementById('sessionTaskInput'), function(goalId) { editingGoalForSession = goalId; });
+    dd.classList.remove('hidden');
+  } else {
+    dd.classList.add('hidden');
+  }
+};
+
+window.toggleAddSessionTaskDropdown = function(e) {
+  if (e) e.stopPropagation();
+  var dd = document.getElementById('addSessionTaskDropdown');
+  var list = document.getElementById('addSessionTaskList');
+  if (!dd || !list) return;
+  if (dd.classList.contains('hidden')) {
+    renderTaskList(list, document.getElementById('addSessionTaskInput'), function(goalId) { addSessionGoalId = goalId; });
+    dd.classList.remove('hidden');
+  } else {
+    dd.classList.add('hidden');
+  }
+};
+
+window.selectTaskFromList = function(taskName, goalId, goalName) {
+  var sessionDd = document.getElementById('sessionTaskDropdown');
+  var addDd = document.getElementById('addSessionTaskDropdown');
+  if (sessionDd && !sessionDd.classList.contains('hidden')) {
+    document.getElementById('sessionTaskInput').value = taskName;
+    if (goalId) {
+      editingGoalForSession = goalId;
+      renderSessionTagDisplay();
+    }
+    sessionDd.classList.add('hidden');
+  } else if (addDd && !addDd.classList.contains('hidden')) {
+    document.getElementById('addSessionTaskInput').value = taskName;
+    if (goalId) {
+      addSessionGoalId = goalId;
+      renderAddSessionTagDisplay();
+    }
+    addDd.classList.add('hidden');
+  }
+};
+
+// Close dropdowns on outside click
+document.addEventListener('click', function(e) {
+  var sessionDd = document.getElementById('sessionTaskDropdown');
+  var addDd = document.getElementById('addSessionTaskDropdown');
+  if (sessionDd && !sessionDd.classList.contains('hidden') && !e.target.closest('#sessionTaskDropdown') && !e.target.closest('[onclick*="toggleSessionTaskDropdown"]')) {
+    sessionDd.classList.add('hidden');
+  }
+  if (addDd && !addDd.classList.contains('hidden') && !e.target.closest('#addSessionTaskDropdown') && !e.target.closest('[onclick*="toggleAddSessionTaskDropdown"]')) {
+    addDd.classList.add('hidden');
+  }
+});
 
 /* ═══════════════════════════════════════
    🎯 Session Timeline (Horizontal Flow)

@@ -1,7 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap');
 body {
   font-family: 'Inter', sans-serif;
-  background-color: #FAFAFA;
 }
 .text-purple-brand { color: #8A7CFB; }
 .bg-purple-brand { background-color: #8A7CFB; }
@@ -9,7 +8,6 @@ body {
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e5e7eb; border-radius: 10px; }
-.timer-circle { border-radius: 50%; }
 #progressRing { transition: stroke-dashoffset 1s linear; }
 #settingsPage { transition: opacity 0.25s ease; }
 #themeDropdown { transition: opacity 0.2s ease, transform 0.2s ease; transform-origin: top center; }
@@ -21,3 +19,286 @@ body {
 #tagDropdown:not(.hidden) { opacity: 1; transform: translateY(0); }
 .color-swatch { width: 24px; height: 24px; border-radius: 999px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.15s; }
 .color-swatch:hover, .color-swatch.selected { border-color: #374151; }
+
+/* ── Timer Circle ── */
+.timer-circle-wrapper {
+  position: relative;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+.timer-circle-wrapper:hover {
+  transform: scale(1.03);
+}
+#pomoShaderCanvas {
+  border-radius: 50%;
+}
+
+
+.timer-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.4);
+  pointer-events: none;
+}
+.timer-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 10;
+  user-select: none;
+}
+.timer-text {
+  font-family: 'Instrument Serif', serif;
+  font-size: 56px;
+  letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.92);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+@media (max-width: 449px) {
+  .timer-text { font-size: 44px; }
+}
+@media (max-width: 299px) {
+  .timer-text { font-size: 32px; }
+}
+.timer-label {
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── Controls ── */
+.pomo-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+}
+.pomo-btn:hover {
+  color: rgba(255,255,255,0.6) !important;
+}
+.pomo-btn:active {
+  transform: scale(0.9);
+}
+.pomo-play-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.pomo-play-btn:hover {
+  color: #fff;
+  border-color: rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.1);
+}
+.pomo-play-btn:active {
+  transform: scale(0.94);
+}
+
+/* ── Settings Gear ── */
+.pomo-gear-btn {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.15);
+  cursor: pointer;
+  padding: 8px;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.pomo-gear-btn:hover {
+  color: rgba(255,255,255,0.45);
+  transform: translateX(-50%) scale(1.1);
+}
+.pomo-gear-btn:active {
+  transform: translateX(-50%) scale(0.95);
+}
+
+/* ── Session Timeline ── */
+.pomo-timeline-container {
+  width: 100%;
+  padding: 0 24px 16px;
+  flex-shrink: 0;
+}
+.pomo-timeline-inner {
+  border-radius: 12px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.pomo-timeline-fade-left,
+.pomo-timeline-fade-right {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  z-index: 2;
+  pointer-events: none;
+}
+.pomo-timeline-fade-left {
+  left: 0;
+  background: linear-gradient(to right, rgba(0,0,0,1), transparent);
+}
+.pomo-timeline-fade-right {
+  right: 0;
+  background: linear-gradient(to left, rgba(0,0,0,1), transparent);
+}
+.pomo-timeline-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.pomo-timeline-scroll::-webkit-scrollbar { display: none; }
+.pomo-timeline-track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+}
+.pomo-timeline-empty {
+  font-size: 13px;
+  text-align: center;
+  padding: 16px 24px;
+  color: rgba(255,255,255,0.25);
+  min-width: 100%;
+}
+
+/* ── Settings Sheet ── */
+#pomoSettings {
+  animation: fadeIn 0.2s ease;
+}
+#pomoSettings.hidden {
+  display: none;
+}
+#pomoSettings:not(.hidden) {
+  display: flex;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.pomo-settings-sheet {
+  background: #0a0a0a;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  border-radius: 16px 16px 0 0;
+  padding: 24px;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.pomo-settings-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 26px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.8);
+  margin-bottom: 24px;
+  text-align: center;
+}
+.pomo-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.pomo-setting-label {
+  font-size: 14px;
+  color: rgba(255,255,255,0.6);
+  letter-spacing: 0.05em;
+}
+.pomo-setting-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pomo-setting-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.15s;
+}
+.pomo-setting-btn:hover {
+  color: rgba(255,255,255,0.8);
+  background: rgba(255,255,255,0.05);
+}
+.pomo-setting-input {
+  width: 48px;
+  text-align: center;
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.9);
+  font-family: 'Instrument Serif', serif;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+.pomo-setting-input::-webkit-inner-spin-button,
+.pomo-setting-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.pomo-setting-input:focus {
+  outline: none;
+}
+.pomo-settings-save {
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.8);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pomo-settings-save:hover {
+  background: rgba(255,255,255,0.15);
+}

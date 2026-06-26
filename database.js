@@ -34,6 +34,62 @@ const MIGRATIONS = [
         FOREIGN KEY (tagId) REFERENCES tags(id)
       );
     `);
+  },
+
+  function v2(db) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS goals (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        color TEXT NOT NULL,
+        tagId TEXT,
+        startDate TEXT NOT NULL,
+        endDate TEXT NOT NULL,
+        duration INTEGER NOT NULL,
+        createdAt TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (tagId) REFERENCES tags(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS goal_progress (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        goalId TEXT NOT NULL,
+        date TEXT NOT NULL,
+        progressValue REAL DEFAULT 0,
+        focusMinutes REAL DEFAULT 0,
+        FOREIGN KEY (goalId) REFERENCES goals(id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_goal_progress_goalId ON goal_progress(goalId);
+      CREATE INDEX IF NOT EXISTS idx_goal_progress_date ON goal_progress(date);
+    `);
+  },
+
+  function v3(db) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS tasks (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        goalId TEXT,
+        completed INTEGER DEFAULT 0,
+        createdAt TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (goalId) REFERENCES goals(id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_tasks_goalId ON tasks(goalId);
+    `);
+  },
+
+  function v4(db) {
+    db.exec(`
+      ALTER TABLE goals ADD COLUMN parentGoalId TEXT REFERENCES goals(id);
+      CREATE INDEX IF NOT EXISTS idx_goals_parent ON goals(parentGoalId);
+    `);
+  },
+  function v5(db) {
+    try { db.exec('ALTER TABLE sessions ADD COLUMN taskId TEXT'); } catch(e) {}
+    try { db.exec('ALTER TABLE sessions ADD COLUMN goalId TEXT'); } catch(e) {}
+    try { db.exec('CREATE INDEX IF NOT EXISTS idx_sessions_taskId ON sessions(taskId)'); } catch(e) {}
+    try { db.exec('CREATE INDEX IF NOT EXISTS idx_sessions_goalId ON sessions(goalId)'); } catch(e) {}
   }
 ];
 
@@ -52,6 +108,8 @@ function init(storagePath, defaultPath) {
 
 function runMigrations() {
   var version = db.pragma('user_version', { simple: true });
+  // If db was at a higher version with now-removed migrations, re-run current ones
+  if (version > MIGRATIONS.length) version = 0;
   for (var i = version; i < MIGRATIONS.length; i++) {
     MIGRATIONS[i](db);
     db.pragma('user_version = ' + (i + 1));
@@ -103,12 +161,20 @@ function deleteTag(id) {
   } catch (e) { return false; }
 }
 
+function getTagsWithGoals() {
+  try {
+    var tags = db.prepare('SELECT * FROM tags ORDER BY createdAt ASC').all();
+    var goals = db.prepare('SELECT id as goalId, name, color FROM goals ORDER BY name ASC').all();
+    return { tags: tags, goals: goals };
+  } catch (e) { return { tags: [], goals: [] }; }
+}
+
 function saveSession(session) {
   try {
     db.prepare(`
       INSERT OR REPLACE INTO sessions
-      (id, startTime, endTime, plannedMinutes, focusMinutes, taskName, note, tagId, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, startTime, endTime, plannedMinutes, focusMinutes, taskName, note, tagId, createdAt, taskId, goalId)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       session.id,
       session.startTime,
@@ -118,16 +184,18 @@ function saveSession(session) {
       session.taskName || '',
       session.note || '',
       session.tagId || null,
-      session.createdAt || Date.now()
+      session.createdAt || Date.now(),
+      session.taskId || null,
+      session.goalId || null
     );
     return true;
   } catch (e) { return false; }
 }
 
-function updateSession(id, taskName, tagId, note) {
+function updateSession(id, taskName, tagId, note, goalId) {
   try {
-    db.prepare('UPDATE sessions SET taskName = ?, tagId = ?, note = ? WHERE id = ?').run(
-      taskName || '', tagId || null, note || '', id
+    db.prepare('UPDATE sessions SET taskName = ?, tagId = ?, note = ?, goalId = ? WHERE id = ?').run(
+      taskName || '', tagId || null, note || '', goalId || null, id
     );
     return true;
   } catch (e) { return false; }
@@ -260,10 +328,129 @@ function close() {
   if (db) { try { db.close(); } catch (e) {} db = null; }
 }
 
+function getSessionsByTagId(tagId) {
+  try { return db.prepare('SELECT * FROM sessions WHERE tagId = ? ORDER BY startTime ASC').all(tagId); }
+  catch (e) { return []; }
+}
+
+function getDescendantGoalIds(goalId) {
+  try {
+    var all = db.prepare('SELECT id, parentGoalId FROM goals').all();
+    var result = [goalId];
+    function collect(parentId) {
+      for (var dgi = 0; dgi < all.length; dgi++) {
+        if (all[dgi].parentGoalId === parentId) {
+          result.push(all[dgi].id);
+          collect(all[dgi].id);
+        }
+      }
+    }
+    collect(goalId);
+    return result;
+  } catch (e) { return [goalId]; }
+}
+
+function getSessionsByGoal(goalId) {
+  try {
+    var goalIds = getDescendantGoalIds(goalId);
+    var placeholders = goalIds.map(function() { return '?' }).join(',');
+    var tasks = db.prepare('SELECT id FROM tasks WHERE goalId IN (' + placeholders + ')').all.apply(null, goalIds);
+    var taskIds = tasks.map(function(t) { return t.id; });
+    if (taskIds.length > 0) {
+      var tPlaceholders = taskIds.map(function() { return '?' }).join(',');
+      return db.prepare('SELECT * FROM sessions WHERE goalId IN (' + placeholders + ') OR taskId IN (' + tPlaceholders + ') ORDER BY startTime DESC').all.apply(null, goalIds.concat(taskIds));
+    }
+    return db.prepare('SELECT * FROM sessions WHERE goalId IN (' + placeholders + ') ORDER BY startTime DESC').all.apply(null, goalIds);
+  } catch (e) { return []; }
+}
+
+function getGoals() {
+  try { return db.prepare('SELECT * FROM goals ORDER BY createdAt ASC').all(); }
+  catch (e) { return []; }
+}
+
+function getGoal(id) {
+  try { return db.prepare('SELECT * FROM goals WHERE id = ?').get(id); }
+  catch (e) { return null; }
+}
+
+function createGoal(goal) {
+  try {
+    db.prepare('INSERT INTO goals (id, name, description, color, tagId, startDate, endDate, duration, parentGoalId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
+      goal.id, goal.name, goal.description || '', goal.color, goal.tagId || null, goal.startDate, goal.endDate, goal.duration, goal.parentGoalId || null
+    );
+    return true;
+  } catch (e) { return false; }
+}
+
+function updateGoal(id, goal) {
+  try {
+    db.prepare('UPDATE goals SET name = ?, description = ?, color = ?, tagId = ?, startDate = ?, endDate = ?, duration = ?, parentGoalId = ? WHERE id = ?').run(
+      goal.name, goal.description || '', goal.color, goal.tagId || null, goal.startDate, goal.endDate, goal.duration, goal.parentGoalId || null, id
+    );
+    return true;
+  } catch (e) { return false; }
+}
+
+function deleteGoal(id) {
+  try {
+    db.prepare('DELETE FROM goal_progress WHERE goalId = ?').run(id);
+    db.prepare('DELETE FROM goals WHERE id = ?').run(id);
+    return true;
+  } catch (e) { return false; }
+}
+
+function getGoalProgress(goalId) {
+  try { return db.prepare('SELECT * FROM goal_progress WHERE goalId = ? ORDER BY date ASC').all(goalId); }
+  catch (e) { return []; }
+}
+
+function getTasks(goalId) {
+  try {
+    if (goalId) return db.prepare('SELECT * FROM tasks WHERE goalId = ? ORDER BY createdAt DESC').all(goalId);
+    return db.prepare('SELECT * FROM tasks ORDER BY createdAt DESC').all();
+  } catch (e) { return []; }
+}
+
+function createTask(task) {
+  try {
+    db.prepare('INSERT INTO tasks (id, name, goalId) VALUES (?, ?, ?)').run(task.id, task.name, task.goalId || null);
+    return true;
+  } catch (e) { return false; }
+}
+
+function toggleTask(id) {
+  try {
+    var task = db.prepare('SELECT completed FROM tasks WHERE id = ?').get(id);
+    if (!task) return false;
+    db.prepare('UPDATE tasks SET completed = ? WHERE id = ?').run(task.completed ? 0 : 1, id);
+    return true;
+  } catch (e) { return false; }
+}
+
+function deleteTask(id) {
+  try {
+    db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
+    return true;
+  } catch (e) { return false; }
+}
+
+function saveGoalProgress(goalId, date, progressValue, focusMinutes) {
+  try {
+    db.prepare('INSERT OR REPLACE INTO goal_progress (goalId, date, progressValue, focusMinutes) VALUES (?, ?, ?, ?)').run(
+      goalId, date, progressValue || 0, focusMinutes || 0
+    );
+    return true;
+  } catch (e) { return false; }
+}
+
 module.exports = {
   init, close, getSetting, setSetting, getAllSettings,
-  getTags, saveTag, deleteTag,
-  saveSession, updateSession, getAllSessionsGrouped,
+  getTags, getTagsWithGoals, saveTag, deleteTag,
+  saveSession, updateSession, getAllSessionsGrouped, getSessionsByTagId, getSessionsByGoal,
   getTodayStats, getTotalStats,
-  migrateFromJson, setPath, getPath
+  migrateFromJson, setPath, getPath,
+  getGoals, getGoal, createGoal, updateGoal, deleteGoal,
+  getGoalProgress, saveGoalProgress,
+  getTasks, createTask, toggleTask, deleteTask
 };

@@ -1,0 +1,92 @@
+/* Base styles for all toast types */
+[data-sonner-toast] {
+  --toast-width: 400px !important;
+  max-width: var(--toast-width) !important;
+  width: var(--toast-width) !important;
+  background-color: rgba(20, 20, 25, 0.85) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  padding: 16px !important;
+}
+
+/* Specific styles for reminder toasts */
+.reminder-toast {
+  --toast-width: 400px !important;
+  max-width: var(--toast-width) !important;
+  width: var(--toast-width) !important;
+  background-color: rgba(20, 20, 25, 0.85) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  padding: 16px !important;
+}
+
+/* Styles for success toasts */
+.success-toast {
+  --toast-width: 400px !important;
+  max-width: var(--toast-width) !important;
+  width: var(--toast-width) !important;
+  border-left: 4px solid var(--chart-3) !important;
+}
+
+/* Styles for error toasts */
+.error-toast {
+  --toast-width: 400px !important;
+  max-width: var(--toast-width) !important;
+  width: var(--toast-width) !important;
+  border-left: 4px solid var(--destructive) !important;
+}
+
+/* Styles for info toasts */
+.info-toast {
+  --toast-width: 400px !important;
+  max-width: var(--toast-width) !important;
+  width: var(--toast-width) !important;
+  border-left: 4px solid var(--chart-2) !important;
+}
+
+/* Styles for default toasts */
+.default-toast {
+  --toast-width: 400px !important;
+  max-width: var(--toast-width) !important;
+  width: var(--toast-width) !important;
+}
+
+/* Button styling within toasts */
+.reminder-toast button {
+  height: auto !important;
+  transition: all 0.2s ease;
+}
+
+.reminder-toast button:hover {
+  transform: translateY(-1px);
+}
+
+/* Make sure toast doesn't auto-dismiss when hovering */
+.reminder-toast:hover {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+/* Ensure the close button is properly positioned */
+[data-sonner-toast] [data-close-button] {
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+[data-sonner-toast] [data-close-button]:hover {
+  opacity: 1;
+}
+
+/* Force the toast container to have the same width */
+[data-sonner-toaster][data-position="top-center"] {
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+
+/* Ensure all toasts inside the toaster container have the same width */
+[data-sonner-toaster] {
+  --toast-width: 400px !important;
+  width: var(--toast-width) !important;
+  max-width: var(--toast-width) !important;
+}

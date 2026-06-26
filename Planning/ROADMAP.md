@@ -99,147 +99,192 @@
 - Save button calls window.api.createGoal()
 - ✅ Test: Modal opens, form validates, goal saves to DB
 
+### Subtask 2.6: Goal Detail Popup + CRUD
+- Click goal card → popup with colored top border (matches goal color)
+- Shows: name, description (only in popup, not card), dates, duration, progress circle
+- Edit button → opens add modal pre-filled with goal data
+- Delete button → custom confirmation modal (styled, not browser confirm)
+- ✅ Test: Click card → popup shows, edit saves changes, delete removes goal
+
 ---
 
-## TASK 3: Goals-Tasks Integration 🔗
+## TASK 3: To-do Tasks 📋
 
-### Subtask 3.1: Modify Sessions to Track Goal Progress
+### Subtask 3.1: DB Migration v3 — Tasks Table
+- Create `tasks` table: id, name, goalId (FK→goals), completed (0/1), createdAt
+- Add `CREATE TABLE IF NOT EXISTS tasks` in migration v3
+- ✅ Test: Migration runs, tasks table created without data loss
+
+### Subtask 3.2: IPC + Preload for Tasks CRUD
+- database.js: getTasks, createTask, toggleTask, deleteTask functions
+- main.js: IPC handlers for db:get-tasks, db:create-task, db:toggle-task, db:delete-task
+- preload.js: expose window.db methods
+- ✅ Test: IPC calls return correct data
+
+### Subtask 3.3: Tasks Page UI — HTML + CSS + Sidebar
+- Add `<div id="page-tasks">` section with tasks list container
+- Add "Tasks" button in sidebar with icon
+- Style tasks list with clean design
+- ✅ Test: Click Tasks in sidebar → page shows
+
+### Subtask 3.4: Redesign Task Add Popup (Bigger)
+- Replace old cramped popup with wider, more spacious layout
+- More padding, bigger input, better spacing
+- "Related Goal" horizontal scroll section preserved
+- ✅ Test: Popup is comfortable to use
+
+### Subtask 3.5: Fix Goal Card Layout
+- Remove full-width goal-group display
+- Show parent goals in normal grid cell (no inline children)
+- Remove goal-group CSS (col-span-full, connector, etc.)
+- ✅ Test: All cards fit in normal grid, no layout breaks
+
+### Subtask 3.6: Child Goals in Parent Detail Popup
+- After goal stats/progress in detail popup, add "Child Goals" section
+- Show child goals with colored connecting dots + names
+- Each child clickable → opens its own detail popup (reuse same modal)
+- ✅ Test: Click parent → see children in popup → click child → child's popup opens
+
+### Subtask 3.7: Goal Progress = Tasks Completion
+- Goal detail popup shows "Linked Tasks" count (completed / total)
+- Formula: progress = (completedTasks / totalTasks) × 100
+- Fallback to calendar progress if no tasks linked
+- Children's progress weighted: childContribution × (childDuration / parentDuration)
+- ✅ Test: Add tasks to goal, complete some → goal progress bar updates
+
+### Subtask 3.8: Goals Hierarchy Popup in Tasks Page
+- Add button in tasks page (same icon as goals) → opens popup
+- Popup shows all goals as toggle list (rectangular header, rounded corners)
+- Expand goal (click toggle) → shows its tasks as bullet points
+- Click any bullet point task → creates it in tasks page (calls createTask)
+- ✅ Test: Click goal icon button → see goals → expand → click task → appears in task list
+
+---
+
+## TASK 4: Pomodoro → Goals Sessions Integration 🔗
+
+### Subtask 4.1: Modify Sessions to Track Goal Progress
 - When session completed with a tag, check if tag is linked to a goal
 - Calculate daily progress based on goal duration
 - Update goal_progress table
 - ✅ Test: Complete session with goal tag → goal progress updates
 
-### Subtask 3.2: Daily Progress Calculation Logic
-- Formula: dailyTarget = totalGoalDays / duration
-- todayProgress = sessionsWithGoalTag.focusMinutes / (dailyTarget * 25)
-- ✅ Test: 3-month goal → each day adds ~0.33% if on track
-
-### Subtask 3.3: Goal Progress Circle UI
-- Render SVG circle in goal card
-- Calculate stroke-dashoffset based on total progress
-- ✅ Test: Progress updates when sessions completed
-
-### Subtask 3.4: Task Popup - Show Goal Linkage
-- When tag selected, check if linked to a goal
-- Show small badge: "Linked to: [Goal Name]"
-- ✅ Test: Select goal tag → badge appears
-
 ---
 
-## TASK 4: Modern Pomodoro Design ⏱️
+## TASK 5: Modern Pomodoro Design ⏱️
 
-### Subtask 4.1: Analyze Reference Design
+### Subtask 5.1: Analyze Reference Design
 - Open all files in Pomo modern design/ folder
 - Document circle animation, button interaction, color scheme, typography
 - ✅ Checkpoint: Design analysis document ready
 
-### Subtask 4.2: Update SVG Circle Design
+### Subtask 5.2: Update SVG Circle Design
 - Replace current SVG circle with new design (thicker stroke, gradient, glow)
 - Keep updateTimer() function working
 - ✅ Test: Timer counts down correctly with new circle
 
-### Subtask 4.3: Make Circle Interactive (Clickable)
+### Subtask 5.3: Make Circle Interactive (Clickable)
 - Add click event to SVG circle element
 - Clicking circle = Start/Pause/Resume
 - Keep existing buttons as fallback
 - ✅ Test: Click circle to start timer, click again to pause
 
-### Subtask 4.4: Center Time Display Styling
+### Subtask 5.4: Center Time Display Styling
 - Apply new font to timer display (64px, font-weight: 300)
 - ✅ Test: Time displays clearly in both EN/AR
 
-### Subtask 4.5: Color Transitions
+### Subtask 5.5: Color Transitions
 - Idle: Gray, Active: Blue gradient, Break: Green gradient
 - Smooth transitions (1s ease)
 - ✅ Test: Colors change smoothly during timer states
 
 ---
 
-## TASK 5: Apple Fonts Integration 🔤
+## TASK 6: Apple Fonts Integration 🔤
 
-### Subtask 5.1: Font Files Setup
+### Subtask 6.1: Font Files Setup
 - Check fonts in Fonts/ folder
 - Add @font-face declarations in <style> of index.html
 - ✅ Test: Fonts load without errors
 
-### Subtask 5.2: Apply SF-Pro to English UI
-- 5.2.1: Sidebar & Navigation
-- 5.2.2: Pomodoro Page
-- 5.2.3: Habits Page
-- 5.2.4: Goals Page
-- 5.2.5: Settings & Modals
+### Subtask 6.2: Apply SF-Pro to English UI
+- 6.2.1: Sidebar & Navigation
+- 6.2.2: Pomodoro Page
+- 6.2.3: Habits Page
+- 6.2.4: Goals Page
+- 6.2.5: Settings & Modals
 
-### Subtask 5.3: Apply SF-Arabic to Arabic UI
-- 5.3.1-5.3.5: Same structure for Arabic
+### Subtask 6.3: Apply SF-Arabic to Arabic UI
+- 6.3.1-6.3.5: Same structure for Arabic
 
-### Subtask 5.4: RTL Adjustments
+### Subtask 6.4: RTL Adjustments
 - Sidebar, Settings, Buttons, Modals: RTL for Arabic
 - Keep LTR: Pomodoro circle, Habits table, Goals grid, Stats graphs
 - ✅ Test: Switch language → correct direction applied
 
 ---
 
-## TASK 6: Statistics Overhaul 📊
+## TASK 7: Statistics Overhaul 📊
 
-### Subtask 6.1: Design Stats Page Layout
+### Subtask 7.1: Design Stats Page Layout
 - Create #statistics-page with time period selector and 3 graph cards
 - ✅ Test: Page shows when clicking "Statistics"
 
-### Subtask 6.2: Data Aggregation Functions
+### Subtask 7.2: Data Aggregation Functions
 - Create DB queries for habits, pomodoro, tasks by period
 - ✅ Test: Queries return correct data
 
-### Subtask 6.3: Graph Rendering (Canvas or SVG)
+### Subtask 7.3: Graph Rendering (Canvas or SVG)
 - Draw axes, plot dots, connecting lines
 - ✅ Test: Graph renders correctly
 
-### Subtask 6.4: Interactive Graph Features
+### Subtask 7.4: Interactive Graph Features
 - Hover tooltips, click for details, zoom
 - ✅ Test: Interactions work smoothly
 
-### Subtask 6.5: Period Selector Logic
+### Subtask 7.5: Period Selector Logic
 - Add Today/Week/Month/Year buttons
 - Clicking re-fetches data and redraws graph
 - ✅ Test: Switching periods updates graphs
 
 ---
 
-## TASK 7: Data Integrity & Backward Compatibility 🛡️
+## TASK 8: Data Integrity & Backward Compatibility 🛡️
 
-### Subtask 7.1: Migration Testing Suite
+### Subtask 8.1: Migration Testing Suite
 - Create test databases with old schema versions
 - Run all migrations (v1 → v4)
 - ✅ Test: Old data survives all migrations
 
-### Subtask 7.2: Add Migration for Goals (v4)
+### Subtask 8.2: Add Migration for Goals (v4)
 - Write migration script in database.js
 - Test on copy of production DB
 - ✅ Test: Migration runs once, doesn't repeat
 
-### Subtask 7.3: Validate All DB Operations
+### Subtask 8.3: Validate All DB Operations
 - Test all CRUD operations
 - ✅ Test: No data loss or corruption
 
 ---
 
-## TASK 8: Code Testing & QA ✅
+## TASK 9: Code Testing & QA ✅
 
-### Subtask 8.1: Manual Testing Checklist
+### Subtask 9.1: Manual Testing Checklist
 - Pomodoro, Habits, Goals, Settings, Statistics
 - ✅ Checkpoint: All features work as expected
 
-### Subtask 8.2: Cross-Language Testing
+### Subtask 9.2: Cross-Language Testing
 - Test all features in English and Arabic
 - Check RTL alignment and font rendering
 - ✅ Test: App works perfectly in both languages
 
-### Subtask 8.3: Edge Cases Testing
+### Subtask 9.3: Edge Cases Testing
 - Empty database, old data, missing fields, invalid inputs
 - ✅ Test: App handles edge cases gracefully
 
 ---
 
-## TASK 9: Build & Deployment 📦
+## TASK 10: Build & Deployment 📦
 
 ### Subtask 9.1: Prepare for Build
 - Update package.json, configure electron-builder, app icon

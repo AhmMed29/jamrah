@@ -1,0 +1,41 @@
+/* Global styles for Sonner toast component */
+
+/* Base container for all toasts */
+[data-sonner-toaster] {
+  --sonner-max-width: 400px !important;
+  width: var(--sonner-max-width) !important;
+  max-width: var(--sonner-max-width) !important;
+}
+
+/* Ensure all toast elements have the same width */
+[data-sonner-toast] {
+  width: var(--sonner-max-width) !important;
+  max-width: var(--sonner-max-width) !important;
+  min-width: var(--sonner-max-width) !important;
+}
+
+/* Prevent toast sizes from changing on hover */
+[data-sonner-toast]:hover {
+  transform: none !important;
+}
+
+/* Center toasts properly */
+[data-sonner-toaster][data-position^="top-center"] {
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+
+/* Add subtle transitions */
+[data-sonner-toast] {
+  transition: opacity 0.2s ease, transform 0.2s ease !important;
+}
+
+/* Ensure consistent height transition */
+[data-sonner-toast] [data-content] {
+  transition: height 0.2s ease !important;
+}
+
+/* Hide the close button (X icon) in all toast notifications */
+[data-sonner-toast] [data-close-button] {
+  display: none !important;
+}

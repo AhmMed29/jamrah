@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "downloadUrl": "https://github.com/AhmMed29/My-Productivity-App/releases/latest",
-  "releaseNotes": "v1.0.0 (beta)\n\nFirst beta release of My Productivity App.\n- Pomodoro timer with session tracking\n- Daily habits tracker\n- Settings customization\n- Multiple themes"
+  "releaseNotes": "🎉 v1.1.0 — Project Restructuring & Shader Rewrite\n\n## ✨ New Features\n- Shader completely rewritten: new multi-wave mixing formula for smoother animations\n- 5 shader themes: Dark, Ocean, Forest, Sunset, Lavender + custom colors\n- Custom color pickers in Settings with DB persistence\n\n## 🔧 Improvements\n- Project restructuring: all inline JS/CSS extracted to separate component files\n- All themes now have dark backgrounds for better color visibility\n- Cleaner, more maintainable codebase\n\n## 🐛 Bug Fixes\n- Shader now properly reads saved theme on initialization\n- Ring color simplified to pure white for all themes"
 }

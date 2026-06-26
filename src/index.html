@@ -28,88 +28,7 @@ tailwind.config={
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/habits.css">
 <link rel="stylesheet" href="css/ahmeds-styles.css">
-<style>
-.sticky-col { position: sticky; right: 0; z-index: 10; }
-.sticky-header { position: sticky; top: 0; background-color: #fdfdfd; z-index: 20; }
-.sticky-corner { position: sticky; top: 0; right: 0; background-color: #fdfdfd; z-index: 30; }
-#main-scroll { overflow: auto; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: transparent transparent; }
-#main-scroll:hover { scrollbar-color: rgba(203, 213, 225, 0.6) transparent; }
-#main-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
-#main-scroll::-webkit-scrollbar-track { background: transparent; }
-#main-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
-#main-scroll:hover::-webkit-scrollbar-thumb { background: rgba(203, 213, 225, 0.6); }
-.sticky-col { transition: background-color 0.15s ease; }
-.sticky-header:hover { background-color: #eef2ff !important; cursor: pointer; transition: background-color 0.15s ease; }
-#habit-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; }
-#habit-modal.open { display: flex; }
-#habit-modal .modal-card { background: #fff; border-radius: 20px; padding: 32px; width: 420px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); position: relative; animation: modalIn 0.2s ease-out; }
-@keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-#habit-modal .close-btn { position: absolute; top: 12px; left: 12px; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #9ca3af; cursor: pointer; transition: all 0.15s; border: none; background: none; }
-#habit-modal .close-btn:hover { background: #f3f4f6; color: #374151; }
-#add-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; }
-#add-modal.open { display: flex; }
-#add-modal .modal-card { background: #fff; border-radius: 20px; padding: 32px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); position: relative; animation: modalIn 0.2s ease-out; }
-#add-modal .close-btn { position: absolute; top: 12px; left: 12px; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #9ca3af; cursor: pointer; transition: all 0.15s; border: none; background: none; }
-#add-modal .close-btn:hover { background: #f3f4f6; color: #374151; }
-.hvo:hover, .hvo:hover .sticky-col { background-color: #f5f3ff !important; }
-.hbl:hover, .hbl:hover .sticky-col { background-color: #eff6ff !important; }
-.hcy:hover, .hcy:hover .sticky-col { background-color: #ecfeff !important; }
-.hro:hover, .hro:hover .sticky-col { background-color: #fff1f2 !important; }
-.hin:hover, .hin:hover .sticky-col { background-color: #eef2ff !important; }
-.hpi:hover, .hpi:hover .sticky-col { background-color: #fdf2f8 !important; }
-.hor:hover, .hor:hover .sticky-col { background-color: #fff7ed !important; }
-.hpu:hover, .hpu:hover .sticky-col { background-color: #faf5ff !important; }
-/* Sidebar styles */
-#sidebar-container {
-  transition: width 0.3s ease;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background: #3B82F6;
-  flex-shrink: 0;
-}
-#sidebar-container.sidebar-collapsed {
-  width: 60px;
-}
-#sidebar-container.sidebar-expanded {
-  width: 220px;
-}
-#sidebar-container .nav-label {
-  display: none;
-  white-space: nowrap;
-  font-size: 14px;
-  font-weight: 500;
-  opacity: 0;
-  transition: opacity 0.2s ease 0.1s;
-}
-#sidebar-container.sidebar-expanded .nav-label {
-  display: inline;
-  opacity: 1;
-}
-#sidebar-container .nav-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-}
-#sidebar-container.sidebar-expanded button {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 8px 16px;
-  justify-content: flex-start;
-}
-#sidebar-container.sidebar-collapsed button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 0;
-}
-</style>
+<link rel="stylesheet" href="css/main.css">
 </head>
 <body class="h-screen w-screen overflow-hidden flex flex-col text-gray-800">
 <div class="flex-shrink-0 h-[32px] bg-white border-b border-gray-100 flex items-center justify-between select-none" id="titlebar">
@@ -130,10 +49,7 @@ tailwind.config={
 <div id="sidebar-container" class="sidebar-collapsed">
 <nav aria-label="Main Navigation" class="h-full w-full flex flex-col items-center py-4 justify-between shrink-0" id="navSidebar">
 <div class="flex flex-col items-center gap-6 w-full">
-<button aria-label="Home" class="text-white/70 hover:text-white transition-colors" data-page="home" onclick="showPage('home')" data-label="home">
-<span class="nav-icon"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span>
-<span class="nav-label">Home</span>
-</button>
+
 <button aria-label="Pomodoro" class="text-white/70 hover:text-white transition-colors" data-page="pomodoro" onclick="showPage('pomodoro')" data-label="pomodoro">
 <span class="nav-icon"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" fill="none" r="10" stroke="currentColor" stroke-width="2"></circle><circle cx="12" cy="12" r="4"></circle></svg></span>
 <span class="nav-label">Pomodoro</span>
@@ -141,6 +57,14 @@ tailwind.config={
 <button aria-label="Habits" class="text-white/70 hover:text-white transition-colors" data-page="habits" onclick="showPage('habits')" data-label="habits">
 <span class="nav-icon"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span>
 <span class="nav-label">Habits</span>
+</button>
+<button aria-label="Tasks" class="text-white/70 hover:text-white transition-colors" data-page="tasks" onclick="showPage('tasks')" data-label="tasks">
+<span class="nav-icon"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></span>
+<span class="nav-label">Tasks</span>
+</button>
+<button aria-label="Goals" class="text-white/70 hover:text-white transition-colors" data-page="goals" onclick="showPage('goals')" data-label="goals">
+<span class="nav-icon"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
+<span class="nav-label">Goals</span>
 </button>
 </div>
 <div class="flex flex-col items-center gap-6 w-full mb-4">
@@ -155,45 +79,104 @@ tailwind.config={
 <div id="page-home" class="hidden flex-1 flex-col items-center justify-center bg-white px-4"></div>
 
 <div id="page-pomodoro" class="flex flex-1 overflow-hidden min-h-0">
-<main class="flex-1 bg-white flex flex-col relative h-full overflow-hidden" id="mainArea">
-<header class="flex justify-between items-center p-6 w-full absolute top-0 left-0 z-10 bg-white/80 backdrop-blur-sm">
-<h1 class="text-xl font-semibold">Pomodoro</h1>
-<div class="flex bg-gray-100 rounded-full p-1 absolute left-1/2 -translate-x-1/2">
-<button class="px-6 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-600 shadow-sm">Pomo</button>
-</div>
-</header>
-<div class="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto p-4">
-<div class="text-gray-400 text-sm mb-8 flex items-center gap-1 cursor-pointer hover:text-gray-600 transition-colors">
-        Focus <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
-</div>
-<div class="w-full max-w-[320px] sm:max-w-[400px] aspect-square timer-circle flex items-center justify-center mb-16 relative" id="timerCircle">
-<svg class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 400 400">
-<circle cx="200" cy="200" fill="none" r="192" stroke="#F3F4F6" stroke-width="8" id="progressBg"></circle>
-<circle cx="200" cy="200" fill="none" r="192" stroke="#C85A17" stroke-linecap="round" stroke-width="8" stroke-dasharray="1214.37" stroke-dashoffset="1224.37" id="progressRing"></circle>
-</svg>
-<div class="text-6xl sm:text-7xl font-light text-gray-800 tracking-tight cursor-pointer" id="timerText" onclick="openTimePopup()">50:00</div>
-</div>
-<div class="flex items-center justify-center gap-4">
-<button class="bg-blue-600 hover:bg-opacity-90 active:scale-95 text-white font-medium text-lg px-12 sm:px-16 py-3 rounded-full shadow-md cursor-pointer select-none" id="startBtn" onclick="toggleTimer()">Start</button>
-<button class="bg-red-500 hover:bg-red-600 active:scale-95 text-white font-medium text-lg px-8 sm:px-10 py-3 rounded-full shadow-md cursor-pointer select-none hidden" id="endBtn" onclick="openEndPopup()">End</button>
-</div>
+<main class="flex-1 flex flex-col relative h-full overflow-hidden bg-black" id="mainArea">
+<div class="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto px-4 relative" style="padding-top:60px;padding-bottom:60px">
+
+  <!-- Timer circle wrapper -->
+  <div class="timer-circle-wrapper" id="timerCircle" style="width:min(68vw,400px);height:min(68vw,400px);min-width:260px;min-height:260px">
+    <canvas id="pomoShaderCanvas" class="absolute inset-0 w-full h-full rounded-full pointer-events-none" style="z-index:1"></canvas>
+    <div class="timer-bg"></div>
+    <svg class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" style="z-index:2" viewBox="0 0 400 400">
+      <circle cx="200" cy="200" fill="none" r="192" stroke="rgba(255,255,255,0.03)" stroke-width="2"></circle>
+      <circle cx="200" cy="200" fill="none" r="192" stroke="rgba(255,255,255,0.15)" stroke-linecap="round" stroke-width="2" stroke-dasharray="1206.37" stroke-dashoffset="1206.37" id="progressRing"></circle>
+    </svg>
+    <div class="timer-face" id="timerFace">
+      <div class="timer-text" id="timerText">25:00</div>
+      <div class="timer-label" id="phaseLabel">Focus</div>
+    </div>
+  </div>
+
+  <!-- Session dots -->
+  <div class="flex items-center gap-2 mt-6" id="sessionDots"></div>
+
+  <!-- Controls -->
+  <div class="flex items-center gap-8 mt-6">
+    <button class="pomo-btn" id="resetBtn" onclick="window.resetTimer()" style="color:rgba(255,255,255,0.25)" title="Reset">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+    </button>
+    <button class="pomo-play-btn" id="playBtn" title="Play/Pause"></button>
+    <button class="pomo-btn" id="skipBtn" onclick="window.skipPhase()" style="color:rgba(255,255,255,0.25)" title="Skip">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+    </button>
+  </div>
+
+  <!-- Settings gear -->
+  <button class="pomo-gear-btn" onclick="window.openPomoSettings()" title="Settings">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="7" r="3"/><circle cx="7" cy="17" r="3"/></svg>
+  </button>
+
 </div>
 
-<div class="session-timeline-container w-full px-6 pb-4">
-  <div class="rounded-xl p-4 relative overflow-hidden" style="background:#F9FAFB;border:1px solid #E5E7EB">
-    <div class="session-timeline-fade-left"></div>
-    <div class="session-timeline-fade-right"></div>
-    <div class="session-timeline-scroll" id="sessionTimelineScroll">
-      <div class="session-timeline-track" id="sessionTimelineTrack">
-        <div class="text-sm text-center py-6 px-4" style="color:#9CA3AF;min-width:100%" id="sessionTimelineEmpty">
+<!-- Session Timeline -->
+<div class="pomo-timeline-container hidden">
+  <div class="pomo-timeline-inner">
+    <div class="pomo-timeline-fade-left"></div>
+    <div class="pomo-timeline-fade-right"></div>
+    <div class="pomo-timeline-scroll" id="sessionTimelineScroll">
+      <div class="pomo-timeline-track" id="sessionTimelineTrack">
+        <div class="pomo-timeline-empty" id="sessionTimelineEmpty">
           No sessions yet. Press Start to begin your first Pomodoro.
         </div>
       </div>
     </div>
   </div>
 </div>
-</main>
 
+<!-- Settings Bottom Sheet -->
+<div id="pomoSettings" class="fixed inset-0 z-50 flex items-end justify-center hidden" onclick="window.closePomoSettings(event)">
+  <div class="pomo-settings-sheet" onclick="event.stopPropagation()">
+    <h3 class="pomo-settings-title">Settings</h3>
+    <div class="pomo-setting-row">
+      <span class="pomo-setting-label">Focus</span>
+      <div class="pomo-setting-controls">
+        <button class="pomo-setting-btn" onclick="window.stepSetting('settingWork',-1)">-</button>
+        <input type="number" id="settingWork" class="pomo-setting-input" value="25" min="1" max="90">
+        <button class="pomo-setting-btn" onclick="window.stepSetting('settingWork',1)">+</button>
+      </div>
+    </div>
+    <div class="pomo-setting-row">
+      <span class="pomo-setting-label">Short Break</span>
+      <div class="pomo-setting-controls">
+        <button class="pomo-setting-btn" onclick="window.stepSetting('settingShortBreak',-1)">-</button>
+        <input type="number" id="settingShortBreak" class="pomo-setting-input" value="5" min="1" max="30">
+        <button class="pomo-setting-btn" onclick="window.stepSetting('settingShortBreak',1)">+</button>
+      </div>
+    </div>
+    <div class="pomo-setting-row">
+      <span class="pomo-setting-label">Long Break</span>
+      <div class="pomo-setting-controls">
+        <button class="pomo-setting-btn" onclick="window.stepSetting('settingLongBreak',-1)">-</button>
+        <input type="number" id="settingLongBreak" class="pomo-setting-input" value="15" min="1" max="60">
+        <button class="pomo-setting-btn" onclick="window.stepSetting('settingLongBreak',1)">+</button>
+      </div>
+    </div>
+    <button class="pomo-settings-save" onclick="window.savePomoSettings()">Save</button>
+  </div>
+</div>
+
+<!-- End popup -->
+<div id="endPopup" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden" onclick="closeEndPopup(event)">
+  <div class="bg-[#0a0a0a] border border-white/5 rounded-2xl p-8 shadow-xl w-80 max-w-[90vw]" onclick="event.stopPropagation()">
+    <h3 class="text-lg font-medium text-white/80 mb-3">End Session Early?</h3>
+    <p class="text-sm text-white/40 mb-6">Elapsed time will be saved and timer will advance to next phase.</p>
+    <div class="flex justify-end gap-3">
+      <button onclick="cancelEnd()" class="px-6 py-2.5 border border-white/10 rounded-xl text-sm text-white/60 hover:text-white/80 hover:bg-white/5 transition-colors">Cancel</button>
+      <button onclick="confirmEnd()" class="px-6 py-2.5 bg-white/10 hover:bg-white/15 text-white/80 rounded-xl text-sm font-medium transition-colors">End</button>
+    </div>
+  </div>
+</div>
+
+</main>
 </div>
 
 <div id="page-habits" class="hidden flex-1 flex flex-col overflow-hidden" dir="rtl">
@@ -240,158 +223,7 @@ tailwind.config={
 </div>
 </div>
 </div>
-<script>
-const today = new Date();
-const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-function formatDate(d) {
-return String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
-}
-const startDate = new Date(today.getFullYear(), 4, 1);
-const DAY_COUNT = Math.floor((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
-function getDates() {
-const dates = [];
-for (let i = 0; i < DAY_COUNT; i++) {
-const d = new Date(today);
-d.setDate(d.getDate() - i);
-dates.push(d);
-}
-return dates;
-}
-const dates = getDates();
-const habits = [
-{ name: 'أذكار الصباح', color: '#f59e0b', bg: '#fffbeb', border: 'border-amber-100', bold: true, textColor: '#f59e0b', hoverClass: '', pct: 100, checked: Array(DAY_COUNT).fill(1) },
-{ name: 'جلسة 10د (تدبر لمعاني القرآن)', color: '#8b5cf6', bg: '#ffffff', border: 'border-gray-100', bold: false, textColor: '#8b5cf6', hoverClass: 'hvo', pct: Math.round(4/DAY_COUNT*100), checked: (()=>{let a=Array(DAY_COUNT).fill(0);a[DAY_COUNT-1]=a[DAY_COUNT-3]=a[DAY_COUNT-5]=a[DAY_COUNT-7]=1;return a})() },
-{ name: 'أذكار المساء', color: '#3b82f6', bg: '#ffffff', border: 'border-gray-100', bold: false, textColor: '#3b82f6', hoverClass: 'hbl', pct: Math.round(5/DAY_COUNT*100), checked: (()=>{let a=Array(DAY_COUNT).fill(0);[DAY_COUNT-1,DAY_COUNT-3,DAY_COUNT-4,DAY_COUNT-7,DAY_COUNT-9].forEach(i=>a[i]=1);return a})() },
-{ name: 'قراءة الورد اليومي', color: '#22c55e', bg: '#f0fdf4', border: 'border-green-100', bold: true, textColor: '#22c55e', hoverClass: '', pct: 100, checked: Array(DAY_COUNT).fill(1) },
-{ name: 'سماع قرآن', color: '#06b6d4', bg: '#ffffff', border: 'border-gray-100', bold: false, textColor: '#06b6d4', hoverClass: 'hcy', pct: Math.round(3/DAY_COUNT*100), checked: (()=>{let a=Array(DAY_COUNT).fill(0);[DAY_COUNT-2,DAY_COUNT-5,DAY_COUNT-9].forEach(i=>a[i]=1);return a})() },
-{ name: 'ذكر الله (لسان + حضور قلب)', color: '#f43f5e', bg: '#ffffff', border: 'border-gray-100', bold: false, textColor: '#f43f5e', hoverClass: 'hro', pct: Math.round(12/DAY_COUNT*100), checked: (()=>{let a=Array(DAY_COUNT).fill(0);[0,1,2,3,5,6,7,9,10,11,13,14].forEach(i=>{let idx=DAY_COUNT-15+i;if(idx>=0)a[idx]=1});return a})() },
-{ name: 'الاستغفار (5 دقائق فقط)', color: '#6366f1', bg: '#ffffff', border: 'border-gray-100', bold: false, textColor: '#6366f1', hoverClass: 'hin', pct: Math.round(1/DAY_COUNT*100), checked: (()=>{let a=Array(DAY_COUNT).fill(0);a[DAY_COUNT-1]=1;return a})() },
-{ name: 'سبحان الله وبحمده 100 مرة', color: '#ec4899', bg: '#ffffff', border: 'border-gray-100', bold: false, textColor: '#ec4899', hoverClass: 'hpi', pct: 50, checked: (()=>{let a=Array(DAY_COUNT).fill(0);for(let i=0;i<DAY_COUNT;i+=2)a[i]=1;return a})() },
-{ name: 'فيديو يذكرك بالله', color: '#f97316', bg: '#ffffff', border: 'border-gray-100', bold: false, textColor: '#f97316', hoverClass: 'hor', pct: Math.round(5/DAY_COUNT*100), checked: (()=>{let a=Array(DAY_COUNT).fill(0);[DAY_COUNT-3,DAY_COUNT-4,DAY_COUNT-5,DAY_COUNT-9,DAY_COUNT-10].forEach(i=>a[i]=1);return a})() },
-{ name: '🏆 Dot Net 90 Days Challenge', color: '#a855f7', bg: '#ffffff', border: 'border-gray-100', bold: false, textColor: '#a855f7', hoverClass: 'hpu', pct: Math.round(13/DAY_COUNT*100), checked: (()=>{let a=Array(DAY_COUNT).fill(0);for(let i=0;i<13;i++){let idx=DAY_COUNT-15+i;if(idx>=0)a[idx]=1}return a})() },
-];
-function render() {
-let h = '<tr>';
-h += '<th class="sticky-corner min-w-[350px] p-2"></th>';
-h += '<th class="sticky-header px-1 py-4 align-bottom text-gray-300 border-b border-gray-100"></th>';
-dates.forEach((d, i) => {
-const isToday = i === DAY_COUNT - 1;
-const tc = isToday ? '#2563eb' : '#6b7280';
-h += '<th class="sticky-header min-w-[60px] px-2 py-4 border-b border-gray-100 text-center font-medium text-sm" style="color:' + tc + '"><div>' + formatDate(d) + '</div><div class="mt-1">' + dayNames[d.getDay()] + '</div></th>';
-});
-h += '</tr>';
-document.getElementById('table-head').innerHTML = h;
-let b = '';
-habits.forEach((habit, idx) => {
-const hasBg = habit.bg !== '#ffffff';
-const cls = hasBg ? '' : habit.hoverClass;
-b += '<tr class="' + cls + '" style="background-color:' + habit.bg + '">';
-const isEng = habit.name.includes('Dot Net');
-const spanSty = 'color:' + habit.textColor + ';font-weight:' + (habit.bold ? '700' : '500');
-b += '<th class="sticky-col py-4 px-6 text-right font-normal text-[15px] border-l ' + habit.border + '" data-habit-index="' + idx + '" style="cursor:pointer;background-color:' + habit.bg + ';color:#333">';
-b += '<div class="flex items-center justify-end gap-3">';
-b += '<span style="' + spanSty + '"' + (isEng ? ' dir="ltr"' : '') + '>' + habit.name + '</span>';
-b += '<svg class="-rotate-90 w-[28px] h-[28px]" viewBox="0 0 36 36">';
-b += '<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e5e7eb" stroke-width="4"></path>';
-b += '<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="' + habit.color + '" stroke-dasharray="' + habit.pct + ', 100" stroke-linecap="round" stroke-width="4"></path>';
-b += '</svg></div></th>';
-b += '<td class="text-center px-1"></td>';
-habit.checked.forEach((status) => {
-b += '<td class="text-center" style="padding:6px 0">';
-if (status) {
-b += '<div class="w-[22px] h-[22px] rounded-md mx-auto flex items-center justify-center shadow-sm cursor-pointer transition-all transform hover:scale-110" style="background-color:' + habit.color + '"><svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></div>';
-} else {
-b += '<div class="w-[22px] h-[22px] rounded-md border-2 mx-auto bg-white cursor-pointer transition-all hover:opacity-70" style="border-color:' + habit.color + '40"></div>';
-}
-b += '</td>';
-});
-b += '</tr>';
-});
-b += '<tr><td style="height:96px" colspan="' + (DAY_COUNT + 2) + '"></td></tr>';
-document.getElementById('table-body').innerHTML = b;
-}
-render();
-const sc = document.getElementById('main-scroll');
-sc.addEventListener('wheel', function(e) {
-if (e.target.closest('thead')) {
-this.scrollBy({ left: -e.deltaY });
-e.preventDefault();
-}
-}, { passive: false });
-var pb = document.getElementById('pomodoro-btn');
-if (pb) {
-var body = document.getElementById('pomo-body');
-var pa = false;
-pb.addEventListener('click', function() {
-pa = !pa;
-if (pa) { body.setAttribute('fill', 'currentColor'); body.setAttribute('stroke', 'none'); }
-else { body.setAttribute('fill', 'none'); body.setAttribute('stroke', 'currentColor'); }
-});
-}
-const modal = document.getElementById('habit-modal');
-const modalContent = document.getElementById('modal-content');
-const modalClose = document.getElementById('modal-close');
-function openModal(habit) {
-const checked = habit.checked.filter(v => v === 1).length;
-const streak = (() => {
-let max = 0, cur = 0;
-for (let i = 0; i < habit.checked.length; i++) {
-if (habit.checked[i] === 1) { cur++; max = Math.max(max, cur); }
-else cur = 0;
-}
-return max;
-})();
-modalContent.innerHTML = '<div class="flex items-center gap-3 mb-6"><div class="w-4 h-4 rounded-full" style="background:' + habit.color + '"></div><h2 class="text-lg font-bold text-gray-800" style="font-family:\'Tajawal\',sans-serif">' + habit.name + '</h2></div><div class="flex items-center justify-center mb-6"><svg class="w-20 h-20 -rotate-90" viewBox="0 0 36 36"><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e5e7eb" stroke-width="3"></path><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="' + habit.color + '" stroke-dasharray="' + habit.pct + ', 100" stroke-linecap="round" stroke-width="3"></path></svg></div><div class="grid grid-cols-3 gap-3 text-center mb-6"><div class="bg-gray-50 rounded-xl py-3 px-2"><div class="text-2xl font-bold text-gray-800">' + DAY_COUNT + '</div><div class="text-xs text-gray-500 mt-1">إجمالي الأيام</div></div><div class="bg-gray-50 rounded-xl py-3 px-2"><div class="text-2xl font-bold" style="color:' + habit.color + '">' + checked + '</div><div class="text-xs text-gray-500 mt-1">تم الإنجاز</div></div><div class="bg-gray-50 rounded-xl py-3 px-2"><div class="text-2xl font-bold text-gray-800">' + streak + '</div><div class="text-xs text-gray-500 mt-1">أطول سلسلة</div></div></div><div class="flex gap-3"><button class="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-all hover:opacity-90" style="background:' + habit.color + '">تعديل العادة</button><button class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:#fff">حذف</button></div>';
-modal.classList.add('open');
-}
-document.getElementById('table-body').addEventListener('click', function(e) {
-const th = e.target.closest('th[data-habit-index]');
-if (th) {
-const idx = parseInt(th.dataset.habitIndex);
-openModal(habits[idx]);
-}
-});
-modalClose.addEventListener('click', () => modal.classList.remove('open'));
-modal.addEventListener('click', (e) => {
-if (e.target === modal) modal.classList.remove('open');
-});
-const addModal = document.getElementById('add-modal');
-const addContent = document.getElementById('add-modal-content');
-const addClose = document.getElementById('add-modal-close');
-const colorPresets = ['#f59e0b','#8b5cf6','#3b82f6','#22c55e','#06b6d4','#f43f5e','#6366f1','#ec4899','#f97316','#a855f7'];
-function openAddModal() {
-const colorSwatches = colorPresets.map(c => '<div class="w-7 h-7 rounded-full cursor-pointer transition-all hover:scale-110 color-swatch ' + (c === '#3b82f6' ? 'ring-2 ring-offset-2 ring-blue-400' : '') + '" style="background:' + c + '" data-color="' + c + '"></div>').join('');
-addContent.innerHTML = '<h2 class="text-lg font-bold text-gray-800 mb-5">إضافة عادة جديدة</h2><label class="block text-sm font-medium text-gray-600 mb-1.5">اسم العادة</label><input id="habit-name-input" type="text" dir="rtl" placeholder="مثال: أذكار الصباح" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none mb-4" style="font-family:\'Tajawal\',sans-serif"><label class="block text-sm font-medium text-gray-600 mb-2.5">اللون</label><div class="flex gap-2.5 flex-wrap mb-5" id="color-picker">' + colorSwatches + '</div><label class="block text-sm font-medium text-gray-600 mb-1.5">نوع المتابعة</label><div class="grid grid-cols-2 gap-3 mb-5" id="track-type-group"><label class="track-type-label flex items-center gap-3 border-2 rounded-xl px-4 py-3 cursor-pointer transition-all hover:border-blue-300" data-value="check" style="border-color:#3b82f6;background:#eff6ff"><input type="radio" name="track-type" value="check" checked class="text-blue-600 focus:ring-blue-400"><span class="text-sm text-gray-700 font-medium">متابعة بنعم/لا</span></label><label class="track-type-label flex items-center gap-3 border-2 border-gray-200 rounded-xl px-4 py-3 cursor-pointer transition-all hover:border-blue-300" data-value="count"><input type="radio" name="track-type" value="count" class="text-blue-600 focus:ring-blue-400"><span class="text-sm text-gray-700 font-medium">عدد (عدّاد)</span></label></div><div class="flex gap-3 mt-6"><button id="save-habit-btn" class="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-all hover:opacity-90" style="background:#3b82f6">حفظ العادة</button><button id="cancel-add-btn" class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:#fff">إلغاء</button></div>';
-addContent.querySelectorAll('.color-swatch').forEach(function(el) {
-el.addEventListener('click', function() {
-addContent.querySelectorAll('.color-swatch').forEach(function(s) { s.classList.remove('ring-2', 'ring-offset-2', 'ring-blue-400'); });
-this.classList.add('ring-2', 'ring-offset-2', 'ring-blue-400');
-});
-});
-addContent.querySelectorAll('.track-type-label').forEach(function(label) {
-label.addEventListener('click', function() {
-addContent.querySelectorAll('.track-type-label').forEach(function(l) { l.style.borderColor = '#e5e7eb'; l.style.background = '#fff'; });
-this.style.borderColor = '#3b82f6';
-this.style.background = '#eff6ff';
-});
-});
-addContent.querySelector('#cancel-add-btn').addEventListener('click', function() { addModal.classList.remove('open'); });
-addContent.querySelector('#save-habit-btn').addEventListener('click', function() {
-const name = addContent.querySelector('#habit-name-input').value.trim();
-if (!name) { addContent.querySelector('#habit-name-input').focus(); return; }
-const color = addContent.querySelector('.color-swatch.ring-2')?.dataset.color || '#3b82f6';
-const type = addContent.querySelector('input[name="track-type"]:checked')?.value || 'check';
-alert('تم إضافة "' + name + '" بنجاح 🎉');
-addModal.classList.remove('open');
-});
-addModal.classList.add('open');
-}
-document.getElementById('add-habit-btn').addEventListener('click', openAddModal);
-addClose.addEventListener('click', function() { addModal.classList.remove('open'); });
-addModal.addEventListener('click', function(e) {
-if (e.target === addModal) addModal.classList.remove('open');
-});
-</script>
+<script src="js/components/habits/habits.js"></script>
 
 <div id="page-settings" class="hidden flex-1 flex flex-col bg-white overflow-auto p-4">
 <div class="w-full max-w-2xl mx-auto pt-12">
@@ -416,6 +248,30 @@ if (e.target === addModal) addModal.classList.remove('open');
 </div>
 </div>
 </div>
+<div class="bg-gray-50 rounded-2xl p-6 sm:p-8 mt-6">
+<h2 class="text-lg font-medium text-gray-800 mb-4">Pomodoro Shader Themes</h2>
+<div class="grid grid-cols-3 sm:grid-cols-5 gap-3" id="pomoThemeGrid">
+</div>
+<div class="mt-4 pt-4 border-t border-gray-200">
+  <h3 class="text-sm font-medium text-gray-700 mb-3">Custom Colors</h3>
+  <div class="grid grid-cols-3 gap-4">
+    <div>
+      <label class="text-xs text-gray-500 block mb-1">Wave Color</label>
+      <input type="color" id="customColor1" value="#0088cc" class="w-full h-10 rounded-lg border border-gray-300 p-0.5 cursor-pointer">
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 block mb-1">Wave 2</label>
+      <input type="color" id="customColor2" value="#4da8da" class="w-full h-10 rounded-lg border border-gray-300 p-0.5 cursor-pointer">
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 block mb-1">Background</label>
+      <input type="color" id="customBgColor" value="#ffffff" class="w-full h-10 rounded-lg border border-gray-300 p-0.5 cursor-pointer">
+    </div>
+  </div>
+  <button onclick="applyCustomColors()" class="mt-3 px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors">Apply Custom</button>
+</div>
+</div>
+
 <div class="flex justify-end gap-3 mt-8">
 <button onclick="cancelSettings()" class="px-6 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium">Cancel</button>
 <button onclick="saveSettings()" class="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-opacity-90 transition-colors">Save Changes</button>
@@ -423,26 +279,66 @@ if (e.target === addModal) addModal.classList.remove('open');
 </div>
 </div>
 
-<div id="timePopup" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 hidden" onclick="closeTimePopup(event)">
-  <div class="bg-white rounded-2xl p-8 shadow-xl w-96 max-w-[90vw]" onclick="event.stopPropagation()">
-    <h3 class="text-xl font-medium mb-5 text-gray-800">Set Timer</h3>
-    <div class="flex items-center gap-3 mb-6">
-      <input type="number" id="timeInput" value="50" min="1" max="999" class="w-full border border-gray-200 rounded-lg px-5 py-3 text-2xl text-center focus:outline-none focus:ring-2 focus:ring-blue-400">
-      <span class="text-gray-500 font-medium text-lg">min</span>
-    </div>
-    <button onclick="setTimer()" class="w-full bg-blue-600 text-white rounded-lg py-3 text-lg font-medium hover:bg-opacity-90 transition-colors">Confirm</button>
-  </div>
+<div id="page-goals" class="hidden flex-1 flex flex-col overflow-hidden">
+<header class="flex-none px-6 py-4 flex justify-between items-center border-b border-gray-100 bg-white shadow-sm">
+<div class="flex items-center gap-3">
+<h1 class="text-xl font-bold text-gray-800">Goals</h1>
+<svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+</svg>
+</div>
+<button id="add-goal-btn" onclick="openAddGoalModal()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl shadow-lg shadow-blue-600/30 font-medium transition-all transform hover:-translate-y-1 text-sm">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+</svg>
+<span>Add New Goal</span>
+</button>
+</header>
+<main class="flex-1 overflow-auto p-6 bg-gray-50">
+<div id="goals-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- goal cards will be rendered here by JS -->
+</div>
+</main>
 </div>
 
-<div id="endPopup" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 hidden" onclick="closeEndPopup(event)">
-  <div class="bg-white rounded-2xl p-8 shadow-xl w-96 max-w-[90vw]" onclick="event.stopPropagation()">
-    <h3 class="text-xl font-medium mb-5 text-gray-800">End Session</h3>
-    <p class="text-gray-600 text-sm mb-6">Your pomodoro will be stopped and the elapsed time will be saved.</p>
-    <div class="flex justify-end gap-3">
-      <button onclick="cancelEnd()" class="px-6 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium">Cancel</button>
-      <button onclick="confirmEnd()" class="px-6 py-2.5 bg-red-500 text-white rounded-xl text-sm font-medium hover:bg-red-600 transition-colors">End And Save</button>
-    </div>
-  </div>
+<div id="page-tasks" class="hidden flex-1 flex flex-col overflow-hidden">
+<header class="flex-none px-6 py-4 flex items-center border-b border-gray-100 bg-white shadow-sm gap-3">
+<h1 class="text-xl font-bold text-gray-800">Tasks</h1>
+<button onclick="openGoalsTaskPopup()" class="ml-auto w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Goals & Tasks">
+<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+</button>
+</header>
+<main class="flex-1 overflow-auto p-6 bg-gray-50">
+<div id="tasks-list"></div>
+</main>
+<button id="add-task-fab" onclick="openAddTaskPopup()" class="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-blue-600 text-white shadow-xl shadow-blue-600/40 flex items-center justify-center hover:bg-blue-700 transition-all transform hover:-translate-y-1 z-30">
+<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+</svg>
+</button>
+</div>
+
+<div id="add-task-popup" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50" style="display:none" onclick="closeAddTaskPopup(event)">
+<div class="bg-white rounded-2xl p-8 shadow-xl w-[500px] max-w-[90vw]" onclick="event.stopPropagation()" style="animation: modalIn 0.2s ease-out;position:relative">
+<button class="close-btn" onclick="closeAddTaskPopup()" style="position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#9ca3af;cursor:pointer;transition:all 0.15s;border:none;background:none">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+</button>
+<h2 class="text-lg font-bold text-gray-800 mb-5">Add New Task</h2>
+<input type="text" id="task-name-input" placeholder="e.g. Read 20 pages" class="w-full border-2 border-gray-200 rounded-xl px-5 py-4 text-base text-gray-700 focus:border-blue-400 focus:ring-0 outline-none mb-5" onkeydown="if(event.key==='Enter')saveTask()">
+<label class="text-sm font-medium text-gray-600 mb-2 block">Related Goal</label>
+<div id="task-goal-tags"></div>
+<button onclick="saveTask()" class="w-full py-3.5 rounded-xl text-white text-base font-medium transition-all hover:opacity-90" style="background:#3B82F6">Add Task</button>
+</div>
+</div>
+
+<div id="goals-task-popup" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50" style="display:none" onclick="closeGoalsTaskPopup(event)">
+<div class="bg-white rounded-2xl p-6 shadow-xl w-[420px] max-w-[90vw] max-h-[80vh] flex flex-col" onclick="event.stopPropagation()" style="animation: modalIn 0.2s ease-out;position:relative">
+<button class="close-btn" onclick="closeGoalsTaskPopup()" style="position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#9ca3af;cursor:pointer;transition:all 0.15s;border:none;background:none">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+</button>
+<h2 class="text-lg font-bold text-gray-800 mb-4">Goals &amp; Tasks</h2>
+<div id="goals-task-tree" class="flex-1 overflow-y-auto" style="scrollbar-width:thin"></div>
+</div>
 </div>
 
 <div id="sessionPopup" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 hidden" onclick="closeSessionPopup(event)">
@@ -450,7 +346,13 @@ if (e.target === addModal) addModal.classList.remove('open');
     <h3 class="text-xl font-medium mb-5 text-gray-800">Edit Session</h3>
     <div class="mb-4">
       <label class="text-sm text-gray-500 mb-1 block">Task Name</label>
-      <input type="text" id="sessionTaskInput" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="e.g. Coding">
+      <div class="flex gap-2">
+        <input type="text" id="sessionTaskInput" class="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="e.g. Coding">
+        <button onclick="toggleSessionTaskDropdown(event)" class="px-3 py-2.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors whitespace-nowrap">Tasks</button>
+      </div>
+      <div id="sessionTaskDropdown" class="hidden mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-10" style="position:relative">
+        <div id="sessionTaskList" class="max-h-40 overflow-y-auto p-2"></div>
+      </div>
     </div>
     <div class="mb-6">
       <div class="flex items-center justify-between mb-2">
@@ -498,7 +400,13 @@ if (e.target === addModal) addModal.classList.remove('open');
     <h3 class="text-xl font-medium mb-5 text-gray-800">Add Session</h3>
     <div class="mb-3">
       <label class="text-sm text-gray-500 mb-1 block">Task Name</label>
-      <input type="text" id="addSessionTaskInput" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="e.g. Coding">
+      <div class="flex gap-2">
+        <input type="text" id="addSessionTaskInput" class="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="e.g. Coding">
+        <button onclick="toggleAddSessionTaskDropdown(event)" class="px-3 py-2.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors whitespace-nowrap">Tasks</button>
+      </div>
+      <div id="addSessionTaskDropdown" class="hidden mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-10" style="position:relative">
+        <div id="addSessionTaskList" class="max-h-40 overflow-y-auto p-2"></div>
+      </div>
     </div>
     <div class="mb-3">
       <label class="text-sm text-gray-500 mb-1 block">Duration (minutes)</label>
@@ -524,7 +432,84 @@ if (e.target === addModal) addModal.classList.remove('open');
       <button onclick="closeAddSessionPopup()" class="px-6 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium">Cancel</button>
       <button onclick="saveAddSession()" class="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-opacity-90 transition-colors">Add</button>
     </div>
+    </div>
   </div>
+</div>
+
+<div id="add-goal-modal">
+<div class="modal-card">
+<button class="close-btn" id="add-goal-modal-close" onclick="closeAddGoalModal()">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+</svg>
+</button>
+<h2 class="text-lg font-bold text-gray-800 mb-5">Add New Goal</h2>
+<form id="add-goal-form" onsubmit="return false">
+<label class="block text-sm font-medium text-gray-600 mb-1.5">Goal Name</label>
+<input id="goal-name-input" type="text" placeholder="e.g. Learn Guitar" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none mb-4">
+
+<label class="block text-sm font-medium text-gray-600 mb-1.5">Description</label>
+<textarea id="goal-desc-input" placeholder="What's this goal about?" rows="2" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none mb-4"></textarea>
+
+<label class="block text-sm font-medium text-gray-600 mb-1.5">Color</label>
+<div class="flex gap-2.5 flex-wrap mb-4" id="goal-color-picker"></div>
+
+<div class="grid grid-cols-2 gap-4 mb-4">
+<div>
+<label class="block text-sm font-medium text-gray-600 mb-1.5">Duration</label>
+<select id="goal-duration-type" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none mb-2">
+<option value="days">Days</option>
+<option value="weeks">Weeks</option>
+<option value="months" selected>Months</option>
+</select>
+<input id="goal-duration-value" type="number" value="3" min="1" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none">
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-600 mb-1.5">Start Date</label>
+<input id="goal-start-date" type="date" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none mb-2">
+<label class="block text-sm font-medium text-gray-600 mb-1.5">End Date</label>
+<input id="goal-end-date" type="date" readonly class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-500 bg-gray-50 focus:border-blue-400 focus:ring-0 transition-all outline-none">
+</div>
+</div>
+
+<div class="mb-4">
+<label class="block text-sm font-medium text-gray-600 mb-1.5">Parent Goal (optional)</label>
+<select id="goal-parent-select" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none">
+<option value="">None</option>
+</select>
+</div>
+<div class="flex gap-3 mt-6">
+<button type="button" id="save-goal-btn" onclick="saveGoal()" class="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-all hover:opacity-90" style="background:#3B82F6">Save Goal</button>
+<button type="button" id="cancel-goal-btn" onclick="closeAddGoalModal()" class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:#fff">Cancel</button>
+</div>
+</form>
+</div>
+</div>
+
+<div id="goal-detail-modal">
+<div class="modal-card" id="goal-detail-card">
+<button class="close-btn" onclick="closeGoalDetailModal()">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+</svg>
+</button>
+<div id="goal-detail-content"></div>
+</div>
+</div>
+
+<div id="delete-confirm-modal" onclick="closeDeleteConfirmModal()">
+<div class="modal-card" onclick="event.stopPropagation()">
+<div class="confirm-icon">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+</svg>
+</div>
+<div class="confirm-title">Delete Goal</div>
+<div class="confirm-msg" id="delete-confirm-msg">Are you sure you want to delete this goal?</div>
+<div class="confirm-actions">
+<button class="btn-confirm-cancel" onclick="closeDeleteConfirmModal()">Cancel</button>
+<button class="btn-confirm-delete" id="btn-confirm-delete-yes">Delete</button>
+</div>
 </div>
 </div>
 
@@ -571,94 +556,14 @@ if (e.target === addModal) addModal.classList.remove('open');
 
 <script src="js/storage.js"></script>
 <script src="js/stats.js"></script>
+<script src="js/shader.js"></script>
 <script src="js/timer.js"></script>
 <script src="js/sessions.js"></script>
 <script src="js/theme.js"></script>
-<script>
-function showPage(name) {
-  var pages = ['home', 'pomodoro', 'habits', 'settings'];
-  pages.forEach(function(p) {
-    var el = document.getElementById('page-' + p);
-    if (el) {
-      if (p === name) el.classList.remove('hidden'); else el.classList.add('hidden');
-    }
-  });
-  var buttons = document.querySelectorAll('#navSidebar button[data-page]');
-  buttons.forEach(function(btn) {
-    btn.classList.remove('text-white', 'relative');
-    btn.classList.add('text-white/70', 'hover:text-white');
-    var indicator = btn.querySelector('.sidebar-active');
-    if (indicator) indicator.remove();
-  });
-  var active = document.querySelector('#navSidebar button[data-page="' + name + '"]');
-  if (active) {
-    active.classList.remove('text-white/70', 'hover:text-white');
-    active.classList.add('text-white', 'relative');
-    var div = document.createElement('div');
-    div.className = 'sidebar-active absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r';
-    active.appendChild(div);
-  }
-}
-
-document.addEventListener('keydown', function(e) {
-  if (e.ctrlKey && (e.key === '=' || e.key === '+')) { e.preventDefault(); window.electronAPI.zoomIn(); }
-  if (e.ctrlKey && e.key === '-') { e.preventDefault(); window.electronAPI.zoomOut(); }
-  if (e.ctrlKey && e.key === '0') { e.preventDefault(); window.electronAPI.zoomReset(); }
-});
-
-function updateClock() {
-  var now = new Date();
-  var clk = document.getElementById('clockDisplay');
-  if(clk) clk.textContent = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-  var dateEl = document.getElementById('dateDisplay');
-  if(dateEl) {
-    var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    dateEl.textContent = days[now.getDay()] + ', ' + months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
-  }
-}
-updateClock();
-setInterval(updateClock, 1000);
-
-/* ── Update system ── */
-var APP_VERSION = '1.0.0'; /* keep in sync with package.json */
-var updateData = null;
-
-window.electronAPI.onUpdateAvailable(function(data) {
-  updateData = data;
-  document.getElementById('updateVersion').textContent = data.version;
-  document.getElementById('updateReleaseNotes').textContent = data.releaseNotes || '';
-  document.getElementById('updateModal').style.display = 'flex';
-});
-
-window.downloadUpdate = function() {
-  if (updateData && updateData.downloadUrl) {
-    window.electronAPI.openUrl(updateData.downloadUrl);
-  }
-  document.getElementById('updateModal').style.display = 'none';
-};
-
-window.closeUpdateModal = function(e) {
-  if (!e || e.target === e.currentTarget) {
-    document.getElementById('updateModal').style.display = 'none';
-  }
-};
-
-/* Sidebar hover expand/collapse */
-var sidebarContainer = document.getElementById('sidebar-container');
-if (sidebarContainer) {
-  sidebarContainer.addEventListener('mouseenter', function() {
-    this.classList.remove('sidebar-collapsed');
-    this.classList.add('sidebar-expanded');
-  });
-  sidebarContainer.addEventListener('mouseleave', function() {
-    this.classList.remove('sidebar-expanded');
-    this.classList.add('sidebar-collapsed');
-  });
-}
-
-showPage('pomodoro');
-</script>
-
+<script src="js/utils/helpers.js"></script>
+<script src="js/components/settings/settings.js"></script>
+<script src="js/components/goals/goals.js"></script>
+<script src="js/components/tasks/tasks.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>

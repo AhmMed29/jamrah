@@ -125,6 +125,10 @@ ipcMain.on('db:get-tags', (e) => {
   e.returnValue = database.getTags()
 })
 
+ipcMain.on('db:get-tags-with-goals', (e) => {
+  e.returnValue = database.getTagsWithGoals()
+})
+
 ipcMain.handle('db:save-tag', async (e, tag) => {
   return database.saveTag(tag)
 })
@@ -141,8 +145,8 @@ ipcMain.handle('db:save-session', async (e, session) => {
   return database.saveSession(session)
 })
 
-ipcMain.handle('db:update-session', async (e, id, taskName, tagId, note) => {
-  return database.updateSession(id, taskName, tagId, note)
+ipcMain.handle('db:update-session', async (e, id, taskName, tagId, note, goalId) => {
+  return database.updateSession(id, taskName, tagId, note, goalId)
 })
 
 ipcMain.on('db:get-today-stats', (e) => {
@@ -173,3 +177,62 @@ ipcMain.handle('db:set-path', async (e, newPath) => {
   }
   return result
 })
+
+// ---- Goals IPC ----
+ipcMain.handle('db:get-goals', async () => {
+  return database.getGoals();
+});
+
+ipcMain.handle('db:create-goal', async (e, goal) => {
+  // Auto-create a tag with the goal's name and color
+  var tags = database.getTags();
+  var existingTag = null;
+  for (var i = 0; i < tags.length; i++) {
+    if (tags[i].name === goal.name) { existingTag = tags[i]; break; }
+  }
+  if (!existingTag) {
+    var tagId = 'tag_' + Date.now();
+    database.saveTag({ id: tagId, name: goal.name, color: goal.color, createdAt: Date.now() });
+    goal.tagId = tagId;
+  } else {
+    goal.tagId = existingTag.id;
+  }
+  return database.createGoal(goal);
+});
+
+ipcMain.handle('db:update-goal', async (e, id, goal) => {
+  return database.updateGoal(id, goal);
+});
+
+ipcMain.handle('db:delete-goal', async (e, id) => {
+  return database.deleteGoal(id);
+});
+
+ipcMain.handle('db:get-goal-progress', async (e, goalId) => {
+  return database.getGoalProgress(goalId);
+});
+
+ipcMain.handle('db:get-sessions-by-tag', async (e, tagId) => {
+  return database.getSessionsByTagId(tagId);
+});
+
+ipcMain.handle('db:get-sessions-by-goal', async (e, goalId) => {
+  return database.getSessionsByGoal(goalId);
+});
+
+// ---- Tasks IPC ----
+ipcMain.handle('db:get-tasks', async (e, goalId) => {
+  return database.getTasks(goalId);
+});
+
+ipcMain.handle('db:create-task', async (e, task) => {
+  return database.createTask(task);
+});
+
+ipcMain.handle('db:toggle-task', async (e, id) => {
+  return database.toggleTask(id);
+});
+
+ipcMain.handle('db:delete-task', async (e, id) => {
+  return database.deleteTask(id);
+});

@@ -1,0 +1,161 @@
+/* ── General styles from inline <style> ── */
+.sticky-col { position: sticky; right: 0; z-index: 10; }
+.sticky-header { position: sticky; top: 0; background-color: #fdfdfd; z-index: 20; }
+.sticky-corner { position: sticky; top: 0; right: 0; background-color: #fdfdfd; z-index: 30; }
+#main-scroll { overflow: auto; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: transparent transparent; }
+#main-scroll:hover { scrollbar-color: rgba(203, 213, 225, 0.6) transparent; }
+#main-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+#main-scroll::-webkit-scrollbar-track { background: transparent; }
+#main-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+#main-scroll:hover::-webkit-scrollbar-thumb { background: rgba(203, 213, 225, 0.6); }
+.sticky-col { transition: background-color 0.15s ease; }
+.sticky-header:hover { background-color: #eef2ff !important; cursor: pointer; transition: background-color 0.15s ease; }
+#habit-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; }
+#habit-modal.open { display: flex; }
+#habit-modal .modal-card { background: #fff; border-radius: 20px; padding: 32px; width: 420px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); position: relative; animation: modalIn 0.2s ease-out; }
+@keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+#habit-modal .close-btn { position: absolute; top: 12px; left: 12px; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #9ca3af; cursor: pointer; transition: all 0.15s; border: none; background: none; }
+#habit-modal .close-btn:hover { background: #f3f4f6; color: #374151; }
+#add-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; }
+#add-modal.open { display: flex; }
+#add-modal .modal-card { background: #fff; border-radius: 20px; padding: 32px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); position: relative; animation: modalIn 0.2s ease-out; }
+#add-modal .close-btn { position: absolute; top: 12px; left: 12px; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #9ca3af; cursor: pointer; transition: all 0.15s; border: none; background: none; }
+#add-modal .close-btn:hover { background: #f3f4f6; color: #374151; }
+.hvo:hover, .hvo:hover .sticky-col { background-color: #f5f3ff !important; }
+.hbl:hover, .hbl:hover .sticky-col { background-color: #eff6ff !important; }
+.hcy:hover, .hcy:hover .sticky-col { background-color: #ecfeff !important; }
+.hro:hover, .hro:hover .sticky-col { background-color: #fff1f2 !important; }
+.hin:hover, .hin:hover .sticky-col { background-color: #eef2ff !important; }
+.hpi:hover, .hpi:hover .sticky-col { background-color: #fdf2f8 !important; }
+.hor:hover, .hor:hover .sticky-col { background-color: #fff7ed !important; }
+.hpu:hover, .hpu:hover .sticky-col { background-color: #faf5ff !important; }
+
+/* ── Sidebar ── */
+#sidebar-container { transition: width 0.3s ease; overflow: hidden; display: flex; flex-direction: column; background: #3B82F6; flex-shrink: 0; }
+#sidebar-container.sidebar-collapsed { width: 60px; }
+#sidebar-container.sidebar-expanded { width: 220px; }
+#sidebar-container .nav-label { overflow: hidden; max-width: 0; white-space: nowrap; font-size: 14px; font-weight: 500; opacity: 0; transition: max-width 0.3s ease, opacity 0.2s ease 0.1s; }
+#sidebar-container.sidebar-expanded .nav-label { max-width: 200px; opacity: 1; }
+#sidebar-container .nav-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 24px; height: 24px; }
+#sidebar-container button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 16px; justify-content: flex-start; }
+
+/* ── Goal card styles ── */
+.goal-card { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04); transition: box-shadow 0.2s ease, transform 0.2s ease; position: relative; border-left: 4px solid #3B82F6; cursor: pointer; }
+.goal-card:hover { box-shadow: 0 10px 25px rgba(0,0,0,0.1); transform: translateY(-2px); }
+.goal-card .goal-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.goal-card .goal-name { font-size: 16px; font-weight: 600; color: #1F2937; margin: 0; }
+.goal-card .goal-actions { display: flex; gap: 8px; opacity: 0; transition: opacity 0.2s ease; }
+.goal-card:hover .goal-actions { opacity: 1; }
+.goal-card .goal-actions button { background: none; border: none; cursor: pointer; padding: 4px; border-radius: 6px; color: #9CA3AF; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+.goal-card .goal-actions button:hover { background: #F3F4F6; color: #374151; }
+.goal-has-children { cursor: pointer; }
+.goal-expand-btn { position: absolute; top: 12px; left: 12px; width: 28px; height: 28px; border-radius: 8px; border: none; background: rgba(255,255,255,0.8); cursor: pointer; display: flex; align-items: center; justify-content: center; color: #9CA3AF; transition: all 0.15s; z-index: 2; }
+.goal-card .goal-progress-wrap { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.goal-card .goal-progress-circle { flex-shrink: 0; }
+.goal-card .goal-progress-circle svg { width: 64px; height: 64px; }
+.goal-card .goal-progress-circle .progress-bg { fill: none; stroke: #F3F4F6; stroke-width: 4; }
+.goal-card .goal-progress-circle .progress-fill { fill: none; stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+.goal-card .goal-progress-text { font-size: 14px; color: #6B7280; line-height: 1.5; }
+.goal-card .goal-progress-text .percentage { font-size: 24px; font-weight: 700; display: block; color: #1F2937; }
+.goal-card .goal-dates { display: flex; justify-content: space-between; font-size: 12px; color: #9CA3AF; padding-top: 12px; border-top: 1px solid #F3F4F6; }
+
+/* ── Add Goal Modal ── */
+#add-goal-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; }
+#add-goal-modal.open { display: flex; }
+#add-goal-modal .modal-card { background: #fff; border-radius: 20px; padding: 32px; width: 480px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); position: relative; animation: modalIn 0.2s ease-out; }
+#add-goal-modal .close-btn { position: absolute; top: 12px; left: 12px; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #9ca3af; cursor: pointer; transition: all 0.15s; border: none; background: none; }
+#add-goal-modal .close-btn:hover { background: #f3f4f6; color: #374151; }
+
+/* ── Goal Detail Modal ── */
+#goal-detail-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; }
+#goal-detail-modal.open { display: flex; }
+#goal-detail-modal .modal-card { background: #fff; border-radius: 20px; padding: 32px; width: 500px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); position: relative; animation: modalIn 0.2s ease-out; border-top: 4px solid #3B82F6; }
+#goal-detail-modal .close-btn { position: absolute; top: 12px; left: 12px; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #9ca3af; cursor: pointer; transition: all 0.15s; border: none; background: none; }
+#goal-detail-modal .close-btn:hover { background: #f3f4f6; color: #374151; }
+#goal-detail-modal .goal-detail-name { font-size: 22px; font-weight: 700; color: #1F2937; margin-bottom: 12px; padding-right: 32px; }
+#goal-detail-modal .goal-detail-desc { font-size: 14px; color: #6B7280; line-height: 1.6; margin-bottom: 20px; padding: 16px; background: #F9FAFB; border-radius: 12px; }
+#goal-detail-modal .goal-detail-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+#goal-detail-modal .goal-detail-stat { background: #F9FAFB; border-radius: 12px; padding: 12px 16px; }
+#goal-detail-modal .goal-detail-stat .label { font-size: 12px; color: #9CA3AF; margin-bottom: 4px; display: block; }
+#goal-detail-modal .goal-detail-stat .value { font-size: 16px; font-weight: 600; color: #1F2937; }
+#goal-detail-modal .goal-detail-progress { text-align: center; margin-bottom: 24px; }
+#goal-detail-modal .goal-detail-progress svg { width: 80px; height: 80px; }
+#goal-detail-modal .goal-detail-actions { display: flex; gap: 12px; }
+#goal-detail-modal .goal-detail-actions button { flex: 1; padding: 10px; border-radius: 12px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: none; }
+#goal-detail-modal .btn-edit-goal { background: #3B82F6; color: #fff; }
+#goal-detail-modal .btn-edit-goal:hover { opacity: 0.9; }
+#goal-detail-modal .btn-delete-goal { background: #FEF2F2; color: #EF4444; border: 1px solid #FEE2E2; }
+#goal-detail-modal .btn-delete-goal:hover { background: #FEE2E2; }
+
+/* ── Child goals inside detail popup ── */
+.detail-children { margin-top: 20px; padding-top: 20px; border-top: 1px solid #F3F4F6; max-height: 260px; overflow-y: auto; }
+.detail-children-title { font-size: 13px; font-weight: 600; color: #6B7280; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.detail-children-list { display: flex; flex-direction: column; gap: 8px; }
+.detail-child-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #F9FAFB; border-radius: 12px; cursor: pointer; transition: all 0.15s; }
+.detail-child-item:hover { background: #F3F4F6; transform: translateX(4px); }
+.detail-child-name { font-size: 14px; font-weight: 500; color: #374151; }
+.detail-child-progress { font-size: 14px; font-weight: 700; }
+
+/* ── Pomodoros section in detail popup ── */
+.detail-pomodoros { margin-top: 20px; padding-top: 20px; border-top: 1px solid #F3F4F6; }
+.detail-pomodoros-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.detail-pomodoros-title { font-size: 13px; font-weight: 600; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; }
+.detail-pomodoros-total { font-size: 13px; font-weight: 600; color: #3B82F6; }
+.detail-pomodoros-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+.detail-pomo-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #F9FAFB; border-radius: 10px; }
+.detail-pomo-name { font-size: 14px; font-weight: 500; color: #374151; }
+.detail-pomo-duration { font-size: 13px; font-weight: 600; color: #6B7280; }
+
+/* ── Delete Confirmation Modal ── */
+#delete-confirm-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; }
+#delete-confirm-modal.open { display: flex; }
+#delete-confirm-modal .modal-card { background: #fff; border-radius: 20px; padding: 28px; width: 340px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); text-align: center; position: relative; animation: modalIn 0.2s ease-out; }
+#delete-confirm-modal .confirm-icon { width: 48px; height: 48px; border-radius: 50%; background: #FEF2F2; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: #EF4444; }
+#delete-confirm-modal .confirm-title { font-size: 17px; font-weight: 600; color: #1F2937; margin-bottom: 8px; }
+#delete-confirm-modal .confirm-msg { font-size: 13px; color: #6B7280; line-height: 1.5; margin-bottom: 24px; }
+#delete-confirm-modal .confirm-actions { display: flex; gap: 10px; }
+#delete-confirm-modal .confirm-actions button { flex: 1; padding: 10px; border-radius: 12px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: none; }
+#delete-confirm-modal .btn-confirm-cancel { background: #F3F4F6; color: #4B5563; }
+#delete-confirm-modal .btn-confirm-cancel:hover { background: #E5E7EB; }
+#delete-confirm-modal .btn-confirm-delete { background: #EF4444; color: #fff; }
+#delete-confirm-modal .btn-confirm-delete:hover { background: #DC2626; }
+
+/* ── Tasks Page ── */
+#add-task-popup input::placeholder { font-size: 13px; color: #9CA3AF; }
+#task-goal-tags { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 82px; overflow-y: auto; margin-bottom: 20px; scrollbar-width: thin; }
+#task-goal-tags .goal-tag { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: 2px solid transparent; text-align: center; }
+#task-goal-tags .goal-tag.selected { border-color: #3B82F6; box-shadow: 0 0 0 1px #3B82F6; }
+.task-item { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: #fff; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 10px; transition: all 0.15s; }
+.task-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.task-item .task-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #D1D5DB; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+.task-item .task-check:hover { border-color: #3B82F6; }
+.task-item .task-check.done { background: #3B82F6; border-color: #3B82F6; }
+.task-item .task-check.done svg { display: block; }
+.task-item .task-check svg { display: none; width: 12px; height: 12px; color: #fff; }
+.task-item .task-name { flex: 1; font-size: 14px; color: #374151; }
+.task-item .task-name.done { text-decoration: line-through; color: #9CA3AF; }
+.task-item .task-goal-badge { font-size: 11px; color: #6B7280; background: #F3F4F6; padding: 3px 10px; border-radius: 10px; white-space: nowrap; }
+.task-item .task-delete { width: 28px; height: 28px; border-radius: 8px; border: none; background: none; cursor: pointer; color: #D1D5DB; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+.task-item .task-delete:hover { background: #FEF2F2; color: #EF4444; }
+
+/* ── Goals Hierarchy Popup (3.8) ── */
+#goals-task-tree { scrollbar-width: thin; }
+.gt-node { user-select: none; }
+.gt-row { display: flex; align-items: center; gap: 8px; padding: 8px 8px; border-radius: 10px; cursor: pointer; transition: background 0.12s; }
+.gt-row:hover { background: #F3F4F6; }
+.gt-chevron { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #9CA3AF; transition: transform 0.2s; }
+.gt-chevron-empty { visibility: hidden; }
+.gt-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.gt-name { flex: 1; font-size: 14px; font-weight: 500; color: #374151; }
+.gt-progress { font-size: 12px; font-weight: 600; flex-shrink: 0; }
+.gt-task { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; transition: background 0.12s; }
+.gt-task:hover { background: #EFF6FF; }
+.gt-task:hover .gt-task-add { opacity: 1; }
+.gt-task-dot { width: 6px; height: 6px; border-radius: 50%; background: #D1D5DB; flex-shrink: 0; }
+.gt-task-name { flex: 1; font-size: 13px; color: #6B7280; }
+.gt-task-add { font-size: 16px; font-weight: 700; color: #3B82F6; opacity: 0; transition: opacity 0.12s; }
+
+/* ── Timer circle, shader, and pomodoro page ── */
+.timer-circle-wrapper { position: relative; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.3s ease; }
+.timer-circle-wrapper:hover { transform: scale(1.03); }
+#pomoShaderCanvas { border-radius: 50%; }

@@ -2,3 +2,18 @@ node_modules/
 .worktrees/
 dist/
 build-out/
+
+# Generated / personal
+jamrah-icon.png
+src/css/ahmeds-styles.css
+check-db.js
+
+# Design prototypes
+Pomo modern design/
+
+# Internal planning
+Planning/
+docs/
+
+# Binary fonts (loaded from Google Fonts CDN)
+Fonts/

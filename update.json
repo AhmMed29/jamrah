@@ -1,5 +1,5 @@
 {
   "version": "1.1.2",
   "downloadUrl": "https://github.com/AhmMed29/My-Productivity-App/releases/latest",
-  "releaseNotes": "v1.2.0 — Preset Timer Controls\n\n## ✨ New Features\n- Added preset time buttons (25m, 50m, Custom) below the timer for quick duration switching\n- Added +/- buttons to adjust remaining time by 5 minutes during a session\n- Added dedicated End button to end the current session early"
+  "releaseNotes": "v1.1.2 — Preset Timer Controls\n\n## ✨ New Features\n- Added preset time buttons (25m, 50m, Custom) below the timer for quick duration switching\n- Added +/- buttons to adjust remaining time by 5 minutes during a session\n- Added dedicated End button to end the current session early"
 }

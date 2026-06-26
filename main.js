@@ -48,14 +48,26 @@ function versionGt(a, b) {
 
 function checkForUpdates() {
   var url = 'https://raw.githubusercontent.com/AhmMed29/My-Productivity-App/main/update.json'
-  fetch(url)
-    .then(function(r) { return r.json() })
-    .then(function(data) {
-      if (win && versionGt(data.version, app.getVersion())) {
-        win.webContents.send('update-available', data)
+  var http = url.startsWith('https') ? require('https') : require('http')
+  http.get(url, { timeout: 10000 }, function(res) {
+    var body = ''
+    res.on('data', function(c) { body += c })
+    res.on('end', function() {
+      try {
+        var data = JSON.parse(body)
+        if (win && versionGt(data.version, app.getVersion())) {
+          win.webContents.send('update-available', data)
+        }
+      } catch (e) {
+        console.error('[Update] parse error:', e)
       }
     })
-    .catch(function() {})
+  }).on('error', function(e) {
+    console.error('[Update] network error:', e.message)
+  }).on('timeout', function() {
+    console.error('[Update] timeout')
+    this.destroy()
+  })
 }
 
 app.whenReady().then(() => {

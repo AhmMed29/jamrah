@@ -66,7 +66,7 @@ setInterval(updateClock, 1000);
 })();
 
 /* ── Update system ── */
-var APP_VERSION = '1.1.0';
+var APP_VERSION = '1.1.1';
 var updateData = null;
 
 window.electronAPI.onUpdateAvailable(function(data) {

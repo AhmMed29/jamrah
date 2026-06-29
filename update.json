@@ -1,5 +1,5 @@
 {
   "version": "1.3.0",
-  "downloadUrl": "https://github.com/AhmMed29/jamrah/releases/download/v1.3.0/Jamrah-Setup-1.3.0.exe",
+  "downloadUrl": "https://github.com/AhmMed29/jamrah/releases/download/v1.3.0/Jamrah.Setup.1.3.0.exe",
   "releaseNotes": "v1.3.0 — Jamrah جَــمْــرَه\n\n## ✨ New\n- First-run welcome popup with app story, support links & contributor info\n- Tabbed settings modal (General / Pomodoro / Storage)\n- \"Search for Updates\" button in Settings for manual update checks\n- Update file size shown in update modal\n\n## 🌐 Language\n- Settings modal translated to English\n\n## 🎨 Design\n- Minimal pomodoro theme (removed progress ring)\n- Settings sidebar tabs now visible\n- White theme with clean borders"
 }

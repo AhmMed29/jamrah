@@ -128,3 +128,17 @@ Uses **electron-updater** with GitHub Releases as the provider. Configuration:
 - **Tailwind CSS** (CDN) — utility-first styling
 - **GLSL** — real-time WebGL shader backgrounds
 - **Font Awesome** / **Material Symbols** — icons
+
+---
+
+## ⚖️ License
+
+**PolyForm Noncommercial License 1.0.0**
+
+This software is free for **personal, noncommercial use** only. You may use, modify, and share it for research, education, hobby projects, and other noncommercial purposes.
+
+**Commercial use is not permitted** without explicit permission from the author.
+
+See the [LICENSE](LICENSE) file for the full terms.
+
+> Required Notice: Copyright AhmMed29 (https://github.com/AhmMed29)

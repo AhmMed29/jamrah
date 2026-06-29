@@ -4,7 +4,7 @@
   "description": "Jamrah جَــمْــرَه — ember of productivity. Pomodoro timer, habits tracker & more",
   "main": "main.js",
   "author": "AhmMed29",
-  "license": "GPL-3.0-only",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "scripts": {
     "postinstall": "npx @electron/rebuild",
     "start": "electron .",

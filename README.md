@@ -10,17 +10,23 @@ An all-in-one **Electron** desktop app: Pomodoro timer with live GLSL shader bac
  
 ---
 
-```table-of-contents
-title: 
-style: nestedList # TOC style (nestedList|nestedOrderedList|inlineFirstLevel)
-minLevel: 0 # Include headings from the specified level
-maxLevel: 0 # Include headings up to the specified level
-include: 
-exclude: 
-includeLinks: true # Make headings clickable
-hideWhenEmpty: false # Hide TOC if no headings are found
-debugInConsole: false # Print debug info in Obsidian console
-```
+## Table of Contents
+- [🧱 Project Structure](#-project-structure)
+- [✨ Features](#-features)
+  - [Simple Pomodoro 🍅](#simple-pomodoro-)
+  - [Add Tasks ✔](#add-tasks-)
+  - [Set a Goal 🎯](#set-a-goal-)
+  - [🤸‍♀️ Habit Tracker](#️-habit-tracker)
+  - [⚙ Customized Setting](#-customized-setting)
+- [🚀 For Developers](#-for-developers)
+  - [Getting Started](#getting-started)
+- [🗄️ Data](#️-data)
+- [🔧 Build for Windows](#-build-for-windows)
+- [Linux & Mobile](#linux--mobile)
+- [🔄 Sync](#-sync)
+- [Updates](#updates)
+- [⚖️ License](#️-license)
+
 ## 🧱 Project Structure
 
 ```
@@ -56,14 +62,14 @@ src/
 # ✨Features
 ## Simple Pomodoro 🍅
 
-![[Jamrah_AEBVDLM4uS.png]]
+![Pomodoro Timer](src/assets/screenshots/Jamrah_AEBVDLM4uS.png)
 ## Add Tasks ✔
 
-![[Pasted image 20260629230335.png]]
+![Tasks](src/assets/screenshots/Pasted-image-20260629230335.png)
 # Set a Goal 🎯
 👉 Goals might be weekly, monthly or quartarly or yearly or customize it 🛠!
 
-![[Pasted image 20260629230343.png]]
+![Goals](src/assets/screenshots/Pasted-image-20260629230343.png)
 
 ### Alert ❕ 
 
@@ -74,7 +80,7 @@ The Goals Tab doesn't working well at all ! it needs alot of improvements ! so i
 - SubGoals
 - more by the time ....
 
-![[Pasted image 20260629230352.png]]
+![Goals Detail](src/assets/screenshots/Pasted-image-20260629230352.png)
 ## 🤸‍♀️ Habit Tracker 
 
 Track Your habit as if it were in a paper ! 
@@ -85,7 +91,7 @@ Track Your habit as if it were in a paper !
 - the statistics of the habit during your week, month and the whole year !
 - make the (everyday habit) add to tasks automaticaly and if the habit related to one by one day it will appear in this day automaticaly to make it more linkable !
 - Support English 
-![[Pasted image 20260629230358.png]]
+![Habit Tracker](src/assets/screenshots/Pasted-image-20260629230358.png)
 ## ⚙ Customized Setting Based On Your Preferences 
 
 ⭐ The Main Idea of this app was to make the user choose his preferences in each component in the app ... hide or display any tab or any button or anything by your preferences ! 
@@ -94,7 +100,7 @@ Track Your habit as if it were in a paper !
 
 We Are Working on each button to make the user has full control on anything and everything !
 
-![[Pasted image 20260629230407.png]]
+![Settings](src/assets/screenshots/Pasted-image-20260629230407.png)
 
 ---
 

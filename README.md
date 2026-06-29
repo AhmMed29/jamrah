@@ -7,36 +7,20 @@
 <p align="center"><i>ember of productivity</i></p>
 
 An all-in-one **Electron** desktop app: Pomodoro timer with live GLSL shader backgrounds (5 themes + custom + Minimal), habits tracker, goals & tasks manager — powered by SQLite with an auto-update system.
-
+ 
 ---
 
-## ✨ Features
-
-- **🍅 Pomodoro Timer** — Focus/break/long-break cycles with animated shader backgrounds (Ocean, Forest, Sunset, Lavender, Dark, Custom, or Minimal text-only mode), session timeline, sound cues
-- **📊 Habits Tracker** — Daily habits table with completion %, streaks, and stats popup
-- **🎯 Goals** — Create goals with sub-goals, link pomodoros and tasks, track time-based progress
-- **✅ Tasks** — Todo list per goal; toggle, delete, quick-add from goals hierarchy
-- **🏷️ Tags & Sessions** — Tag every session, filter timeline, edit past sessions
-- **🎨 Shader Themes** — 5 animated GLSL themes + custom color pickers + new **Minimal** (text-only) mode
-- **⚙️ Tabbed Settings** — General / Pomodoro / Storage with timer durations, sound toggle, theme grid, storage path
-- **🔄 Auto-Update** — Checks GitHub Releases on launch; shows size, progress bar, and manual **Search for Updates** button in Settings
-- **🗄️ SQLite Persistence** — All data stored locally with automatic JSON migration
-
----
-
-## 🚀 Getting Started
-
-```bash
-git clone https://github.com/AhmMed29/jamrah.git
-cd jamrah
-npm install
-npm start
+```table-of-contents
+title: 
+style: nestedList # TOC style (nestedList|nestedOrderedList|inlineFirstLevel)
+minLevel: 0 # Include headings from the specified level
+maxLevel: 0 # Include headings up to the specified level
+include: 
+exclude: 
+includeLinks: true # Make headings clickable
+hideWhenEmpty: false # Hide TOC if no headings are found
+debugInConsole: false # Print debug info in Obsidian console
 ```
-
-Requires **Node.js 22+** and **npm**.
-
----
-
 ## 🧱 Project Structure
 
 ```
@@ -69,8 +53,64 @@ src/
 └── package.json
 ```
 
+# ✨Features
+## Simple Pomodoro 🍅
+
+![[Jamrah_AEBVDLM4uS.png]]
+## Add Tasks ✔
+
+![[Pasted image 20260629230335.png]]
+# Set a Goal 🎯
+👉 Goals might be weekly, monthly or quartarly or yearly or customize it 🛠!
+
+![[Pasted image 20260629230343.png]]
+
+### Alert ❕ 
+
+The Goals Tab doesn't working well at all ! it needs alot of improvements ! so its prefered not to use it till it woek correctly ! 
+⚔ The remaining Features :
+- Customize Your Duration well ! not solid like (3-months or 3Weeks) ! set a goal in a specific deuration
+- Complex Analytics ... when adding a task this may be linked to a specific Goal and this make it more productive and give a real analytics !
+- SubGoals
+- more by the time ....
+
+![[Pasted image 20260629230352.png]]
+## 🤸‍♀️ Habit Tracker 
+
+Track Your habit as if it were in a paper ! 
+
+༼ つ ◕_◕ ༽つ it has a clicked sounds to make it more attractive while done your habit !
+
+⚔ the remaining part is also :
+- the statistics of the habit during your week, month and the whole year !
+- make the (everyday habit) add to tasks automaticaly and if the habit related to one by one day it will appear in this day automaticaly to make it more linkable !
+- Support English 
+![[Pasted image 20260629230358.png]]
+## ⚙ Customized Setting Based On Your Preferences 
+
+⭐ The Main Idea of this app was to make the user choose his preferences in each component in the app ... hide or display any tab or any button or anything by your preferences ! 
+
+👎 any other app make it solid and static . . they impose thier favourite buttons, colors and themes !
+
+We Are Working on each button to make the user has full control on anything and everything !
+
+![[Pasted image 20260629230407.png]]
+
 ---
 
+## 🚀 For Developers 
+
+### Getting Started
+
+```bash
+git clone https://github.com/AhmMed29/jamrah.git
+cd jamrah
+npm install
+npm start
+```
+
+Requires **Node.js 22+** and **npm**.
+***
 ## 🗄️ Data
 
 All data stored locally via **SQLite** (better-sqlite3). Default location:
@@ -79,58 +119,33 @@ All data stored locally via **SQLite** (better-sqlite3). Default location:
 Windows: %APPDATA%/Jamrah/data/
 ```
 
-You can change the storage path in Settings → Storage tab.
-
-### Schema (v5)
-
-| Table | Purpose |
-|-------|---------|
-| `settings` | Key-value pairs (theme, durations, paths, welcomeShown) |
-| `sessions` | Pomodoro sessions with tags, tasks, goals |
-| `tags` | Colored labels for sessions |
-| `goals` | Goals with dates, colors, parent-child hierarchy |
-| `goal_progress` | Cached progress snapshots |
-| `tasks` | Todo items linked to goals |
-
----
-
+You can change the storage path in Settings → Storage tab (well be customized more and more soon .. need more improvements).
+***
 ## 🔧 Build for Windows
+
+🙆‍♂️ Unfortunately ! this app currently for windows else ! 
 
 ```bash
 npm run dist
 ```
 
 Output in `dist/` — NSIS installer.
+## Linux & Mobile
+
+👉 Im Calling all Devs To make this app working on linux and mobile ! 
+
+## 🔄 Sync 
+
+When The First Release For Mobile Work !
+it must have a sync functionality ! to start use it with other platforms easily !
+this may take many time to achieve unless any developer work on it !
 
 ---
+## Updates
 
-## 🔄 Update System
-
-Uses **electron-updater** with GitHub Releases as the provider. Configuration:
-
-```json
-"publish": { "provider": "github", "owner": "AhmMed29", "repo": "jamrah" }
-```
-
-- On launch: `autoUpdater.checkForUpdates()` checks for new releases
-- When available: modal shows version, size (KB/MB), release notes, download button
-- Download progress: animated progress bar + percentage
-- Manual check: **Search for Updates** button in Settings → General → Updates
-- **Code signing recommended** to avoid Windows SmartScreen warnings
+tell now the new updates reach to the end user successfuly ! with a full release notes for every new feature and updates !
 
 ---
-
-## 📦 Tech Stack
-
-- **Electron** 42 — desktop shell
-- **better-sqlite3** — local database
-- **electron-updater** — auto-update via GitHub Releases
-- **Tailwind CSS** (CDN) — utility-first styling
-- **GLSL** — real-time WebGL shader backgrounds
-- **Font Awesome** / **Material Symbols** — icons
-
----
-
 ## ⚖️ License
 
 **PolyForm Noncommercial License 1.0.0**

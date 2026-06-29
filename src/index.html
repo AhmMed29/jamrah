@@ -2,16 +2,30 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
+<style>
+#app-splash{position:fixed;inset:0;z-index:99999;background:#fff;display:flex;align-items:center;justify-content:center}
+.splash-scale{transform:scale(1.2);position:relative;width:150px;height:150px}
+@keyframes dropAndShift{0%{transform:translate(0px,15px)}16.67%{transform:translate(80px,13px)}33.34%{transform:translate(40px,10px)}50.01%{transform:translate(40px,-30px)}66.68%{transform:translate(40px,55px)}83.35%{transform:translate(40px,10px)}100%{transform:translate(0px,15px)}}
+@keyframes bubbleGlint{0%{top:3px;left:4px;opacity:0}8.335%{top:6px;left:6px;opacity:0.5}16.67%{top:3px;left:4px;opacity:0}33.34%{top:3px;left:4px;opacity:0.5}50.01%{top:3px;left:4px;opacity:0}58.345%{top:6px;left:6px;opacity:0.5}66.68%{top:3px;left:4px;opacity:0}83.35%{top:6px;left:6px;opacity:0.5}100%{top:3px;left:4px;opacity:0}}
+.Strich1{position:absolute;width:130px;height:50px;background:#000;border-radius:25px;box-shadow:0 4px 10px rgba(0,0,0,0.4);z-index:0;top:50%;left:50%;transform:translate(-50%,-50%) rotate(45deg)}
+.Strich2{position:absolute;width:130px;height:50px;background:#000;border-radius:25px;box-shadow:0 4px 10px rgba(0,0,0,0.4);z-index:0;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-90deg)}
+.bubble{position:absolute;top:0;left:15px;width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#ffb3c1,#e64980,#ff8787);animation:dropAndShift 5s ease-in-out infinite;z-index:1}
+.bubble1{position:absolute;top:0;width:20px;height:20px;background:radial-gradient(circle at 30% 30%,#edb3ff,#ac49e6,#fb87ff);border-radius:50%;left:8px;animation:dropAndShift 6s ease-in-out infinite;z-index:2}
+.bubble2{position:absolute;top:0;width:20px;height:20px;background:radial-gradient(circle at 30% 30%,#b3d8ff,#4963e6,#87a7ff);border-radius:50%;left:12px;animation:dropAndShift 4s ease-in-out infinite;z-index:3}
+.bubble3{position:absolute;top:0;width:20px;height:20px;background:radial-gradient(circle at 30% 30%,#b3ffbc,#35a32f,#75ba61);border-radius:50%;left:10px;animation:dropAndShift 7s ease-in-out infinite;z-index:4}
+.bubble4{position:absolute;top:0;width:20px;height:20px;background:radial-gradient(circle at 30% 30%,#ffe0b3,#e6a849,#ffbe5c);border-radius:50%;left:6px;animation:dropAndShift 5.5s ease-in-out infinite;z-index:1}
+</style>
+<script>window._splashStart = performance.now()</script>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.buymeacoffee.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self'; img-src 'self' data: https:; media-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'">
 <title>Jamrah جَــمْــرَه</title>
 <link rel="icon" type="image/svg+xml" href="assets/Jamrah-Icon.svg">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous">
+<link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous"></noscript>
 <link href="https://fonts.googleapis.com" rel="preconnect">
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"></noscript>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap"></noscript>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"></noscript>
 <script>
 window.tailwind={ config: {
   theme:{
@@ -26,14 +40,16 @@ window.tailwind={ config: {
   }
 } }
 </script>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries" integrity="sha384-1DcZPGeODWbGGjS/i/n4ULX/pEc0DPcKK2WhyuWEmBXRfzOwoVTDQBN9C3C5jJHK" crossorigin="anonymous"></script>
+<script defer src="https://cdn.tailwindcss.com?plugins=forms,container-queries" integrity="sha384-1DcZPGeODWbGGjS/i/n4ULX/pEc0DPcKK2WhyuWEmBXRfzOwoVTDQBN9C3C5jJHK" crossorigin="anonymous"></script>
 <link rel="stylesheet" href="css/pomodoro.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/habits.css">
 <link rel="stylesheet" href="css/ahmeds-styles.css">
 <link rel="stylesheet" href="css/main.css">
+
 </head>
 <body class="h-screen w-screen overflow-hidden flex flex-col text-gray-800">
+<div id="app-splash"><div class="splash-scale"><div class="Strich1"><div class="Strich2"><div class="bubble"></div><div class="bubble1"></div><div class="bubble2"></div><div class="bubble3"></div><div class="bubble4"></div></div></div></div></div>
 <div class="flex-shrink-0 h-[32px] bg-white border-b border-gray-100 flex items-center justify-between select-none" id="titlebar">
 <div class="flex-1 h-full" id="drag-region" style="-webkit-app-region: drag"></div>
 <div class="flex h-full">

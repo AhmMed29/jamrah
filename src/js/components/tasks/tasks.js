@@ -77,17 +77,42 @@ document.addEventListener('click', function(e) {
 function editTask(id) {
   closeTaskMenus();
   window.db.getTasks().then(function(tasks) {
+    if (!tasks || !tasks.length) return;
     var task = null;
     for (var ei = 0; ei < tasks.length; ei++) {
       if (tasks[ei].id === id) { task = tasks[ei]; break; }
     }
     if (!task) return;
-    try {
-      var newName = prompt('Edit task name:', task.name);
-      if (newName && newName.trim() && newName.trim() !== task.name) {
-        window.db.updateTask(id, newName.trim()).then(function() { renderTasks(); });
-      }
-    } catch (e) {}
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;padding:20px';
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border-radius:16px;padding:24px;width:100%;max-width:400px;box-shadow:0 8px 30px rgba(0,0,0,0.15)';
+    var h = document.createElement('h3');
+    h.textContent = 'Edit Task';
+    h.style.cssText = 'font-size:18px;font-weight:700;color:#1F2937;margin-bottom:16px;margin-top:0';
+    var input = document.createElement('input');
+    input.type = 'text'; input.value = task.name;
+    input.style.cssText = 'width:100%;padding:12px 16px;border:2px solid #e5e7eb;border-radius:10px;font-size:14px;color:#374151;outline:none;box-sizing:border-box;font-family:inherit';
+    input.addEventListener('keydown', function(e) { if (e.key === 'Enter') saveBtn.click(); if (e.key === 'Escape') overlay.click(); });
+    var btnWrap = document.createElement('div');
+    btnWrap.style.cssText = 'display:flex;gap:10px;margin-top:20px;justify-content:flex-end';
+    var cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = 'padding:10px 24px;border:1px solid #D1D5DB;border-radius:10px;font-size:13px;color:#6B7280;background:#fff;cursor:pointer;font-weight:500;font-family:inherit';
+    var saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save';
+    saveBtn.style.cssText = 'padding:10px 24px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;font-weight:600;font-family:inherit';
+    function removeModal() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }
+    cancelBtn.addEventListener('click', removeModal);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) removeModal(); });
+    saveBtn.addEventListener('click', function() {
+      var n = input.value.trim();
+      if (n && n !== task.name) { window.db.updateTask(id, n).then(function() { removeModal(); renderTasks(); }); }
+      else { removeModal(); }
+    });
+    card.appendChild(h); card.appendChild(input); btnWrap.appendChild(cancelBtn); btnWrap.appendChild(saveBtn);
+    card.appendChild(btnWrap); overlay.appendChild(card); document.body.appendChild(overlay);
+    setTimeout(function() { input.focus(); input.select(); }, 50);
   });
 }
 
@@ -111,6 +136,9 @@ function addSubtask(parentId) {
 }
 
 function toggleTask(id) {
+  var el = document.querySelector('#task-item-' + id + ' .task-check');
+  var wasDone = el && el.classList.contains('done');
+  if (window.AudioManager) window.AudioManager.playSound(wasDone ? 'checkbox-uncheck.mp3' : 'checkbox-check.mp3');
   window.db.toggleTask(id).then(function() { renderTasks(); });
 }
 

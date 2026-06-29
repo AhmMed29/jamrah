@@ -342,6 +342,7 @@ document.getElementById('table-body').addEventListener('click', async function(e
     var date = toggle.getAttribute('data-date');
     var value = parseInt(toggle.getAttribute('data-value'));
     if (habitId && date) {
+      if (window.AudioManager) window.AudioManager.playSound(value === 1 ? 'checkbox-check.mp3' : 'checkbox-uncheck.mp3');
       await window.db.setHabitLog(habitId, date, value);
       await render();
     }

@@ -55,6 +55,8 @@ function createWindow () {
     width: 1200,
     height: 800,
     frame: false,
+    show: false,
+    backgroundColor: '#fff',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -65,6 +67,7 @@ function createWindow () {
     }
   })
   win.maximize()
+  win.once('ready-to-show', () => win.show())
   win.loadFile('src/index.html').then(function() {
     database.migrateFromJson(storagePath)
     autoUpdater.checkForUpdates()

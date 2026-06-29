@@ -84,7 +84,7 @@ updateClock();
 setInterval(updateClock, 1000);
 
 /* ── Update system (electron-updater) ── */
-var APP_VERSION = '1.3.2';
+var APP_VERSION = '1.3.3';
 var updateData = null;
 var updateDownloaded = false;
 
@@ -221,4 +221,14 @@ showPage = async function(name) {
   if (name === 'habits' && window.renderHabits) renderHabits();
 };
 
-(async function() { await showPage('pomodoro'); })();
+(async function() {
+  await showPage('pomodoro');
+})();
+window.addEventListener('load', function() {
+  var elapsed = performance.now() - window._splashStart;
+  var delay = Math.max(0, 5000 - elapsed);
+  setTimeout(function() {
+    var splash = document.getElementById('app-splash');
+    if (splash) { splash.style.opacity = '0'; splash.style.transition = 'opacity 0.6s'; setTimeout(function() { splash.style.display = 'none'; }, 600); }
+  }, delay);
+});

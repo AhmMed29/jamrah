@@ -162,7 +162,7 @@ window.closeUpdateModal = function(e) {
 /* ── Welcome popup (shown once, first launch only) ── */
 (async function checkWelcome() {
   var shown = await window.db.getSetting('welcomeShown');
-  // if (shown === 'true') return; // temporarily disabled for review
+  if (shown === 'true') return;
   var modal = document.getElementById('welcomeModal');
   if (modal) modal.style.display = 'flex';
 })();

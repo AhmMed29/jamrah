@@ -21,9 +21,7 @@ The app uses Electron + vanilla JS + SQLite (better-sqlite3).
 
 ## Code style
 
-- No semicolons, single quotes, 2-space indentation
-- Use `var` not `let/const`
-- Match the existing code style
+- Well be add soon !
 
 ## Building
 
@@ -33,6 +31,4 @@ npx electron-builder --win
 
 ## Notes
 
-- The database schema lives in `database.js` with migrations
-- Update `update.json` when bumping versions
-- Fonts are loaded from Google Fonts CDN, not committed
+- soon ! 

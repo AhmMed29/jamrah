@@ -3,11 +3,13 @@ node_modules/
 dist/
 dist2/
 build-out/
+.vs/
 
 # Generated / personal
 jamrah-icon.png
 src/css/ahmeds-styles.css
 check-db.js
+image.png
 
 # Design prototypes
 Pomo modern design/
@@ -21,3 +23,15 @@ Fonts/
 
 Jamrah-Icon.png
 AGENTS.md
+
+# .NET build artifacts
+backend/bin/
+backend/obj/
+
+# Test databases (not real user data)
+backend/jamrah.db
+backend/jamrah.db-shm
+backend/jamrah.db-wal
+test-backend.db
+test-backend.db-shm
+test-backend.db-wal

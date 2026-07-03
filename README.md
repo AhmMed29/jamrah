@@ -6,12 +6,11 @@
 
 <p align="center"><i>ember of productivity</i></p>
 
-An all-in-one **Electron** desktop app: Pomodoro timer with live GLSL shader backgrounds (5 themes + custom + Minimal), habits tracker, goals & tasks manager — powered by SQLite with an auto-update system.
- 
+An all-in-one **Electron** desktop app: Pomodoro timer with live GLSL shader backgrounds (5 themes + custom + Minimal), habits tracker, goals & tasks manager — powered by **.NET 9 + EF Core SQLite** backend with an auto-update system.
+
 ---
 
 ## Table of Contents
-- [🧱 Project Structure](#-project-structure)
 - [✨ Features](#-features)
   - [Simple Pomodoro 🍅](#simple-pomodoro-)
   - [Add Tasks ✔](#add-tasks-)
@@ -25,39 +24,8 @@ An all-in-one **Electron** desktop app: Pomodoro timer with live GLSL shader bac
 - [Linux & Mobile](#linux--mobile)
 - [🔄 Sync](#-sync)
 - [Updates](#updates)
+- [🧱 Project Structure](#-project-structure)
 - [⚖️ License](#️-license)
-
-## 🧱 Project Structure
-
-```
-src/
-├── index.html                 # Main HTML (settings modal, popups, dock)
-├── css/
-│   ├── pomodoro.css           # Timer, settings modal, minimal theme
-│   ├── home.css               # Home page styles
-│   ├── habits.css             # Habits table styles
-│   ├── ahmeds-styles.css      # Custom toggle-switch, modal styles
-│   └── main.css               # Dock, floating-menu, extracted shared styles
-├── js/
-│   ├── app.js                 # Page router, clock, updates, welcome popup
-│   ├── storage.js             # DB path init
-│   ├── stats.js               # Today/total stats helpers
-│   ├── shader.js              # GLSL shader engine + 5 themes + hexToRgb
-│   ├── timer.js               # Pomodoro logic, phases, presets, reset
-│   ├── sessions.js            # Session CRUD, timeline, tags, popups
-│   ├── theme.js               # openSettings, closeSettings, page navigation
-│   ├── utils/
-│   │   └── helpers.js         # GOAL_COLORS, hexToRgb, esc
-│   └── components/
-│       ├── settings/settings.js   # Tab switching, theme cards, custom colors, save/cancel
-│       ├── goals/              # Goals CRUD, detail modal, hierarchy
-│       ├── tasks/              # Tasks CRUD, goals-tree popup
-│       └── habits/             # Habits table, stats modal, add modal
-├── main.js                    # Electron main process + SQLite IPC + auto-updater
-├── preload.js                 # Context bridge (electronAPI + db API)
-├── database.js                # SQLite schema, migrations, queries
-└── package.json
-```
 
 # ✨Features
 ## Simple Pomodoro 🍅
@@ -116,17 +84,17 @@ npm install
 npm start
 ```
 
-Requires **Node.js 22+** and **npm**.
+Requires **Node.js 22+**, **npm**, and **[.NET 9 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)**.
 ***
 ## 🗄️ Data
 
-All data stored locally via **SQLite** (better-sqlite3). Default location:
+All data stored locally via **SQLite** with **Entity Framework Core** (.NET 9 backend). Default location:
 
 ```
-Windows: %APPDATA%/Jamrah/data/
+Windows: %APPDATA%/MyProductivityApp/data/app.db
 ```
 
-You can change the storage path in Settings → Storage tab (well be customized more and more soon .. need more improvements).
+The Electron main process spawns the .NET backend as a child process, and the renderer communicates via IPC → HTTP (localhost:5200). You can change the storage path in Settings → Storage tab (well be customized more and more soon .. need more improvements).
 ***
 ## 🔧 Build for Windows
 
@@ -151,8 +119,63 @@ this may take many time to achieve unless any developer work on it !
 ## Updates
 
 tell now the new updates reach to the end user successfuly ! with a full release notes for every new feature and updates !
+---
+
+## 🧱 Project Structure
+
+```
+├── src/
+│   ├── index.html               # Main HTML (settings modal, popups, dock)
+│   ├── css/
+│   │   ├── pomodoro.css         # Timer, settings modal, minimal theme
+│   │   ├── home.css             # Home page styles
+│   │   ├── habits.css           # Habits table styles
+│   │   ├── ahmeds-styles.css    # Custom toggle-switch, modal styles
+│   │   └── main.css             # Dock, floating-menu, extracted shared styles
+│   ├── js/
+│   │   ├── app.js               # Page router, clock, updates, welcome popup
+│   │   ├── storage.js           # DB path init
+│   │   ├── stats.js             # Today/total stats helpers
+│   │   ├── shader.js            # GLSL shader engine + 5 themes + hexToRgb
+│   │   ├── timer.js             # Pomodoro logic, phases, presets, reset
+│   │   ├── sessions.js          # Session CRUD, timeline, tags, popups
+│   │   ├── theme.js             # openSettings, closeSettings, page navigation
+│   │   ├── utils/
+│   │   │   └── helpers.js       # GOAL_COLORS, hexToRgb, esc
+│   │   └── components/
+│   │       ├── settings/settings.js  # Tab switching, theme cards, custom colors, save/cancel
+│   │       ├── goals/               # Goals CRUD, detail modal, hierarchy
+│   │       ├── tasks/               # Tasks CRUD, goals-tree popup
+│   │       └── habits/              # Habits table, stats modal, add modal
+│   ├── main.js                  # Electron main — spawns .NET backend, IPC → HTTP bridge
+│   └── preload.js               # Context bridge (electronAPI + db API)
+├── backend/
+│   ├── Program.cs               # .NET 9 startup, EF Core + legacy DB migration
+│   ├── Data/
+│   │   └── AppDbContext.cs      # EF Core DbContext (8 entities)
+│   ├── Entities/                # Goal, GoalProgress, Habit, HabitLog,
+│   │                            # Session, Setting, Tag, TaskItem
+│   ├── DTOs/                    # Request/response DTOs per entity
+│   ├── Controllers/             # REST API: Goals, Habits, Sessions,
+│   │                            # Settings, Tags, Tasks
+│   ├── Migrations/              # EF Core migrations
+│   ├── Properties/
+│   │   └── launchSettings.json  # Dev server config (port 5200)
+│   ├── appsettings.json         # Logging, connection strings
+│   └── Jamrah.Backend.csproj    # .NET 9 project file
+├── package.json                 # Electron + build config
+├── .gitignore
+└── README.md
+```
+
+**Architecture Flow:**
+
+```
+Renderer (HTML/JS)  →  IPC (preload.js)  →  Main Process (main.js)  →  HTTP  →  .NET Backend (localhost:5200)  →  SQLite
+```
 
 ---
+
 ## ⚖️ License
 
 **PolyForm Noncommercial License 1.0.0**

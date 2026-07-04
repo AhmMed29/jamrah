@@ -44,6 +44,7 @@ function determineStoragePath() {
 async function startBackend() {
   var backendDir = path.join(__dirname, 'backend')
   var dbFullPath = path.join(storagePath, 'app.db')
+  if (!fs.existsSync(storagePath)) fs.mkdirSync(storagePath, { recursive: true })
 
   backendProcess = spawn('dotnet', ['run', '--project', backendDir], {
     env: {
@@ -66,11 +67,18 @@ async function startBackend() {
     await new Promise(function(r) { setTimeout(r, 500) })
   }
   console.warn('[.NET] Timed out waiting for backend')
+  dialog.showErrorBox('Backend Error', 'Failed to start the backend service. Please restart the application.')
 }
 
 function stopBackend() {
   if (backendProcess && !backendProcess.killed) {
-    try { backendProcess.kill() } catch (e) {}
+    try {
+      if (process.platform === 'win32') {
+        require('child_process').execSync('taskkill /PID ' + backendProcess.pid + ' /T /F', { stdio: 'ignore' })
+      } else {
+        backendProcess.kill('SIGTERM')
+      }
+    } catch (e) {}
     backendProcess = null
   }
 }
@@ -98,6 +106,18 @@ function createWindow () {
   })
 }
 
+var gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', function() {
+    if (win) {
+      if (win.isMinimized()) win.restore()
+      win.focus()
+    }
+  })
+}
+
 app.whenReady().then(async () => {
   storagePath = determineStoragePath()
   await startBackend()
@@ -109,6 +129,7 @@ ipcMain.on('maximize', () => {
   win?.isMaximized() ? win.unmaximize() : win?.maximize()
 })
 ipcMain.on('close', () => win?.close())
+ipcMain.on('close-app', () => app.quit())
 
 ipcMain.handle('zoom-in', (e) => {
   var wc = e.sender

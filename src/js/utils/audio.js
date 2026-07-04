@@ -9,21 +9,22 @@ function getAudio(path) {
   return audioCache[path];
 }
 
-function playSound(soundName, options = {}) {
-  const enabled = window.db?.getSetting?.('playPomoSound') !== 'false';
-  if (!enabled) return;
-
-  const volume = parseFloat(window.db?.getSetting?.('pomoSoundVolume')) || 1.0;
-  const basePath = 'assets/App Sounds/';
-  const path = basePath + soundName;
-
+async function playSound(soundName, options = {}) {
   try {
-    const audio = getAudio(path);
+    var enabled = await window.db.getSetting('playPomoSound');
+    if (enabled === 'false') return;
+
+    var volumeStr = await window.db.getSetting('pomoSoundVolume');
+    var volume = parseFloat(volumeStr) || 1.0;
+    var basePath = 'assets/App Sounds/';
+    var path = basePath + soundName;
+
+    var audio = getAudio(path);
     audio.volume = Math.max(0, Math.min(1, volume));
     audio.currentTime = 0;
-    const promise = audio.play();
+    var promise = audio.play();
     if (promise) {
-      promise.catch(err => console.warn('Audio play failed:', err.message));
+      promise.catch(function(err) { console.warn('Audio play failed:', err.message); });
     }
   } catch (e) {
     console.warn('Sound error:', e.message);

@@ -36,8 +36,8 @@ async function showPage(name) {
   }
 }
 
-window.confirmSettingsSave = function() {
-  window.saveSettings();
+window.confirmSettingsSave = async function() {
+  await window.saveSettings();
   document.getElementById('settingsConfirmModal').style.display = 'none';
   document.getElementById('settingsModal').style.display = 'none';
   var target = _pendingNav;
@@ -66,6 +66,10 @@ document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && (e.key === '=' || e.key === '+')) { e.preventDefault(); window.electronAPI.zoomIn(); }
   if (e.ctrlKey && e.key === '-') { e.preventDefault(); window.electronAPI.zoomOut(); }
   if (e.ctrlKey && e.key === '0') { e.preventDefault(); window.electronAPI.zoomReset(); }
+  if (e.ctrlKey && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); showPage('pomodoro'); }
+  if (e.ctrlKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); if (window.openSettings) window.openSettings(); }
+  if (e.ctrlKey && (e.key === 'n' || e.key === 'N')) { e.preventDefault(); if (window.openAddTaskPopup) window.openAddTaskPopup(); }
+  if (e.ctrlKey && (e.key === 'q' || e.key === 'Q')) { e.preventDefault(); if (window.electronAPI) window.electronAPI.closeApp(); }
 });
 
 /* â”€â”€ Clock â”€â”€ */
@@ -176,12 +180,11 @@ window.closeWelcomeModal = async function() {
 window.checkForUpdates = function() {
   var btn = document.getElementById('checkUpdateBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Checking...'; }
-  var statusEl = document.getElementById('updateStatus');
+  var statusEl = document.getElementById('updateSettingsStatus');
   if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Checking for updates...'; }
   window.electronAPI.checkForUpdates().then(function(available) {
     if (btn) { btn.disabled = false; btn.textContent = 'Search for Updates'; }
     if (available) {
-      // update-available event will fire automatically
     } else {
       if (statusEl) statusEl.textContent = 'You are up to date.';
       setTimeout(function() {
@@ -226,7 +229,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 window.addEventListener('load', function() {
   var elapsed = performance.now() - window._splashStart;
-  var delay = Math.max(0, 2000 - elapsed);
+  var delay = Math.max(0, 1500 - elapsed);
   setTimeout(function() {
     var splash = document.getElementById('app-splash');
     if (splash) { splash.style.opacity = '0'; splash.style.transition = 'opacity 0.6s'; setTimeout(function() { splash.style.display = 'none'; }, 600); }

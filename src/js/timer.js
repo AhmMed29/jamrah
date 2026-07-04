@@ -83,16 +83,13 @@ window.toggleTimer = async function() {
     phase = 'work';
     await setPhaseTime('work');
     startTimer();
-    if (window.shaderSetRunning) window.shaderSetRunning(true);
     if (window.AudioManager) window.AudioManager.playSound('pomo-start.mp3');
   } else {
     if (isRunning) {
       stopTimer();
       recalcRemaining();
-      if (window.shaderSetRunning) window.shaderSetRunning(false);
     } else {
       startTimer();
-      if (window.shaderSetRunning) window.shaderSetRunning(true);
       if (window.AudioManager) window.AudioManager.playSound('pomo-start.mp3');
     }
   }
@@ -101,7 +98,6 @@ window.toggleTimer = async function() {
 
 window.resetTimer = async function() {
   stopTimer();
-  if (window.shaderSetRunning) window.shaderSetRunning(false);
   phase = 'idle';
   await setPhaseTime('work');
   sessionCount = 0;
@@ -128,7 +124,6 @@ async function advancePhase() {
 }
 
 async function completeTimer() {
-  if (window.shaderSetRunning) window.shaderSetRunning(false);
   await advancePhase();
   recalcRemaining();
   updateUI();
@@ -145,8 +140,8 @@ function updateUI() {
   var label = document.getElementById('phaseLabel');
   var playBtn = document.getElementById('playBtn');
 
-  if (text) text.textContent = phase === 'idle' ? '' : formatTime(remainingSeconds);
-  if (label) label.textContent = phase === 'idle' ? 'tap to start' : PHASE_LABELS[phase];
+  if (text) text.textContent = formatTime(remainingSeconds);
+  if (label) label.textContent = PHASE_LABELS[phase] || 'Focus';
 
   if (playBtn) {
     playBtn.innerHTML = isRunning
@@ -155,12 +150,26 @@ function updateUI() {
   }
 
   var show = phase === 'idle' || !isRunning;
-  var ctrl = document.getElementById('pomoControls');
+  var ctrlArea = document.getElementById('pomoControlsArea');
+  if (ctrlArea) {
+    if (show) ctrlArea.classList.add('controls-visible');
+    else ctrlArea.classList.remove('controls-visible');
+  }
   var pres = document.getElementById('pomoPresets');
   var nmBox = document.getElementById('pomoNameBox');
-  if (ctrl) ctrl.style.display = show ? 'flex' : 'none';
   if (pres) pres.style.display = show ? 'flex' : 'none';
   if (nmBox) nmBox.style.display = show ? 'block' : 'none';
+
+  var counter = document.getElementById('sessionCounter');
+  if (counter) {
+    if (!isRunning) {
+      var count = sessionCount % SESSIONS_BEFORE_LONG_BREAK + 1;
+      counter.textContent = count + '/' + SESSIONS_BEFORE_LONG_BREAK;
+      counter.style.display = '';
+    } else {
+      counter.style.display = 'none';
+    }
+  }
 
   updateSessionDots();
 }
@@ -182,9 +191,9 @@ function updateSessionDots() {
 }
 
 // Settings
-window.openPomoSettings = function() {
+window.openPomoSettings = async function() {
+  if (window.openSettings) await window.openSettings();
   if (window.switchSettingsTab) window.switchSettingsTab('pomodoro');
-  if (window.openSettings) window.openSettings();
 };
 
 window.savePomoSettings = async function() {
@@ -213,6 +222,7 @@ window.stepSetting = function(id, delta) {
   if (!inp) return;
   var val = parseInt(inp.value) || 0;
   inp.value = Math.max(1, val + delta);
+  markDirty();
 };
 
 window.setTimer = function() {};
@@ -222,10 +232,15 @@ window.closeTimePopup = function() {};
 // Preset & time adjustment
 window.setPreset = async function(minutes) {
   await window.db.setSetting('workMinutes', minutes);
-  if (phase === 'idle' || (phase === 'work' && !isRunning)) {
+  if (phase === 'idle') {
     await setPhaseTime('work');
-    updateUI();
+  } else if (phase === 'work') {
+    var newTotal = minutes * 60;
+    var progress = totalSeconds > 0 ? (totalSeconds - remainingSeconds) / totalSeconds : 0;
+    totalSeconds = newTotal;
+    remainingSeconds = Math.max(0, Math.round(newTotal * (1 - progress)));
   }
+  updateUI();
 };
 
 window.adjustTime = function(delta) {

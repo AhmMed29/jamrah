@@ -104,6 +104,16 @@ function createWindow () {
   win.loadFile('src/index.html').then(function() {
     autoUpdater.checkForUpdates()
   })
+
+  win.webContents.on('before-input-event', function(e, input) {
+    if (!input.control) return
+    switch (input.key.toLowerCase()) {
+      case 'p': e.preventDefault(); win.webContents.send('shortcut', 'pomodoro'); break
+      case 's': e.preventDefault(); win.webContents.send('shortcut', 'settings'); break
+      case 'n': e.preventDefault(); win.webContents.send('shortcut', 'new-task'); break
+      case 'q': e.preventDefault(); app.quit(); break
+    }
+  })
 }
 
 var gotTheLock = app.requestSingleInstanceLock()

@@ -1,3 +1,7 @@
+function newTaskId() {
+  return 'task_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+}
+
 var _selectedTaskGoalId = null;
 var _selectedPriority = 'Medium';
 var _sortBy = 'date-desc';
@@ -328,7 +332,7 @@ function addSubtask(parentId) {
   saveBtn.addEventListener('click', function() {
     var n = input.value.trim();
     if (n) {
-      var task = { id: 'task_' + Date.now(), name: n, parentTaskId: parentId, priority: _localPriority };
+      var task = { id: newTaskId(), name: n, parentTaskId: parentId, priority: _localPriority };
       window.db.createTask(task).then(function(result) { if (result) { removeModal(); renderTasks(); } });
     }
   });
@@ -380,14 +384,16 @@ function selectTaskGoal(el) {
 function saveTask() {
   var name = document.getElementById('task-name-input').value.trim();
   if (!name) return;
-  var task = { id: 'task_' + Date.now(), name: name, goalId: _selectedTaskGoalId, priority: _selectedPriority };
+  var task = { id: newTaskId(), name: name, goalId: _selectedTaskGoalId, priority: _selectedPriority };
   window.db.createTask(task).then(function(result) {
-    if (result === true) {
+    if (result) {
       document.getElementById('task-name-input').value = '';
       _selectedTaskGoalId = null;
       closeAddTaskPopup();
       renderTasks();
     }
+  }).catch(function(err) {
+    console.error('Failed to save task:', err);
   });
 }
 
@@ -477,9 +483,9 @@ function toggleGoalsTaskNode(e, id) {
 }
 
 function addTaskFromGoal(name, goalId) {
-  var task = { id: 'task_' + Date.now(), name: name, goalId: goalId };
+  var task = { id: newTaskId(), name: name, goalId: goalId };
   window.db.createTask(task).then(function(result) {
-    if (result === true) { renderTasks(); openGoalsTaskPopup(); }
+    if (result) { renderTasks(); openGoalsTaskPopup(); }
   });
 }
 

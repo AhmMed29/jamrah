@@ -719,7 +719,7 @@ async function getTodaySessions() {
    ───────────────────────────────────────────────────────── */
 async function renderSessionTimeline() {
 
-  var todaySessions = getTodaySessions();
+  var todaySessions = await getTodaySessions();
   var connector = '<div class="flex-shrink-0" style="width:24px;height:1px;background:#E5E7EB"></div>';
 
   /* ── Empty state: no sessions today ── */
@@ -849,7 +849,7 @@ async function renderSessionTimeline() {
 
 var sessionTimelineEditId = null;
 
-window.openSessionTimelineModal = function(sessionId) {
+window.openSessionTimelineModal = async function(sessionId) {
   sessionTimelineEditId = sessionId;
   var modal = document.getElementById('sessionTimelineModal');
   var input = document.getElementById('sessionTimelineTaskInput');
@@ -892,27 +892,6 @@ window.saveSessionTimeline = async function() {
   await renderSessionTimeline();
   window.closeSessionTimelineModal();
 };
-
-window.toggleTaskPopup = function() {
-  var toggle = document.getElementById('taskPopupToggle');
-  if (!toggle) return;
-  var currentlyOn = toggle.classList.contains('active');
-  if (currentlyOn) {
-    toggle.classList.remove('active');
-    await window.db.setSetting('showTaskPopupOnStart', 'false');
-  } else {
-    toggle.classList.add('active');
-    await window.db.setSetting('showTaskPopupOnStart', 'true');
-  }
-};
-
-(async function() {
-  var setting = await window.db.getSetting('showTaskPopupOnStart');
-  var toggle = document.getElementById('taskPopupToggle');
-  if (toggle && setting === 'false') {
-    toggle.classList.remove('active');
-  }
-})();
 
 document.addEventListener('click', function(e) {
   var modal = document.getElementById('sessionTimelineModal');

@@ -67,7 +67,8 @@ public class GoalsController : ControllerBase
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
                 Duration = dto.Duration,
-                ParentGoalId = dto.ParentGoalId
+                ParentGoalId = dto.ParentGoalId,
+                CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff")
             };
 
             _db.Goals.Add(goal);
@@ -76,10 +77,12 @@ public class GoalsController : ControllerBase
 
             return Ok(true);
         }
-        catch
+        catch (Exception ex)
         {
+            // surface real failures instead of a silent 200 false — the
+            // renderer treats anything but true as "quietly do nothing"
             await tx.RollbackAsync();
-            return Ok(false);
+            return StatusCode(500, ex.Message);
         }
     }
 
@@ -94,7 +97,9 @@ public class GoalsController : ControllerBase
         goal.Name = dto.Name;
         goal.Description = dto.Description ?? "";
         goal.Color = dto.Color;
-        goal.TagId = dto.TagId;
+        // the edit form never sends tagId; overwriting with null here would
+        // sever the goal↔tag link created at goal creation on every edit
+        if (dto.TagId != null) goal.TagId = dto.TagId;
         goal.StartDate = dto.StartDate;
         goal.EndDate = dto.EndDate;
         goal.Duration = dto.Duration;
@@ -110,7 +115,17 @@ public class GoalsController : ControllerBase
         var goal = await _db.Goals.FindAsync(id);
         if (goal == null) return Ok(false);
 
+        // detach references explicitly rather than relying on ON DELETE SET
+        // NULL: pre-migration DBs have plain FKs with no delete action, and
+        // enforcement is on under Microsoft.Data.Sqlite
+        await _db.Goals.Where(g => g.ParentGoalId == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(g => g.ParentGoalId, (string?)null));
+        await _db.TaskItems.Where(t => t.GoalId == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.GoalId, (string?)null));
+        await _db.Sessions.Where(s => s.GoalId == id)
+            .ExecuteUpdateAsync(u => u.SetProperty(s => s.GoalId, (string?)null));
         await _db.GoalProgresses.Where(gp => gp.GoalId == id).ExecuteDeleteAsync();
+
         _db.Goals.Remove(goal);
         await _db.SaveChangesAsync();
         return Ok(true);

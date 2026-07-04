@@ -35,3 +35,6 @@ backend/jamrah.db-wal
 test-backend.db
 test-backend.db-shm
 test-backend.db-wal
+
+# .NET publish output bundled into the installer via extraResources
+backend/publish/

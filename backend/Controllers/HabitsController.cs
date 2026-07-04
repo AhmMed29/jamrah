@@ -33,7 +33,8 @@ public class HabitsController : ControllerBase
             Color = dto.Color,
             DurationType = dto.DurationType,
             DurationStart = dto.DurationStart,
-            DurationEnd = dto.DurationEnd
+            DurationEnd = dto.DurationEnd,
+            CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff")
         });
 
         await _db.SaveChangesAsync();

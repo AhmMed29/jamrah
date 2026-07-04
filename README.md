@@ -91,7 +91,8 @@ Requires **Node.js 22+**, **npm**, and **[.NET 9 SDK](https://dotnet.microsoft.c
 All data stored locally via **SQLite** with **Entity Framework Core** (.NET 9 backend). Default location:
 
 ```
-Windows: %APPDATA%/MyProductivityApp/data/app.db
+Windows (dev):       %APPDATA%/jamrah/data/app.db
+Windows (installed): %APPDATA%/Jamrah/data/app.db
 ```
 
 The Electron main process spawns the .NET backend as a child process, and the renderer communicates via IPC → HTTP (localhost:5200). You can change the storage path in Settings → Storage tab (well be customized more and more soon .. need more improvements).

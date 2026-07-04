@@ -193,6 +193,11 @@
 .timer-circle-wrapper { position: relative; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.3s ease; }
 .timer-circle-wrapper:hover { transform: scale(1.03); }
 #pomoShaderCanvas { border-radius: 50%; }
+#sessionTimelineModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; }
+#sessionTimelineModal.open { display: flex; }
+#sessionTimelineModal .modal-card { background: #fff; border-radius: 20px; padding: 32px; width: 420px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); position: relative; }
+#sessionTimelineModal .close-btn { position: absolute; top: 12px; left: 12px; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #9ca3af; cursor: pointer; transition: all 0.15s; border: none; background: none; }
+#sessionTimelineModal .close-btn:hover { background: #f3f4f6; color: #374151; }
 #timerText { color: #000; }
 .habit-toggle { width:22px; height:22px; border-radius:6px; margin:0 auto; cursor:pointer; transition:all 0.12s; display:inline-flex; align-items:center; justify-content:center; }
 .habit-toggle.checked { box-shadow:0 1px 3px rgba(0,0,0,0.1); }

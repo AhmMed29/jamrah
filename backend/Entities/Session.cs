@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Jamrah.Backend.Entities;
 
 public class Session
@@ -14,6 +16,6 @@ public class Session
     public string? TaskId { get; set; }
     public string? GoalId { get; set; }
 
-    public Tag? Tag { get; set; }
-    public Goal? Goal { get; set; }
+    [JsonIgnore] public Tag? Tag { get; set; }
+    [JsonIgnore] public Goal? Goal { get; set; }
 }

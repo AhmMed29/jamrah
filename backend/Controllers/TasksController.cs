@@ -36,7 +36,11 @@ public class TasksController : ControllerBase
             Id = dto.Id,
             Name = dto.Name,
             GoalId = dto.GoalId,
-            ParentTaskId = dto.ParentTaskId
+            ParentTaskId = dto.ParentTaskId,
+            // string-comparable with legacy datetime('now') rows; without it EF
+            // inserts "" and new tasks sort to the bottom of the DESC listing.
+            // .fff keeps two creates in the same second in insertion order.
+            CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff")
         });
 
         await _db.SaveChangesAsync();
@@ -70,12 +74,38 @@ public class TasksController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
-        var task = await _db.TaskItems.FindAsync(id);
-        if (task == null) return Ok(false);
+        var exists = await _db.TaskItems.AnyAsync(t => t.Id == id);
+        if (!exists) return Ok(false);
 
-        await _db.TaskItems.Where(t => t.ParentTaskId == id).ExecuteDeleteAsync();
-        _db.TaskItems.Remove(task);
-        await _db.SaveChangesAsync();
+        // delete the whole subtree; FK is SET NULL, so anything below the
+        // first level would otherwise survive as orphaned top-level tasks
+        var all = await _db.TaskItems
+            .Select(t => new { t.Id, t.ParentTaskId })
+            .ToListAsync();
+
+        var toDelete = new List<string> { id };
+        var stack = new Stack<string>();
+        stack.Push(id);
+
+        while (stack.Count > 0)
+        {
+            var current = stack.Pop();
+            foreach (var t in all)
+            {
+                if (t.ParentTaskId == current && !toDelete.Contains(t.Id))
+                {
+                    toDelete.Add(t.Id);
+                    stack.Push(t.Id);
+                }
+            }
+        }
+
+        // break parent links first: legacy DBs enforce parentTaskId FKs with
+        // no delete action, and a single multi-row DELETE can drop a parent
+        // before its child mid-statement
+        await _db.TaskItems.Where(t => toDelete.Contains(t.Id))
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.ParentTaskId, (string?)null));
+        await _db.TaskItems.Where(t => toDelete.Contains(t.Id)).ExecuteDeleteAsync();
         return Ok(true);
     }
 }

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Jamrah.Backend.Entities;
 
 public class Goal
@@ -13,10 +15,11 @@ public class Goal
     public string CreatedAt { get; set; } = string.Empty;
     public string? ParentGoalId { get; set; }
 
-    public Tag? Tag { get; set; }
-    public Goal? ParentGoal { get; set; }
-    public ICollection<Goal> Children { get; set; } = new List<Goal>();
-    public ICollection<GoalProgress> ProgressRecords { get; set; } = new List<GoalProgress>();
-    public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
-    public ICollection<Session> Sessions { get; set; } = new List<Session>();
+    // navs are EF-only: serializing them cycles via ParentGoal<->Children
+    [JsonIgnore] public Tag? Tag { get; set; }
+    [JsonIgnore] public Goal? ParentGoal { get; set; }
+    [JsonIgnore] public ICollection<Goal> Children { get; set; } = new List<Goal>();
+    [JsonIgnore] public ICollection<GoalProgress> ProgressRecords { get; set; } = new List<GoalProgress>();
+    [JsonIgnore] public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
+    [JsonIgnore] public ICollection<Session> Sessions { get; set; } = new List<Session>();
 }

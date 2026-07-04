@@ -123,15 +123,42 @@ function addSubtask(parentId) {
     for (var ai = 0; ai < tasks.length; ai++) {
       if (tasks[ai].id === parentId) { parentName = tasks[ai].name; break; }
     }
-    try {
-      var name = prompt('Add subtask under "' + parentName + '":');
-      if (name && name.trim()) {
-        var task = { id: 'task_' + Date.now(), name: name.trim(), parentTaskId: parentId };
-        window.db.createTask(task).then(function(result) {
-          if (result === true) renderTasks();
-        });
-      }
-    } catch (e) {}
+    // window.prompt is unsupported in Electron (it throws), so this action
+    // silently did nothing; use the same inline modal pattern as editTask
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;padding:20px';
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border-radius:16px;padding:24px;width:100%;max-width:400px;box-shadow:0 8px 30px rgba(0,0,0,0.15)';
+    var h = document.createElement('h3');
+    h.textContent = 'Add subtask under "' + parentName + '"';
+    h.style.cssText = 'font-size:18px;font-weight:700;color:#1F2937;margin-bottom:16px;margin-top:0';
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Subtask name';
+    input.style.cssText = 'width:100%;padding:12px 16px;border:2px solid #e5e7eb;border-radius:10px;font-size:14px;color:#374151;outline:none;box-sizing:border-box;font-family:inherit';
+    input.addEventListener('keydown', function(e) { if (e.key === 'Enter') saveBtn.click(); if (e.key === 'Escape') overlay.click(); });
+    var btnWrap = document.createElement('div');
+    btnWrap.style.cssText = 'display:flex;gap:10px;margin-top:20px;justify-content:flex-end';
+    var cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = 'padding:10px 24px;border:1px solid #D1D5DB;border-radius:10px;font-size:13px;color:#6B7280;background:#fff;cursor:pointer;font-weight:500;font-family:inherit';
+    var saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Add';
+    saveBtn.style.cssText = 'padding:10px 24px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;font-weight:600;font-family:inherit';
+    function removeModal() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }
+    cancelBtn.addEventListener('click', removeModal);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) removeModal(); });
+    saveBtn.addEventListener('click', function() {
+      var name = input.value.trim();
+      if (!name) { input.focus(); return; }
+      var task = { id: newTaskId(), name: name, parentTaskId: parentId };
+      window.db.createTask(task).then(function(result) {
+        if (result === true) { removeModal(); renderTasks(); }
+      });
+    });
+    card.appendChild(h); card.appendChild(input); btnWrap.appendChild(cancelBtn); btnWrap.appendChild(saveBtn);
+    card.appendChild(btnWrap); overlay.appendChild(card); document.body.appendChild(overlay);
+    setTimeout(function() { input.focus(); }, 50);
   });
 }
 
@@ -176,17 +203,32 @@ function selectTaskGoal(el) {
   _selectedTaskGoalId = el.dataset.id || null;
 }
 
+/* Date.now() alone collides when two tasks are created in the same
+   millisecond (rapid subtask adds) — a duplicate primary key 500s */
+function newTaskId() {
+  return 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+}
+
 function saveTask() {
   var name = document.getElementById('task-name-input').value.trim();
   if (!name) return;
-  var task = { id: 'task_' + Date.now(), name: name, goalId: _selectedTaskGoalId };
+  var task = { id: newTaskId(), name: name, goalId: _selectedTaskGoalId };
   window.db.createTask(task).then(function(result) {
     if (result === true) {
       document.getElementById('task-name-input').value = '';
       _selectedTaskGoalId = null;
       closeAddTaskPopup();
       renderTasks();
+    } else if (result && result.error) {
+      console.error('saveTask: backend error - status:', result.status, 'body:', result.body, 'message:', result.message);
+      alert('Could not save the task (backend error ' + (result.status || '') + '). See console for details.');
+    } else {
+      console.error('saveTask: unexpected result from createTask:', result);
+      alert('Could not save the task. See console for details.');
     }
+  }).catch(function(err) {
+    console.error('saveTask: createTask failed:', err);
+    alert('Could not save the task. See console for details.');
   });
 }
 
@@ -276,7 +318,7 @@ function toggleGoalsTaskNode(e, id) {
 }
 
 function addTaskFromGoal(name, goalId) {
-  var task = { id: 'task_' + Date.now(), name: name, goalId: goalId };
+  var task = { id: newTaskId(), name: name, goalId: goalId };
   window.db.createTask(task).then(function(result) {
     if (result === true) { renderTasks(); openGoalsTaskPopup(); }
   });

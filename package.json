@@ -6,10 +6,10 @@
   "author": "AhmMed29",
   "license": "PolyForm-Noncommercial-1.0.0",
   "scripts": {
-    "postinstall": "npx @electron/rebuild",
     "start": "electron .",
-    "build": "electron-builder",
-    "dist": "electron-builder --win"
+    "build:backend": "dotnet publish backend -c Release -r win-x64 --self-contained true -o backend/publish",
+    "build": "npm run build:backend && electron-builder",
+    "dist": "npm run build:backend && electron-builder --win"
   },
   "build": {
     "appId": "com.ahmmed.jamrah",
@@ -20,9 +20,14 @@
     "files": [
       "main.js",
       "preload.js",
-      "database.js",
       "Jamrah-Icon.png",
       "src/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend/publish",
+        "to": "backend"
+      }
     ],
     "win": {
       "target": "nsis",
@@ -44,12 +49,11 @@
   "devDependencies": {
     "@electron/rebuild": "^4.0.4",
     "electron": "^42.4.0",
-    "electron-builder": "^25.1.8",
+    "electron-builder": "^26.15.3",
     "eslint": "^10.6.0",
     "sharp": "^0.35.2"
   },
   "dependencies": {
-    "better-sqlite3": "^12.11.1",
     "electron-updater": "^6.3.9"
   }
 }

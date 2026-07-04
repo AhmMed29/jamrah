@@ -10,6 +10,20 @@ let win
 let storagePath = null
 let backendProcess = null
 
+// a second instance would spawn a second backend that collides on port 5200
+// and opens the same SQLite file
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) {
+  app.quit()
+} else {
+  app.on('second-instance', function() {
+    if (win) {
+      if (win.isMinimized()) win.restore()
+      win.focus()
+    }
+  })
+}
+
 function is(type, val) {
   if (type === 'string') return typeof val === 'string' && val.length > 0
   if (type === 'object') return val !== null && typeof val === 'object' && !Array.isArray(val)
@@ -54,17 +68,27 @@ function determineStoragePath() {
 }
 
 async function startBackend() {
-  var backendDir = path.join(__dirname, 'backend')
   var dbFullPath = path.join(storagePath, 'app.db')
 
-  backendProcess = spawn('dotnet', ['run', '--project', backendDir], {
-    env: {
-      ...process.env,
-      ASPNETCORE_URLS: 'http://localhost:5200',
-      DATABASE_PATH: dbFullPath
-    },
-    stdio: ['ignore', 'pipe', 'pipe']
-  })
+  // SQLite cannot create missing parent directories; on a clean machine the
+  // backend would die with SQLITE_CANTOPEN before serving a single request
+  try { fs.mkdirSync(storagePath, { recursive: true }) } catch (e) { console.error('[.NET] mkdir failed:', e.message) }
+
+  var env = {
+    ...process.env,
+    ASPNETCORE_URLS: 'http://localhost:5200',
+    DATABASE_PATH: dbFullPath
+  }
+
+  if (app.isPackaged) {
+    // self-contained publish output shipped via electron-builder extraResources;
+    // installed machines have neither the .NET SDK nor the backend source
+    var exe = path.join(process.resourcesPath, 'backend', 'Jamrah.Backend.exe')
+    backendProcess = spawn(exe, [], { env: env, cwd: path.dirname(exe), stdio: ['ignore', 'pipe', 'pipe'] })
+  } else {
+    var backendDir = path.join(__dirname, 'backend')
+    backendProcess = spawn('dotnet', ['run', '--project', backendDir], { env: env, stdio: ['ignore', 'pipe', 'pipe'] })
+  }
 
   backendProcess.stdout.on('data', function(d) { var s = d.toString().trim(); if (s) console.log('[.NET] ' + s) })
   backendProcess.stderr.on('data', function(d) { var s = d.toString().trim(); if (s) console.error('[.NET] ' + s) })
@@ -73,16 +97,25 @@ async function startBackend() {
   for (var i = 0; i < 30; i++) {
     try {
       var res = await fetch(API_BASE + '/settings')
-      if (res.ok) { console.log('[.NET] Ready'); return }
+      if (res.ok) { console.log('[.NET] Ready'); return true }
     } catch (e) {}
     await new Promise(function(r) { setTimeout(r, 500) })
   }
   console.warn('[.NET] Timed out waiting for backend')
+  return false
 }
 
 function stopBackend() {
   if (backendProcess && !backendProcess.killed) {
-    try { backendProcess.kill() } catch (e) {}
+    try {
+      if (process.platform === 'win32') {
+        // "dotnet run" hosts the real server as a child process; a plain
+        // kill() orphans it, leaving port 5200 held and app.db locked
+        require('child_process').spawnSync('taskkill', ['/pid', String(backendProcess.pid), '/T', '/F'], { stdio: 'ignore' })
+      } else {
+        backendProcess.kill()
+      }
+    } catch (e) {}
     backendProcess = null
   }
 }
@@ -112,7 +145,16 @@ function createWindow () {
 
 app.whenReady().then(async () => {
   storagePath = determineStoragePath()
-  await startBackend()
+  var backendReady = await startBackend()
+  if (!backendReady) {
+    dialog.showErrorBox(
+      'Jamrah — backend failed to start',
+      'The database service did not start, so tasks, sessions, habits and settings cannot load.\n\n' +
+      (app.isPackaged
+        ? 'Try restarting the app. If the problem persists, reinstall Jamrah.'
+        : 'Check that the .NET 9 SDK is installed and that port 5200 is free.')
+    )
+  }
   createWindow()
 })
 
@@ -221,14 +263,18 @@ ipcMain.handle('db:init', async () => {
 
 ipcMain.handle('db:get-setting', async (e, key) => {
   if (!is('string', key)) return null
-  try { var r = await fetch(api('/settings/' + encodeURIComponent(key))); return r.ok ? await r.text() : null }
+  // json(), not text(): the backend returns a JSON string, so text() hands the
+  // renderer a double-quoted value ("\"true\"") and missing keys as "null"
+  try { var r = await fetch(api('/settings/' + encodeURIComponent(key))); return r.ok ? await r.json() : null }
   catch { return null }
 })
 
 ipcMain.handle('db:set-setting', async (e, key, value) => {
   if (!is('string', key)) return null
   try {
-    var r = await fetch(api('/settings/' + encodeURIComponent(key)), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) })
+    // the backend binds [FromBody] string, so numbers (timer minutes) must be
+    // sent as JSON strings or the request 400s and the setting never saves
+    var r = await fetch(api('/settings/' + encodeURIComponent(key)), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(String(value)) })
     return r.ok ? await r.json() : false
   } catch { return false }
 })
@@ -308,7 +354,7 @@ ipcMain.handle('open-url', async (e, url) => {
 
 ipcMain.handle('db:set-path', async (e, newPath) => {
   if (!is('string', newPath)) return null
-  var fullPath = newPath + '/MyProductivityApp/data'
+  var fullPath = path.join(newPath, 'Jamrah', 'data')
   var oldDb = path.join(storagePath, 'app.db')
   var newDb = path.join(fullPath, 'app.db')
   try {
@@ -319,6 +365,7 @@ ipcMain.handle('db:set-path', async (e, newPath) => {
     storagePath = fullPath
     await startBackend()
     var defaultPath = path.join(app.getPath('userData'), 'data')
+    if (!fs.existsSync(defaultPath)) fs.mkdirSync(defaultPath, { recursive: true })
     fs.writeFileSync(path.join(defaultPath, '.datadir'), storagePath, 'utf-8')
     return storagePath
   } catch { return null }
@@ -381,8 +428,9 @@ ipcMain.handle('db:create-task', async (e, task) => {
   if (!is('object', task)) return null
   try {
     var r = await fetch(api('/tasks'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(task) })
-    return r.ok ? await r.json() : false
-  } catch { return false }
+    if (!r.ok) { var body = await r.text(); return { error: true, status: r.status, body: body } }
+    return await r.json()
+  } catch (err) { return { error: true, message: err.message } }
 })
 
 ipcMain.handle('db:toggle-task', async (e, id) => {
@@ -446,7 +494,7 @@ ipcMain.handle('db:get-habit-logs', async (e, habitId, startDate, endDate) => {
 ipcMain.handle('db:set-habit-log', async (e, habitId, date, value) => {
   if (!is('string', habitId) || !is('string', date)) return null
   try {
-    var r = await fetch(api('/habits/' + encodeURIComponent(habitId) + '/logs'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habitId: habitId, date: date, value: value || 1 }) })
+    var r = await fetch(api('/habits/' + encodeURIComponent(habitId) + '/logs'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habitId: habitId, date: date, value: typeof value === 'number' ? value : 1 }) })
     return r.ok ? await r.json() : false
   } catch { return false }
 })

@@ -14,11 +14,11 @@ public class CreateSessionDto
     public long EndTime { get; set; }
 
     [Required]
-    [Range(0.1, 999, ErrorMessage = "Planned minutes must be between 0.1 and 999")]
+    [Range(0, 1440, ErrorMessage = "Planned minutes must be between 0 and 1440")]
     public double PlannedMinutes { get; set; }
 
     [Required]
-    [Range(0, 999, ErrorMessage = "Focus minutes must be between 0 and 999")]
+    [Range(0, 1440, ErrorMessage = "Focus minutes must be between 0 and 1440")]
     public double FocusMinutes { get; set; }
 
     public string? TaskName { get; set; }

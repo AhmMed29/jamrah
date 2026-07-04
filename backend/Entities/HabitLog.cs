@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Jamrah.Backend.Entities;
 
 public class HabitLog
@@ -8,5 +10,5 @@ public class HabitLog
     public int Value { get; set; } = 1;
     public string CreatedAt { get; set; } = string.Empty;
 
-    public Habit Habit { get; set; } = null!;
+    [JsonIgnore] public Habit Habit { get; set; } = null!;
 }

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Jamrah.Backend.Entities;
 
 public class Habit
@@ -11,5 +13,5 @@ public class Habit
     public string? DurationStart { get; set; }
     public string? DurationEnd { get; set; }
 
-    public ICollection<HabitLog> Logs { get; set; } = new List<HabitLog>();
+    [JsonIgnore] public ICollection<HabitLog> Logs { get; set; } = new List<HabitLog>();
 }

@@ -60,7 +60,7 @@ body {
   font-family: 'Instrument Serif', serif;
   font-size: 56px;
   letter-spacing: 0.04em;
-  color: rgba(255,255,255,0.92);
+  color: #000;
   line-height: 1;
   margin-bottom: 8px;
 }
@@ -74,7 +74,7 @@ body {
   font-size: 13px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.4);
+  color: rgba(0,0,0,0.4);
   font-family: 'Inter', sans-serif;
 }
 
@@ -132,7 +132,7 @@ body {
   transform: translateX(-50%);
   background: none;
   border: none;
-  color: rgba(255,255,255,0.15);
+  color: rgba(0,0,0,0.25);
   cursor: pointer;
   padding: 8px;
   transition: all 0.15s;
@@ -142,7 +142,7 @@ body {
   border-radius: 50%;
 }
 .pomo-gear-btn:hover {
-  color: rgba(255,255,255,0.45);
+  color: rgba(0,0,0,0.6);
   transform: translateX(-50%) scale(1.1);
 }
 .pomo-gear-btn:active {
@@ -160,8 +160,8 @@ body {
   padding: 16px;
   position: relative;
   overflow: hidden;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.02);
+  border: 1px solid rgba(0,0,0,0.08);
 }
 .pomo-timeline-fade-left,
 .pomo-timeline-fade-right {
@@ -174,11 +174,11 @@ body {
 }
 .pomo-timeline-fade-left {
   left: 0;
-  background: linear-gradient(to right, rgba(0,0,0,1), transparent);
+  background: linear-gradient(to right, rgba(255,255,255,1), transparent);
 }
 .pomo-timeline-fade-right {
   right: 0;
-  background: linear-gradient(to left, rgba(0,0,0,1), transparent);
+  background: linear-gradient(to left, rgba(255,255,255,1), transparent);
 }
 .pomo-timeline-scroll {
   overflow-x: auto;
@@ -196,7 +196,7 @@ body {
   font-size: 13px;
   text-align: center;
   padding: 16px 24px;
-  color: rgba(255,255,255,0.25);
+  color: rgba(0,0,0,0.3);
   min-width: 100%;
 }
 

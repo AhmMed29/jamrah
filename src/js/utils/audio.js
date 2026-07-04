@@ -9,11 +9,13 @@ function getAudio(path) {
   return audioCache[path];
 }
 
-function playSound(soundName, options = {}) {
-  const enabled = window.db?.getSetting?.('playPomoSound') !== 'false';
+async function playSound(soundName, options = {}) {
+  // getSetting is async IPC — the old sync reads compared a Promise to
+  // 'false' (always true) and parseFloat'd a Promise (always NaN)
+  const enabled = window.db ? (await window.db.getSetting('playPomoSound')) !== 'false' : true;
   if (!enabled) return;
 
-  const volume = parseFloat(window.db?.getSetting?.('pomoSoundVolume')) || 1.0;
+  const volume = parseFloat(window.db ? await window.db.getSetting('pomoSoundVolume') : '') || 1.0;
   const basePath = 'assets/App Sounds/';
   const path = basePath + soundName;
 

@@ -71,8 +71,13 @@ public class TagsController : ControllerBase
         var tag = await _db.Tags.FindAsync(id);
         if (tag == null) return Ok(false);
 
+        // detach references explicitly: pre-migration DBs have plain FKs with
+        // no ON DELETE action (and now run with enforcement on), so relying on
+        // the new schema's SET NULL would 500 there
         await _db.Sessions.Where(s => s.TagId == id)
             .ExecuteUpdateAsync(setters => setters.SetProperty(s => s.TagId, (string?)null));
+        await _db.Goals.Where(g => g.TagId == id)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(g => g.TagId, (string?)null));
 
         _db.Tags.Remove(tag);
         await _db.SaveChangesAsync();

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Jamrah.Backend.Entities;
 
 public class GoalProgress
@@ -8,5 +10,5 @@ public class GoalProgress
     public double ProgressValue { get; set; }
     public double FocusMinutes { get; set; }
 
-    public Goal Goal { get; set; } = null!;
+    [JsonIgnore] public Goal Goal { get; set; } = null!;
 }

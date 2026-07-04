@@ -111,7 +111,7 @@ window.tailwind={ config: {
 
   <!-- Session name -->
   <div id="pomoNameBox" class="mt-4" style="width:min(68vw,400px);min-width:260px">
-    <input id="pomoNameInput" type="text" placeholder="Session name (optional)" class="w-full bg-transparent border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white/40 placeholder-white/20 text-center focus:outline-none focus:border-white/20 focus:text-white/70 transition-colors" style="font-family:'Inter',sans-serif">
+    <input id="pomoNameInput" type="text" placeholder="Session name (optional)" class="w-full bg-transparent border border-black/10 rounded-xl px-4 py-2.5 text-sm text-black/40 placeholder-black/20 text-center focus:outline-none focus:border-black/20 focus:text-black/70 transition-colors" style="font-family:'Inter',sans-serif">
   </div>
 
   <!-- Settings gear -->
@@ -122,7 +122,7 @@ window.tailwind={ config: {
 </div>
 
 <!-- Session Timeline -->
-<div class="pomo-timeline-container hidden">
+<div class="pomo-timeline-container">
   <div class="pomo-timeline-inner">
     <div class="pomo-timeline-fade-left"></div>
     <div class="pomo-timeline-fade-right"></div>
@@ -618,7 +618,7 @@ window.tailwind={ config: {
 
 <div id="sessionTimelineModal">
   <div class="modal-card" style="width:100%; max-width:480px;">
-    <button class="close-btn" id="sessionTimelineModalClose">
+    <button class="close-btn" id="sessionTimelineModalClose" onclick="closeSessionTimelineModal()">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
       </svg>

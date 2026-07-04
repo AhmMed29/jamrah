@@ -36,8 +36,8 @@ async function showPage(name) {
   }
 }
 
-window.confirmSettingsSave = function() {
-  window.saveSettings();
+window.confirmSettingsSave = async function() {
+  await window.saveSettings();
   document.getElementById('settingsConfirmModal').style.display = 'none';
   document.getElementById('settingsModal').style.display = 'none';
   var target = _pendingNav;
@@ -66,6 +66,17 @@ document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && (e.key === '=' || e.key === '+')) { e.preventDefault(); window.electronAPI.zoomIn(); }
   if (e.ctrlKey && e.key === '-') { e.preventDefault(); window.electronAPI.zoomOut(); }
   if (e.ctrlKey && e.key === '0') { e.preventDefault(); window.electronAPI.zoomReset(); }
+  var k = typeof e.key === 'string' ? e.key.toLowerCase() : '';
+  if (e.ctrlKey && k === 'p' && window.toggleTimer) { e.preventDefault(); window.toggleTimer(); }
+  if (e.ctrlKey && k === 's') {
+    e.preventDefault();
+    // only save while the add-task popup is open — a global Ctrl+S used to
+    // create ghost tasks from stale text left in the hidden popup's input
+    var addTaskPopup = document.getElementById('add-task-popup');
+    if (addTaskPopup && addTaskPopup.style.display !== 'none' && window.saveTask) window.saveTask();
+  }
+  if (e.ctrlKey && k === 'n' && window.openAddTaskPopup) { e.preventDefault(); window.openAddTaskPopup(); }
+  if (e.ctrlKey && k === 'q') { e.preventDefault(); window.electronAPI.close(); }
 });
 
 /* ── Clock ── */
@@ -176,7 +187,9 @@ window.closeWelcomeModal = async function() {
 window.checkForUpdates = function() {
   var btn = document.getElementById('checkUpdateBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Checking...'; }
-  var statusEl = document.getElementById('updateStatus');
+  // the button lives in the settings pane; #updateStatus is inside the
+  // (hidden) update modal and was never visible from here
+  var statusEl = document.getElementById('updateSettingsStatus') || document.getElementById('updateStatus');
   if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Checking for updates...'; }
   window.electronAPI.checkForUpdates().then(function(available) {
     if (btn) { btn.disabled = false; btn.textContent = 'Search for Updates'; }
@@ -226,7 +239,7 @@ showPage = async function(name) {
 })();
 window.addEventListener('load', function() {
   var elapsed = performance.now() - window._splashStart;
-  var delay = Math.max(0, 5000 - elapsed);
+  var delay = Math.max(0, 1500 - elapsed);
   setTimeout(function() {
     var splash = document.getElementById('app-splash');
     if (splash) { splash.style.opacity = '0'; splash.style.transition = 'opacity 0.6s'; setTimeout(function() { splash.style.display = 'none'; }, 600); }

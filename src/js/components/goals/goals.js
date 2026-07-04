@@ -173,11 +173,20 @@ function computeGoalProgress(goalId, childMap, taskMap, cache) {
   return result;
 }
 
+/* parse 'YYYY-MM-DD' as local time: new Date(str) treats it as UTC midnight,
+   which renders the previous calendar day in negative-offset timezones */
+function formatGoalDate(s) {
+  if (!s) return '';
+  var p = String(s).split('-');
+  if (p.length < 3) return s;
+  return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString();
+}
+
 function goalCardHtml(g, progress) {
   var circumference = 2 * Math.PI * 30;
   var offset = circumference * (1 - (progress || 0) / 100);
-  var sd = g.startDate ? new Date(g.startDate).toLocaleDateString() : '';
-  var ed = g.endDate ? new Date(g.endDate).toLocaleDateString() : '';
+  var sd = g.startDate ? formatGoalDate(g.startDate) : '';
+  var ed = g.endDate ? formatGoalDate(g.endDate) : '';
   return '<div class="goal-card" style="border-left-color:' + g.color + '" data-goal-id="' + g.id + '">' +
     '<div class="goal-card-header">' +
       '<h3 class="goal-name">' + g.name + '</h3>' +
@@ -302,8 +311,8 @@ function openGoalDetailModal(goalId) {
         var progress = getProgress(g.id);
         var circumference = 2 * Math.PI * 34;
         var offset = circumference * (1 - progress / 100);
-        var sd = g.startDate ? new Date(g.startDate).toLocaleDateString() : '-';
-        var ed = g.endDate ? new Date(g.endDate).toLocaleDateString() : '-';
+        var sd = g.startDate ? formatGoalDate(g.startDate) : '-';
+        var ed = g.endDate ? formatGoalDate(g.endDate) : '-';
         var durText = g.duration ? g.duration + ' days' : '-';
         function renderChildTree(parentId, depth) {
           var kids = childMap[parentId] || [];

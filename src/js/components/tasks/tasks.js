@@ -103,51 +103,115 @@ document.addEventListener('click', function(e) {
 });
 
 function showTaskDetails(id) {
-  window.db.getTasks().then(function(tasks) {
+  Promise.all([window.db.getTasks(), window.db.getGoals()]).then(function(results) {
+    var tasks = results[0];
+    var goals = results[1];
     if (!tasks || !tasks.length) return;
     var task = null;
     for (var si = 0; si < tasks.length; si++) {
       if (tasks[si].id === id) { task = tasks[si]; break; }
     }
     if (!task) return;
+
+    var subtasks = [];
+    for (var si = 0; si < tasks.length; si++) {
+      if (tasks[si].parentTaskId === id) subtasks.push(tasks[si]);
+    }
+
+    var goalName = '';
+    if (task.goalId && goals) {
+      for (var gi = 0; gi < goals.length; gi++) {
+        if (goals[gi].id === task.goalId) { goalName = goals[gi].name; break; }
+      }
+    }
+
+    var dateStr = task.createdAt || '';
+    var formattedDate = dateStr;
+    if (dateStr) {
+      var parts = dateStr.split(' ');
+      if (parts.length >= 1) {
+        var dateParts = parts[0].split('-');
+        if (dateParts.length === 3) {
+          var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          formattedDate = months[parseInt(dateParts[1]) - 1] + ' ' + parseInt(dateParts[2]) + ', ' + dateParts[0];
+        }
+      }
+    }
+
     var overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px';
     overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.parentNode.removeChild(overlay); });
+
     var card = document.createElement('div');
-    card.style.cssText = 'background:#fff;border-radius:16px;padding:28px;width:100%;max-width:420px;box-shadow:0 8px 30px rgba(0,0,0,0.15);position:relative';
-    var closeBtn = document.createElement('button');
+    card.style.cssText = 'background:#fff;border-radius:20px;padding:28px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative;animation:modalIn 0.2s ease-out';
+
+    function el(tag, styles, parent) {
+      var e = document.createElement(tag);
+      if (styles) for (var k in styles) e.style[k] = styles[k];
+      if (parent) parent.appendChild(e);
+      return e;
+    }
+    function tx(text, parent) {
+      var e = document.createTextNode(text);
+      if (parent) parent.appendChild(e);
+      return e;
+    }
+
+    var closeBtn = el('button', {position:'absolute',top:'12px',left:'12px',width:'32px',height:'32px',borderRadius:'10px',display:'flex',alignItems:'center',justifyContent:'center',color:'#9ca3af',cursor:'pointer',border:'none',background:'none',fontSize:'20px',lineHeight:'1',padding:'0'}, card);
     closeBtn.innerHTML = '&times;';
-    closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;font-size:22px;color:#9ca3af;background:none;border:none;cursor:pointer;padding:4px;line-height:1';
     closeBtn.addEventListener('click', function() { overlay.parentNode.removeChild(overlay); });
-    var nameEl = document.createElement('h2');
-    nameEl.textContent = task.name;
-    nameEl.style.cssText = 'font-size:20px;font-weight:700;color:#1F2937;margin-bottom:14px;margin-top:0;word-break:break-word';
-    var badgesHtml = '';
+
+    el('h2', {fontSize:'20px',fontWeight:'700',color:'#1F2937',margin:'0 0 16px 0',paddingLeft:'36px',wordBreak:'break-word'}, card).appendChild(tx(task.name));
+
+    var badgesWrap = el('div', {marginBottom:'16px'}, card);
     if (task.priority && task.priority !== 'none') {
       var pc = task.priority === 'Low' ? '#059669' : task.priority === 'High' ? '#dc2626' : '#d97706';
       var pb = task.priority === 'Low' ? '#d1fae5' : task.priority === 'High' ? '#fee2e2' : '#fef3c7';
-      badgesHtml += '<span style="display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:0.5px;color:' + pc + ';background:' + pb + ';margin-right:6px;margin-bottom:4px">' + task.priority + '</span>';
+      var pbEl = el('span', {display:'inline-block',fontSize:'11px',fontWeight:'700',padding:'3px 10px',borderRadius:'6px',textTransform:'uppercase',color:pc,background:pb,margin:'0 6px 6px 0'}, badgesWrap);
+      pbEl.appendChild(tx(task.priority));
     }
-    if (task.goalId) badgesHtml += '<span style="display:inline-block;font-size:11px;color:#6B7280;background:#F3F4F6;padding:3px 10px;border-radius:10px;margin-right:6px;margin-bottom:4px">Goal</span>';
-    badgesHtml += task.completed ? '<span style="display:inline-block;font-size:11px;color:#059669;background:#d1fae5;padding:3px 10px;border-radius:10px;margin-bottom:4px">Done</span>' : '';
-    var badgesDiv = document.createElement('div');
-    badgesDiv.style.cssText = 'margin-bottom:24px';
-    badgesDiv.innerHTML = badgesHtml;
-    var divider = document.createElement('hr');
-    divider.style.cssText = 'border:none;border-top:1px solid #e5e7eb;margin-bottom:20px';
-    var btnWrap = document.createElement('div');
-    btnWrap.style.cssText = 'display:flex;gap:10px';
-    var editBtn = document.createElement('button');
-    editBtn.textContent = 'Edit';
-    editBtn.style.cssText = 'flex:1;padding:12px 20px;background:#3b82f6;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit';
+    if (goalName) {
+      var gbEl = el('span', {display:'inline-block',fontSize:'11px',fontWeight:'500',padding:'3px 10px',borderRadius:'6px',color:'#6B7280',background:'#F3F4F6',margin:'0 6px 6px 0'}, badgesWrap);
+      gbEl.appendChild(tx(goalName));
+    }
+    if (task.completed) {
+      el('span', {display:'inline-block',fontSize:'11px',fontWeight:'700',padding:'3px 10px',borderRadius:'6px',color:'#059669',background:'#d1fae5',margin:'0 0 6px 0'}, badgesWrap).appendChild(tx('Done'));
+    }
+
+    var infoWrap = el('div', {marginBottom:'20px'}, card);
+    var infoRow = el('div', {display:'flex',alignItems:'center',gap:'8px',padding:'10px 12px',background:'#F9FAFB',borderRadius:'10px'}, infoWrap);
+    infoRow.innerHTML += '<svg width="14" height="14" fill="none" stroke="#9CA3AF" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>';
+    infoRow.appendChild(tx('Created ' + formattedDate));
+
+    if (subtasks.length > 0) {
+      var subWrap = el('div', {marginBottom:'20px'}, card);
+      el('div', {fontSize:'12px',fontWeight:'600',color:'#6B7280',marginBottom:'8px',textTransform:'uppercase',letterSpacing:'0.5px'}, subWrap).appendChild(tx('Subtasks (' + subtasks.length + ')'));
+      var subList = el('div', {display:'flex',flexDirection:'column',gap:'6px',maxHeight:'160px',overflowY:'auto'}, subWrap);
+      for (var sti = 0; sti < subtasks.length; sti++) {
+        var st = subtasks[sti];
+        var row = el('div', {display:'flex',alignItems:'center',gap:'10px',padding:'8px 12px',background:'#F9FAFB',borderRadius:'10px'}, subList);
+        if (st.completed) {
+          row.innerHTML += '<div style="width:16px;height:16px;border-radius:50%;flex-shrink:0;background:#3B82F6;display:flex;align-items:center;justify-content:center"><svg width="8" height="8" fill="none" stroke="#fff" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7"/></svg></div>';
+          el('span', {fontSize:'13px',color:'#9CA3AF',textDecoration:'line-through'}, row).appendChild(tx(st.name));
+        } else {
+          row.innerHTML += '<div style="width:16px;height:16px;border-radius:50%;flex-shrink:0;border:2px solid #D1D5DB"></div>';
+          el('span', {fontSize:'13px',color:'#374151'}, row).appendChild(tx(st.name));
+        }
+      }
+    }
+
+    el('hr', {border:'none',borderTop:'1px solid #e5e7eb',margin:'0 0 16px 0'}, card);
+
+    var btnWrap = el('div', {display:'flex',gap:'10px'}, card);
+    var editBtn = el('button', {flex:'1',padding:'12px',background:'#3b82f6',color:'#fff',border:'none',borderRadius:'12px',fontSize:'14px',fontWeight:'600',cursor:'pointer',fontFamily:'inherit'}, btnWrap);
+    editBtn.appendChild(tx('Edit'));
     editBtn.addEventListener('click', function() { overlay.parentNode.removeChild(overlay); editTask(id); });
-    var deleteBtn = document.createElement('button');
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.style.cssText = 'flex:1;padding:12px 20px;background:#fff;color:#EF4444;border:2px solid #FCA5A5;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit';
+    var deleteBtn = el('button', {flex:'1',padding:'12px',background:'#FEF2F2',color:'#EF4444',border:'2px solid #FCA5A5',borderRadius:'12px',fontSize:'14px',fontWeight:'600',cursor:'pointer',fontFamily:'inherit'}, btnWrap);
+    deleteBtn.appendChild(tx('Delete'));
     deleteBtn.addEventListener('click', function() { overlay.parentNode.removeChild(overlay); deleteTask(id); });
-    btnWrap.appendChild(editBtn); btnWrap.appendChild(deleteBtn);
-    card.appendChild(closeBtn); card.appendChild(nameEl); card.appendChild(badgesDiv); card.appendChild(divider); card.appendChild(btnWrap);
-    overlay.appendChild(card); document.body.appendChild(overlay);
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
   });
 }
 

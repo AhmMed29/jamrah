@@ -150,6 +150,10 @@ window.tailwind={ config: {
     </div>
   </div>
 </div>
+</main>
+</div>
+
+<!-- Confirm popup (outside page containers so it's never clipped by hidden parent) -->
 <div id="confirmPopup" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden" onclick="closeConfirmPopup(event)">
   <div class="bg-white rounded-2xl p-6 shadow-xl w-80 max-w-[90vw]" onclick="event.stopPropagation()">
     <h3 class="text-lg font-medium text-gray-800 mb-2" id="confirmTitle">تأكيد</h3>
@@ -159,9 +163,6 @@ window.tailwind={ config: {
       <button onclick="confirmConfirm()" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors" id="confirmBtn">حذف</button>
     </div>
   </div>
-</div>
-
-</main>
 </div>
 
 <div id="page-habits" class="hidden flex-1 flex flex-col overflow-hidden" dir="rtl">

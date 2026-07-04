@@ -66,10 +66,13 @@ document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && (e.key === '=' || e.key === '+')) { e.preventDefault(); window.electronAPI.zoomIn(); }
   if (e.ctrlKey && e.key === '-') { e.preventDefault(); window.electronAPI.zoomOut(); }
   if (e.ctrlKey && e.key === '0') { e.preventDefault(); window.electronAPI.zoomReset(); }
-  if (e.ctrlKey && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); showPage('pomodoro'); }
-  if (e.ctrlKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); if (window.openSettings) window.openSettings(); }
-  if (e.ctrlKey && (e.key === 'n' || e.key === 'N')) { e.preventDefault(); if (window.openAddTaskPopup) window.openAddTaskPopup(); }
-  if (e.ctrlKey && (e.key === 'q' || e.key === 'Q')) { e.preventDefault(); if (window.electronAPI) window.electronAPI.closeApp(); }
+});
+window.electronAPI.onShortcut(function(action) {
+  switch (action) {
+    case 'pomodoro': showPage('pomodoro'); break;
+    case 'settings': if (window.openSettings) openSettings(); break;
+    case 'new-task': if (window.openAddTaskPopup) openAddTaskPopup(); break;
+  }
 });
 
 /* â”€â”€ Clock â”€â”€ */

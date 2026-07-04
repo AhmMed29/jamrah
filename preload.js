@@ -33,7 +33,10 @@ var electronAPI = {
   backupGetInfo: () => ipcRenderer.invoke('backup:get-info'),
   backupGetDefaultPath: () => ipcRenderer.invoke('backup:get-default-path'),
   backupOpenFolder: (folderPath) => ipcRenderer.invoke('backup:open-folder', folderPath),
-  closeApp: () => ipcRenderer.send('close-app')
+  closeApp: () => ipcRenderer.send('close-app'),
+  onShortcut: (callback) => {
+    ipcRenderer.on('shortcut', (_, action) => callback(action))
+  }
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

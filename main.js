@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const { spawn } = require('child_process')
@@ -84,6 +84,7 @@ function stopBackend() {
 }
 
 function createWindow () {
+  Menu.setApplicationMenu(Menu.buildFromTemplate([]))
   win = new BrowserWindow({
     width: 1200,
     height: 800,

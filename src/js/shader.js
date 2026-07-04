@@ -49,14 +49,7 @@ var SHADER_FRAGMENT = [
   '}',
 ].join('\n');
 
-var THEMES = {
-  dark:    { color1: [0.15, 0.15, 0.15], color2: [0.0, 0.0, 0.0], bg: [0.0, 0.0, 0.0], label: 'Dark', preview: ['#262626','#000','#000'] },
-  ocean:   { color1: [0.0, 0.55, 0.85], color2: [0.3, 0.7, 0.9], bg: [0.0, 0.0, 0.0], label: 'Ocean', preview: ['#0088CC','#4DA8DA','#000'] },
-  forest:  { color1: [0.05, 0.5, 0.2], color2: [0.2, 0.7, 0.3], bg: [0.0, 0.0, 0.0], label: 'Forest', preview: ['#0D8040','#33B35A','#000'] },
-  sunset:  { color1: [0.75, 0.2, 0.1], color2: [0.9, 0.5, 0.1], bg: [0.0, 0.0, 0.0], label: 'Sunset', preview: ['#BF331A','#E68A19','#000'] },
-  lavender:{ color1: [0.45, 0.15, 0.75], color2: [0.65, 0.45, 0.85], bg: [0.0, 0.0, 0.0], label: 'Lavender', preview: ['#7326BF','#A673D9','#000'] },
-};
-window.shaderThemes = THEMES;
+
 
 function initShader(canvas) {
   if (!canvas) return null;
@@ -79,7 +72,6 @@ function initShader(canvas) {
   var startTime = Date.now();
   var mouseX = 0.5, mouseY = 0.5;
   var running = true;
-  var theme = THEMES.ocean;
 
   function resize() {
     var rect = canvas.getBoundingClientRect();
@@ -97,9 +89,6 @@ function initShader(canvas) {
     gl.uniform2f(u.iResolution, canvas.width, canvas.height);
     gl.uniform1f(u.iTime, time);
     gl.uniform2f(u.iMouse, mouseX, mouseY);
-    gl.uniform3f(u.iColor1, theme.color1[0], theme.color1[1], theme.color1[2]);
-    gl.uniform3f(u.iColor2, theme.color2[0], theme.color2[1], theme.color2[2]);
-    gl.uniform3f(u.iBgColor, theme.bg[0], theme.bg[1], theme.bg[2]);
   }
 
   function draw() {
@@ -132,10 +121,6 @@ function initShader(canvas) {
   return {
     destroy: function() { running = false; },
     updateMouse: function(x, y) { mouseX = x; mouseY = y; },
-    setTheme: function(id) { theme = THEMES[id] || THEMES.dark; },
-    setColors: function(c1, c2, bg) {
-      theme = { color1: c1, color2: c2, bg: bg };
-    },
   };
 }
 
@@ -191,39 +176,8 @@ function hexToRgb(h) {
 }
 
 window.initPomoShader = async function() {
-  if (_shaderInstance) return;
-  var savedTheme = window.db ? await window.db.getSetting('pomoTheme') || 'ocean' : 'ocean';
   var circle = document.getElementById('timerCircle');
-  if (savedTheme === 'minimal') {
-    if (circle) circle.classList.add('minimal-mode');
-    return;
-  }
-  var canvas = document.getElementById('pomoShaderCanvas');
-  if (!canvas) return;
-  _shaderInstance = initShader(canvas);
-  if (savedTheme === 'custom') {
-    var cc1 = await window.db.getSetting('customColor1');
-    var cc2 = await window.db.getSetting('customColor2');
-    var cbg = await window.db.getSetting('customBgColor');
-    if (cc1 && cc2 && cbg) {
-      _shaderInstance.setColors(hexToRgb(cc1), hexToRgb(cc2), hexToRgb(cbg));
-    } else {
-      _shaderInstance.setTheme(savedTheme);
-    }
-  } else {
-    _shaderInstance.setTheme(savedTheme);
-  }
-  if (circle && _shaderInstance) {
-    circle.addEventListener('mousemove', function(e) {
-      var rect = canvas.getBoundingClientRect();
-      var x = (e.clientX - rect.left) / rect.width;
-      var y = (e.clientY - rect.top) / rect.height;
-      _shaderInstance.updateMouse(x, y);
-    });
-    circle.addEventListener('mouseleave', function() {
-      _shaderInstance.updateMouse(0.5, 0.5);
-    });
-  }
+  if (circle) circle.classList.add('minimal-mode');
 };
 
 window.destroyPomoShader = function() {
@@ -233,17 +187,4 @@ window.destroyPomoShader = function() {
   }
 };
 
-window.shaderSetRunning = function() {
-};
 
-window.shaderSetTheme = function(id) {
-  if (_shaderInstance) {
-    _shaderInstance.setTheme(id);
-  }
-};
-
-window.shaderSetColors = function(c1, c2, bg) {
-  if (_shaderInstance) {
-    _shaderInstance.setColors(c1, c2, bg);
-  }
-};

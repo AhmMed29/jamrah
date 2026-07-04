@@ -35,3 +35,7 @@ backend/jamrah.db-wal
 test-backend.db
 test-backend.db-shm
 test-backend.db-wal
+
+# Published .NET backend
+backend/publish/
+

@@ -42,11 +42,19 @@ function determineStoragePath() {
 }
 
 async function startBackend() {
-  var backendDir = path.join(__dirname, 'backend')
   var dbFullPath = path.join(storagePath, 'app.db')
   if (!fs.existsSync(storagePath)) fs.mkdirSync(storagePath, { recursive: true })
 
-  backendProcess = spawn('dotnet', ['run', '--project', backendDir], {
+  var backendCmd, backendArgs
+  if (app.isPackaged) {
+    backendCmd = path.join(process.resourcesPath, 'backend', 'Jamrah.Backend.exe')
+    backendArgs = []
+  } else {
+    backendCmd = 'dotnet'
+    backendArgs = ['run', '--project', path.join(__dirname, 'backend')]
+  }
+
+  backendProcess = spawn(backendCmd, backendArgs, {
     env: {
       ...process.env,
       ASPNETCORE_URLS: 'http://localhost:5200',

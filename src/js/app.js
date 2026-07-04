@@ -221,9 +221,9 @@ showPage = async function(name) {
   if (name === 'habits' && window.renderHabits) renderHabits();
 };
 
-(async function() {
+document.addEventListener('DOMContentLoaded', async function() {
   await showPage('pomodoro');
-})();
+});
 window.addEventListener('load', function() {
   var elapsed = performance.now() - window._splashStart;
   var delay = Math.max(0, 2000 - elapsed);

@@ -124,6 +124,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Completed).HasColumnName("completed").HasDefaultValue(0);
             entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql("datetime('now')");
             entity.Property(e => e.ParentTaskId).HasColumnName("parentTaskId");
+            entity.Property(e => e.Priority).HasColumnName("priority").IsRequired().ValueGeneratedOnAdd().HasDefaultValue("none");
 
             entity.HasOne(e => e.Goal)
                   .WithMany(g => g.Tasks)

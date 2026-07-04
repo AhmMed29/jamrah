@@ -169,7 +169,7 @@ async function openModal(habitId) {
     '</div>' +
     '<div class="flex gap-3">' +
       '<button class="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-all hover:opacity-90 edit-habit-btn" style="background:' + habit.color + '" data-id="' + habitId + '">تعديل العادة</button>' +
-      '<button class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:#fff" data-id="' + habitId + '">حذف</button>' +
+      '<button class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700 delete-habit-btn" style="background:#fff" data-id="' + habitId + '">حذف</button>' +
     '</div>';
 
   modalContent.querySelector('.edit-habit-btn').addEventListener('click', function() {

@@ -1,4 +1,4 @@
-/* ── Page Router ── */
+﻿/* â”€â”€ Page Router â”€â”€ */
 var _pendingNav = null;
 
 async function showPage(name) {
@@ -61,14 +61,14 @@ window.closeSettingsConfirm = function(e) {
   }
 };
 
-/* ── Keyboard Shortcuts ── */
+/* â”€â”€ Keyboard Shortcuts â”€â”€ */
 document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && (e.key === '=' || e.key === '+')) { e.preventDefault(); window.electronAPI.zoomIn(); }
   if (e.ctrlKey && e.key === '-') { e.preventDefault(); window.electronAPI.zoomOut(); }
   if (e.ctrlKey && e.key === '0') { e.preventDefault(); window.electronAPI.zoomReset(); }
 });
 
-/* ── Clock ── */
+/* â”€â”€ Clock â”€â”€ */
 function updateClock() {
   var now = new Date();
   var clk = document.getElementById('clockDisplay');
@@ -83,7 +83,7 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 1000);
 
-/* ── Update system (electron-updater) ── */
+/* â”€â”€ Update system (electron-updater) â”€â”€ */
 var APP_VERSION = '1.3.3';
 var updateData = null;
 var updateDownloaded = false;
@@ -94,7 +94,7 @@ function renderReleaseNotes(text) {
     .replace(/^### (.+)$/gm, '<div style="font-size:14px;font-weight:600;color:#374151;margin-top:12px;margin-bottom:6px">$1</div>')
     .replace(/^## (.+)$/gm, '<div style="font-size:15px;font-weight:700;color:#1F2937;margin-top:14px;margin-bottom:8px">$1</div>')
     .replace(/^# (.+)$/gm, '<div style="font-size:16px;font-weight:700;color:#111827;margin-top:16px;margin-bottom:8px">$1</div>')
-    .replace(/^- (.+)$/gm, '<div style="display:flex;align-items:baseline;gap:8px;padding:2px 0"><span style="color:#3B82F6;flex-shrink:0">•</span><span>$1</span></div>')
+    .replace(/^- (.+)$/gm, '<div style="display:flex;align-items:baseline;gap:8px;padding:2px 0"><span style="color:#3B82F6;flex-shrink:0">â€¢</span><span>$1</span></div>')
     .replace(/\n/g, '<br>');
 }
 
@@ -102,7 +102,7 @@ window.electronAPI.onUpdateAvailable(function(data) {
   updateData = data;
   updateDownloaded = false;
   document.getElementById('updateVersion').textContent = data.version;
-  // Show update size (bytes → KB/MB)
+  // Show update size (bytes â†’ KB/MB)
   var sizeEl = document.getElementById('updateSize');
   if (sizeEl && data.files && data.files.length > 0) {
     var bytes = data.files[0].size;
@@ -159,7 +159,7 @@ window.closeUpdateModal = function(e) {
   }
 };
 
-/* ── Welcome popup (shown once, first launch only) ── */
+/* â”€â”€ Welcome popup (shown once, first launch only) â”€â”€ */
 (async function checkWelcome() {
   var shown = await window.db.getSetting('welcomeShown');
   if (shown === 'true') return;
@@ -172,7 +172,7 @@ window.closeWelcomeModal = async function() {
   document.getElementById('welcomeModal').style.display = 'none';
 };
 
-/* ── Manual update check (from settings) ── */
+/* â”€â”€ Manual update check (from settings) â”€â”€ */
 window.checkForUpdates = function() {
   var btn = document.getElementById('checkUpdateBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Checking...'; }
@@ -191,7 +191,7 @@ window.checkForUpdates = function() {
   });
 };
 
-/* ── Settings Page ── */
+/* â”€â”€ Settings Page â”€â”€ */
 function selectStoragePath() {
   window.electronAPI.selectFolder().then(function(newPath) {
     if (newPath) {
@@ -212,7 +212,7 @@ function selectStoragePath() {
   }
 })();
 
-/* ── Page change hook: render goals/tasks when page becomes visible ── */
+/* â”€â”€ Page change hook: render goals/tasks when page becomes visible â”€â”€ */
 var _origShowPage2 = showPage;
 showPage = async function(name) {
   await _origShowPage2(name);
@@ -226,9 +226,10 @@ showPage = async function(name) {
 })();
 window.addEventListener('load', function() {
   var elapsed = performance.now() - window._splashStart;
-  var delay = Math.max(0, 5000 - elapsed);
+  var delay = Math.max(0, 2000 - elapsed);
   setTimeout(function() {
     var splash = document.getElementById('app-splash');
     if (splash) { splash.style.opacity = '0'; splash.style.transition = 'opacity 0.6s'; setTimeout(function() { splash.style.display = 'none'; }, 600); }
   }, delay);
 });
+

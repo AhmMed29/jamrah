@@ -146,6 +146,12 @@
     .hpi:hover, .hpi:hover .sticky-col { background-color: #fdf2f8 !important; }
     .hor:hover, .hor:hover .sticky-col { background-color: #fff7ed !important; }
     .hpu:hover, .hpu:hover .sticky-col { background-color: #faf5ff !important; }
+    #habit-modal { animation: fadeIn 0.15s ease-out; }
+    #add-modal { animation: fadeIn 0.15s ease-out; }
+    #habit-modal .modal-card { animation: modalIn 0.2s ease-out; }
+    #add-modal .modal-card { animation: modalIn 0.2s ease-out; }
+    @keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">

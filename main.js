@@ -38,19 +38,7 @@ autoUpdater.on('error', function(err) {
 })
 
 function determineStoragePath() {
-  var defaultPath = path.join(app.getPath('userData'), 'data')
-  var datadirPath = path.join(defaultPath, '.datadir')
-  if (fs.existsSync(datadirPath)) {
-    return fs.readFileSync(datadirPath, 'utf-8').trim()
-  }
-  var settingsPath = path.join(defaultPath, 'settings.json')
-  if (fs.existsSync(settingsPath)) {
-    try {
-      var settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
-      if (settings.dataPath) return settings.dataPath
-    } catch (e) {}
-  }
-  return defaultPath
+  return path.join(app.getPath('userData'), 'data')
 }
 
 async function startBackend() {
@@ -397,10 +385,10 @@ ipcMain.handle('db:delete-task', async (e, id) => {
   catch { return false }
 })
 
-ipcMain.handle('db:update-task', async (e, id, name) => {
-  if (!is('string', id) || !is('string', name)) return null
+ipcMain.handle('db:update-task', async (e, id, data) => {
+  if (!is('string', id) || !is('object', data)) return null
   try {
-    var r = await fetch(api('/tasks/' + encodeURIComponent(id)), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name }) })
+    var r = await fetch(api('/tasks/' + encodeURIComponent(id)), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
     return r.ok ? await r.json() : false
   } catch { return false }
 })
@@ -446,7 +434,75 @@ ipcMain.handle('db:get-habit-logs', async (e, habitId, startDate, endDate) => {
 ipcMain.handle('db:set-habit-log', async (e, habitId, date, value) => {
   if (!is('string', habitId) || !is('string', date)) return null
   try {
-    var r = await fetch(api('/habits/' + encodeURIComponent(habitId) + '/logs'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ habitId: habitId, date: date, value: value || 1 }) })
+    var r = await fetch(api('/habits/' + encodeURIComponent(habitId) + '/logs'), { method: 'POST', headers: { 'Content-Type': 'application/json' },       body: JSON.stringify({ habitId: habitId, date: date, value: value != null ? value : 1 }) })
     return r.ok ? await r.json() : false
   } catch { return false }
+})
+
+// ---- Backup / Restore IPC ----
+ipcMain.handle('backup:get-default-path', async () => {
+  return path.join(app.getPath('documents'), 'MyProductivityApp Backups')
+})
+
+ipcMain.handle('backup:get-info', async () => {
+  var dbFile = path.join(storagePath, 'app.db')
+  var settingsFile = path.join(storagePath, 'settings.json')
+  return {
+    storagePath: storagePath,
+    dbFile: dbFile,
+    dbExists: fs.existsSync(dbFile),
+    settingsFile: settingsFile,
+    settingsExists: fs.existsSync(settingsFile)
+  }
+})
+
+ipcMain.handle('backup:do', async (e, backupDir) => {
+  if (!is('string', backupDir)) return { success: false, error: 'Invalid directory' }
+  try {
+    if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true })
+
+    var dbSource = path.join(storagePath, 'app.db')
+    var dbDest = path.join(backupDir, 'app.db')
+
+    if (fs.existsSync(dbSource)) fs.copyFileSync(dbSource, dbDest)
+
+    var settingsSource = path.join(storagePath, 'settings.json')
+    var settingsDest = path.join(backupDir, 'settings.json')
+
+    if (fs.existsSync(settingsSource)) fs.copyFileSync(settingsSource, settingsDest)
+
+    return { success: true, path: backupDir, files: [{ name: 'app.db', path: dbDest }, { name: 'settings.json', path: settingsDest }] }
+  } catch (err) { return { success: false, error: err.message } }
+})
+
+ipcMain.handle('backup:select-folder', async () => {
+  var result = await dialog.showOpenDialog(win, {
+    properties: ['openDirectory', 'createDirectory']
+  })
+  return result.canceled ? null : result.filePaths[0]
+})
+
+ipcMain.handle('backup:select-files', async () => {
+  var result = await dialog.showOpenDialog(win, {
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Database Files', extensions: ['db'] }]
+  })
+  return result.canceled ? null : result.filePaths
+})
+
+ipcMain.handle('backup:restore', async (e, files) => {
+  if (!Array.isArray(files) || files.length === 0) return { log: [{ type: 'error', message: 'No files selected' }] }
+  try {
+    var r = await fetch(api('/backup/restore'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: files })
+    })
+    return r.ok ? await r.json() : { log: [{ type: 'error', message: 'Restore request failed' }] }
+  } catch (err) { return { log: [{ type: 'error', message: err.message }] } }
+})
+
+ipcMain.handle('backup:open-folder', async (e, folderPath) => {
+  if (!is('string', folderPath)) return
+  try { shell.openPath(folderPath) } catch {}
 })

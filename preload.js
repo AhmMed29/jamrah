@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron')
+﻿const { contextBridge, ipcRenderer } = require('electron')
 
 var electronAPI = {
   minimize: () => ipcRenderer.send('minimize'),
@@ -25,7 +25,14 @@ var electronAPI = {
   },
   startDownload: () => ipcRenderer.invoke('start-download'),
   quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),
-  checkForUpdates: () => ipcRenderer.invoke('check-for-updates')
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  backupDo: (dir) => ipcRenderer.invoke('backup:do', dir),
+  backupSelectFolder: () => ipcRenderer.invoke('backup:select-folder'),
+  backupSelectFiles: () => ipcRenderer.invoke('backup:select-files'),
+  backupRestore: (files) => ipcRenderer.invoke('backup:restore', files),
+  backupGetInfo: () => ipcRenderer.invoke('backup:get-info'),
+  backupGetDefaultPath: () => ipcRenderer.invoke('backup:get-default-path'),
+  backupOpenFolder: (folderPath) => ipcRenderer.invoke('backup:open-folder', folderPath)
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)
@@ -56,7 +63,7 @@ var db = {
   getTasks: (goalId) => ipcRenderer.invoke('db:get-tasks', goalId),
   createTask: (task) => ipcRenderer.invoke('db:create-task', task),
   toggleTask: (id) => ipcRenderer.invoke('db:toggle-task', id),
-  updateTask: (id, name) => ipcRenderer.invoke('db:update-task', id, name),
+  updateTask: (id, data) => ipcRenderer.invoke('db:update-task', id, data),
   deleteTask: (id) => ipcRenderer.invoke('db:delete-task', id),
   getHabits: () => ipcRenderer.invoke('db:get-habits'),
   createHabit: (habit) => ipcRenderer.invoke('db:create-habit', habit),
@@ -67,3 +74,4 @@ var db = {
 }
 
 contextBridge.exposeInMainWorld('db', db)
+

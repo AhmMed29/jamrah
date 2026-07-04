@@ -156,17 +156,19 @@
 .task-item.task-sub .task-check { width: 18px; height: 18px; }
 .task-item.task-sub .task-name { font-size: 13px; }
 
-/* ── Task three-dot menu ── */
-.task-menu-wrap { position: relative; flex-shrink: 0; }
-.task-menu-btn { width: 28px; height: 28px; border-radius: 8px; border: none; background: none; cursor: pointer; color: #D1D5DB; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
-.task-item:hover .task-menu-btn { color: #9CA3AF; }
-.task-menu-btn:hover { background: #F3F4F6; color: #374151 !important; }
-.task-menu-dropdown { display: none; position: absolute; right: 0; top: 100%; z-index: 100; background: #fff; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04); padding: 4px; min-width: 130px; margin-top: 4px; }
-.task-menu-dropdown.open { display: block; }
-.task-menu-item { padding: 7px 14px; font-size: 13px; color: #374151; cursor: pointer; border-radius: 6px; transition: background 0.1s; }
-.task-menu-item:hover { background: #F3F4F6; }
-.task-menu-item-danger { color: #EF4444; }
-.task-menu-item-danger:hover { background: #FEF2F2; }
+/* ── Priority Badge ── */
+.task-priority-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0; margin-right: 4px; }
+.task-priority-badge.low { color: #059669; background: #d1fae5; }
+.task-priority-badge.medium { color: #d97706; background: #fef3c7; }
+.task-priority-badge.high { color: #dc2626; background: #fee2e2; }
+
+/* ── Priority Selector ── */
+#priority-selector .priority-btn { flex: 1; padding: 10px 16px; border-radius: 12px; font-size: 13px; font-weight: 600; border: 2px solid transparent; cursor: pointer; transition: all 0.15s; }
+#priority-selector .priority-btn:hover { opacity: 0.8; }
+#priority-selector .priority-btn.selected { border-color: currentColor; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+#priority-selector .priority-low { color: #059669; background: #d1fae5; }
+#priority-selector .priority-medium { color: #d97706; background: #fef3c7; }
+#priority-selector .priority-high { color: #dc2626; background: #fee2e2; }
 
 /* ── Goals Hierarchy Popup (3.8) ── */
 #goals-task-tree { scrollbar-width: thin; }
@@ -202,5 +204,8 @@
 
 ::selection { background: #D8B4FE; color: inherit; }
 ::-moz-selection { background: #D8B4FE; color: inherit; }
+
+.sort-option.active { background: #EFF6FF; color: #2563EB; }
+.sort-option.active svg { color: #2563EB; }
 
 

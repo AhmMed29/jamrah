@@ -63,6 +63,7 @@ public class TasksController : ControllerBase
         if (task == null) return Ok(false);
 
         task.Name = dto.Name;
+        if (dto.Priority != null) task.Priority = dto.Priority;
         await _db.SaveChangesAsync();
         return Ok(true);
     }

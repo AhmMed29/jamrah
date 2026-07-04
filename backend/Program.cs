@@ -16,6 +16,7 @@ builder.Services.AddControllers()
     {
         opts.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
         opts.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+        opts.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
 builder.Services.AddDbContext<AppDbContext>(opts =>
@@ -36,6 +37,10 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var ctx = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    // Checkpoint WAL into main db before migrations
+    try { ctx.Database.ExecuteSqlRaw("PRAGMA wal_checkpoint(TRUNCATE)"); }
+    catch { }
 
     // Create tables that the old DB might be missing (habits, habit_logs)
     string[] createMissingTables = [

@@ -18,7 +18,7 @@
 <script>window._splashStart = performance.now()</script>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.buymeacoffee.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self'; img-src 'self' data: https:; media-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'">
-<title>Jamrah جَــمْــرَه</title>
+<title>Jamrah جَمْرَه</title>
 <link rel="icon" type="image/svg+xml" href="assets/Jamrah-Icon.svg">
 <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous"></noscript>
 <link href="https://fonts.googleapis.com" rel="preconnect">
@@ -231,6 +231,8 @@ window.tailwind={ config: {
       </button>
     </nav>
   </div>
+        <!-- Restore Log Modal -->
+        
   <!-- Content -->
   <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0">
     <!-- Header -->
@@ -349,7 +351,7 @@ window.tailwind={ config: {
           </section>
         </div>
 
-        <!-- Storage -->
+                <!-- Storage -->
         <div class="settings-pane" id="paneStorage" style="display:none">
           <section>
             <div style="padding-bottom:8px;border-bottom:1px solid rgba(195,198,213,0.3);margin-bottom:20px">
@@ -360,11 +362,52 @@ window.tailwind={ config: {
                 <span class="material-symbols-outlined" style="font-size:18px;color:#9CA3AF;flex-shrink:0">folder</span>
                 <span id="storagePathDisplay" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">...</span>
               </span>
-              <button onclick="selectStoragePath()" style="padding:10px 20px;background:#fff;color:#0e58c5;border:1px solid rgba(195,198,213,0.5);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;white-space:nowrap" onmouseover="this.style.background='#f8f9ff'" onmouseout="this.style.background='#fff'">Browse...</button>
+              <button onclick="openStorageFolder()" style="padding:10px 20px;background:#fff;color:#0e58c5;border:1px solid rgba(195,198,213,0.5);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;white-space:nowrap" onmouseover="this.style.background='#f8f9ff'" onmouseout="this.style.background='#fff'">Browse...</button>
             </div>
           </section>
+
+          <section style="margin-top:32px">
+            <div style="padding-bottom:8px;border-bottom:1px solid rgba(195,198,213,0.3);margin-bottom:16px">
+              <h4 style="font-size:16px;font-weight:600;color:#0b1c30">Backup</h4>
+            </div>
+            <div id="backupStatus" style="display:none;padding:10px 16px;border-radius:8px;margin-bottom:12px;font-size:13px;font-weight:500"></div>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+              <span style="display:flex;align-items:center;gap:8px;flex:1;padding:10px 14px;background:#fff;border:1px solid rgba(195,198,213,0.5);border-radius:8px;font-size:13px;color:#6B7280;overflow:hidden">
+                <span class="material-symbols-outlined" style="font-size:18px;color:#9CA3AF;flex-shrink:0">folder_copy</span>
+                <span id="backupPathDisplay" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Not set</span>
+              </span>
+              <button onclick="selectBackupFolder()" style="padding:10px 20px;background:#fff;color:#0e58c5;border:1px solid rgba(195,198,213,0.5);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;white-space:nowrap" onmouseover="this.style.background='#f8f9ff'" onmouseout="this.style.background='#fff'">Browse</button>
+            </div>
+            <button onclick="doBackup()" style="padding:10px 24px;background:#0e58c5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity 0.15s;display:flex;align-items:center;gap:8px" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+              <span class="material-symbols-outlined" style="font-size:18px">backup</span> Backup Now
+            </button>
+          </section>
+
+          <section style="margin-top:32px">
+            <div style="padding-bottom:8px;border-bottom:1px solid rgba(195,198,213,0.3);margin-bottom:16px">
+              <h4 style="font-size:16px;font-weight:600;color:#0b1c30">Restore from Backup</h4>
+            </div>
+            <p style="font-size:12px;color:#6B7280;margin-bottom:12px">Expected file name: <strong>app.db</strong> (SQLite database)</p>
+            <button onclick="doRestore()" style="padding:10px 24px;background:#fff;color:#dc2626;border:1px solid #dc2626;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='#fff'">
+              <span class="material-symbols-outlined" style="font-size:18px">restore</span> Restore
+            </button>
+          </section>
+
           <div style="display:flex;justify-content:center;margin-top:32px;padding-top:20px;border-top:1px solid #E5E7EB">
             <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="ahmedghazi" data-color="#FFDD00" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff" integrity="sha384-OibPdNn05smfqAFi21q8C4YkzZLEjwXs7kTtiqrJwOv7PtZefVaGPzKgX4rJfvWv" crossorigin="anonymous"></script>
+          </div>
+        </div>
+
+        <!-- Restore Log Modal -->
+        <div id="restoreLogModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden" onclick="closeRestoreLog(event)">
+          <div class="bg-white rounded-2xl p-6 shadow-xl w-[600px] max-w-[90vw] max-h-[80vh] flex flex-col" onclick="event.stopPropagation()">
+            <h3 class="text-lg font-medium text-gray-800 mb-4">Restore Log</h3>
+            <div id="restoreLogContent" style="flex:1;overflow-y:auto;background:#f9fafb;border:1px solid #E5E7EB;border-radius:8px;padding:12px;font-size:13px;font-family:Consolas,'Courier New',monospace;line-height:1.6;min-height:200px">
+              <div style="color:#9CA3AF">Waiting...</div>
+            </div>
+            <div class="flex justify-end mt-4">
+              <button onclick="closeRestoreLog()" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors">OK</button>
+            </div>
           </div>
         </div>
 
@@ -409,6 +452,26 @@ window.tailwind={ config: {
     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
   </button>
   <span class="text-sm text-gray-500 font-medium">Goal Tasks</span>
+  <div class="relative" id="sort-wrap">
+    <button onclick="toggleSortDropdown(event)" class="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Sort Tasks">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9l4-4 4 4M7 5v14M21 15l-4 4-4-4M17 19V5"/></svg>
+    </button>
+    <div id="sort-dropdown" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-100 py-2 min-w-[150px] z-40" style="box-shadow:0 4px 16px rgba(0,0,0,0.12)">
+      <div class="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Sort by</div>
+      <button onclick="setSortBy('date-desc')" class="sort-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2" data-value="date-desc">
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m0 0l-4-4m4 4l4-4"/></svg>
+        <span>Date</span>
+      </button>
+      <button onclick="setSortBy('date-asc')" class="sort-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2" data-value="date-asc">
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-4 4m4-4l4 4"/></svg>
+        <span>Date</span>
+      </button>
+      <button onclick="setSortBy('priority')" class="sort-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2" data-value="priority">
+        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h18M3 12h18M3 20h18"/></svg>
+        Priority
+      </button>
+    </div>
+  </div>
 </div>
 </header>
 <main class="flex-1 overflow-auto p-6 bg-gray-50">
@@ -428,6 +491,12 @@ window.tailwind={ config: {
 </button>
 <h2 class="text-lg font-bold text-gray-800 mb-5">Add New Task</h2>
 <input type="text" id="task-name-input" placeholder="e.g. Read 20 pages" class="w-full border-2 border-gray-200 rounded-xl px-5 py-4 text-base text-gray-700 focus:border-blue-400 focus:ring-0 outline-none mb-5" onkeydown="if(event.key==='Enter')saveTask()">
+<label class="text-sm font-medium text-gray-600 mb-2 block">Priority</label>
+<div class="flex gap-2 mb-5" id="priority-selector">
+  <button onclick="selectPriority('Low')" class="priority-btn priority-low flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 border-transparent cursor-pointer transition-all hover:opacity-80" data-value="Low">Low</button>
+  <button onclick="selectPriority('Medium')" class="priority-btn priority-medium selected flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 border-transparent cursor-pointer transition-all hover:opacity-80" data-value="Medium">Medium</button>
+  <button onclick="selectPriority('High')" class="priority-btn priority-high flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 border-transparent cursor-pointer transition-all hover:opacity-80" data-value="High">High</button>
+</div>
 <label class="text-sm font-medium text-gray-600 mb-2 block">Related Goal</label>
 <div id="task-goal-tags"></div>
 <button onclick="saveTask()" class="w-full py-3.5 rounded-xl text-white text-base font-medium transition-all hover:opacity-90" style="background:#3B82F6">Add Task</button>
@@ -649,7 +718,7 @@ window.tailwind={ config: {
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px">
       <img src="assets/Jamrah-Icon.svg" alt="Jamrah" style="width:40px;height:40px"/>
       <div>
-        <h3 style="font-size:22px;font-weight:700;color:#1F2937">Jamrah جَــمْــرَه</h3>
+        <h3 style="font-size:22px;font-weight:700;color:#1F2937">Jamrah جَمْرَه</h3>
         <p style="font-size:14px;color:#6B7280">New version: <span id="updateVersion" style="font-weight:700;color:#374151"></span> <span id="updateSize" style="font-size:12px;color:#9CA3AF;margin-left:4px"></span></p>
       </div>
     </div>
@@ -672,21 +741,21 @@ window.tailwind={ config: {
     <div style="height:6px;background:linear-gradient(90deg,#0e58c5,#3B82F6,#8B5CF6);flex-shrink:0"></div>
     <div style="padding:32px 32px 24px;text-align:center;overflow-y:auto;flex:1">
       <img src="assets/gifs/jewelry-for-updates.gif" alt="" style="width:90px;margin:0 auto 12px;display:block"/>
-      <h2 style="font-size:24px;font-weight:800;color:#0b1c30;margin-bottom:4px">Hi 🖐</h2>
+      <h2 style="font-size:24px;font-weight:800;color:#0b1c30;margin-bottom:4px">Hi ðŸ–</h2>
       <p style="font-size:14px;color:#4B5563;line-height:1.7;text-align:left;margin-bottom:16px">
         I'm <strong>Ahmed</strong>, a .NET backend developer and a Computer Science student.
       </p>
       <p style="font-size:14px;color:#4B5563;line-height:1.7;text-align:left;margin-bottom:16px">
-        I built <strong>Jamrah</strong> to help students and anyone who wants to stay focused and productive — but couldn't find a simple, beautiful, and <strong>completely free</strong> app that does the job without all the clutter. So I made one.
+        I built <strong>Jamrah</strong> to help students and anyone who wants to stay focused and productive â€” but couldn't find a simple, beautiful, and <strong>completely free</strong> app that does the job without all the clutter. So I made one.
       </p>
       <p style="font-size:14px;color:#4B5563;line-height:1.7;text-align:left;margin-bottom:16px">
-        My dream is to turn this into a full cross-platform mobile app someday — it's on my roadmap! In the meantime, it's fully <strong>open source</strong>. If anyone wants to contribute or build on it, you'd be helping the whole community.
+        My dream is to turn this into a full cross-platform mobile app someday â€” it's on my roadmap! In the meantime, it's fully <strong>open source</strong>. If anyone wants to contribute or build on it, you'd be helping the whole community.
       </p>
       <p style="font-size:14px;color:#4B5563;line-height:1.7;text-align:left;margin-bottom:16px">
-        I'm a backend .NET dev by trade — frontend isn't really my lane. This was built with <strong>vibe coding</strong>! I put a lot of effort into keeping the design clean and giving you full control over everything: colors, sounds, buttons — you name it. I'm still actively developing it, making it simpler every day.
+        I'm a backend .NET dev by trade â€” frontend isn't really my lane. This was built with <strong>vibe coding</strong>! I put a lot of effort into keeping the design clean and giving you full control over everything: colors, sounds, buttons â€” you name it. I'm still actively developing it, making it simpler every day.
       </p>
       <p style="font-size:14px;color:#4B5563;line-height:1.7;text-align:left;margin-bottom:16px">
-        If you just want a <strong>Pomodoro timer</strong> — the app will be just that. If you want <strong>habit tracking</strong> — it'll be just that too. Everything is under <strong>your control</strong>. You choose what to use and how to use it, exactly the way you like. No distractions. No payments.
+        If you just want a <strong>Pomodoro timer</strong> â€” the app will be just that. If you want <strong>habit tracking</strong> â€” it'll be just that too. Everything is under <strong>your control</strong>. You choose what to use and how to use it, exactly the way you like. No distractions. No payments.
       </p>
       <p style="font-size:14px;color:#4B5563;line-height:1.7;text-align:left;margin-bottom:20px">
         I'm constantly updating the app, fixing bugs, improving the design, and adding more features. Hope you enjoy it! &#x1F604;&#x1F4AA;
@@ -778,3 +847,4 @@ window.tailwind={ config: {
 <script src="js/app.js"></script>
 </body>
 </html>
+

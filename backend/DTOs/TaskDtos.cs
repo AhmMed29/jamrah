@@ -20,4 +20,5 @@ public class UpdateTaskItemDto
     [Required(ErrorMessage = "Task name is required")]
     [StringLength(500, MinimumLength = 1)]
     public string Name { get; set; } = string.Empty;
+    public string? Priority { get; set; }
 }

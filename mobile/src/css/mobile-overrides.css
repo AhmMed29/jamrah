@@ -26,6 +26,10 @@ button:active, .clickable:active {
 /* ── Hide scrollbars on mobile ── */
 ::-webkit-scrollbar { display: none; }
 
+/* ── Hide Electron titlebar (window controls don't work on mobile) ── */
+#titlebar { display: none !important; }
+#drag-region { display: none !important; }
+
 /* ── Bottom nav (mobile-specific, already in index.html) ── */
 .safe-area-bottom {
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
@@ -35,6 +39,26 @@ button:active, .clickable:active {
 body {
   -webkit-user-select: none;
   user-select: none;
+}
+
+/* ── Account for bottom nav (fixed 60px bar) ── */
+#page-pomodoro main .flex-1.flex-col:first-child {
+  padding-bottom: 80px !important;
+}
+#page-habits #main-scroll {
+  padding-bottom: 80px;
+}
+#page-habits .fixed.bottom-8 {
+  bottom: calc(3rem + 60px) !important;
+}
+#page-tasks main {
+  padding-bottom: 80px !important;
+}
+#page-tasks .fixed.bottom-8 {
+  bottom: calc(2rem + 60px) !important;
+}
+#page-goals main {
+  padding-bottom: 80px !important;
 }
 
 /* ── Input and textarea adjustments ── */

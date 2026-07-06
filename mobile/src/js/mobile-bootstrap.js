@@ -45,4 +45,14 @@
   // Hide floating dock
   var dock = document.getElementById('floating-dock')
   if (dock) dock.style.display = 'none'
+
+  // Fallback: force-hide splash after 3s (in case load event never fires)
+  setTimeout(function() {
+    var splash = document.getElementById('app-splash')
+    if (splash && splash.style.display !== 'none') {
+      splash.style.opacity = '0'
+      splash.style.transition = 'opacity 0.3s'
+      setTimeout(function() { splash.style.display = 'none' }, 300)
+    }
+  }, 3000)
 })()

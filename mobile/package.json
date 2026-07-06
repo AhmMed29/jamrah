@@ -1,8 +1,8 @@
 {
-  "name": "my-productivity-app-mobile",
-  "version": "1.0.0",
+  "name": "jamrah-mobile",
+  "version": "2.0.0",
   "private": true,
-  "description": "My Productivity App - Mobile (Capacitor)",
+  "description": "Jamrah جَمْرَه - Mobile (Capacitor)",
   "scripts": {
     "build": "npx cap copy",
     "sync": "npx cap sync",
@@ -15,6 +15,9 @@
     "@capacitor/android": "^8.4.1",
     "@capacitor/cli": "^8.4.1",
     "@capacitor/core": "^8.4.1",
-    "@capacitor/splash-screen": "^8.0.1"
+    "@capacitor/dialog": "^8.0.1",
+    "@capacitor/filesystem": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/share": "^8.0.1"
   }
 }

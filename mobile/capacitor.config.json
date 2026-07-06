@@ -1,5 +1,14 @@
 {
-  "appId": "com.ahmmed.myproductivityapp",
-  "appName": "My Productivity App",
-  "webDir": "src"
+  "appId": "com.ahmmed.jamrah",
+  "appName": "Jamrah",
+  "webDir": "src",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#FFFFFF"
+    }
+  },
+  "server": {
+    "androidScheme": "https"
+  }
 }

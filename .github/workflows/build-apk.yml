@@ -23,7 +23,7 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          java-version: 17
+          java-version: 21
           distribution: 'temurin'
 
       - name: Setup Android SDK
@@ -37,7 +37,9 @@ jobs:
 
       - name: Build APK
         working-directory: mobile/android
-        run: ./gradlew assembleDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4

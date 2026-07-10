@@ -45,6 +45,7 @@ window.tailwind={ config: {
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/habits.css">
 <link rel="stylesheet" href="css/ahmeds-styles.css">
+<link rel="stylesheet" href="css/stats.css">
 <link rel="stylesheet" href="css/main.css">
 
 </head>
@@ -54,25 +55,47 @@ window.tailwind={ config: {
 <div class="flex-1 h-full" id="drag-region" style="-webkit-app-region: drag"></div>
 <div class="flex h-full">
 <button onclick="window.electronAPI.minimize()" class="w-[46px] h-full flex items-center justify-center text-gray-500 hover:bg-[rgba(0,0,0,0.05)] transition-colors">
-<svg class="w-[10px] h-[1px]" viewbox="0 0 10 1"><rect width="10" height="1" fill="currentColor"></rect></svg>
+<svg class="w-[10px] h-[1px]" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"></rect></svg>
 </button>
 <button onclick="window.electronAPI.maximize()" class="w-[46px] h-full flex items-center justify-center text-gray-500 hover:bg-[rgba(0,0,0,0.05)] transition-colors">
-<svg class="w-[10px] h-[10px]" viewbox="0 0 10 10"><rect fill="none" height="10" stroke="currentColor" stroke-width="1.2" width="10"></rect></svg>
+<svg class="w-[10px] h-[10px]" viewBox="0 0 10 10"><rect fill="none" height="10" stroke="currentColor" stroke-width="1.2" width="10"></rect></svg>
 </button>
 <button onclick="window.electronAPI.close()" class="w-[46px] h-full flex items-center justify-center text-gray-500 hover:bg-[#e81123] hover:text-white transition-colors">
-<svg class="w-[10px] h-[10px]" viewbox="0 0 10 10"><path d="M1 1l8 8M9 1l-8 8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path></svg>
+<svg class="w-[10px] h-[10px]" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1l-8 8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path></svg>
 </button>
 </div>
 </div>
-<div class="flex flex-1 overflow-hidden">
+<div id="appContent" class="flex flex-1 overflow-hidden">
 <div id="page-home" class="hidden flex-1 flex-col items-center justify-center bg-white px-4"></div>
 
 <div id="page-pomodoro" class="flex flex-1 overflow-hidden min-h-0">
+<div id="pomoSideBox" class="pomo-side-box">
+  <div class="pomo-side-header">
+    <span id="pomoSideDateLabel" class="pomo-side-date-label">Today</span>
+  </div>
+  <div class="pomo-side-timeline" id="pomoSideTimeline"></div>
+  <div class="pomo-side-nav" id="pomoSideNav">
+    <button class="pomo-side-nav-btn" id="pomoSideNavBack" onclick="sideBoxPrevDay()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <span class="pomo-side-nav-label" id="pomoSideNavLabel">Today</span>
+    <button class="pomo-side-nav-btn" id="pomoSideNavFwd" onclick="sideBoxNextDay()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+  </div>
+</div>
 <main class="flex-1 flex flex-col relative h-full overflow-hidden bg-white" id="mainArea">
 <div class="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto px-4 relative" style="padding-top:60px;padding-bottom:60px">
 
-  <!-- Session counter -->
-  <div id="sessionCounter" class="pomo-counter"></div>
+  <div id="pomoTaskDropdown" class="pomo-task-dropdown">
+    <button id="pomoTaskDropdownBtn" class="pomo-task-dropdown-btn" onclick="togglePomoTaskDropdown()">
+      <span id="pomoTaskLabel">Select task...</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div id="pomoTaskDropdownMenu" class="pomo-task-dropdown-menu hidden">
+      <!-- populated dynamically -->
+    </div>
+  </div>
 
   <!-- Timer circle wrapper -->
   <div class="timer-circle-wrapper" id="timerCircle" style="width:min(68vw,400px);height:min(68vw,400px);min-width:260px;min-height:260px">
@@ -84,69 +107,25 @@ window.tailwind={ config: {
     <div class="timer-face" id="timerFace">
       <div class="timer-text" id="timerText">25:00</div>
       <div class="timer-label" id="phaseLabel">Focus</div>
-    </div>
-  </div>
-
-  <!-- Session dots -->
-  <div class="flex items-center gap-2 mt-6" id="sessionDots"></div>
-
-  <!-- Controls (hover-reveal when running) -->
-  <div class="pomo-controls-area" id="pomoControlsArea">
-    <div class="pomo-controls-row" id="pomoControls">
-      <button class="pomo-btn" id="resetBtn" onclick="window.resetTimer()" title="Reset">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-      </button>
-      <button class="pomo-btn pomo-adj-btn" onclick="window.adjustTime(-5)" title="-5 min">-5</button>
-      <button class="pomo-btn pomo-adj-btn" onclick="window.adjustTime(-1)" title="-1 min">-1</button>
       <button class="pomo-play-btn" id="playBtn" title="Play/Pause"></button>
-      <button class="pomo-btn pomo-adj-btn" onclick="window.adjustTime(1)" title="+1 min">+1</button>
-      <button class="pomo-btn pomo-adj-btn" onclick="window.adjustTime(5)" title="+5 min">+5</button>
-      <button class="pomo-btn" id="skipBtn" onclick="window.skipPhase()" title="Skip">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+    </div>
+    <button id="pomoDecBtn" class="pomo-adj-btn pomo-adj-left" onclick="adjustTime(-5)" title="−5 min">−5</button>
+    <button id="pomoIncBtn" class="pomo-adj-btn pomo-adj-right" onclick="adjustTime(5)" title="+5 min">+5</button>
+    <button id="pomoCancelBtn" class="pomo-cancel-btn" onclick="openEndPopup()" title="إنهاء الجلسة">✕</button>
+  </div>
+
+  <!-- Session name popup (inside side box area) -->
+  <div id="pomoNamePopup" class="pomo-name-popup hidden">
+    <div class="pomo-name-popup-arrow"></div>
+    <div class="pomo-name-popup-body">
+      <input id="pomoNamePopupInput" type="text" placeholder="Session name..." class="pomo-name-popup-input">
+      <button class="pomo-name-popup-btn" onclick="confirmSessionName()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>
       </button>
     </div>
   </div>
 
-  <!-- Presets (hidden when running) -->
-  <div class="flex items-center gap-2 mt-6" id="pomoPresets">
-    <button class="pomo-preset-btn" onclick="window.setPreset(25)">25m</button>
-    <button class="pomo-preset-btn" onclick="window.setPreset(50)">50m</button>
-    <button class="pomo-preset-btn pomo-settings-btn" onclick="window.openPomoSettings()" title="Timer Settings">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
-    </button>
-    <div class="pomo-preset-divider"></div>
-    <button class="pomo-preset-btn pomo-end-btn" onclick="window.openEndPopup()">End</button>
   </div>
-
-  <!-- Session name -->
-  <div id="pomoNameBox" class="mt-4" style="width:min(68vw,400px);min-width:260px">
-    <input id="pomoNameInput" type="text" placeholder="Session name (optional)" class="w-full bg-transparent border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white/40 placeholder-white/20 text-center focus:outline-none focus:border-white/20 focus:text-white/70 transition-colors" style="font-family:'Inter',sans-serif">
-  </div>
-
-  <!-- Settings gear -->
-  <button class="pomo-gear-btn" onclick="window.openPomoSettings()" title="Settings">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="7" r="3"/><circle cx="7" cy="17" r="3"/></svg>
-  </button>
-
-</div>
-
-<!-- Session Timeline -->
-<div class="pomo-timeline-container hidden">
-  <div class="pomo-timeline-inner">
-    <div class="pomo-timeline-fade-left"></div>
-    <div class="pomo-timeline-fade-right"></div>
-    <div class="pomo-timeline-scroll" id="sessionTimelineScroll">
-      <div class="pomo-timeline-track" id="sessionTimelineTrack">
-        <div class="pomo-timeline-empty" id="sessionTimelineEmpty">
-          No sessions yet. Press Start to begin your first Pomodoro.
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- Settings Bottom Sheet (moved to Settings Modal) -->
 
@@ -224,8 +203,8 @@ window.tailwind={ config: {
 <script src="js/components/habits/habits.js"></script>
 
 <!-- Settings Modal (tabbed) -->
-<div id="settingsModal" style="display:none;position:fixed;inset:0;z-index:60;background:rgba(0,0,0,0.35);backdrop-filter:blur(2px);align-items:center;justify-content:center;padding:16px" onclick="closeSettings(event)">
-<div style="background:#fff;border-radius:16px;width:100%;max-width:1000px;height:85vh;display:flex;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.12);border:1px solid rgba(195,198,213,0.3)" onclick="event.stopPropagation()">
+<div id="page-settings" class="hidden flex-1 flex-col overflow-hidden">
+<div style="display:flex;flex:1;overflow:hidden">
   <!-- Sidebar -->
   <div style="width:200px;background:#f8f9ff;border-left:1px solid rgba(195,198,213,0.5);padding:28px 16px;flex-shrink:0;display:flex;flex-direction:column">
       <h2 style="font-size:18px;font-weight:700;color:#0b1c30;margin-bottom:24px;padding:0 12px">Settings</h2>
@@ -267,7 +246,7 @@ window.tailwind={ config: {
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:20px">
               <div>
-                <label style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer" for="taskPopupToggle">Show task popup on start</label>
+                <label style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer" onclick="toggleTaskPopup()">Show task popup on start</label>
                 <p style="font-size:12px;color:#6B7280;margin-top:4px">Automatically open the add task dialog when timer starts</p>
               </div>
               <div class="toggle-switch active" id="taskPopupToggle" onclick="toggleTaskPopup()">
@@ -287,6 +266,14 @@ window.tailwind={ config: {
               <button id="checkUpdateBtn" onclick="checkForUpdates()" style="padding:9px 20px;background:#0e58c5;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500;transition:opacity 0.15s;white-space:nowrap" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Search for Updates</button>
             </div>
             <div id="updateSettingsStatus" style="font-size:12px;color:#9CA3AF;text-align:center;display:none"></div>
+          </section>
+          <section style="margin-top:32px">
+            <div style="padding-bottom:8px;border-bottom:1px solid rgba(195,198,213,0.3);margin-bottom:16px">
+              <h4 style="font-size:16px;font-weight:600;color:#0b1c30">Support</h4>
+            </div>
+            <div style="display:flex;justify-content:center;padding-top:8px">
+              <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="ahmedghazi" data-color="#FFDD00" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff" integrity="sha384-OibPdNn05smfqAFi21q8C4YkzZLEjwXs7kTtiqrJwOv7PtZefVaGPzKgX4rJfvWv" crossorigin="anonymous"></script>
+            </div>
           </section>
         </div>
 
@@ -329,7 +316,7 @@ window.tailwind={ config: {
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:20px">
               <div>
-                <label style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer" for="pomoSoundToggle">Pomodoro sounds</label>
+                <label style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer" onclick="togglePomoSound()">Pomodoro sounds</label>
                 <p style="font-size:12px;color:#6B7280;margin-top:4px">Play sound on session start and end</p>
               </div>
               <div class="toggle-switch active" id="pomoSoundToggle" onclick="togglePomoSound()">
@@ -382,9 +369,7 @@ window.tailwind={ config: {
             </button>
           </section>
 
-          <div style="display:flex;justify-content:center;margin-top:32px;padding-top:20px;border-top:1px solid #E5E7EB">
-            <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="ahmedghazi" data-color="#FFDD00" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff" integrity="sha384-OibPdNn05smfqAFi21q8C4YkzZLEjwXs7kTtiqrJwOv7PtZefVaGPzKgX4rJfvWv" crossorigin="anonymous"></script>
-          </div>
+
         </div>
 
         <!-- Restore Log Modal -->
@@ -405,32 +390,36 @@ window.tailwind={ config: {
     <!-- Footer -->
     <div style="padding:14px 28px;background:#fff;border-top:1px solid rgba(195,198,213,0.3);display:none;justify-content:flex-end;gap:10px;flex-shrink:0" id="settingsBtnRow">
       <button id="settingsCancelBtn" onclick="cancelSettings()" style="padding:9px 24px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;color:#6B7280;background:#fff;cursor:pointer;font-weight:500;transition:all 0.15s" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">Cancel</button>
-      <button onclick="saveSettings()" style="padding:9px 24px;background:#0e58c5;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;transition:all 0.15s" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Save Changes</button>
+      <button onclick="saveSettings();closeSettings()" style="padding:9px 24px;background:#0e58c5;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;transition:all 0.15s" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Save Changes</button>
     </div>
   </div>
 </div>
 </div>
 
 <div id="page-goals" class="hidden flex-1 flex flex-col overflow-hidden">
-<header class="flex-none px-6 py-4 flex justify-between items-center border-b border-gray-100 bg-white shadow-sm">
-<div class="flex items-center gap-3">
-<h1 class="text-xl font-bold text-gray-800">Goals</h1>
-<svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-</svg>
-</div>
-<button id="add-goal-btn" onclick="openAddGoalModal()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl shadow-lg shadow-blue-600/30 font-medium transition-all transform hover:-translate-y-1 text-sm">
-<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-</svg>
-<span>Add New Goal</span>
-</button>
-</header>
-<main class="flex-1 overflow-auto p-6 bg-gray-50">
-<div id="goals-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-<!-- goal cards will be rendered here by JS -->
-</div>
-</main>
+  <div class="goals-header">
+    <button id="addGoalBtn" class="goals-add-btn" onclick="openAddGoalRow()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+    </button>
+  </div>
+  <div class="goals-table-wrap">
+    <table id="goalsTable" class="goals-table">
+      <thead>
+        <tr>
+          <th>الهدف</th>
+          <th>المدة</th>
+          <th>تاريخ البداية</th>
+          <th>تاريخ النهاية</th>
+          <th>التقدم</th>
+          <th>الحالة</th>
+          <th></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="goalsTableBody">
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <div id="page-tasks" class="hidden flex-1 flex flex-col overflow-hidden">
@@ -471,6 +460,15 @@ window.tailwind={ config: {
 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
 </svg>
 </button>
+</div>
+
+<div id="page-stats" class="hidden flex-1 flex flex-col overflow-hidden">
+  <div class="stats-header">
+    <h1>الإحصائيات</h1>
+  </div>
+  <div class="stats-grid" id="statsGrid">
+    <!-- Widgets rendered by JS -->
+  </div>
 </div>
 
 <div id="add-task-popup" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50" style="display:none" onclick="closeAddTaskPopup(event)">
@@ -525,7 +523,7 @@ window.tailwind={ config: {
         <div id="tagList" class="max-h-40 overflow-y-auto p-2"></div>
         <div class="border-t border-gray-100 p-2">
           <button onclick="openNewTagPopup()" class="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
             New Tag
           </button>
         </div>
@@ -583,7 +581,7 @@ window.tailwind={ config: {
         <div id="addTagList" class="max-h-40 overflow-y-auto p-2"></div>
         <div class="border-t border-gray-100 p-2">
           <button onclick="openNewTagPopup()" class="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
             New Tag
           </button>
         </div>
@@ -595,68 +593,8 @@ window.tailwind={ config: {
     </div>
     </div>
   </div>
-</div>
 
-<div id="add-goal-modal">
-<div class="modal-card">
-<button class="close-btn" id="add-goal-modal-close" onclick="closeAddGoalModal()">
-<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-</svg>
-</button>
-<h2 class="text-lg font-bold text-gray-800 mb-5">Add New Goal</h2>
-<form id="add-goal-form" onsubmit="return false">
-<label class="block text-sm font-medium text-gray-600 mb-1.5">Goal Name</label>
-<input id="goal-name-input" type="text" placeholder="e.g. Learn Guitar" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none mb-4">
 
-<label class="block text-sm font-medium text-gray-600 mb-1.5">Description</label>
-<textarea id="goal-desc-input" placeholder="What's this goal about?" rows="2" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none mb-4"></textarea>
-
-<label class="block text-sm font-medium text-gray-600 mb-1.5">Color</label>
-<div class="flex gap-2.5 flex-wrap mb-4" id="goal-color-picker"></div>
-
-<div class="grid grid-cols-2 gap-4 mb-4">
-<div>
-<label class="block text-sm font-medium text-gray-600 mb-1.5">Duration</label>
-<select id="goal-duration-type" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none mb-2">
-<option value="days">Days</option>
-<option value="weeks">Weeks</option>
-<option value="months" selected>Months</option>
-</select>
-<input id="goal-duration-value" type="number" value="3" min="1" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none">
-</div>
-<div>
-<label class="block text-sm font-medium text-gray-600 mb-1.5">Start Date</label>
-<input id="goal-start-date" type="date" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none mb-2">
-<label class="block text-sm font-medium text-gray-600 mb-1.5">End Date</label>
-<input id="goal-end-date" type="date" readonly class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-500 bg-gray-50 focus:border-blue-400 focus:ring-0 transition-all outline-none">
-</div>
-</div>
-
-<div class="mb-4">
-<label class="block text-sm font-medium text-gray-600 mb-1.5">Parent Goal (optional)</label>
-<select id="goal-parent-select" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none">
-<option value="">None</option>
-</select>
-</div>
-<div class="flex gap-3 mt-6">
-<button type="button" id="save-goal-btn" onclick="saveGoal()" class="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-all hover:opacity-90" style="background:#3B82F6">Save Goal</button>
-<button type="button" id="cancel-goal-btn" onclick="closeAddGoalModal()" class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:#fff">Cancel</button>
-</div>
-</form>
-</div>
-</div>
-
-<div id="goal-detail-modal">
-<div class="modal-card" id="goal-detail-card">
-<button class="close-btn" onclick="closeGoalDetailModal()">
-<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-</svg>
-</button>
-<div id="goal-detail-content"></div>
-</div>
-</div>
 
 <div id="delete-confirm-modal" onclick="closeDeleteConfirmModal()">
 <div class="modal-card" onclick="event.stopPropagation()">
@@ -669,14 +607,14 @@ window.tailwind={ config: {
 <div class="confirm-msg" id="delete-confirm-msg">Are you sure you want to delete this goal?</div>
 <div class="confirm-actions">
 <button class="btn-confirm-cancel" onclick="closeDeleteConfirmModal()">Cancel</button>
-<button class="btn-confirm-delete" id="btn-confirm-delete-yes">Delete</button>
+<button class="btn-confirm-delete" id="btn-confirm-delete-yes" onclick="confirmDeleteGoal()">Delete</button>
 </div>
 </div>
 </div>
 
-<div id="sessionTimelineModal">
-  <div class="modal-card" style="width:100%; max-width:480px;">
-    <button class="close-btn" id="sessionTimelineModalClose">
+<div id="sessionTimelineModal" onclick="closeSessionTimelineModal(event)">
+  <div class="modal-card" style="width:100%; max-width:480px;" onclick="event.stopPropagation()">
+    <button class="close-btn" id="sessionTimelineModalClose" onclick="closeSessionTimelineModal()">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
       </svg>
@@ -793,6 +731,36 @@ window.tailwind={ config: {
     </div>
   </div>
 </div>
+<!-- خلفية الـ Sidebar (Backdrop) -->
+<div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+
+<!-- زرار تبديل السايد بار -->
+<button id="sidebarToggleBtn" class="sidebar-toggle-btn" aria-label="Toggle Menu">
+  <svg class="sidebar-toggle-icon" id="sidebarIconHamburger" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+    <line x1="3" y1="5" x2="17" y2="5"/>
+    <line x1="3" y1="10" x2="17" y2="10"/>
+    <line x1="3" y1="15" x2="17" y2="15"/>
+  </svg>
+  <svg class="sidebar-toggle-icon hidden" id="sidebarIconX" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <line x1="2" y1="2" x2="14" y2="14"/>
+    <line x1="14" y1="2" x2="2" y2="14"/>
+  </svg>
+</button>
+
+<!-- الـ Sidebar -->
+<aside id="sidebar" class="sidebar">
+  <!-- روابط الـ Sidebar -->
+  <nav class="sidebar-nav mt-auto">
+    <button class="sidebar-item" onclick="showPage('stats')">
+      <span class="material-symbols-outlined">bar_chart</span>
+      <span>Stats</span>
+    </button>
+    <button id="settingsBtn" class="sidebar-item active">
+      <span class="material-symbols-outlined">settings</span>
+      <span>Settings</span>
+    </button>
+  </nav>
+</aside>
 
 <!-- Floating Dock Navigation -->
 <div class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50">
@@ -814,10 +782,7 @@ window.tailwind={ config: {
 <span class="material-symbols-outlined text-lg sm:text-xl">checklist</span>
 <span class="text-[9px] sm:text-[10px] font-medium mt-0.5 leading-tight">Habits</span>
 </button>
-<button class="dock-item flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl transition-colors text-tickgray-500 hover:bg-blue-50 hover:text-tickblue" data-page="settings" onclick="openSettings();window.AudioManager?.playSound('tab-swipping.mp3')">
-<span class="material-symbols-outlined text-lg sm:text-xl">settings</span>
-<span class="text-[9px] sm:text-[10px] font-medium mt-0.5 leading-tight">Settings</span>
-</button>
+
 </nav>
 </div>
 </div>
@@ -831,6 +796,7 @@ window.tailwind={ config: {
 <script src="js/theme.js"></script>
 <script src="js/utils/helpers.js"></script>
 <script src="js/components/settings/settings.js"></script>
+<script src="js/components/stats/stats.js"></script>
 <script src="js/components/goals/goals.js"></script>
 <script src="js/components/tasks/tasks.js"></script>
 <script src="js/app.js"></script>

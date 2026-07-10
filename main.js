@@ -152,14 +152,14 @@ ipcMain.on('close-app', () => app.quit())
 
 ipcMain.handle('zoom-in', (e) => {
   var wc = e.sender
-  var z = Math.min((wc.getZoomFactor() || 1) + 0.1, 1.3)
+  var z = Math.min((wc.getZoomFactor() || 1) + 0.1, 2.1)
   wc.setZoomFactor(z)
   return z
 })
 
 ipcMain.handle('zoom-out', (e) => {
   var wc = e.sender
-  var z = Math.max((wc.getZoomFactor() || 1) - 0.1, 0.8)
+  var z = Math.max((wc.getZoomFactor() || 1) - 0.1, 0.7)
   wc.setZoomFactor(z)
   return z
 })

@@ -47,108 +47,7 @@ function hexToRgb(hex) {
 }
 
 async function renderTimeline() {
-  var container = document.getElementById('focusTimeline');
-  if (!container) return;
-  var sessions = await getSessions();
-  var html = '<div class="absolute left-4 top-2 bottom-0 w-px bg-gray-100"></div>';
-
-  var activeSessionHtml = '';
-
-  if (activeSession) {
-    var now = Date.now();
-    var elapsedInCurrentRun = activeSession.lastResumeTime ? now - activeSession.lastResumeTime : 0;
-    var totalElapsed = activeSession.accumulatedMs + elapsedInCurrentRun;
-    var totalFocusMin = totalElapsed / 60000;
-    var estimatedEnd = now + remainingSeconds * 1000;
-    var timeRange = formatTimeHM(activeSession.startTime) + ' - ' + formatTimeHM(estimatedEnd);
-    var durationText = totalFocusMin < 1 ? (Math.round(totalFocusMin * 60) + 's') : totalFocusMin.toFixed(1) + 'm';
-    var tagHtml = '';
-    if (activeSession.tagId) {
-      var allTags = await getTags();
-      var tag = allTags.find(function(t) { return t.id === activeSession.tagId; });
-      if (tag) {
-        tagHtml = '<span class="tag-bubble" style="background:' + 'rgba(' + hexToRgb(tag.color) + ',0.12);color:' + tag.color + ';border:1px solid rgba(' + hexToRgb(tag.color) + ',0.25)">#' + tag.name + '</span>';
-      }
-    }
-
-    activeSessionHtml += '<div class="flex items-start mb-4 relative z-10 group cursor-pointer" data-sid="' + activeSession.id + '">';
-    activeSessionHtml += '<div class="w-6 h-6 rounded-full bg-purple-light flex items-center justify-center text-purple-brand mt-0.5 border-2 border-white relative -ml-1.5 opacity-70">';
-    activeSessionHtml += '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"></path></svg>';
-    activeSessionHtml += '</div>';
-    activeSessionHtml += '<div class="ml-3 flex-1">';
-    activeSessionHtml += '<div class="flex justify-between items-baseline">';
-    activeSessionHtml += '<span class="text-xs text-gray-400">' + timeRange + '</span>';
-    activeSessionHtml += '<span class="text-xs text-gray-400">' + durationText + '</span>';
-    activeSessionHtml += '</div>';
-    if (activeSession.taskName) {
-      activeSessionHtml += '<p class="text-sm text-gray-600 mt-0.5">' + activeSession.taskName + '</p>';
-    }
-    if (tagHtml) {
-      activeSessionHtml += '<div class="mt-1">' + tagHtml + '</div>';
-    }
-    activeSessionHtml += '</div></div>';
-  }
-
-  var dates = Object.keys(sessions).sort().reverse();
-  var today = todayKey();
-  var todayRendered = false;
-
-  for (var di = 0; di < dates.length; di++) {
-    var dateStr = dates[di];
-    var entries = sessions[dateStr];
-    if (!entries || entries.length === 0) continue;
-    var label = dateStr === today ? 'Today' : formatDateLabel(dateStr);
-    html += '<div class="mb-6 relative">';
-    html += '<div class="text-sm font-medium text-gray-400 mb-3 bg-white inline-block pr-2 relative z-10 -ml-3">' + label + '</div>';
-    if (label === 'Today' && activeSessionHtml) {
-      html += activeSessionHtml;
-      todayRendered = true;
-    }
-    for (var ei = 0; ei < entries.length; ei++) {
-      var e = entries[ei];
-      var timeRange2 = formatTimeHM(e.startTime) + ' - ' + formatTimeHM(e.endTime);
-      var durMin = e.focusMinutes;
-      var durText = durMin < 1 ? (Math.round(durMin * 60) + 's') : (durMin < 10 ? durMin.toFixed(1) : Math.round(durMin)) + 'm';
-      var tagHtml2 = '';
-      if (e.tagId) {
-        var allTags2 = await getTags();
-        var tag2 = allTags2.find(function(t) { return t.id === e.tagId; });
-        if (tag2) {
-          tagHtml2 = '<span class="tag-bubble" style="background:' + tag2.color + '20;color:' + tag2.color + ';border:1px solid ' + tag2.color + '40">#' + tag2.name + '</span>';
-        }
-      }
-      html += '<div class="flex items-start mb-4 relative z-10 group cursor-pointer" data-sid="' + e.id + '">';
-      html += '<div class="w-6 h-6 rounded-full bg-purple-light flex items-center justify-center text-purple-brand mt-0.5 border-2 border-white relative -ml-1.5">';
-      html += '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"></path></svg>';
-      html += '</div>';
-      html += '<div class="ml-3 flex-1">';
-      html += '<div class="flex justify-between items-baseline">';
-      html += '<span class="text-xs text-gray-400">' + timeRange2 + '</span>';
-      html += '<span class="text-xs text-gray-400">' + durText + '</span>';
-      html += '</div>';
-      if (e.taskName) {
-        html += '<p class="text-sm text-gray-600 mt-0.5">' + e.taskName + '</p>';
-      }
-      if (tagHtml2) {
-        html += '<div class="mt-1">' + tagHtml2 + '</div>';
-      }
-      html += '</div></div>';
-    }
-    html += '</div>';
-  }
-
-  if (activeSessionHtml && !todayRendered) {
-    html += '<div class="mb-6 relative">';
-    html += '<div class="text-sm font-medium text-gray-400 mb-3 bg-white inline-block pr-2 relative z-10 -ml-3">Today</div>';
-    html += activeSessionHtml;
-    html += '</div>';
-  }
-
-  if (!activeSession && dates.length === 0) {
-    html += '<div class="text-sm text-gray-400 text-center py-8">No sessions yet</div>';
-  }
-
-  container.innerHTML = html;
+  // Timeline removed in redesign
 }
 
 function formatDateLabel(dateStr) {
@@ -159,21 +58,27 @@ function formatDateLabel(dateStr) {
 
 // Session event hooks
 function onSessionStart() {
+  hideSessionNamePopup();
   if (activeSession) {
     activeSession = null;
   }
+  var name = _taskPopupEnabled ? (window.pomoSessionName || '') : '';
   activeSession = {
     id: 's_' + Date.now(),
     startTime: Date.now(),
     accumulatedMs: 0,
-    lastResumeTime: Date.now(),
-    taskName: window.pomoSessionName || '',
+    lastResumeTime: null,
+    taskName: name,
     tagId: null,
     goalId: null,
     status: 'running'
   };
   renderTimeline();
   renderSessionTimeline();
+  renderSessionSideBox();
+  if (_taskPopupEnabled) {
+    setTimeout(showSessionNamePopup, 100);
+  }
 }
 
 function onSessionPause() {
@@ -183,6 +88,7 @@ function onSessionPause() {
   activeSession.status = 'paused';
   renderTimeline();
   renderSessionTimeline();
+  renderSessionSideBox();
 }
 
 function onSessionResume() {
@@ -191,10 +97,15 @@ function onSessionResume() {
   activeSession.status = 'running';
   renderTimeline();
   renderSessionTimeline();
+  renderSessionSideBox();
 }
 
 async function onSessionComplete(focusMinutes, plannedMinutes) {
   if (!activeSession) return;
+  _pendingSessionStart = false; window._pendingSessionStart = false;
+  window.pomoSessionName = '';
+  try { localStorage.removeItem('pomoSessionName'); } catch(e) {}
+  hideSessionNamePopup();
   if (activeSession.lastResumeTime) {
     activeSession.accumulatedMs += Date.now() - activeSession.lastResumeTime;
   }
@@ -221,33 +132,34 @@ async function onSessionComplete(focusMinutes, plannedMinutes) {
 
 function onSessionCancel() {
   if (!activeSession) return;
+  _pendingSessionStart = false; window._pendingSessionStart = false;
+  hideSessionNamePopup();
   activeSession = null;
   renderTimeline();
   renderSessionTimeline();
 }
 
-renderTimeline();
-renderSessionTimeline();
-
-// Event delegation for timeline entries
-document.addEventListener('click', function(e) {
-  var el = e.target.closest('[data-sid]');
-  if (el && document.getElementById('focusTimeline') && document.getElementById('focusTimeline').contains(el)) {
-    var sid = el.getAttribute('data-sid');
-    if (sid) window.openSessionPopup(sid);
-  }
-});
+// Timeline rendering removed in redesign
+// Event delegation for timeline entries also removed
 
 // Patch timer functions to hook into session tracking
 var _origToggleTimer = window.toggleTimer;
-window.toggleTimer = async function() {
-  if (remainingSeconds <= 0) { window.openTimePopup(); return; }
+var _pendingSessionStart = false;
+window._pendingSessionStart = false;
+window.toggleTimer = function() {
+  if (remainingSeconds <= 0) return;
+  if (_pendingSessionStart) return;
   if (isRunning) {
-    await _origToggleTimer();
+    _origToggleTimer();
     onSessionPause();
   } else {
     var isFresh = remainingSeconds === totalSeconds;
-    await _origToggleTimer();
+    if (isFresh && _taskPopupEnabled) {
+      _pendingSessionStart = true; window._pendingSessionStart = true;
+      onSessionStart();
+      return;
+    }
+    _origToggleTimer();
     if (isFresh) onSessionStart(); else onSessionResume();
   }
 };
@@ -284,10 +196,29 @@ window.confirmEnd = async function() {
   await onSessionComplete(elapsedSec / 60, plannedMinutes);
 };
 
-var _origSetTimer = window.setTimer;
-window.setTimer = function() {
-  _origSetTimer();
+var _origResetTimer = window.resetTimer;
+window.resetTimer = async function() {
+  await _origResetTimer();
   onSessionCancel();
+};
+
+var _origSkipPhase = window.skipPhase;
+window.skipPhase = async function() {
+  if (_pendingSessionStart) {
+    // Don't save if not started yet
+    _pendingSessionStart = false; window._pendingSessionStart = false;
+    onSessionCancel();
+  } else if (phase === 'work' && activeSession && activeSession.lastResumeTime) {
+    // Save current session when skipping work phase
+    activeSession.accumulatedMs += Date.now() - activeSession.lastResumeTime;
+    activeSession.lastResumeTime = null;
+    var elapsedSec = totalSeconds - remainingSeconds;
+    var plannedMinutes = totalSeconds / 60;
+    await onSessionComplete(elapsedSec / 60, plannedMinutes);
+  } else {
+    onSessionCancel();
+  }
+  await _origSkipPhase();
 };
 
 // Tag selection functions
@@ -416,6 +347,7 @@ window.saveSessionEdit = async function() {
     activeSession.goalId = editingGoalForSession;
     await renderTimeline();
     await renderSessionTimeline();
+    await renderSessionSideBox();
     var popup = document.getElementById('sessionPopup');
     if (popup) popup.classList.add('hidden');
     return;
@@ -423,6 +355,7 @@ window.saveSessionEdit = async function() {
   await window.db.updateSession(editingSessionId, taskName, editingTagForSession, '', editingGoalForSession);
   await renderTimeline();
   await renderSessionTimeline();
+  await renderSessionSideBox();
   var popup = document.getElementById('sessionPopup');
   if (popup) popup.classList.add('hidden');
 };
@@ -718,134 +651,11 @@ async function getTodaySessions() {
    والـ connector خط رفيع بين كل نود والتانية
    ───────────────────────────────────────────────────────── */
 async function renderSessionTimeline() {
-
-  var todaySessions = await getTodaySessions();
-  var connector = '<div class="flex-shrink-0" style="width:24px;height:1px;background:#E5E7EB"></div>';
-
-  /* ── Empty state: no sessions today ── */
-  if (todaySessions.length === 0 && !activeSession) {
-    track.innerHTML = '<div class="flex items-center gap-3 py-4" style="min-width:100%">' +
-      connector +
-      '<div class="flex flex-col items-center flex-shrink-0 relative z-10" onclick="openSessionTimelineModal(null)" style="cursor:pointer">' +
-        '<span style="font-size:11px;color:#9CA3AF;font-weight:500;white-space:nowrap;margin-bottom:8px;opacity:0">00:00</span>' +
-        '<div style="width:32px;height:32px;border-radius:50%;border:2px dashed #D1D5DB;display:flex;align-items:center;justify-content:center">' +
-          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>' +
-        '</div>' +
-        '<span style="font-size:11px;color:#9CA3AF;font-weight:500;margin-top:8px;white-space:nowrap">Start</span>' +
-      '</div>' +
-    '</div>';
-    return;
-  }
-
-  /* ── Build node list: completed sessions + break + active + upcoming ── */
-  var allNodes = [];
-
-  for (var i = 0; i < todaySessions.length; i++) {
-    var s = todaySessions[i];
-    allNodes.push({ type: 'session', data: s, state: 'completed' });
-    if (i < todaySessions.length - 1 || activeSession) {
-      allNodes.push({ type: 'break' });
-    }
-  }
-
-  if (activeSession) {
-    allNodes.push({ type: 'session', data: activeSession, state: 'active' });
-  }
-
-  var futureCount = Math.max(2, 4 - allNodes.length);
-  for (var f = 0; f < futureCount; f++) {
-    if (f > 0 || (allNodes.length > 0 && allNodes[allNodes.length - 1].type === 'break')) {
-    } else {
-      allNodes.push({ type: 'break', upcoming: true });
-    }
-    allNodes.push({ type: 'session', state: 'upcoming' });
-  }
-
-  /* ── Generate HTML for all nodes ── */
-  var html = '';
-  for (var n = 0; n < allNodes.length; n++) {
-    var node = allNodes[n];
-
-    /* ─── BREAK node (نقطة الاستراحة - قابلة للضغط تفتح popup) ─── */
-    if (node.type === 'break') {
-      html += connector;
-      var breakCls = node.upcoming ? '#F3F4F6' : '#D1D5DB';
-      html += '<div class="flex flex-col items-center flex-shrink-0 relative z-10" onclick="openSessionTimelineModal(null)" style="cursor:pointer">';
-      html += '<span style="font-size:11px;color:#9CA3AF;font-weight:500;white-space:nowrap;margin-bottom:8px;opacity:0">Break</span>';
-      html += '<div style="width:14px;height:14px;border-radius:50%;background:' + breakCls + ';border:3px solid #fff;flex-shrink:0"></div>';
-      html += '<span style="font-size:11px;color:#9CA3AF;font-weight:500;margin-top:8px;opacity:0">0m</span>';
-      html += '</div>';
-      continue;
-    }
-
-    /* ─── COMPLETED session (جلسة منتهية - قابلة للضغط) ─── */
-    if (node.type === 'session' && node.state === 'completed') {
-      var s = node.data;
-      var timeLabel = formatTimeHM(s.startTime) + ' - ' + formatTimeHM(s.endTime);
-      var durLabel = formatDuration(s.focusMinutes);
-      html += connector;
-      html += '<div class="flex flex-col items-center flex-shrink-0 relative z-10" data-sid="' + s.id + '" onclick="openSessionTimelineModal(\'' + s.id + '\')" style="cursor:pointer">';
-      html += '<span style="font-size:11px;color:#6B7280;font-weight:500;white-space:nowrap;margin-bottom:8px">' + timeLabel + '</span>';
-      html += '<div style="width:32px;height:32px;border-radius:50%;background:#DBEAFE;color:#3B82F6;display:flex;align-items:center;justify-content:center;border:4px solid #fff;flex-shrink:0">';
-      html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
-      html += '</div>';
-      html += '<span style="font-size:11px;color:#6B7280;font-weight:500;margin-top:8px;white-space:nowrap">' + durLabel + '</span>';
-      html += '</div>';
-    }
-
-    /* ─── ACTIVE session (الجلسة الحالية - قابلة للضغط) ─── */
-    if (node.type === 'session' && node.state === 'active') {
-      var now = Date.now();
-      var elapsedInCurrentRun = activeSession.lastResumeTime ? now - activeSession.lastResumeTime : 0;
-      var totalElapsed = activeSession.accumulatedMs + elapsedInCurrentRun;
-      var estEnd = now + remainingSeconds * 1000;
-      var timeLabel = formatTimeHM(activeSession.startTime) + ' - ' + formatTimeHM(estEnd);
-      var durLabel = formatDuration(totalElapsed / 60000);
-      html += connector;
-      html += '<div class="flex flex-col items-center flex-shrink-0 relative z-10" data-sid="' + activeSession.id + '" onclick="openSessionTimelineModal(\'' + activeSession.id + '\')" style="cursor:pointer">';
-      html += '<span style="font-size:11px;color:#3B82F6;font-weight:700;white-space:nowrap;margin-bottom:8px">' + timeLabel + '</span>';
-      html += '<div style="width:32px;height:32px;border-radius:50%;background:#BFDBFE;color:#1D4ED8;display:flex;align-items:center;justify-content:center;border:4px solid #fff;flex-shrink:0;box-shadow:0 0 12px rgba(59,130,246,0.25)">';
-      html += '<div style="width:6px;height:6px;border-radius:50%;background:#1D4ED8;animation:pulse-dot 1.5s ease-in-out infinite"></div>';
-      html += '</div>';
-      html += '<span style="font-size:11px;color:#3B82F6;font-weight:500;margin-top:8px;white-space:nowrap">' + durLabel + '</span>';
-      html += '</div>';
-    }
-
-    /* ─── UPCOMING session (جلسة قادمة) ─── */
-    if (node.type === 'session' && node.state === 'upcoming') {
-      html += connector;
-      html += '<div class="flex flex-col items-center flex-shrink-0 relative z-10" style="opacity:0.5">';
-      html += '<span style="font-size:11px;color:#9CA3AF;font-weight:500;white-space:nowrap;margin-bottom:8px">--:--</span>';
-      html += '<div style="width:32px;height:32px;border-radius:50%;background:#F3F4F6;border:4px solid #fff;flex-shrink:0"></div>';
-      html += '<span style="font-size:11px;color:#9CA3AF;font-weight:500;margin-top:8px;white-space:nowrap">--m</span>';
-      html += '</div>';
-    }
-  }
-
-  html = html.replace(connector, ''); /* remove leading connector before first node */
-  track.innerHTML = html;
-
-  /* ── Auto-scroll to latest (rightmost) session ── */
-  var scrollEl = document.getElementById('sessionTimelineScroll');
-  if (scrollEl) {
-    scrollEl.scrollLeft = scrollEl.scrollWidth;
-  }
+  // Timeline removed in redesign
+  return;
 }
 
-/* ─── Scroll behavior: vertical wheel → horizontal scroll ───
-   عشان السكرول العمودي يشتغل أفقي جوه التايم لاين
-   ──────────────────────────────────────────────────────────── */
-(function() {
-  var scrollEl = document.getElementById('sessionTimelineScroll');
-  if (scrollEl) {
-    scrollEl.addEventListener('wheel', function(e) {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        this.scrollBy({ left: e.deltaY, behavior: 'auto' });
-        e.preventDefault();
-      }
-    }, { passive: false });
-  }
-})();
+
 
 var sessionTimelineEditId = null;
 
@@ -888,9 +698,8 @@ window.saveSessionTimeline = async function() {
     await window.db.updateSession(sessionTimelineEditId, taskName, null, '');
   }
 
-  await renderTimeline();
-  await renderSessionTimeline();
   window.closeSessionTimelineModal();
+  renderSessionSideBox();
 };
 
 document.addEventListener('click', function(e) {
@@ -900,7 +709,220 @@ document.addEventListener('click', function(e) {
   }
 });
 
+/* ── Side Box: Vertical Session Timeline ── */
+var _sideBoxDate = todayKey();
+
+window.sideBoxPrevDay = function() {
+  var d = new Date(_sideBoxDate + 'T00:00:00');
+  d.setDate(d.getDate() - 1);
+  _sideBoxDate = d.toISOString().split('T')[0];
+  renderSessionSideBox();
+};
+
+window.sideBoxNextDay = function() {
+  var d = new Date(_sideBoxDate + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  _sideBoxDate = d.toISOString().split('T')[0];
+  renderSessionSideBox();
+};
+
+function formatTimeHMShort(ts) {
+  var d = new Date(ts);
+  var h = d.getHours(), m = d.getMinutes();
+  return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+}
+
+function formatDurationLong(minutes) {
+  if (minutes < 1) return Math.round(minutes * 60) + ' seconds';
+  if (minutes < 60) return Math.round(minutes) + ' minutes';
+  var h = Math.floor(minutes / 60);
+  var rm = Math.round(minutes % 60);
+  return h + (rm > 0 ? '.' + Math.round(rm * 10 / 6) : '') + ' hours';
+}
+
+async function getSessionsForDate(dateStr) {
+  try {
+    var grouped = await window.db.getSessionsGrouped() || {};
+    var list = grouped[dateStr] || [];
+    return list.sort(function(a, b) { return a.startTime - b.startTime; });
+  } catch(e) { return []; }
+}
+
+async function renderSessionSideBox() {
+  var container = document.getElementById('pomoSideTimeline');
+  var dateLabel = document.getElementById('pomoSideDateLabel');
+  var navLabel = document.getElementById('pomoSideNavLabel');
+  var fwdBtn = document.getElementById('pomoSideNavFwd');
+  if (!container) return;
+
+  var today = todayKey();
+  var displayDate = _sideBoxDate === today ? 'Today' : formatDateLabel(_sideBoxDate);
+  if (dateLabel) dateLabel.textContent = displayDate;
+  if (navLabel) navLabel.textContent = displayDate;
+  if (fwdBtn) fwdBtn.style.display = _sideBoxDate === today ? 'none' : '';
+
+  var sessions = await getSessionsForDate(_sideBoxDate);
+  var activeOnDate = _sideBoxDate === today ? activeSession : null;
+
+  if (sessions.length === 0 && !activeOnDate) {
+    container.innerHTML = '';
+    return;
+  }
+
+  var allSessions = sessions.slice();
+  if (activeOnDate) allSessions.push(activeOnDate);
+
+  var showName = _taskPopupEnabled;
+
+  var html = '<table class="pomo-side-table">';
+  html += '<thead><tr><th>الوقت</th><th>المدة</th><th>الاسم</th><th>الحالة</th></tr></thead><tbody>';
+  for (var i = 0; i < allSessions.length; i++) {
+    var s = allSessions[i];
+    var isActive = activeOnDate && i === allSessions.length - 1;
+    var endT = isActive ? Date.now() + remainingSeconds * 1000 : s.endTime;
+    var timeRange = formatTimeHMShort(s.startTime) + ' → ' + formatTimeHMShort(endT);
+
+    var durMin = isActive
+      ? (activeSession.accumulatedMs + (activeSession.lastResumeTime ? Date.now() - activeSession.lastResumeTime : 0)) / 60000
+      : s.focusMinutes;
+    var durText = formatDurationLong(durMin);
+
+    var name = s.taskName || '';
+    var statusText = isActive ? 'جاري' : 'تم';
+
+    html += '<tr class="' + (isActive ? 'pomo-side-row-active' : '') + '">';
+    html += '<td class="pomo-side-td-time"><span class="pomo-side-time-range">' + timeRange + '</span></td>';
+    html += '<td class="pomo-side-td-dur"><span class="pomo-side-time-desc">' + durText + '</span></td>';
+    html += '<td class="pomo-side-td-name">' + (showName ? name : '') + '</td>';
+    html += '<td class="pomo-side-td-status"><span class="pomo-side-status-badge' + (isActive ? ' active' : '') + '">' + statusText + '</span></td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+
+  container.innerHTML = html;
+  container.scrollTop = container.scrollHeight;
+}
+
+/* ── Session name popup ── */
+var _taskPopupEnabled = false;
+
+window.showSessionNamePopup = function() {
+  var popup = document.getElementById('pomoNamePopup');
+  var input = document.getElementById('pomoNamePopupInput');
+  if (!popup || !input) return;
+  
+  // Pre-fill from localStorage
+  var saved = localStorage.getItem('pomoSessionName');
+  input.value = saved || '';
+  
+  popup.classList.remove('hidden');
+  setTimeout(function() { input.focus(); }, 50);
+}
+
+window.hideSessionNamePopup = function() {
+  var popup = document.getElementById('pomoNamePopup');
+  if (popup) popup.classList.add('hidden');
+  var input = document.getElementById('pomoNamePopupInput');
+  if (input) input.value = '';
+}
+
+window.confirmSessionName = function() {
+  var input = document.getElementById('pomoNamePopupInput');
+  if (!input) return;
+  var name = input.value.trim();
+  window.pomoSessionName = name;
+  try { localStorage.setItem('pomoSessionName', name); } catch(e) {}
+  if (activeSession) {
+    activeSession.taskName = name;
+  }
+  hideSessionNamePopup();
+  if (_pendingSessionStart) {
+    _pendingSessionStart = false; window._pendingSessionStart = false;
+    if (activeSession) {
+      activeSession.lastResumeTime = Date.now();
+    }
+    startTimer();
+  }
+  updateUI();
+  renderTimeline();
+  renderSessionTimeline();
+  renderSessionSideBox();
+};
+
+document.addEventListener('click', function(e) {
+  var popup = document.getElementById('pomoNamePopup');
+  if (!popup || popup.classList.contains('hidden')) return;
+  if (!popup.contains(e.target)) {
+    confirmSessionName();
+  }
+});
+
+async function updateTaskPopupCache() {
+  var val = await window.db.getSetting('taskPopup');
+  _taskPopupEnabled = val !== 'false';
+}
+
 (async function() {
+  if (window._dbInitPromise) await window._dbInitPromise;
+  await updateTaskPopupCache();
   await renderTimeline();
   await renderSessionTimeline();
+  await renderSessionSideBox();
 })();
+
+// ===== Tasks Dropdown (Pomodoro) =====
+var selectedTaskId = null;
+var selectedTaskName = '';
+
+window.togglePomoTaskDropdown = function() {
+  var menu = document.getElementById('pomoTaskDropdownMenu');
+  if (!menu) return;
+  menu.classList.toggle('hidden');
+  if (!menu.classList.contains('hidden')) {
+    populatePomoTaskDropdown();
+  }
+};
+
+async function populatePomoTaskDropdown() {
+  var menu = document.getElementById('pomoTaskDropdownMenu');
+  if (!menu) return;
+  menu.innerHTML = '<div class="pomo-task-dropdown-item" onclick="selectPomoTask(null, \'None\')">بدون مهمة</div>';
+  try {
+    var tasks = await window.db.getTasks();
+    (tasks || []).forEach(function(t) {
+      var name = t.name || t.title || t.text || 'Untitled';
+      var item = document.createElement('div');
+      item.className = 'pomo-task-dropdown-item' + (selectedTaskId === t.id ? ' selected' : '');
+      item.textContent = name;
+      item.onclick = function() { selectPomoTask(t.id, name); };
+      menu.appendChild(item);
+    });
+  } catch(e) {
+    console.error('Failed to load tasks:', e);
+  }
+}
+
+window.selectPomoTask = function(taskId, taskName) {
+  selectedTaskId = taskId;
+  selectedTaskName = taskName || '';
+  var label = document.getElementById('pomoTaskLabel');
+  if (label) label.textContent = taskName || 'Select task...';
+  var menu = document.getElementById('pomoTaskDropdownMenu');
+  if (menu) menu.classList.add('hidden');
+
+  // Link to active session if exists
+  if (window.activeSession) {
+    window.activeSession.taskId = taskId;
+    window.activeSession.taskName = taskName || null;
+  }
+};
+
+document.addEventListener('click', function(e) {
+  var dd = document.getElementById('pomoTaskDropdown');
+  if (dd && !dd.contains(e.target)) {
+    var menu = document.getElementById('pomoTaskDropdownMenu');
+    if (menu && !menu.classList.contains('hidden')) {
+      menu.classList.add('hidden');
+    }
+  }
+});

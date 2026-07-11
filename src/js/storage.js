@@ -13,6 +13,6 @@ STORAGE.setPath = async function (newPath) {
   if (result) STORAGE.path = result;
 };
 
-(async function() {
+window._dbInitPromise = (async function() {
   try { await STORAGE.init(); } catch(e) {}
 })();

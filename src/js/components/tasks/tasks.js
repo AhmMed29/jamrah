@@ -393,7 +393,7 @@ function saveTask() {
       renderTasks();
     }
   }).catch(function(err) {
-    console.error('Failed to save task:', err);
+    /* Failed to save task */
   });
 }
 
@@ -480,13 +480,6 @@ function toggleGoalsTaskNode(e, id) {
   var ch = document.getElementById('gt-ch-' + id);
   if (!ch) return;
   ch.style.display = ch.style.display === 'none' ? 'block' : 'none';
-}
-
-function addTaskFromGoal(name, goalId) {
-  var task = { id: newTaskId(), name: name, goalId: goalId };
-  window.db.createTask(task).then(function(result) {
-    if (result) { renderTasks(); openGoalsTaskPopup(); }
-  });
 }
 
 window.db.getSetting('taskSortBy').then(function(val) {

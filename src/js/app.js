@@ -2,14 +2,14 @@
 var _pendingNav = null;
 
 async function showPage(name) {
-  var settingsModal = document.getElementById('settingsModal');
-  if (settingsModal && settingsModal.style.display === 'flex' && window.settingsDirty) {
+  closeSidebar();
+  var settingsPage = document.getElementById('page-settings');
+  if (settingsPage && !settingsPage.classList.contains('hidden') && window.settingsDirty) {
     _pendingNav = name;
     document.getElementById('settingsConfirmModal').style.display = 'flex';
     return;
   }
-  if (settingsModal) settingsModal.style.display = 'none';
-  var pages = ['home', 'pomodoro', 'habits', 'goals', 'tasks'];
+  var pages = ['home', 'pomodoro', 'habits', 'goals', 'tasks', 'settings', 'stats'];
   pages.forEach(function(p) {
     var el = document.getElementById('page-' + p);
     if (el) {
@@ -39,19 +39,17 @@ async function showPage(name) {
 window.confirmSettingsSave = async function() {
   await window.saveSettings();
   document.getElementById('settingsConfirmModal').style.display = 'none';
-  document.getElementById('settingsModal').style.display = 'none';
   var target = _pendingNav;
   _pendingNav = null;
-  if (target) showPage(target);
+  showPage(target || 'pomodoro');
 };
 
 window.confirmSettingsDiscard = function() {
   window.cancelSettings();
   document.getElementById('settingsConfirmModal').style.display = 'none';
-  document.getElementById('settingsModal').style.display = 'none';
   var target = _pendingNav;
   _pendingNav = null;
-  if (target) showPage(target);
+  showPage(target || 'pomodoro');
 };
 
 window.closeSettingsConfirm = function(e) {
@@ -222,9 +220,10 @@ function selectStoragePath() {
 var _origShowPage2 = showPage;
 showPage = async function(name) {
   await _origShowPage2(name);
-  if (name === 'goals') renderGoals();
-  if (name === 'tasks') renderTasks();
+  if (name === 'goals' && typeof renderGoals === 'function') renderGoals();
+  if (name === 'tasks' && typeof renderTasks === 'function') renderTasks();
   if (name === 'habits' && window.renderHabits) renderHabits();
+  if (name === 'stats' && window.renderStats) renderStats();
 };
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -237,5 +236,66 @@ window.addEventListener('load', function() {
     var splash = document.getElementById('app-splash');
     if (splash) { splash.style.opacity = '0'; splash.style.transition = 'opacity 0.6s'; setTimeout(function() { splash.style.display = 'none'; }, 600); }
   }, delay);
+});
+
+/* ── Sidebar Toggle ── */
+function toggleSidebar() {
+  var sidebar = document.getElementById('sidebar');
+  var backdrop = document.getElementById('sidebarBackdrop');
+  sidebar.classList.toggle('open');
+  backdrop.classList.toggle('open');
+}
+
+function closeSidebar() {
+  var sidebar = document.getElementById('sidebar');
+  var backdrop = document.getElementById('sidebarBackdrop');
+  sidebar.classList.remove('open');
+  backdrop.classList.remove('open');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeSidebar();
+    var ham = document.getElementById('sidebarIconHamburger');
+    var x = document.getElementById('sidebarIconX');
+    if (ham) ham.classList.remove('hidden');
+    if (x) x.classList.add('hidden');
+  }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  const toggleBtn = document.getElementById('sidebarToggleBtn');
+  const settingsBtn = document.getElementById('settingsBtn');
+
+  function updateToggleIcon() {
+    var open = sidebar.classList.contains('open');
+    var ham = document.getElementById('sidebarIconHamburger');
+    var x = document.getElementById('sidebarIconX');
+    if (ham) ham.classList.toggle('hidden', open);
+    if (x) x.classList.toggle('hidden', !open);
+  }
+
+  // زرار التبديل الواحد
+  toggleBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    toggleSidebar();
+    updateToggleIcon();
+  });
+  backdrop.addEventListener('click', function() {
+    closeSidebar();
+    updateToggleIcon();
+  });
+
+  // زرار الإعدادات
+  settingsBtn.addEventListener('click', () => {
+    if (typeof openSettings === 'function') openSettings();
+    closeSidebar();
+    updateToggleIcon();
+    if (window.AudioManager?.playSound) {
+      window.AudioManager.playSound('tab-swipping.mp3');
+    }
+  });
 });
 

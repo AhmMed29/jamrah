@@ -170,7 +170,8 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
       </svg>
     </button>
-    <button id="habits-btn" class="w-10 h-10 rounded-xl flex items-center justify-center bg-purple-600 text-white shadow-md shadow-purple-600/30 transition-all" title="العادات">
+    <!-- Second habits button (sidebar bottom) -->
+    <button id="habits-btn-2" class="w-10 h-10 rounded-xl flex items-center justify-center bg-purple-600 text-white shadow-md shadow-purple-600/30 transition-all" title="العادات">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
       </svg>
@@ -397,6 +398,7 @@
         body.setAttribute('fill', 'none');
         body.setAttribute('stroke', 'currentColor');
       }
+      window.electronAPI.navigate('index.html');
     });
 
     // Modal: open on habit name click

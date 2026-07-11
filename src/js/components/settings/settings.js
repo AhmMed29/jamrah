@@ -63,7 +63,11 @@ window.saveSettings = async function() {
   if (row) row.style.display = 'none';
   var cancel = document.getElementById('settingsCancelBtn');
   if (cancel) cancel.style.display = '';
-  document.getElementById('settingsModal').style.display = 'none';
+  
+  // Update cache immediately after saving
+  if (window.updateTaskPopupCache) {
+    await window.updateTaskPopupCache();
+  }
 };
 
 window.cancelSettings = async function() {

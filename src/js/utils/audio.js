@@ -24,10 +24,10 @@ async function playSound(soundName, options = {}) {
     audio.currentTime = 0;
     var promise = audio.play();
     if (promise) {
-      promise.catch(function(err) { console.warn('Audio play failed:', err.message); });
+      promise.catch(function(err) { /* Audio play failed */ });
     }
   } catch (e) {
-    console.warn('Sound error:', e.message);
+    /* Sound error */
   }
 }
 

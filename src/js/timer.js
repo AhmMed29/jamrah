@@ -255,7 +255,7 @@ document.getElementById('playBtn').addEventListener('click', function(e) {
 var timerCircle = document.getElementById('timerCircle');
 if (timerCircle) {
   timerCircle.addEventListener('click', function(e) {
-    if (e.target.closest('.pomo-play-btn') || e.target.closest('.pomo-adj-btn')) return;
+    if (e.target.closest('.pomo-play-btn')) return;
     window.toggleTimer();
     updateUI();
   });

@@ -22,16 +22,22 @@ window.renderStats = async function() {
   // Load data
   var sessions, goals, tasks, habits;
   try {
+    var groupedResult = await window.db.getSessionsGrouped();
+    var grouped = groupedResult || {};
+    sessions = [];
+    for (var dateKey in grouped) {
+      if (grouped.hasOwnProperty(dateKey)) {
+        sessions = sessions.concat(grouped[dateKey]);
+      }
+    }
     var results = await Promise.all([
-      window.db.getSessions(),
       window.db.getGoals(),
       window.db.getTasks(),
       window.db.getHabits ? window.db.getHabits() : Promise.resolve([])
     ]);
-    sessions = results[0] || [];
-    goals = results[1] || [];
-    tasks = results[2] || [];
-    habits = results[3] || [];
+    goals = results[0] || [];
+    tasks = results[1] || [];
+    habits = results[2] || [];
 
     // Compute habit completion data from logs
     if (habits.length > 0 && window.db.getHabitLogs) {

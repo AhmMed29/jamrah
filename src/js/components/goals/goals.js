@@ -42,6 +42,10 @@ async function loadGoalsData() {
     var stored = loadGoalTasks(g.id);
     if (stored.length > 0) g.tasks = stored;
     else if (!g.tasks) g.tasks = [];
+    var savedType = localStorage.getItem('goalDurationType_' + g.id);
+    var savedVal = localStorage.getItem('goalDurationValue_' + g.id);
+    if (savedType) g.durationType = savedType;
+    if (savedVal) g.durationValue = parseInt(savedVal) || 1;
   }
 }
 
@@ -152,11 +156,13 @@ window.renderGoals = async function() {
 function createDisplayRow(g, progress) {
   var tr = document.createElement('tr');
   tr.className = expandedGoalId === g.id ? 'goal-row-expanded' : '';
+  tr.style.cursor = 'pointer';
+  tr.setAttribute('onclick', 'toggleGoalExpand(\'' + g.id + '\')');
 
   var statusClass = getStatusClass(g.status || 'active');
 
   tr.innerHTML =
-    '<td><span style="cursor:pointer;font-weight:500" onclick="toggleGoalExpand(\'' + g.id + '\')">' + escapeHtml(g.name) + '</span></td>' +
+    '<td><span style="font-weight:500">' + escapeHtml(g.name) + '</span></td>' +
     '<td>' + formatDuration(g) + '</td>' +
     '<td>' + formatGoalDate(g.startDate) + '</td>' +
     '<td>' + formatGoalDate(g.endDate) + '</td>' +
@@ -246,7 +252,7 @@ function createTasksRow(g) {
     html += '</div>';
   }
 
-  html += '<button class="goal-add-task-btn" onclick="addGoalTask(\'' + g.id + '\')">';
+  html += '<button class="goal-add-task-btn" onclick="event.stopPropagation();addGoalTask(\'' + g.id + '\')">';
   html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>';
   html += '<span>إضافة مهمة</span>';
   html += '</button>';
@@ -341,6 +347,10 @@ window.saveNewGoal = async function() {
 
   var result = await window.db.createGoal(goal);
   if (result === false) { alert('فشل حفظ الهدف'); return; }
+  try {
+    localStorage.setItem('goalDurationType_' + goal.id, durationType);
+    localStorage.setItem('goalDurationValue_' + goal.id, String(durationVal));
+  } catch(e) {}
   isAddingGoal = false;
   renderGoals();
 };
@@ -365,7 +375,6 @@ window.saveEditGoal = async function(id) {
   var startDate = document.getElementById('goalEditStart').value;
   var endDate = document.getElementById('goalEditEnd').value;
 
-  // Get current goal for color
   var curGoal = null;
   for (var ci = 0; ci < goalsData.length; ci++) {
     if (goalsData[ci].id === id) { curGoal = goalsData[ci]; break; }
@@ -373,14 +382,23 @@ window.saveEditGoal = async function(id) {
 
   var updates = {
     name: name,
+    description: (curGoal && curGoal.description) || '',
     color: (curGoal && curGoal.color) || '#3b82f6',
-    duration: computeDurationDays(durationType, durationVal),
+    tagId: (curGoal && curGoal.tagId) || null,
     startDate: startDate,
-    endDate: endDate
+    endDate: endDate,
+    duration: computeDurationDays(durationType, durationVal),
+    parentGoalId: (curGoal && curGoal.parentGoalId) || null
   };
 
   var result = await window.db.updateGoal(id, updates);
   if (result === false) { alert('فشل تعديل الهدف'); return; }
+
+  try {
+    localStorage.setItem('goalDurationType_' + id, durationType);
+    localStorage.setItem('goalDurationValue_' + id, String(durationVal));
+  } catch(e) {}
+
   editingGoalId = null;
   renderGoals();
 };

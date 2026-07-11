@@ -76,8 +76,8 @@ function onSessionStart() {
   renderTimeline();
   renderSessionTimeline();
   renderSessionSideBox();
-  if (_taskPopupEnabled) {
-    setTimeout(showSessionNamePopup, 100);
+  if (window._pendingSessionStart) {
+    showSessionNamePopup();
   }
 }
 
@@ -102,7 +102,7 @@ function onSessionResume() {
 
 async function onSessionComplete(focusMinutes, plannedMinutes) {
   if (!activeSession) return;
-  _pendingSessionStart = false; window._pendingSessionStart = false;
+  window._pendingSessionStart = false;
   window.pomoSessionName = '';
   try { localStorage.removeItem('pomoSessionName'); } catch(e) {}
   hideSessionNamePopup();
@@ -132,7 +132,7 @@ async function onSessionComplete(focusMinutes, plannedMinutes) {
 
 function onSessionCancel() {
   if (!activeSession) return;
-  _pendingSessionStart = false; window._pendingSessionStart = false;
+  window._pendingSessionStart = false;
   hideSessionNamePopup();
   activeSession = null;
   renderTimeline();
@@ -144,18 +144,16 @@ function onSessionCancel() {
 
 // Patch timer functions to hook into session tracking
 var _origToggleTimer = window.toggleTimer;
-var _pendingSessionStart = false;
-window._pendingSessionStart = false;
 window.toggleTimer = function() {
   if (remainingSeconds <= 0) return;
-  if (_pendingSessionStart) return;
+  if (window._pendingSessionStart) return;
   if (isRunning) {
     _origToggleTimer();
     onSessionPause();
   } else {
     var isFresh = remainingSeconds === totalSeconds;
     if (isFresh && _taskPopupEnabled) {
-      _pendingSessionStart = true; window._pendingSessionStart = true;
+      window._pendingSessionStart = true;
       onSessionStart();
       return;
     }
@@ -198,27 +196,60 @@ window.confirmEnd = async function() {
 
 var _origResetTimer = window.resetTimer;
 window.resetTimer = async function() {
-  await _origResetTimer();
+  // Clean up session FIRST to preserve state
   onSessionCancel();
+  
+  // Then reset timer
+  await _origResetTimer();
 };
 
 var _origSkipPhase = window.skipPhase;
 window.skipPhase = async function() {
-  if (_pendingSessionStart) {
+  if (window._pendingSessionStart) {
     // Don't save if not started yet
-    _pendingSessionStart = false; window._pendingSessionStart = false;
+    window._pendingSessionStart = false;
     onSessionCancel();
   } else if (phase === 'work' && activeSession && activeSession.lastResumeTime) {
     // Save current session when skipping work phase
     activeSession.accumulatedMs += Date.now() - activeSession.lastResumeTime;
     activeSession.lastResumeTime = null;
-    var elapsedSec = totalSeconds - remainingSeconds;
+    var elapsedSec = activeSession.accumulatedMs / 1000;
     var plannedMinutes = totalSeconds / 60;
     await onSessionComplete(elapsedSec / 60, plannedMinutes);
   } else {
     onSessionCancel();
   }
   await _origSkipPhase();
+};
+
+window.cancelSessionNow = async function() {
+  if (phase === 'idle') return;
+  var sp = document.getElementById('sessionPopup');
+  if (sp) sp.classList.add('hidden');
+  var td = document.getElementById('tagDropdown');
+  if (td) td.classList.add('hidden');
+  if (window._pendingSessionStart) {
+    window._pendingSessionStart = false;
+    onSessionCancel();
+    stopTimer();
+    phase = 'idle';
+    await setPhaseTime('work');
+    updateUI();
+    return;
+  }
+  var elapsedSec = totalSeconds - remainingSeconds;
+  var plannedMinutes = totalSeconds / 60;
+  if (activeSession && activeSession.lastResumeTime) {
+    activeSession.accumulatedMs += Date.now() - activeSession.lastResumeTime;
+    activeSession.lastResumeTime = null;
+  }
+  stopTimer();
+  phase = 'idle';
+  await advancePhase();
+  recalcRemaining();
+  updateUI();
+  await onSessionComplete(elapsedSec / 60, plannedMinutes);
+  if (window.AudioManager) window.AudioManager.playSound('pomo-end.mp3');
 };
 
 // Tag selection functions
@@ -713,16 +744,18 @@ document.addEventListener('click', function(e) {
 var _sideBoxDate = todayKey();
 
 window.sideBoxPrevDay = function() {
-  var d = new Date(_sideBoxDate + 'T00:00:00');
-  d.setDate(d.getDate() - 1);
-  _sideBoxDate = d.toISOString().split('T')[0];
+  var parts = _sideBoxDate.split('-');
+  var d = new Date(+parts[0], +parts[1] - 1, +parts[2] - 1);
+  _sideBoxDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   renderSessionSideBox();
 };
 
 window.sideBoxNextDay = function() {
-  var d = new Date(_sideBoxDate + 'T00:00:00');
-  d.setDate(d.getDate() + 1);
-  _sideBoxDate = d.toISOString().split('T')[0];
+  var today = todayKey();
+  if (_sideBoxDate >= today) return;
+  var parts = _sideBoxDate.split('-');
+  var d = new Date(+parts[0], +parts[1] - 1, +parts[2] + 1);
+  _sideBoxDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   renderSessionSideBox();
 };
 
@@ -830,19 +863,24 @@ window.confirmSessionName = function() {
   var input = document.getElementById('pomoNamePopupInput');
   if (!input) return;
   var name = input.value.trim();
+  
+  // Ensure both pomoSessionName and localStorage are updated atomically
   window.pomoSessionName = name;
   try { localStorage.setItem('pomoSessionName', name); } catch(e) {}
+  
   if (activeSession) {
     activeSession.taskName = name;
   }
+  
   hideSessionNamePopup();
-  if (_pendingSessionStart) {
-    _pendingSessionStart = false; window._pendingSessionStart = false;
+  if (window._pendingSessionStart) {
+    window._pendingSessionStart = false;
     if (activeSession) {
       activeSession.lastResumeTime = Date.now();
     }
     startTimer();
   }
+  
   updateUI();
   renderTimeline();
   renderSessionTimeline();

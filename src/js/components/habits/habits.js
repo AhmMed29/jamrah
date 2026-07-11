@@ -43,7 +43,7 @@ async function loadHabitsFromDB() {
     }
     return { habits: habits, logs: allLogs };
   } catch (e) {
-    console.error('[Habits] DB error:', e);
+    /* [Habits] DB error */
     return { habits: [], logs: {} };
   }
 }

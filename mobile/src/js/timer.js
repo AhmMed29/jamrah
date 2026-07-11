@@ -150,5 +150,13 @@ window.cancelEnd = function() {
   if (popup) popup.classList.add('hidden');
 };
 
+window.adjustTime = function(delta) {
+  if (phase === 'idle' && !window._pendingSessionStart) return;
+  var adj = delta * 60;
+  totalSeconds = Math.max(60, totalSeconds + adj);
+  remainingSeconds = Math.max(0, remainingSeconds + adj);
+  updateUI();
+};
+
 initStats();
 updateSidebar();

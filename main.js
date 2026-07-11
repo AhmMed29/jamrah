@@ -249,14 +249,14 @@ ipcMain.handle('db:init', async () => {
 
 ipcMain.handle('db:get-setting', async (e, key) => {
   if (!is('string', key)) return null
-  try { var r = await fetch(api('/settings/' + encodeURIComponent(key))); return r.ok ? await r.text() : null }
+  try { var r = await fetch(api('/settings/' + encodeURIComponent(key))); return r.ok ? await r.json() : null }
   catch { return null }
 })
 
 ipcMain.handle('db:set-setting', async (e, key, value) => {
   if (!is('string', key)) return null
   try {
-    var r = await fetch(api('/settings/' + encodeURIComponent(key)), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) })
+    var r = await fetch(api('/settings/' + encodeURIComponent(key)), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(String(value)) })
     return r.ok ? await r.json() : false
   } catch { return false }
 })

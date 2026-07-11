@@ -145,9 +145,9 @@ body {
 
 /* ── Pomodoro side box (session timeline) ── */
 .pomo-side-box {
-  width: 320px;
-  min-width: 320px;
-  margin: 16px 0 16px 16px;
+  width: 240px;
+  min-width: 240px;
+  margin: 16px 0 16px 12px;
   border: 1px solid rgba(195,198,213,0.4);
   border-radius: 16px;
   background: #fff;
@@ -292,14 +292,14 @@ body {
   font-weight: 500;
 }
 
-/* ── Adjustment buttons (inside timer circle) ── */
+/* ── Adjustment buttons (outside timer circle) ── */
 .pomo-adj-btn {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   border: 1px solid #d1d5db;
   background: white;
   color: #4b5563;
@@ -314,8 +314,8 @@ body {
   justify-content: center;
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
-.pomo-adj-left { left: -18px; }
-.pomo-adj-right { right: -18px; }
+.pomo-adj-left { left: -56px; }
+.pomo-adj-right { right: -56px; }
 .timer-circle-wrapper:hover .pomo-adj-btn { opacity: 1; }
 .pomo-adj-btn:hover { border-color: #3b82f6; color: #3b82f6; }
 

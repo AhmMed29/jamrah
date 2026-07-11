@@ -32,16 +32,17 @@ public class SettingsController : ControllerBase
     }
 
     [HttpPut("{key}")]
-    public async Task<IActionResult> Set(string key, [FromBody] string value)
+    public async Task<IActionResult> Set(string key, [FromBody] object value)
     {
+        var str = value?.ToString() ?? "";
         var existing = await _db.Settings.FindAsync(key);
         if (existing != null)
         {
-            existing.Value = value;
+            existing.Value = str;
         }
         else
         {
-            _db.Settings.Add(new Entities.Setting { Key = key, Value = value });
+            _db.Settings.Add(new Entities.Setting { Key = key, Value = str });
         }
         await _db.SaveChangesAsync();
         return Ok(true);

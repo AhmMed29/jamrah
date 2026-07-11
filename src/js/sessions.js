@@ -740,17 +740,17 @@ document.addEventListener('click', function(e) {
   }
 });
 
-/* ── Side Box: Vertical Session Timeline ── */
+/* ── Session History Dropdown ── */
 var _sideBoxDate = todayKey();
 
-window.sideBoxPrevDay = function() {
+function histPrevDay() {
   var parts = _sideBoxDate.split('-');
   var d = new Date(+parts[0], +parts[1] - 1, +parts[2] - 1);
   _sideBoxDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   renderSessionSideBox();
 };
 
-window.sideBoxNextDay = function() {
+function histNextDay() {
   var today = todayKey();
   if (_sideBoxDate >= today) return;
   var parts = _sideBoxDate.split('-');
@@ -782,10 +782,10 @@ async function getSessionsForDate(dateStr) {
 }
 
 async function renderSessionSideBox() {
-  var container = document.getElementById('pomoSideTimeline');
-  var dateLabel = document.getElementById('pomoSideDateLabel');
-  var navLabel = document.getElementById('pomoSideNavLabel');
-  var fwdBtn = document.getElementById('pomoSideNavFwd');
+  var container = document.getElementById('sessionHistoryBody');
+  var dateLabel = document.getElementById('histDateLabel');
+  var navLabel = document.getElementById('histNavLabel');
+  var fwdBtn = document.querySelector('.session-history-nav button:last-child');
   if (!container) return;
 
   var today = todayKey();
@@ -835,6 +835,26 @@ async function renderSessionSideBox() {
   container.innerHTML = html;
   container.scrollTop = container.scrollHeight;
 }
+
+/* ── Toggle history dropdown ── */
+window.toggleHistoryDropdown = async function() {
+  var dd = document.getElementById('sessionHistoryDropdown');
+  if (!dd) return;
+  var isHidden = dd.classList.contains('hidden');
+  // Close all other dropdowns
+  document.querySelectorAll('.session-history-dropdown').forEach(function(el) { el.classList.add('hidden'); });
+  if (isHidden) {
+    await renderSessionSideBox();
+    dd.classList.remove('hidden');
+  }
+};
+
+document.addEventListener('click', function(e) {
+  var dd = document.getElementById('sessionHistoryDropdown');
+  if (dd && !dd.classList.contains('hidden') && !dd.contains(e.target) && !e.target.closest('[onclick*="toggleHistoryDropdown"]')) {
+    dd.classList.add('hidden');
+  }
+});
 
 /* ── Session name popup ── */
 var _taskPopupEnabled = false;
@@ -908,59 +928,4 @@ async function updateTaskPopupCache() {
   await renderSessionSideBox();
 })();
 
-// ===== Tasks Dropdown (Pomodoro) =====
-var selectedTaskId = null;
-var selectedTaskName = '';
 
-window.togglePomoTaskDropdown = function() {
-  var menu = document.getElementById('pomoTaskDropdownMenu');
-  if (!menu) return;
-  menu.classList.toggle('hidden');
-  if (!menu.classList.contains('hidden')) {
-    populatePomoTaskDropdown();
-  }
-};
-
-async function populatePomoTaskDropdown() {
-  var menu = document.getElementById('pomoTaskDropdownMenu');
-  if (!menu) return;
-  menu.innerHTML = '<div class="pomo-task-dropdown-item" onclick="selectPomoTask(null, \'None\')">بدون مهمة</div>';
-  try {
-    var tasks = await window.db.getTasks();
-    (tasks || []).forEach(function(t) {
-      var name = t.name || t.title || t.text || 'Untitled';
-      var item = document.createElement('div');
-      item.className = 'pomo-task-dropdown-item' + (selectedTaskId === t.id ? ' selected' : '');
-      item.textContent = name;
-      item.onclick = function() { selectPomoTask(t.id, name); };
-      menu.appendChild(item);
-    });
-  } catch(e) {
-    console.error('Failed to load tasks:', e);
-  }
-}
-
-window.selectPomoTask = function(taskId, taskName) {
-  selectedTaskId = taskId;
-  selectedTaskName = taskName || '';
-  var label = document.getElementById('pomoTaskLabel');
-  if (label) label.textContent = taskName || 'Select task...';
-  var menu = document.getElementById('pomoTaskDropdownMenu');
-  if (menu) menu.classList.add('hidden');
-
-  // Link to active session if exists
-  if (window.activeSession) {
-    window.activeSession.taskId = taskId;
-    window.activeSession.taskName = taskName || null;
-  }
-};
-
-document.addEventListener('click', function(e) {
-  var dd = document.getElementById('pomoTaskDropdown');
-  if (dd && !dd.contains(e.target)) {
-    var menu = document.getElementById('pomoTaskDropdownMenu');
-    if (menu && !menu.classList.contains('hidden')) {
-      menu.classList.add('hidden');
-    }
-  }
-});

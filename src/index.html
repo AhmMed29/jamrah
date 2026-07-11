@@ -69,33 +69,20 @@ window.tailwind={ config: {
 <div id="page-home" class="hidden flex-1 flex-col items-center justify-center bg-white px-4"></div>
 
 <div id="page-pomodoro" class="flex flex-1 overflow-hidden min-h-0">
-<div id="pomoSideBox" class="pomo-side-box">
-  <div class="pomo-side-header">
-    <span id="pomoSideDateLabel" class="pomo-side-date-label">Today</span>
+<!-- Session history dropdown -->
+<div id="sessionHistoryDropdown" class="session-history-dropdown hidden">
+  <div class="session-history-header">
+    <span id="histDateLabel">Today</span>
   </div>
-  <div class="pomo-side-timeline" id="pomoSideTimeline"></div>
-  <div class="pomo-side-nav" id="pomoSideNav">
-    <button class="pomo-side-nav-btn" id="pomoSideNavBack" onclick="sideBoxPrevDay()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-    </button>
-    <span class="pomo-side-nav-label" id="pomoSideNavLabel">Today</span>
-    <button class="pomo-side-nav-btn" id="pomoSideNavFwd" onclick="sideBoxNextDay()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-    </button>
+  <div class="session-history-body" id="sessionHistoryBody"></div>
+  <div class="session-history-nav">
+    <button onclick="histPrevDay()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <span id="histNavLabel">Today</span>
+    <button onclick="histNextDay()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
   </div>
 </div>
 <main class="flex-1 flex flex-col relative h-full overflow-hidden bg-white" id="mainArea">
 <div class="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto px-4 relative" style="padding-top:60px;padding-bottom:60px">
-
-  <div id="pomoTaskDropdown" class="pomo-task-dropdown">
-    <button id="pomoTaskDropdownBtn" class="pomo-task-dropdown-btn" onclick="togglePomoTaskDropdown()">
-      <span id="pomoTaskLabel">Select task...</span>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-    </button>
-    <div id="pomoTaskDropdownMenu" class="pomo-task-dropdown-menu hidden">
-      <!-- populated dynamically -->
-    </div>
-  </div>
 
   <!-- Timer circle wrapper -->
   <div class="timer-circle-wrapper" id="timerCircle" style="width:min(68vw,400px);height:min(68vw,400px);min-width:260px;min-height:260px">
@@ -728,37 +715,6 @@ window.tailwind={ config: {
     </div>
   </div>
 </div>
-<!-- خلفية الـ Sidebar (Backdrop) -->
-<div id="sidebarBackdrop" class="sidebar-backdrop"></div>
-
-<!-- زرار تبديل السايد بار -->
-<button id="sidebarToggleBtn" class="sidebar-toggle-btn" aria-label="Toggle Menu">
-  <svg class="sidebar-toggle-icon" id="sidebarIconHamburger" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-    <line x1="3" y1="5" x2="17" y2="5"/>
-    <line x1="3" y1="10" x2="17" y2="10"/>
-    <line x1="3" y1="15" x2="17" y2="15"/>
-  </svg>
-  <svg class="sidebar-toggle-icon hidden" id="sidebarIconX" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-    <line x1="2" y1="2" x2="14" y2="14"/>
-    <line x1="14" y1="2" x2="2" y2="14"/>
-  </svg>
-</button>
-
-<!-- الـ Sidebar -->
-<aside id="sidebar" class="sidebar">
-  <!-- روابط الـ Sidebar -->
-  <nav class="sidebar-nav mt-auto">
-    <button class="sidebar-item" onclick="showPage('stats')">
-      <span class="material-symbols-outlined">bar_chart</span>
-      <span>Stats</span>
-    </button>
-    <button id="settingsBtn" class="sidebar-item active">
-      <span class="material-symbols-outlined">settings</span>
-      <span>Settings</span>
-    </button>
-  </nav>
-</aside>
-
 <!-- Floating Dock Navigation -->
 <div class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50">
 <div class="floating-menu-glass rounded-full px-3 py-2 sm:px-4 sm:py-2.5 flex items-center gap-1 sm:gap-2">
@@ -778,6 +734,18 @@ window.tailwind={ config: {
 <button class="dock-item flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl transition-colors text-tickgray-500 hover:bg-blue-50 hover:text-tickblue" data-page="habits" onclick="showPage('habits');window.AudioManager?.playSound('tab-swipping.mp3')">
 <span class="material-symbols-outlined text-lg sm:text-xl">checklist</span>
 <span class="text-[9px] sm:text-[10px] font-medium mt-0.5 leading-tight">Habits</span>
+</button>
+<button class="dock-item flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl transition-colors text-tickgray-500 hover:bg-blue-50 hover:text-tickblue" onclick="toggleHistoryDropdown();window.AudioManager?.playSound('tab-swipping.mp3')">
+<span class="material-symbols-outlined text-lg sm:text-xl">history</span>
+<span class="text-[9px] sm:text-[10px] font-medium mt-0.5 leading-tight">History</span>
+</button>
+<button class="dock-item flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl transition-colors text-tickgray-500 hover:bg-blue-50 hover:text-tickblue" data-page="stats" onclick="showPage('stats');window.AudioManager?.playSound('tab-swipping.mp3')">
+<span class="material-symbols-outlined text-lg sm:text-xl">bar_chart</span>
+<span class="text-[9px] sm:text-[10px] font-medium mt-0.5 leading-tight">Stats</span>
+</button>
+<button id="settingsBtn" class="dock-item flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl transition-colors text-tickgray-500 hover:bg-blue-50 hover:text-tickblue" onclick="if (typeof openSettings==='function') openSettings();window.AudioManager?.playSound('tab-swipping.mp3')">
+<span class="material-symbols-outlined text-lg sm:text-xl">settings</span>
+<span class="text-[9px] sm:text-[10px] font-medium mt-0.5 leading-tight">Settings</span>
 </button>
 
 </nav>

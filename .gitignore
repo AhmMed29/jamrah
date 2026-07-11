@@ -39,3 +39,5 @@ test-backend.db-wal
 # Published .NET backend
 backend/publish/
 
+
+.superpowers/

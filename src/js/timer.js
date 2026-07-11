@@ -150,8 +150,6 @@ function updateUI() {
       : '<svg width="14" height="16" viewBox="0 0 12 16" fill="currentColor" style="margin-left:2px"><polygon points="0,0 12,8 0,16"/></svg>';
   }
 
-  var sideBox = document.getElementById('pomoSideBox');
-  if (sideBox) sideBox.classList.remove('hidden');
 }
 
 // Settings

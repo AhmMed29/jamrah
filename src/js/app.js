@@ -2,7 +2,6 @@
 var _pendingNav = null;
 
 async function showPage(name) {
-  closeSidebar();
   var settingsPage = document.getElementById('page-settings');
   if (settingsPage && !settingsPage.classList.contains('hidden') && window.settingsDirty) {
     _pendingNav = name;
@@ -238,64 +237,16 @@ window.addEventListener('load', function() {
   }, delay);
 });
 
-/* ── Sidebar Toggle ── */
-function toggleSidebar() {
-  var sidebar = document.getElementById('sidebar');
-  var backdrop = document.getElementById('sidebarBackdrop');
-  sidebar.classList.toggle('open');
-  backdrop.classList.toggle('open');
-}
-
-function closeSidebar() {
-  var sidebar = document.getElementById('sidebar');
-  var backdrop = document.getElementById('sidebarBackdrop');
-  sidebar.classList.remove('open');
-  backdrop.classList.remove('open');
-}
-
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    closeSidebar();
-    var ham = document.getElementById('sidebarIconHamburger');
-    var x = document.getElementById('sidebarIconX');
-    if (ham) ham.classList.remove('hidden');
-    if (x) x.classList.add('hidden');
-  }
-});
-
+/* زرار الإعدادات في الـ dock */
 document.addEventListener("DOMContentLoaded", () => {
-  const sidebar = document.getElementById('sidebar');
-  const backdrop = document.getElementById('sidebarBackdrop');
-  const toggleBtn = document.getElementById('sidebarToggleBtn');
-  const settingsBtn = document.getElementById('settingsBtn');
-
-  function updateToggleIcon() {
-    var open = sidebar.classList.contains('open');
-    var ham = document.getElementById('sidebarIconHamburger');
-    var x = document.getElementById('sidebarIconX');
-    if (ham) ham.classList.toggle('hidden', open);
-    if (x) x.classList.toggle('hidden', !open);
+  var settingsBtn = document.getElementById('settingsBtn');
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', function() {
+      if (typeof openSettings === 'function') openSettings();
+      if (window.AudioManager?.playSound) {
+        window.AudioManager.playSound('tab-swipping.mp3');
+      }
+    });
   }
-
-  // زرار التبديل الواحد
-  toggleBtn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    toggleSidebar();
-    updateToggleIcon();
-  });
-  backdrop.addEventListener('click', function() {
-    closeSidebar();
-    updateToggleIcon();
-  });
-
-  // زرار الإعدادات
-  settingsBtn.addEventListener('click', () => {
-    if (typeof openSettings === 'function') openSettings();
-    closeSidebar();
-    updateToggleIcon();
-    if (window.AudioManager?.playSound) {
-      window.AudioManager.playSound('tab-swipping.mp3');
-    }
-  });
 });
 

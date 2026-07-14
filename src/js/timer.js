@@ -1,4 +1,3 @@
-var SESSIONS_BEFORE_LONG_BREAK = 4;
 var PHASE_LABELS = { idle: '', work: 'Focus', shortBreak: 'Short Break', longBreak: 'Long Break' };
 
 var phase = 'idle';
@@ -63,7 +62,6 @@ async function tick() {
   if (remainingSeconds <= 0) {
     remainingSeconds = 0;
     stopTimer();
-    // Sidebar stats removed in redesign
     updateUI();
     await completeTimer();
     return;
@@ -109,15 +107,21 @@ window.skipPhase = async function() {
   if (phase === 'idle') return;
   stopTimer();
   if (phase === 'work') sessionCount++;
-  phase = nextPhase(phase, sessionCount);
+  var lbiVal = parseInt(await window.db.getSetting('longBreakInterval')) || 4;
+  if (phase === 'work') {
+    phase = sessionCount % lbiVal === 0 ? 'longBreak' : 'shortBreak';
+  } else {
+    phase = 'work';
+  }
   await setPhaseTime(phase);
   updateUI();
 };
 
 async function advancePhase() {
+  var lbiVal = parseInt(await window.db.getSetting('longBreakInterval')) || 4;
   if (phase === 'work') {
     sessionCount++;
-    phase = sessionCount % SESSIONS_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak';
+    phase = sessionCount % lbiVal === 0 ? 'longBreak' : 'shortBreak';
   } else {
     phase = 'work';
   }
@@ -129,11 +133,31 @@ async function completeTimer() {
   recalcRemaining();
   updateUI();
   if (window.AudioManager) window.AudioManager.playSound('pomo-end.mp3');
-}
 
-function nextPhase(current, count) {
-  if (current === 'work') return (count + 1) % SESSIONS_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak';
-  return 'work';
+  // Desktop notification
+  var dn = await window.db.getSetting('desktopNotifications');
+  if (dn !== 'false' && window.Notification) {
+    if (Notification.permission === 'granted') {
+      new Notification('Focus Timer', { body: phase === 'work' ? 'Break finished! Time to focus.' : 'Focus session finished! Take a break.' });
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+  }
+
+  // Auto-start next phase
+  if (phase === 'work') {
+    var asf = await window.db.getSetting('autoStartFocus');
+    if (asf === 'true') {
+      startTimer();
+      if (window.AudioManager) window.AudioManager.playSound('pomo-start.mp3');
+    }
+  } else {
+    var asb = await window.db.getSetting('autoStartBreak');
+    if (asb === 'true') {
+      startTimer();
+      if (window.AudioManager) window.AudioManager.playSound('pomo-start.mp3');
+    }
+  }
 }
 
 function updateUI() {
@@ -150,6 +174,38 @@ function updateUI() {
       : '<svg width="14" height="16" viewBox="0 0 12 16" fill="currentColor" style="margin-left:2px"><polygon points="0,0 12,8 0,16"/></svg>';
   }
 
+  // Toggle side box visibility
+  var sideBox = document.getElementById('pomoSideBox');
+  if (sideBox) {
+    if (isRunning) {
+      sideBox.classList.add('hidden-fade');
+    } else {
+      sideBox.classList.remove('hidden-fade');
+    }
+  }
+
+  // Toggle timer-running on circle wrapper for hover buttons
+  var wrapper = document.getElementById('timerCircle');
+  if (wrapper) {
+    if (isRunning) {
+      wrapper.classList.add('timer-running');
+    } else {
+      wrapper.classList.remove('timer-running');
+    }
+  }
+
+  // Update session count display
+  var sCount = document.getElementById('sessionCountDisplay');
+  if (sCount) {
+    window.db.getSetting('showSessionCount').then(function(ssc) {
+      if (ssc !== 'false' && phase !== 'idle') {
+        sCount.style.display = 'block';
+        sCount.textContent = 'Session #' + (sessionCount + 1);
+      } else {
+        sCount.style.display = 'none';
+      }
+    });
+  }
 }
 
 // Settings
@@ -168,12 +224,16 @@ window.savePomoSettings = async function() {
   await window.db.setSetting('workMinutes', w);
   await window.db.setSetting('shortBreakMinutes', sb);
   await window.db.setSetting('longBreakMinutes', lb);
+  await window.refreshTimerSettings();
+};
+
+window.refreshTimerSettings = async function() {
   if (phase === 'idle') {
     await setPhaseTime('work');
   } else if (!isRunning) {
     await setPhaseTime(phase);
-    updateUI();
   }
+  updateUI();
 };
 
 window.stepSetting = function(id, delta) {
@@ -196,12 +256,10 @@ window.setPreset = async function(minutes) {
 
 window.adjustTime = function(delta) {
   if (phase === 'idle' && !window._pendingSessionStart) {
-    // Allow adjustment in idle state
     var newMinutes = Math.max(1, Math.floor(remainingSeconds / 60) + delta);
     totalSeconds = newMinutes * 60;
     remainingSeconds = totalSeconds;
   } else {
-    // During timer or pending start
     var adj = delta * 60;
     totalSeconds = Math.max(60, totalSeconds + adj);
     remainingSeconds = Math.max(0, remainingSeconds + adj);
@@ -219,6 +277,27 @@ window.confirmEnd = async function() {
   var popup = document.getElementById('endPopup');
   if (popup) popup.classList.add('hidden');
   if (window.AudioManager) window.AudioManager.playSound('pomo-end.mp3');
+
+  // Desktop notification
+  var dn = await window.db.getSetting('desktopNotifications');
+  if (dn !== 'false' && window.Notification && Notification.permission === 'granted') {
+    new Notification('Focus Timer', { body: 'Session ended early.' });
+  }
+
+  // Auto-start next phase
+  if (phase === 'work') {
+    var asf = await window.db.getSetting('autoStartFocus');
+    if (asf === 'true') {
+      startTimer();
+      if (window.AudioManager) window.AudioManager.playSound('pomo-start.mp3');
+    }
+  } else {
+    var asb = await window.db.getSetting('autoStartBreak');
+    if (asb === 'true') {
+      startTimer();
+      if (window.AudioManager) window.AudioManager.playSound('pomo-start.mp3');
+    }
+  }
 };
 
 window.cancelEnd = function() {
@@ -242,23 +321,18 @@ window.pomoSessionName = localStorage.getItem('pomoSessionName') || '';
   if (window._dbInitPromise) await window._dbInitPromise;
   await setPhaseTime('work');
   updateUI();
+  
+  // Request notification permission if not asked
+  if (window.Notification && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
 })();
-
-document.getElementById('playBtn').addEventListener('click', function(e) {
-  e.stopPropagation();
-  window.toggleTimer();
-  updateUI();
-});
 
 var timerCircle = document.getElementById('timerCircle');
 if (timerCircle) {
   timerCircle.addEventListener('click', function(e) {
-    if (e.target.closest('.pomo-play-btn')) return;
+    if (e.target.closest('.pomo-play-btn') || e.target.closest('.pomo-hover-btn')) return;
     window.toggleTimer();
     updateUI();
   });
 }
-
-(async function() {
-  // Sidebar stats removed in redesign
-})();

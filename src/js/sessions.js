@@ -67,16 +67,17 @@ function onSessionStart() {
     id: 's_' + Date.now(),
     startTime: Date.now(),
     accumulatedMs: 0,
-    lastResumeTime: null,
+    lastResumeTime: _taskPopupEnabled ? null : Date.now(),
     taskName: name,
     tagId: null,
     goalId: null,
+    note: '',
     status: 'running'
   };
   renderTimeline();
   renderSessionTimeline();
   renderSessionSideBox();
-  if (window._pendingSessionStart) {
+  if (_taskPopupEnabled && window._pendingSessionStart) {
     showSessionNamePopup();
   }
 }
@@ -128,6 +129,7 @@ async function onSessionComplete(focusMinutes, plannedMinutes) {
   activeSession = null;
   await renderTimeline();
   await renderSessionTimeline();
+  await renderSessionSideBox();
 }
 
 function onSessionCancel() {
@@ -137,12 +139,9 @@ function onSessionCancel() {
   activeSession = null;
   renderTimeline();
   renderSessionTimeline();
+  renderSessionSideBox();
 }
 
-// Timeline rendering removed in redesign
-// Event delegation for timeline entries also removed
-
-// Patch timer functions to hook into session tracking
 var _origToggleTimer = window.toggleTimer;
 window.toggleTimer = function() {
   if (remainingSeconds <= 0) return;
@@ -516,6 +515,7 @@ window.saveAddSession = async function() {
   await window.db.saveSession(session);
   await renderTimeline();
   await renderSessionTimeline();
+  await renderSessionSideBox();
   var popup = document.getElementById('addSessionPopup');
   if (popup) popup.classList.add('hidden');
 };
@@ -653,11 +653,8 @@ document.addEventListener('click', function(e) {
 
 /* ═══════════════════════════════════════
    🎯 Session Timeline (Horizontal Flow)
-   التايم لاين الأفقي للجلسات - مستوحى من
-   Warm Focus design palette
    ═══════════════════════════════════════ */
 
-/* ─── Helper: format duration (minutes → readable) ─── */
 function formatDuration(minutes) {
   if (minutes < 1) return Math.round(minutes * 60) + 's';
   if (minutes < 60) return Math.round(minutes) + 'm';
@@ -666,7 +663,14 @@ function formatDuration(minutes) {
   return h + 'h ' + m + 'm';
 }
 
-/* ─── Helper: get today's sessions sorted by startTime ─── */
+function formatDurationShort(minutes) {
+  if (minutes < 1) return Math.round(minutes * 60) + 's';
+  if (minutes < 60) return Math.round(minutes) + 'm';
+  var h = Math.floor(minutes / 60);
+  var rm = Math.round(minutes % 60);
+  return h + (rm > 0 ? '.' + Math.round(rm * 10 / 6) : '') + 'h';
+}
+
 async function getTodaySessions() {
   try {
     var grouped = await window.db.getSessionsGrouped() || {};
@@ -676,17 +680,10 @@ async function getTodaySessions() {
   } catch(e) { return []; }
 }
 
-/* ─── Main render: draws the horizontal session timeline ───
-   كل نود في التايم لاين لها هيكل ثابت:
-   الوقت (فوق) → الدائرة (وسط) → المدة (تحت)
-   والـ connector خط رفيع بين كل نود والتانية
-   ───────────────────────────────────────────────────────── */
 async function renderSessionTimeline() {
   // Timeline removed in redesign
   return;
 }
-
-
 
 var sessionTimelineEditId = null;
 
@@ -701,7 +698,7 @@ window.openSessionTimelineModal = async function(sessionId) {
     if (activeSession && activeSession.id === sessionId) {
       session = activeSession;
     } else {
-  var todaySessions = await getTodaySessions();
+      var todaySessions = await getTodaySessions();
       for (var i = 0; i < todaySessions.length; i++) {
         if (todaySessions[i].id === sessionId) { session = todaySessions[i]; break; }
       }
@@ -740,17 +737,17 @@ document.addEventListener('click', function(e) {
   }
 });
 
-/* ── Session History Dropdown ── */
+/* ── Session History Dropdown / Left side box ── */
 var _sideBoxDate = todayKey();
 
-function histPrevDay() {
+window.pomoPrevDay = function() {
   var parts = _sideBoxDate.split('-');
   var d = new Date(+parts[0], +parts[1] - 1, +parts[2] - 1);
   _sideBoxDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   renderSessionSideBox();
 };
 
-function histNextDay() {
+window.pomoNextDay = function() {
   var today = todayKey();
   if (_sideBoxDate >= today) return;
   var parts = _sideBoxDate.split('-');
@@ -759,18 +756,18 @@ function histNextDay() {
   renderSessionSideBox();
 };
 
-function formatTimeHMShort(ts) {
+function formatTimeHMShort2(ts) {
   var d = new Date(ts);
   var h = d.getHours(), m = d.getMinutes();
-  return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  if (h > 12) h -= 12;
+  if (h === 0) h = 12;
+  return h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
 }
 
-function formatDurationLong(minutes) {
-  if (minutes < 1) return Math.round(minutes * 60) + ' seconds';
-  if (minutes < 60) return Math.round(minutes) + ' minutes';
-  var h = Math.floor(minutes / 60);
-  var rm = Math.round(minutes % 60);
-  return h + (rm > 0 ? '.' + Math.round(rm * 10 / 6) : '') + ' hours';
+function escapeHtml(str) {
+  if (typeof str !== 'string') return str || '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 async function getSessionsForDate(dateStr) {
@@ -781,53 +778,152 @@ async function getSessionsForDate(dateStr) {
   } catch(e) { return []; }
 }
 
+/* ── Inline Edit Session Name ── */
+window.startInlineEditSessionName = function(event, sessionId) {
+  event.stopPropagation();
+  var el = event.currentTarget;
+  var currentName = el.dataset.name || '';
+  
+  var rect = el.getBoundingClientRect();
+  var editPopup = document.createElement('div');
+  editPopup.className = 'inline-edit-popup';
+  editPopup.style.position = 'fixed';
+  editPopup.style.top = (rect.top + window.scrollY) + 'px';
+  editPopup.style.left = (rect.left + window.scrollX) + 'px';
+  editPopup.style.width = rect.width + 'px';
+  editPopup.style.height = rect.height + 'px';
+  editPopup.style.zIndex = '1000';
+  
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'inline-edit-input';
+  input.value = currentName;
+  input.style.width = '100%';
+  input.style.height = '100%';
+  input.style.border = '2px solid #3b82f6';
+  input.style.borderRadius = '6px';
+  input.style.padding = '0 8px';
+  input.style.fontSize = '12px';
+  input.style.outline = 'none';
+  input.style.fontFamily = 'inherit';
+  input.style.boxSizing = 'border-box';
+  
+  editPopup.appendChild(input);
+  document.body.appendChild(editPopup);
+  input.focus();
+  input.select();
+  
+  var finished = false;
+  async function finishEdit() {
+    if (finished) return;
+    finished = true;
+    var newName = input.value.trim();
+    document.body.removeChild(editPopup);
+    if (newName && newName !== currentName) {
+      if (activeSession && activeSession.id === sessionId) {
+        activeSession.taskName = newName;
+      } else {
+        var sessions = await getSessions();
+        var session = null;
+        var keys = Object.keys(sessions);
+        for (var k = 0; k < keys.length; k++) {
+          var list = sessions[keys[k]] || [];
+          var found = list.find(function(s) { return s.id === sessionId; });
+          if (found) { session = found; break; }
+        }
+        if (session) {
+          await window.db.updateSession(sessionId, newName, session.tagId, session.note, session.goalId);
+        }
+      }
+      renderSessionSideBox();
+    }
+  }
+  
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      finishEdit();
+    } else if (e.key === 'Escape') {
+      finished = true;
+      document.body.removeChild(editPopup);
+    }
+  });
+  
+  setTimeout(function() {
+    document.addEventListener('click', function onClickOutside(e) {
+      if (!editPopup.contains(e.target)) {
+        document.removeEventListener('click', onClickOutside);
+        finishEdit();
+      }
+    });
+  }, 10);
+};
+
 async function renderSessionSideBox() {
-  var container = document.getElementById('sessionHistoryBody');
-  var dateLabel = document.getElementById('histDateLabel');
-  var navLabel = document.getElementById('histNavLabel');
-  var fwdBtn = document.querySelector('.session-history-nav button:last-child');
+  var container = document.getElementById('pomoSideTimeline');
+  var dateLabel = document.getElementById('pomoSideDateLabel');
+  var navLabel = document.getElementById('pomoSideNavLabel');
+  var fwdBtn = document.querySelector('.pomo-side-nav button:last-child');
   if (!container) return;
 
   var today = todayKey();
   var displayDate = _sideBoxDate === today ? 'Today' : formatDateLabel(_sideBoxDate);
   if (dateLabel) dateLabel.textContent = displayDate;
   if (navLabel) navLabel.textContent = displayDate;
-  if (fwdBtn) fwdBtn.style.display = _sideBoxDate === today ? 'none' : '';
+  if (fwdBtn) {
+    if (_sideBoxDate === today) fwdBtn.setAttribute('disabled', 'true');
+    else fwdBtn.removeAttribute('disabled');
+  }
 
   var sessions = await getSessionsForDate(_sideBoxDate);
   var activeOnDate = _sideBoxDate === today ? activeSession : null;
 
   if (sessions.length === 0 && !activeOnDate) {
-    container.innerHTML = '';
+    container.innerHTML = '<div style="color:#9ca3af;font-size:13px;text-align:center;padding:40px 0;">No focus sessions</div>';
     return;
   }
 
   var allSessions = sessions.slice();
   if (activeOnDate) allSessions.push(activeOnDate);
 
-  var showName = _taskPopupEnabled;
+  var html = '<table class="pomo-side-table" style="width:100%">';
+  html += '<thead><tr><th>Name</th><th>Time</th><th>Dur</th><th>Tag</th><th></th></tr></thead><tbody>';
+  
+  var tags = await getTags();
+  var gw = await getTagsWithGoals();
+  var goals = gw.goals || [];
 
-  var html = '<table class="pomo-side-table">';
-  html += '<thead><tr><th>الوقت</th><th>المدة</th><th>الاسم</th><th>الحالة</th></tr></thead><tbody>';
   for (var i = 0; i < allSessions.length; i++) {
     var s = allSessions[i];
     var isActive = activeOnDate && i === allSessions.length - 1;
     var endT = isActive ? Date.now() + remainingSeconds * 1000 : s.endTime;
-    var timeRange = formatTimeHMShort(s.startTime) + ' → ' + formatTimeHMShort(endT);
+    var timeRange = formatTimeHMShort2(s.startTime) + ' - ' + formatTimeHMShort2(endT);
 
     var durMin = isActive
       ? (activeSession.accumulatedMs + (activeSession.lastResumeTime ? Date.now() - activeSession.lastResumeTime : 0)) / 60000
       : s.focusMinutes;
-    var durText = formatDurationLong(durMin);
+    var durText = formatDurationShort(durMin);
 
-    var name = s.taskName || '';
-    var statusText = isActive ? 'جاري' : 'تم';
+    var name = s.taskName || 'Focus Session';
+    
+    var tagHtml = '<span style="color:#9ca3af;font-size:10px;">-</span>';
+    if (s.tagId) {
+      var foundTag = tags.find(function(t) { return t.id === s.tagId; });
+      if (foundTag) {
+        tagHtml = '<span class="pomo-side-tag-bubble" style="background:rgba(' + hexToRgb(foundTag.color) + ',0.12);color:' + foundTag.color + ';border:1px solid rgba(' + hexToRgb(foundTag.color) + ',0.25)">' + foundTag.name + '</span>';
+      }
+    } else if (s.goalId) {
+      var foundGoal = goals.find(function(g) { return g.goalId === s.goalId; });
+      if (foundGoal) {
+        tagHtml = '<span class="pomo-side-tag-bubble" style="background:rgba(' + hexToRgb(foundGoal.color) + ',0.12);color:' + foundGoal.color + ';border:1px solid rgba(' + hexToRgb(foundGoal.color) + ',0.25)">' + foundGoal.name + '</span>';
+      }
+    }
 
-    html += '<tr class="' + (isActive ? 'pomo-side-row-active' : '') + '">';
-    html += '<td class="pomo-side-td-time"><span class="pomo-side-time-range">' + timeRange + '</span></td>';
-    html += '<td class="pomo-side-td-dur"><span class="pomo-side-time-desc">' + durText + '</span></td>';
-    html += '<td class="pomo-side-td-name">' + (showName ? name : '') + '</td>';
-    html += '<td class="pomo-side-td-status"><span class="pomo-side-status-badge' + (isActive ? ' active' : '') + '">' + statusText + '</span></td>';
+    html += '<tr>';
+    html += '<td style="padding: 6px 4px;"><span class="pomo-side-name-rect ' + (isActive ? 'active-glow' : '') + '" data-name="' + escapeHtml(name) + '" onclick="window.startInlineEditSessionName(event, \'' + s.id + '\')">' + escapeHtml(name) + '</span></td>';
+    html += '<td style="white-space:nowrap;color:#4b5563;font-size:11px;font-weight:500;">' + timeRange + '</td>';
+    html += '<td style="color:#6b7280;font-weight:500;">' + durText + '</td>';
+    html += '<td>' + tagHtml + '</td>';
+    html += '<td style="text-align: right; padding-right: 4px;">' + (!isActive ? '<button onclick="window.deleteSession(\'' + s.id + '\')" style="background:transparent;border:none;cursor:pointer;color:#9ca3af;padding:2px;display:flex;align-items:center;" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'#9ca3af\'" title="Delete Session"><span class="material-symbols-outlined" style="font-size:14px;">delete</span></button>' : '') + '</td>';
     html += '</tr>';
   }
   html += '</tbody></table>';
@@ -836,60 +932,115 @@ async function renderSessionSideBox() {
   container.scrollTop = container.scrollHeight;
 }
 
-/* ── Toggle history dropdown ── */
-window.toggleHistoryDropdown = async function() {
-  var dd = document.getElementById('sessionHistoryDropdown');
-  if (!dd) return;
-  var isHidden = dd.classList.contains('hidden');
-  // Close all other dropdowns
-  document.querySelectorAll('.session-history-dropdown').forEach(function(el) { el.classList.add('hidden'); });
-  if (isHidden) {
-    await renderSessionSideBox();
-    dd.classList.remove('hidden');
+window.deleteSession = async function(id) {
+  if (window.showConfirmModal) {
+    window.showConfirmModal('Delete Session', 'Are you sure you want to delete this session?', 'Delete', async function() {
+      await window.db.deleteSession(id);
+      if (window.renderStats) await window.renderStats();
+      if (typeof renderSessionTimeline === 'function') await renderSessionTimeline();
+      await renderSessionSideBox();
+    });
+  } else {
+    if (confirm('Are you sure you want to delete this session?')) {
+      await window.db.deleteSession(id);
+      if (window.renderStats) await window.renderStats();
+      if (typeof renderSessionTimeline === 'function') await renderSessionTimeline();
+      await renderSessionSideBox();
+    }
   }
 };
 
-document.addEventListener('click', function(e) {
-  var dd = document.getElementById('sessionHistoryDropdown');
-  if (dd && !dd.classList.contains('hidden') && !dd.contains(e.target) && !e.target.closest('[onclick*="toggleHistoryDropdown"]')) {
-    dd.classList.add('hidden');
+/* ── Toggle history dropdown ── */
+window.toggleHistoryDropdown = async function() {
+  // Toggle the side box visibility explicitly if needed, but the dock item was removed.
+  // We keep it as a fallback.
+  var sideBox = document.getElementById('pomoSideBox');
+  if (sideBox) {
+    sideBox.classList.toggle('hidden-fade');
   }
-});
+};
 
 /* ── Session name popup ── */
 var _taskPopupEnabled = false;
 
-window.showSessionNamePopup = function() {
+window.showSessionNamePopup = async function() {
   var popup = document.getElementById('pomoNamePopup');
-  var input = document.getElementById('pomoNamePopupInput');
-  if (!popup || !input) return;
+  if (!popup) return;
   
-  // Pre-fill from localStorage
-  var saved = localStorage.getItem('pomoSessionName');
-  input.value = saved || '';
+  var nameInput = document.getElementById('pomoPopupTaskName');
+  if (nameInput) nameInput.value = '';
+  var noteInput = document.getElementById('pomoPopupNote');
+  if (noteInput) noteInput.value = '';
   
+  // Populate tags
+  var tagSelect = document.getElementById('pomoPopupTag');
+  if (tagSelect) {
+    tagSelect.innerHTML = '<option value="">None</option>';
+    var tags = await getTags();
+    tags.forEach(function(t) {
+      var opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.name;
+      tagSelect.appendChild(opt);
+    });
+  }
+  
+  // Populate goals
+  var goalSelect = document.getElementById('pomoPopupGoal');
+  if (goalSelect) {
+    goalSelect.innerHTML = '<option value="">None</option>';
+    var data = await getTagsWithGoals();
+    var goals = data.goals || [];
+    goals.forEach(function(g) {
+      var opt = document.createElement('option');
+      opt.value = g.goalId;
+      opt.textContent = g.name;
+      goalSelect.appendChild(opt);
+    });
+  }
+
   popup.classList.remove('hidden');
-  setTimeout(function() { input.focus(); }, 50);
-}
+  var backdrop = document.getElementById('pomoNamePopupBackdrop');
+  if (backdrop) backdrop.classList.remove('hidden');
+
+  window._popupRecentlyShown = true;
+  setTimeout(function() { window._popupRecentlyShown = false; }, 100);
+};
 
 window.hideSessionNamePopup = function() {
   var popup = document.getElementById('pomoNamePopup');
   if (popup) popup.classList.add('hidden');
-  var input = document.getElementById('pomoNamePopupInput');
-  if (input) input.value = '';
-}
+  var backdrop = document.getElementById('pomoNamePopupBackdrop');
+  if (backdrop) backdrop.classList.add('hidden');
+};
 
 window.confirmSessionName = function() {
-  var input = document.getElementById('pomoNamePopupInput');
-  if (!input) return;
-  var name = input.value.trim();
+  var nameInput = document.getElementById('pomoPopupTaskName');
+  var tagSelect = document.getElementById('pomoPopupTag');
+  var goalSelect = document.getElementById('pomoPopupGoal');
+  var noteInput = document.getElementById('pomoPopupNote');
   
-  // Ensure both pomoSessionName and localStorage are updated atomically
+  var name = nameInput ? nameInput.value.trim() : '';
+  var tagId = tagSelect ? tagSelect.value : null;
+  var goalId = goalSelect ? goalSelect.value : null;
+  var note = noteInput ? noteInput.value.trim() : '';
+  
+  var durationInput = document.getElementById('pomoPopupDuration');
+  var customDuration = durationInput && durationInput.value ? parseInt(durationInput.value) : null;
+  
+  if (customDuration && customDuration > 0 && window.phase === 'work') {
+    window.totalSeconds = customDuration * 60;
+    window.remainingSeconds = window.totalSeconds;
+  }
+  
   window.pomoSessionName = name;
   try { localStorage.setItem('pomoSessionName', name); } catch(e) {}
   
   if (activeSession) {
     activeSession.taskName = name;
+    activeSession.tagId = tagId;
+    activeSession.goalId = goalId;
+    activeSession.note = note;
   }
   
   hideSessionNamePopup();
@@ -908,24 +1059,82 @@ window.confirmSessionName = function() {
 };
 
 document.addEventListener('click', function(e) {
+  if (window._popupRecentlyShown) return;
   var popup = document.getElementById('pomoNamePopup');
   if (!popup || popup.classList.contains('hidden')) return;
-  if (!popup.contains(e.target)) {
+  if (!popup.contains(e.target) && !e.target.closest('.dock-item') && !e.target.closest('.sidebar-toggle-btn') && !e.target.closest('#timerCircle')) {
     confirmSessionName();
   }
 });
 
-async function updateTaskPopupCache() {
+window.updateTaskPopupCache = async function() {
   var val = await window.db.getSetting('taskPopup');
   _taskPopupEnabled = val !== 'false';
-}
+};
+
+// --- Pomo Sidebar Resizer ---
+setTimeout(function() {
+  var pomoResizer = document.getElementById('pomoResizer');
+  var pomoSideBox = document.getElementById('pomoSideBox');
+  var isResizingPomo = false;
+
+  if (pomoResizer && pomoSideBox) {
+    pomoResizer.addEventListener('mousedown', function(e) {
+      isResizingPomo = true;
+      document.body.style.cursor = 'col-resize';
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!isResizingPomo) return;
+      var newWidth = e.clientX - 72; // Account for the 72px left margin
+      if (newWidth < 250) newWidth = 250;
+      if (newWidth > 800) newWidth = 800;
+      pomoSideBox.style.width = newWidth + 'px';
+    });
+
+    document.addEventListener('mouseup', function(e) {
+      if (isResizingPomo) {
+        isResizingPomo = false;
+        document.body.style.cursor = '';
+        var finalWidth = parseInt(pomoSideBox.style.width, 10);
+        if (finalWidth) {
+          window.db.setSetting('pomoSideBoxWidth', finalWidth);
+        }
+      }
+    });
+  }
+}, 500);
 
 (async function() {
   if (window._dbInitPromise) await window._dbInitPromise;
-  await updateTaskPopupCache();
+  var savedWidth = await window.db.getSetting('pomoSideBoxWidth');
+  if (savedWidth) {
+    var pomoSideBox = document.getElementById('pomoSideBox');
+    if (pomoSideBox) pomoSideBox.style.width = savedWidth + 'px';
+  }
+  await window.updateTaskPopupCache();
   await renderTimeline();
   await renderSessionTimeline();
   await renderSessionSideBox();
 })();
 
+window.togglePomoSideBox = function() {
+  var box = document.getElementById('pomoSideBox');
+  var resizer = document.getElementById('pomoResizer');
+  if (box.classList.contains('collapsed')) {
+    box.classList.remove('collapsed');
+    box.style.width = box.dataset.expandedWidth || '320px';
+    if (resizer) resizer.style.display = '';
+  } else {
+    box.dataset.expandedWidth = box.style.width || '320px';
+    box.style.width = ''; 
+    box.classList.add('collapsed');
+    if (resizer) resizer.style.display = 'none';
+  }
+};
 
+document.getElementById('pomoSideBox').addEventListener('click', function(e) {
+  if (this.classList.contains('collapsed')) {
+    window.togglePomoSideBox();
+  }
+});

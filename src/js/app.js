@@ -223,6 +223,7 @@ showPage = async function(name) {
   if (name === 'tasks' && typeof renderTasks === 'function') renderTasks();
   if (name === 'habits' && window.renderHabits) renderHabits();
   if (name === 'stats' && window.renderStats) renderStats();
+  if (typeof updateAppSidebarActive === 'function') updateAppSidebarActive(name);
 };
 
 document.addEventListener('DOMContentLoaded', async function() {

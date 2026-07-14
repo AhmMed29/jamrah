@@ -177,7 +177,7 @@ async function openModal(habitId) {
     openEditModal(habitId);
   });
   modalContent.querySelector('.delete-habit-btn').addEventListener('click', function() {
-    showConfirmModal('حذف العادة', 'هل أنت متأكد من حذف "' + habit.name + '"?', 'حذف', async function() {
+    showConfirmModal('Delete Habit', 'Are you sure you want to delete "' + habit.name + '"?', 'Delete', async function() {
       await window.db.deleteHabit(habitId);
       modal.classList.remove('open');
       await render();
@@ -312,7 +312,7 @@ window.showConfirmModal = function(title, message, confirmLabel, onConfirm) {
   if (!el) return;
   document.getElementById('confirmTitle').textContent = title;
   document.getElementById('confirmMessage').textContent = message;
-  document.getElementById('confirmBtn').textContent = confirmLabel || 'حذف';
+  document.getElementById('confirmBtn').textContent = confirmLabel || 'Confirm';
   _confirmCb = onConfirm;
   el.classList.remove('hidden');
 };

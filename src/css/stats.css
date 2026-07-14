@@ -1,221 +1,129 @@
-/* Stats Dashboard Styles */
+/* ── Modern Stats Dashboard ── */
+
 .stats-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 32px 32px 24px;
+  background: white;
+  border-bottom: 1px solid rgba(195, 198, 213, 0.3);
 }
+
 .stats-header h1 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1f2937;
+  font-size: 28px;
+  font-weight: 800;
+  color: #0b1c30;
   font-family: 'Manrope', sans-serif;
+  margin: 0;
+}
+
+.stats-time-toggle {
+  display: flex;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.stats-time-btn {
+  background: transparent;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Manrope', sans-serif;
+}
+
+.stats-time-btn:hover {
+  color: #0f172a;
+}
+
+.stats-time-btn.active {
+  background: white;
+  color: #0e58c5;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .stats-grid {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 24px;
+  padding: 32px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.stats-widget {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  position: relative;
-}
-
-.stats-widget-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-.stats-widget-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #374151;
-  font-family: 'Manrope', sans-serif;
-}
-.stats-widget-dots {
-  display: flex;
-  gap: 3px;
-  cursor: grab;
-  padding: 4px;
-}
-.stats-widget-dots:active { cursor: grabbing; }
-.stats-widget-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #d1d5db;
-}
-
-/* Overview widget */
-.stats-overview {
-  display: flex;
   gap: 24px;
-  flex-wrap: wrap;
-}
-.stats-ov-item {
-  text-align: center;
-  min-width: 80px;
-}
-.stats-ov-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1f2937;
-  font-family: 'Instrument Serif', serif;
-}
-.stats-ov-label {
-  font-size: 11px;
-  color: #9ca3af;
-  margin-top: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  background: #fafafc;
 }
 
-/* Goals progress widget */
-.stats-goal-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid #f3f4f6;
-}
-.stats-goal-item:last-child { border-bottom: none; }
-.stats-goal-name {
-  flex: 1;
-  font-size: 13px;
-  color: #374151;
-}
-.stats-goal-bar {
-  width: 120px;
-  height: 6px;
-  background: #f3f4f6;
-  border-radius: 3px;
-  overflow: hidden;
-}
-.stats-goal-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-.stats-goal-pct {
-  font-size: 12px;
-  color: #6b7280;
-  width: 35px;
-  text-align: right;
-}
-
-/* Tasks widget */
-.stats-tasks-summary {
-  display: flex;
+/* Overview Cards */
+.stats-overview-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
 }
-.stats-tasks-stat {
-  text-align: center;
-}
-.stats-tasks-num {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1f2937;
-}
-.stats-tasks-label {
-  font-size: 11px;
-  color: #9ca3af;
-}
 
-/* Habits widget */
-.stats-habit-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 6px 0;
-}
-.stats-habit-name {
-  flex: 1;
-  font-size: 13px;
-  color: #374151;
-}
-.stats-habit-bar {
-  width: 100px;
-  height: 6px;
-  background: #f3f4f6;
-  border-radius: 3px;
-  overflow: hidden;
-}
-.stats-habit-fill {
-  height: 100%;
-  border-radius: 3px;
-}
-.stats-habit-pct {
-  font-size: 12px;
-  color: #6b7280;
-  width: 35px;
-  text-align: right;
-}
-
-/* Heatmap */
-.stats-heatmap {
+.stats-ov-card {
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(195, 198, 213, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
-.stats-heatmap-week {
-  display: flex;
-  gap: 4px;
-}
-.stats-heatmap-day {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  background: #f3f4f6;
-  transition: transform 0.1s;
-}
-.stats-heatmap-day:hover { transform: scale(1.3); }
 
-/* Focus Hours chart */
-.stats-focus-chart {
-  display: flex;
-  align-items: flex-end;
-  gap: 6px;
-  height: 100px;
-  padding-top: 10px;
+.stats-ov-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: 'Manrope', sans-serif;
 }
-.stats-focus-bar {
+
+.stats-ov-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: #0b1c30;
+  font-family: 'Manrope', sans-serif;
+  line-height: 1;
+}
+
+/* Charts Area */
+.stats-chart-row {
+  display: flex;
+  gap: 24px;
+  min-height: 320px;
+}
+
+.stats-chart-card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid rgba(195, 198, 213, 0.4);
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-chart-header {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0b1c30;
+  margin-bottom: 20px;
+  font-family: 'Manrope', sans-serif;
+}
+
+.stats-chart-body {
   flex: 1;
-  border-radius: 4px 4px 0 0;
-  min-width: 16px;
   position: relative;
-  transition: height 0.3s ease;
-}
-.stats-focus-label {
-  position: absolute;
-  bottom: -18px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 9px;
-  color: #9ca3af;
-  white-space: nowrap;
+  min-height: 0;
 }
 
-/* Drag states */
-.stats-widget.dragging {
-  opacity: 0.5;
-  border: 2px dashed #3b82f6;
-}
-.stats-widget.drag-over {
-  border-top: 2px solid #3b82f6;
-}
-
-/* Empty state */
-.stats-empty {
-  text-align: center;
-  padding: 40px;
-  color: #9ca3af;
-  font-size: 14px;
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .stats-chart-row {
+    flex-direction: column;
+  }
 }

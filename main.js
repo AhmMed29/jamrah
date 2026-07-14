@@ -311,6 +311,14 @@ ipcMain.handle('db:update-session', async (e, id, taskName, tagId, note, goalId)
   } catch { return false }
 })
 
+ipcMain.handle('db:delete-session', async (e, id) => {
+  if (!is('string', id)) return false
+  try {
+    var r = await fetch(api('/sessions/' + encodeURIComponent(id)), { method: 'DELETE' })
+    return r.ok
+  } catch { return false }
+})
+
 ipcMain.handle('db:get-today-stats', async () => {
   try { var r = await fetch(api('/sessions/stats/today')); return r.ok ? await r.json() : { todayPomos: 0, todayFocusMinutes: 0 } }
   catch { return { todayPomos: 0, todayFocusMinutes: 0 } }

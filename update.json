@@ -1,5 +1,5 @@
 {
-  "version": "1.3.3",
-  "downloadUrl": "https://github.com/AhmMed29/jamrah/releases/download/v1.3.3/Jamrah.Setup.1.3.3.exe",
-  "releaseNotes": "✨ v1.3.3\n- New animated splash screen on startup\n- Sound effects when completing tasks and habits\n- Faster loading — splash appears immediately\n- Fixed Edit button for tasks\n- Updated README"
+  "version": "2.3.0",
+  "downloadUrl": "https://github.com/AhmMed29/jamrah/releases/download/v2.3.0/Jamrah.Setup.2.3.0.exe",
+  "releaseNotes": "✨ v2.3.0\n- Redesigned session side box with timeline, day navigation, and inline editing\n- New sidebar design: single toggle button with overlay (no content push)\n- Session name popup: enter name before starting (optional)\n- Pomodoro button delay fixes - fully synchronous toggleTimer\n- Settings toggle fix: Show popup task on start now works correctly\n- Clicking outside session name popup closes it without starting timer\n- Updated welcome screen with animated release version\n- Various bug fixes and performance improvements"
 }

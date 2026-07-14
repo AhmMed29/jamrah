@@ -88,7 +88,7 @@ updateClock();
 setInterval(updateClock, 1000);
 
 /* â”€â”€ Update system (electron-updater) â”€â”€ */
-var APP_VERSION = '2.0.0';
+var APP_VERSION = '2.3.0';
 var updateData = null;
 var updateDownloaded = false;
 
@@ -163,12 +163,34 @@ window.closeUpdateModal = function(e) {
   }
 };
 
-/* â”€â”€ Welcome popup (shown once, first launch only) â”€â”€ */
+/* --- Welcome popup (shown once, first launch only) --- */
 (async function checkWelcome() {
   var shown = await window.db.getSetting('welcomeShown');
   if (shown === 'true') return;
   var modal = document.getElementById('welcomeModal');
-  if (modal) modal.style.display = 'flex';
+  if (!modal) return;
+  modal.style.display = 'flex';
+  // Trigger SVG draw circle animation
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      var path = document.querySelector('.draw-circle-path');
+      if (!path) return;
+      var len = path.getTotalLength();
+      if (!len) return;
+      path.style.strokeDasharray = len;
+      path.style.strokeDashoffset = len;
+      path.style.opacity = '1';
+      path.animate([
+        { strokeDashoffset: len },
+        { strokeDashoffset: 0 }
+      ], {
+        duration: 1500,
+        easing: 'ease-in-out',
+        delay: 300,
+        fill: 'forwards'
+      });
+    });
+  });
 })();
 
 window.closeWelcomeModal = async function() {

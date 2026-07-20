@@ -1,4 +1,4 @@
-﻿const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer } = require('electron')
 
 var electronAPI = {
   minimize: () => ipcRenderer.send('minimize'),
@@ -36,6 +36,9 @@ var electronAPI = {
   closeApp: () => ipcRenderer.send('close-app'),
   onShortcut: (callback) => {
     ipcRenderer.on('shortcut', (_, action) => callback(action))
+  },
+  onBackendError: (callback) => {
+    ipcRenderer.on('backend-error', (_, msg) => callback(msg))
   }
 }
 
@@ -52,7 +55,9 @@ var db = {
   deleteTag: (id) => ipcRenderer.invoke('db:delete-tag', id),
   getSessionsGrouped: () => ipcRenderer.invoke('db:get-sessions-grouped'),
   saveSession: (session) => ipcRenderer.invoke('db:save-session', session),
-  updateSession: (id, taskName, tagId, note, goalId) => ipcRenderer.invoke('db:update-session', id, taskName, tagId, note, goalId),
+  getSession: (id) => ipcRenderer.invoke('db:get-session', id),
+  updateSession: (id, data) => ipcRenderer.invoke('db:update-session', id, data),
+  deleteSession: (id) => ipcRenderer.invoke('db:delete-session', id),
   getTodayStats: () => ipcRenderer.invoke('db:get-today-stats'),
   getTotalStats: () => ipcRenderer.invoke('db:get-total-stats'),
   getPath: () => ipcRenderer.invoke('db:get-path'),

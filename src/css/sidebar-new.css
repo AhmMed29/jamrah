@@ -1,0 +1,126 @@
+/* ══════════════════════════════════════
+   App Sidebar — Clean and Minimal CSS
+   ══════════════════════════════════════ */
+
+/* ── Sidebar Container ── */
+.app-sidebar {
+  position: fixed;
+  top: 32px;
+  left: 0;
+  bottom: 0;
+  width: 72px;
+  background: #ffffff;
+  border-right: 1px solid rgba(195,198,213,0.4);
+  display: flex;
+  flex-direction: column;
+  z-index: 42;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-x: hidden;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.04);
+}
+.app-sidebar.open {
+  width: 240px;
+}
+.app-sidebar.open .sidebar-toggle-btn {
+  left: 184px;
+}
+#appContent {
+  margin-left: 72px;
+}
+
+/* ── Sidebar Content ── */
+.app-sidebar-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 72px 16px 24px;
+  box-sizing: border-box;
+}
+
+/* ── Sidebar Groups ── */
+.app-sidebar-group {
+  margin-bottom: 24px;
+}
+.app-sidebar-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 10px 8px;
+  user-select: none;
+}
+
+/* ── Sidebar Menu ── */
+.app-sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.app-sidebar-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 208px; /* Fixed width so text doesn't wrap/squish */
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4b5563;
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+  box-sizing: border-box;
+}
+.app-sidebar-menu-item:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+.app-sidebar-menu-item.active {
+  background: #eff6ff;
+  color: #3b82f6;
+  font-weight: 600;
+}
+.app-sidebar-menu-item .material-symbols-outlined {
+  font-size: 22px;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.app-sidebar-menu-item span:nth-child(2) {
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.app-sidebar.open .app-sidebar-menu-item span:nth-child(2) {
+  opacity: 1;
+}
+.app-sidebar-group-label {
+  opacity: 0;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+.app-sidebar.open .app-sidebar-group-label {
+  opacity: 1;
+}
+
+/* ── Sidebar Backdrop (No blur) ── */
+.app-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  pointer-events: none;
+  z-index: 41;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s, visibility 0.25s;
+}
+.app-sidebar-backdrop.open {
+  opacity: 1;
+  visibility: visible;
+}

@@ -1,0 +1,151 @@
+/* ── Timer Circle ── */
+.timer-circle-wrapper {
+  position: relative;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+.timer-circle-wrapper:hover {
+  transform: scale(1.03);
+}
+#pomoShaderCanvas {
+  border-radius: 50%;
+}
+
+.timer-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: transparent;
+  pointer-events: none;
+}
+.timer-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 10;
+  user-select: none;
+}
+.timer-text {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 56px;
+  letter-spacing: 0.04em;
+  color: #0b1c30;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+@media (max-width: 449px) {
+  .timer-text { font-size: 44px; }
+}
+@media (max-width: 299px) {
+  .timer-text { font-size: 32px; }
+}
+.timer-label {
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #6B7280;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── Play button (inside timer face) ── */
+.pomo-play-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  border: none;
+  background: #3b82f6;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+  pointer-events: auto;
+  margin-top: 12px;
+}
+.pomo-play-btn:hover {
+  background: #2563eb;
+  box-shadow: 0 6px 16px rgba(59,130,246,0.4);
+  transform: translateY(-1px);
+}
+.pomo-play-btn:active {
+  transform: scale(0.94);
+}
+
+/* ── Minimal theme ── */
+.timer-circle-wrapper.minimal-mode {
+  width:auto !important; height:auto !important; min-width:0 !important; min-height:0 !important;
+  border-radius:0; background:transparent !important;
+}
+.timer-circle-wrapper.minimal-mode #pomoShaderCanvas { display:none; }
+.timer-circle-wrapper.minimal-mode .timer-bg { display:none; }
+.timer-circle-wrapper.minimal-mode svg { display:none; }
+.timer-circle-wrapper.minimal-mode .timer-face {
+  position:static; pointer-events:auto;
+}
+.timer-circle-wrapper.minimal-mode .timer-text {
+  font-size:72px; color:#0b1c30; font-family:'Manrope','Tajawal',sans-serif;
+  letter-spacing:2px; margin-bottom:4px;
+}
+.timer-circle-wrapper.minimal-mode .timer-label {
+  color:#9CA3AF; font-size:14px;
+}
+
+/* ── Hover buttons around Pomodoro (Skip, Reset, End) ── */
+.pomo-hover-btn {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.15s, color 0.15s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.pomo-hover-btn:hover {
+  background: #ffffff;
+  color: #3b82f6;
+  transform: scale(1.1);
+}
+.pomo-hover-btn span {
+  font-size: 20px;
+}
+
+/* Position around circle */
+.pomo-btn-skip {
+  top: 10%;
+  right: 10%;
+}
+.pomo-btn-reset {
+  bottom: 10%;
+  left: 10%;
+}
+.pomo-btn-end {
+  bottom: 10%;
+  right: 10%;
+}
+
+/* Only show on hover of the circle wrapper when timer is running */
+.timer-circle-wrapper.timer-running:hover .pomo-hover-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+

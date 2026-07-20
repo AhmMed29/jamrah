@@ -18,22 +18,24 @@
 }
 
 async function openSettings() {
+  showPage('settings');
+
   var pages = ['home', 'pomodoro', 'habits'];
   for (var i = 0; i < pages.length; i++) {
     var el = document.getElementById('page-' + pages[i]);
     if (el && !el.classList.contains('hidden')) {
-      await window.db.setSetting('lastPage', pages[i]);
+      window.db.setSetting('lastPage', pages[i]);
       break;
     }
   }
   if (window.switchSettingsTab) {
     window.switchSettingsTab('general');
   }
-  document.getElementById('settingsModal').style.display = 'flex';
   var spd = document.getElementById('storagePathDisplay');
   if (spd) {
-    var p = await window.db.getSetting('storagePath');
-    spd.textContent = p || await window.db.getSetting('defaultStoragePath') || 'Default';
+    window.db.getSetting('storagePath').then(function(p) {
+      spd.textContent = p || 'Default';
+    });
   }
   window.settingsDirty = false;
   var row = document.getElementById('settingsBtnRow');
@@ -48,10 +50,9 @@ window.closeSettings = function(e) {
     document.getElementById('settingsConfirmModal').style.display = 'flex';
     return;
   }
-  document.getElementById('settingsModal').style.display = 'none';
+  showPage('pomodoro');
 };
 
-function cancelSettings() { closeSettings(); }
 function openStorageFolder() {
   window.electronAPI.backupGetInfo().then(function(info) {
     if (info && info.storagePath) {
@@ -155,18 +156,20 @@ function escapeHtml(str) {
 }
 
 var _origOpenSettings = openSettings;
-openSettings = async function() {
-  await _origOpenSettings();
+openSettings = function() {
+  _origOpenSettings();
 
   var bpd = document.getElementById('backupPathDisplay');
   if (bpd) {
-    var saved = await window.db.getSetting('backupPath');
-    if (saved) {
-      bpd.textContent = saved;
-    } else {
-      var def = await window.electronAPI.backupGetDefaultPath();
-      bpd.textContent = def || 'Not set';
-    }
+    window.db.getSetting('backupPath').then(function(saved) {
+      if (saved) {
+        bpd.textContent = saved;
+      } else {
+        window.electronAPI.backupGetDefaultPath().then(function(def) {
+          bpd.textContent = def || 'Not set';
+        });
+      }
+    });
   }
 };
 

@@ -4,9 +4,13 @@ var activeSession = null;
 var editingSessionId = null;
 var editingTagForSession = null;
 var editingGoalForSession = null;
+var _editingSessionNote = '';
 var addSessionTagId = null;
 var addSessionGoalId = null;
 var selectedTagColor = '#3B82F6';
+var _rightPanelSession = null;
+var _noteSaveTimer = null;
+var _rightPanelOriginalNote = '';
 
 async function getTags() {
   try { return await window.db.getTags() || []; } catch(e) { return []; }
@@ -47,108 +51,7 @@ function hexToRgb(hex) {
 }
 
 async function renderTimeline() {
-  var container = document.getElementById('focusTimeline');
-  if (!container) return;
-  var sessions = await getSessions();
-  var html = '<div class="absolute left-4 top-2 bottom-0 w-px bg-gray-100"></div>';
-
-  var activeSessionHtml = '';
-
-  if (activeSession) {
-    var now = Date.now();
-    var elapsedInCurrentRun = activeSession.lastResumeTime ? now - activeSession.lastResumeTime : 0;
-    var totalElapsed = activeSession.accumulatedMs + elapsedInCurrentRun;
-    var totalFocusMin = totalElapsed / 60000;
-    var estimatedEnd = now + remainingSeconds * 1000;
-    var timeRange = formatTimeHM(activeSession.startTime) + ' - ' + formatTimeHM(estimatedEnd);
-    var durationText = totalFocusMin < 1 ? (Math.round(totalFocusMin * 60) + 's') : totalFocusMin.toFixed(1) + 'm';
-    var tagHtml = '';
-    if (activeSession.tagId) {
-      var allTags = await getTags();
-      var tag = allTags.find(function(t) { return t.id === activeSession.tagId; });
-      if (tag) {
-        tagHtml = '<span class="tag-bubble" style="background:' + 'rgba(' + hexToRgb(tag.color) + ',0.12);color:' + tag.color + ';border:1px solid rgba(' + hexToRgb(tag.color) + ',0.25)">#' + tag.name + '</span>';
-      }
-    }
-
-    activeSessionHtml += '<div class="flex items-start mb-4 relative z-10 group cursor-pointer" data-sid="' + activeSession.id + '">';
-    activeSessionHtml += '<div class="w-6 h-6 rounded-full bg-purple-light flex items-center justify-center text-purple-brand mt-0.5 border-2 border-white relative -ml-1.5 opacity-70">';
-    activeSessionHtml += '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"></path></svg>';
-    activeSessionHtml += '</div>';
-    activeSessionHtml += '<div class="ml-3 flex-1">';
-    activeSessionHtml += '<div class="flex justify-between items-baseline">';
-    activeSessionHtml += '<span class="text-xs text-gray-400">' + timeRange + '</span>';
-    activeSessionHtml += '<span class="text-xs text-gray-400">' + durationText + '</span>';
-    activeSessionHtml += '</div>';
-    if (activeSession.taskName) {
-      activeSessionHtml += '<p class="text-sm text-gray-600 mt-0.5">' + activeSession.taskName + '</p>';
-    }
-    if (tagHtml) {
-      activeSessionHtml += '<div class="mt-1">' + tagHtml + '</div>';
-    }
-    activeSessionHtml += '</div></div>';
-  }
-
-  var dates = Object.keys(sessions).sort().reverse();
-  var today = todayKey();
-  var todayRendered = false;
-
-  for (var di = 0; di < dates.length; di++) {
-    var dateStr = dates[di];
-    var entries = sessions[dateStr];
-    if (!entries || entries.length === 0) continue;
-    var label = dateStr === today ? 'Today' : formatDateLabel(dateStr);
-    html += '<div class="mb-6 relative">';
-    html += '<div class="text-sm font-medium text-gray-400 mb-3 bg-white inline-block pr-2 relative z-10 -ml-3">' + label + '</div>';
-    if (label === 'Today' && activeSessionHtml) {
-      html += activeSessionHtml;
-      todayRendered = true;
-    }
-    for (var ei = 0; ei < entries.length; ei++) {
-      var e = entries[ei];
-      var timeRange2 = formatTimeHM(e.startTime) + ' - ' + formatTimeHM(e.endTime);
-      var durMin = e.focusMinutes;
-      var durText = durMin < 1 ? (Math.round(durMin * 60) + 's') : (durMin < 10 ? durMin.toFixed(1) : Math.round(durMin)) + 'm';
-      var tagHtml2 = '';
-      if (e.tagId) {
-        var allTags2 = await getTags();
-        var tag2 = allTags2.find(function(t) { return t.id === e.tagId; });
-        if (tag2) {
-          tagHtml2 = '<span class="tag-bubble" style="background:' + tag2.color + '20;color:' + tag2.color + ';border:1px solid ' + tag2.color + '40">#' + tag2.name + '</span>';
-        }
-      }
-      html += '<div class="flex items-start mb-4 relative z-10 group cursor-pointer" data-sid="' + e.id + '">';
-      html += '<div class="w-6 h-6 rounded-full bg-purple-light flex items-center justify-center text-purple-brand mt-0.5 border-2 border-white relative -ml-1.5">';
-      html += '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"></path></svg>';
-      html += '</div>';
-      html += '<div class="ml-3 flex-1">';
-      html += '<div class="flex justify-between items-baseline">';
-      html += '<span class="text-xs text-gray-400">' + timeRange2 + '</span>';
-      html += '<span class="text-xs text-gray-400">' + durText + '</span>';
-      html += '</div>';
-      if (e.taskName) {
-        html += '<p class="text-sm text-gray-600 mt-0.5">' + e.taskName + '</p>';
-      }
-      if (tagHtml2) {
-        html += '<div class="mt-1">' + tagHtml2 + '</div>';
-      }
-      html += '</div></div>';
-    }
-    html += '</div>';
-  }
-
-  if (activeSessionHtml && !todayRendered) {
-    html += '<div class="mb-6 relative">';
-    html += '<div class="text-sm font-medium text-gray-400 mb-3 bg-white inline-block pr-2 relative z-10 -ml-3">Today</div>';
-    html += activeSessionHtml;
-    html += '</div>';
-  }
-
-  if (!activeSession && dates.length === 0) {
-    html += '<div class="text-sm text-gray-400 text-center py-8">No sessions yet</div>';
-  }
-
-  container.innerHTML = html;
+  // Timeline removed in redesign
 }
 
 function formatDateLabel(dateStr) {
@@ -159,21 +62,28 @@ function formatDateLabel(dateStr) {
 
 // Session event hooks
 function onSessionStart() {
+  hideSessionNamePopup();
   if (activeSession) {
     activeSession = null;
   }
+  var name = _taskPopupEnabled ? (window.pomoSessionName || '') : '';
   activeSession = {
     id: 's_' + Date.now(),
     startTime: Date.now(),
     accumulatedMs: 0,
-    lastResumeTime: Date.now(),
-    taskName: window.pomoSessionName || '',
+    lastResumeTime: _taskPopupEnabled ? null : Date.now(),
+    taskName: name,
     tagId: null,
     goalId: null,
+    note: '',
     status: 'running'
   };
   renderTimeline();
   renderSessionTimeline();
+  renderSessionSideBox();
+  if (_taskPopupEnabled && window._pendingSessionStart) {
+    showSessionNamePopup();
+  }
 }
 
 function onSessionPause() {
@@ -183,6 +93,7 @@ function onSessionPause() {
   activeSession.status = 'paused';
   renderTimeline();
   renderSessionTimeline();
+  renderSessionSideBox();
 }
 
 function onSessionResume() {
@@ -191,15 +102,20 @@ function onSessionResume() {
   activeSession.status = 'running';
   renderTimeline();
   renderSessionTimeline();
+  renderSessionSideBox();
 }
 
 async function onSessionComplete(focusMinutes, plannedMinutes) {
   if (!activeSession) return;
+  window._pendingSessionStart = false;
+  window.pomoSessionName = '';
+  try { localStorage.removeItem('pomoSessionName'); } catch(e) {}
+  hideSessionNamePopup();
   if (activeSession.lastResumeTime) {
     activeSession.accumulatedMs += Date.now() - activeSession.lastResumeTime;
   }
   if (focusMinutes === undefined) {
-    focusMinutes = activeSession.accumulatedMs / 60000;
+    focusMinutes = Math.round(activeSession.accumulatedMs / 60000);
   }
   var endTime = Date.now();
   var session = {
@@ -214,40 +130,43 @@ async function onSessionComplete(focusMinutes, plannedMinutes) {
     goalId: activeSession.goalId || null
   };
   await window.db.saveSession(session);
+  if (_rightPanelSession && activeSession && _rightPanelSession.id === activeSession.id) {
+    _rightPanelSession = null;
+  }
   activeSession = null;
   await renderTimeline();
   await renderSessionTimeline();
+  await renderSessionSideBox();
 }
 
 function onSessionCancel() {
   if (!activeSession) return;
+  window._pendingSessionStart = false;
+  hideSessionNamePopup();
+  if (_rightPanelSession && activeSession && _rightPanelSession.id === activeSession.id) {
+    _rightPanelSession = null;
+  }
   activeSession = null;
   renderTimeline();
   renderSessionTimeline();
+  renderSessionSideBox();
 }
 
-renderTimeline();
-renderSessionTimeline();
-
-// Event delegation for timeline entries
-document.addEventListener('click', function(e) {
-  var el = e.target.closest('[data-sid]');
-  if (el && document.getElementById('focusTimeline') && document.getElementById('focusTimeline').contains(el)) {
-    var sid = el.getAttribute('data-sid');
-    if (sid) window.openSessionPopup(sid);
-  }
-});
-
-// Patch timer functions to hook into session tracking
 var _origToggleTimer = window.toggleTimer;
-window.toggleTimer = async function() {
-  if (remainingSeconds <= 0) { window.openTimePopup(); return; }
+window.toggleTimer = function() {
+  if (remainingSeconds <= 0) return;
+  if (window._pendingSessionStart) return;
   if (isRunning) {
-    await _origToggleTimer();
+    _origToggleTimer();
     onSessionPause();
   } else {
     var isFresh = remainingSeconds === totalSeconds;
-    await _origToggleTimer();
+    if (isFresh && _taskPopupEnabled) {
+      window._pendingSessionStart = true;
+      showSessionNamePopup();
+      return;
+    }
+    _origToggleTimer();
     if (isFresh) onSessionStart(); else onSessionResume();
   }
 };
@@ -284,10 +203,62 @@ window.confirmEnd = async function() {
   await onSessionComplete(elapsedSec / 60, plannedMinutes);
 };
 
-var _origSetTimer = window.setTimer;
-window.setTimer = function() {
-  _origSetTimer();
+var _origResetTimer = window.resetTimer;
+window.resetTimer = async function() {
+  // Clean up session FIRST to preserve state
   onSessionCancel();
+  
+  // Then reset timer
+  await _origResetTimer();
+};
+
+var _origSkipPhase = window.skipPhase;
+window.skipPhase = async function() {
+  if (window._pendingSessionStart) {
+    // Don't save if not started yet
+    window._pendingSessionStart = false;
+    onSessionCancel();
+  } else if (phase === 'work' && activeSession && activeSession.lastResumeTime) {
+    // Save current session when skipping work phase
+    activeSession.accumulatedMs += Date.now() - activeSession.lastResumeTime;
+    activeSession.lastResumeTime = null;
+    var elapsedSec = activeSession.accumulatedMs / 1000;
+    var plannedMinutes = totalSeconds / 60;
+    await onSessionComplete(elapsedSec / 60, plannedMinutes);
+  } else {
+    onSessionCancel();
+  }
+  await _origSkipPhase();
+};
+
+window.cancelSessionNow = async function() {
+  if (phase === 'idle') return;
+  var sp = document.getElementById('sessionPopup');
+  if (sp) sp.classList.add('hidden');
+  var td = document.getElementById('tagDropdown');
+  if (td) td.classList.add('hidden');
+  if (window._pendingSessionStart) {
+    window._pendingSessionStart = false;
+    onSessionCancel();
+    stopTimer();
+    phase = 'idle';
+    await setPhaseTime('work');
+    updateUI();
+    return;
+  }
+  var elapsedSec = totalSeconds - remainingSeconds;
+  var plannedMinutes = totalSeconds / 60;
+  if (activeSession && activeSession.lastResumeTime) {
+    activeSession.accumulatedMs += Date.now() - activeSession.lastResumeTime;
+    activeSession.lastResumeTime = null;
+  }
+  stopTimer();
+  phase = 'idle';
+  await advancePhase();
+  recalcRemaining();
+  updateUI();
+  await onSessionComplete(elapsedSec / 60, plannedMinutes);
+  if (window.AudioManager) window.AudioManager.playSound('pomo-end.mp3');
 };
 
 // Tag selection functions
@@ -394,6 +365,7 @@ window.openSessionPopup = async function(sessionId) {
   if (input) input.value = session.taskName || '';
   editingTagForSession = session.tagId || null;
   editingGoalForSession = session.goalId || null;
+  _editingSessionNote = session.note || '';
   await renderSessionTagDisplay();
   var popup = document.getElementById('sessionPopup');
   if (popup) popup.classList.remove('hidden');
@@ -416,13 +388,15 @@ window.saveSessionEdit = async function() {
     activeSession.goalId = editingGoalForSession;
     await renderTimeline();
     await renderSessionTimeline();
+    await renderSessionSideBox();
     var popup = document.getElementById('sessionPopup');
     if (popup) popup.classList.add('hidden');
     return;
   }
-  await window.db.updateSession(editingSessionId, taskName, editingTagForSession, '', editingGoalForSession);
+  await window.db.updateSession(editingSessionId, { taskName: taskName, tagId: editingTagForSession, note: _editingSessionNote, goalId: editingGoalForSession });
   await renderTimeline();
   await renderSessionTimeline();
+  await renderSessionSideBox();
   var popup = document.getElementById('sessionPopup');
   if (popup) popup.classList.add('hidden');
 };
@@ -552,6 +526,7 @@ window.saveAddSession = async function() {
   await window.db.saveSession(session);
   await renderTimeline();
   await renderSessionTimeline();
+  await renderSessionSideBox();
   var popup = document.getElementById('addSessionPopup');
   if (popup) popup.classList.add('hidden');
 };
@@ -689,11 +664,8 @@ document.addEventListener('click', function(e) {
 
 /* ═══════════════════════════════════════
    🎯 Session Timeline (Horizontal Flow)
-   التايم لاين الأفقي للجلسات - مستوحى من
-   Warm Focus design palette
    ═══════════════════════════════════════ */
 
-/* ─── Helper: format duration (minutes → readable) ─── */
 function formatDuration(minutes) {
   if (minutes < 1) return Math.round(minutes * 60) + 's';
   if (minutes < 60) return Math.round(minutes) + 'm';
@@ -702,7 +674,14 @@ function formatDuration(minutes) {
   return h + 'h ' + m + 'm';
 }
 
-/* ─── Helper: get today's sessions sorted by startTime ─── */
+function formatDurationShort(minutes) {
+  if (minutes < 1) return Math.round(minutes * 60) + 's';
+  if (minutes < 60) return Math.round(minutes) + 'm';
+  var h = Math.floor(minutes / 60);
+  var rm = Math.round(minutes % 60);
+  return h + (rm > 0 ? '.' + Math.round(rm * 10 / 6) : '') + 'h';
+}
+
 async function getTodaySessions() {
   try {
     var grouped = await window.db.getSessionsGrouped() || {};
@@ -712,142 +691,14 @@ async function getTodaySessions() {
   } catch(e) { return []; }
 }
 
-/* ─── Main render: draws the horizontal session timeline ───
-   كل نود في التايم لاين لها هيكل ثابت:
-   الوقت (فوق) → الدائرة (وسط) → المدة (تحت)
-   والـ connector خط رفيع بين كل نود والتانية
-   ───────────────────────────────────────────────────────── */
 async function renderSessionTimeline() {
-
-  var todaySessions = await getTodaySessions();
-  var connector = '<div class="flex-shrink-0" style="width:24px;height:1px;background:#E5E7EB"></div>';
-
-  /* ── Empty state: no sessions today ── */
-  if (todaySessions.length === 0 && !activeSession) {
-    track.innerHTML = '<div class="flex items-center gap-3 py-4" style="min-width:100%">' +
-      connector +
-      '<div class="flex flex-col items-center flex-shrink-0 relative z-10" onclick="openSessionTimelineModal(null)" style="cursor:pointer">' +
-        '<span style="font-size:11px;color:#9CA3AF;font-weight:500;white-space:nowrap;margin-bottom:8px;opacity:0">00:00</span>' +
-        '<div style="width:32px;height:32px;border-radius:50%;border:2px dashed #D1D5DB;display:flex;align-items:center;justify-content:center">' +
-          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>' +
-        '</div>' +
-        '<span style="font-size:11px;color:#9CA3AF;font-weight:500;margin-top:8px;white-space:nowrap">Start</span>' +
-      '</div>' +
-    '</div>';
-    return;
-  }
-
-  /* ── Build node list: completed sessions + break + active + upcoming ── */
-  var allNodes = [];
-
-  for (var i = 0; i < todaySessions.length; i++) {
-    var s = todaySessions[i];
-    allNodes.push({ type: 'session', data: s, state: 'completed' });
-    if (i < todaySessions.length - 1 || activeSession) {
-      allNodes.push({ type: 'break' });
-    }
-  }
-
-  if (activeSession) {
-    allNodes.push({ type: 'session', data: activeSession, state: 'active' });
-  }
-
-  var futureCount = Math.max(2, 4 - allNodes.length);
-  for (var f = 0; f < futureCount; f++) {
-    if (f > 0 || (allNodes.length > 0 && allNodes[allNodes.length - 1].type === 'break')) {
-    } else {
-      allNodes.push({ type: 'break', upcoming: true });
-    }
-    allNodes.push({ type: 'session', state: 'upcoming' });
-  }
-
-  /* ── Generate HTML for all nodes ── */
-  var html = '';
-  for (var n = 0; n < allNodes.length; n++) {
-    var node = allNodes[n];
-
-    /* ─── BREAK node (نقطة الاستراحة - قابلة للضغط تفتح popup) ─── */
-    if (node.type === 'break') {
-      html += connector;
-      var breakCls = node.upcoming ? '#F3F4F6' : '#D1D5DB';
-      html += '<div class="flex flex-col items-center flex-shrink-0 relative z-10" onclick="openSessionTimelineModal(null)" style="cursor:pointer">';
-      html += '<span style="font-size:11px;color:#9CA3AF;font-weight:500;white-space:nowrap;margin-bottom:8px;opacity:0">Break</span>';
-      html += '<div style="width:14px;height:14px;border-radius:50%;background:' + breakCls + ';border:3px solid #fff;flex-shrink:0"></div>';
-      html += '<span style="font-size:11px;color:#9CA3AF;font-weight:500;margin-top:8px;opacity:0">0m</span>';
-      html += '</div>';
-      continue;
-    }
-
-    /* ─── COMPLETED session (جلسة منتهية - قابلة للضغط) ─── */
-    if (node.type === 'session' && node.state === 'completed') {
-      var s = node.data;
-      var timeLabel = formatTimeHM(s.startTime) + ' - ' + formatTimeHM(s.endTime);
-      var durLabel = formatDuration(s.focusMinutes);
-      html += connector;
-      html += '<div class="flex flex-col items-center flex-shrink-0 relative z-10" data-sid="' + s.id + '" onclick="openSessionTimelineModal(\'' + s.id + '\')" style="cursor:pointer">';
-      html += '<span style="font-size:11px;color:#6B7280;font-weight:500;white-space:nowrap;margin-bottom:8px">' + timeLabel + '</span>';
-      html += '<div style="width:32px;height:32px;border-radius:50%;background:#DBEAFE;color:#3B82F6;display:flex;align-items:center;justify-content:center;border:4px solid #fff;flex-shrink:0">';
-      html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
-      html += '</div>';
-      html += '<span style="font-size:11px;color:#6B7280;font-weight:500;margin-top:8px;white-space:nowrap">' + durLabel + '</span>';
-      html += '</div>';
-    }
-
-    /* ─── ACTIVE session (الجلسة الحالية - قابلة للضغط) ─── */
-    if (node.type === 'session' && node.state === 'active') {
-      var now = Date.now();
-      var elapsedInCurrentRun = activeSession.lastResumeTime ? now - activeSession.lastResumeTime : 0;
-      var totalElapsed = activeSession.accumulatedMs + elapsedInCurrentRun;
-      var estEnd = now + remainingSeconds * 1000;
-      var timeLabel = formatTimeHM(activeSession.startTime) + ' - ' + formatTimeHM(estEnd);
-      var durLabel = formatDuration(totalElapsed / 60000);
-      html += connector;
-      html += '<div class="flex flex-col items-center flex-shrink-0 relative z-10" data-sid="' + activeSession.id + '" onclick="openSessionTimelineModal(\'' + activeSession.id + '\')" style="cursor:pointer">';
-      html += '<span style="font-size:11px;color:#3B82F6;font-weight:700;white-space:nowrap;margin-bottom:8px">' + timeLabel + '</span>';
-      html += '<div style="width:32px;height:32px;border-radius:50%;background:#BFDBFE;color:#1D4ED8;display:flex;align-items:center;justify-content:center;border:4px solid #fff;flex-shrink:0;box-shadow:0 0 12px rgba(59,130,246,0.25)">';
-      html += '<div style="width:6px;height:6px;border-radius:50%;background:#1D4ED8;animation:pulse-dot 1.5s ease-in-out infinite"></div>';
-      html += '</div>';
-      html += '<span style="font-size:11px;color:#3B82F6;font-weight:500;margin-top:8px;white-space:nowrap">' + durLabel + '</span>';
-      html += '</div>';
-    }
-
-    /* ─── UPCOMING session (جلسة قادمة) ─── */
-    if (node.type === 'session' && node.state === 'upcoming') {
-      html += connector;
-      html += '<div class="flex flex-col items-center flex-shrink-0 relative z-10" style="opacity:0.5">';
-      html += '<span style="font-size:11px;color:#9CA3AF;font-weight:500;white-space:nowrap;margin-bottom:8px">--:--</span>';
-      html += '<div style="width:32px;height:32px;border-radius:50%;background:#F3F4F6;border:4px solid #fff;flex-shrink:0"></div>';
-      html += '<span style="font-size:11px;color:#9CA3AF;font-weight:500;margin-top:8px;white-space:nowrap">--m</span>';
-      html += '</div>';
-    }
-  }
-
-  html = html.replace(connector, ''); /* remove leading connector before first node */
-  track.innerHTML = html;
-
-  /* ── Auto-scroll to latest (rightmost) session ── */
-  var scrollEl = document.getElementById('sessionTimelineScroll');
-  if (scrollEl) {
-    scrollEl.scrollLeft = scrollEl.scrollWidth;
-  }
+  // Timeline removed in redesign
+  return;
 }
 
-/* ─── Scroll behavior: vertical wheel → horizontal scroll ───
-   عشان السكرول العمودي يشتغل أفقي جوه التايم لاين
-   ──────────────────────────────────────────────────────────── */
-(function() {
-  var scrollEl = document.getElementById('sessionTimelineScroll');
-  if (scrollEl) {
-    scrollEl.addEventListener('wheel', function(e) {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        this.scrollBy({ left: e.deltaY, behavior: 'auto' });
-        e.preventDefault();
-      }
-    }, { passive: false });
-  }
-})();
-
 var sessionTimelineEditId = null;
+var _sessionTimelineEditNote = '';
+var _sessionTimelineEditGoalId = null;
 
 window.openSessionTimelineModal = async function(sessionId) {
   sessionTimelineEditId = sessionId;
@@ -860,14 +711,18 @@ window.openSessionTimelineModal = async function(sessionId) {
     if (activeSession && activeSession.id === sessionId) {
       session = activeSession;
     } else {
-  var todaySessions = await getTodaySessions();
+      var todaySessions = await getTodaySessions();
       for (var i = 0; i < todaySessions.length; i++) {
         if (todaySessions[i].id === sessionId) { session = todaySessions[i]; break; }
       }
     }
     input.value = session ? (session.taskName || '') : '';
+    _sessionTimelineEditNote = session ? (session.note || '') : '';
+    _sessionTimelineEditGoalId = session ? (session.goalId || null) : null;
   } else {
     input.value = '';
+    _sessionTimelineEditNote = '';
+    _sessionTimelineEditGoalId = null;
   }
 
   modal.classList.add('open');
@@ -885,12 +740,11 @@ window.saveSessionTimeline = async function() {
   if (sessionTimelineEditId && activeSession && activeSession.id === sessionTimelineEditId) {
     activeSession.taskName = taskName;
   } else if (sessionTimelineEditId) {
-    await window.db.updateSession(sessionTimelineEditId, taskName, null, '');
+    await window.db.updateSession(sessionTimelineEditId, { taskName: taskName, tagId: null, note: _sessionTimelineEditNote, goalId: _sessionTimelineEditGoalId });
   }
 
-  await renderTimeline();
-  await renderSessionTimeline();
   window.closeSessionTimelineModal();
+  renderSessionSideBox();
 };
 
 document.addEventListener('click', function(e) {
@@ -900,7 +754,758 @@ document.addEventListener('click', function(e) {
   }
 });
 
+/* ── Session History Dropdown / Left side box ── */
+var _sideBoxDate = todayKey();
+
+window.pomoPrevDay = function() {
+  var parts = _sideBoxDate.split('-');
+  var d = new Date(+parts[0], +parts[1] - 1, +parts[2] - 1);
+  _sideBoxDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  renderSessionSideBox();
+};
+
+window.pomoNextDay = function() {
+  var today = todayKey();
+  if (_sideBoxDate >= today) return;
+  var parts = _sideBoxDate.split('-');
+  var d = new Date(+parts[0], +parts[1] - 1, +parts[2] + 1);
+  _sideBoxDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  renderSessionSideBox();
+};
+
+function formatTimeHMShort2(ts) {
+  var d = new Date(ts);
+  var h = d.getHours(), m = d.getMinutes();
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  if (h > 12) h -= 12;
+  if (h === 0) h = 12;
+  return h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
+}
+
+function escapeHtml(str) {
+  if (typeof str !== 'string') return str || '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function getSessionsForDate(dateStr) {
+  try {
+    var grouped = await window.db.getSessionsGrouped() || {};
+    var list = grouped[dateStr] || [];
+    return list.sort(function(a, b) { return b.startTime - a.startTime; });
+  } catch(e) { return []; }
+}
+
+/* ── Inline Edit Session Name ── */
+window.startInlineEditSessionName = function(event, sessionId) {
+  event.stopPropagation();
+  var el = event.currentTarget;
+  var currentName = el.dataset.name || '';
+  
+  var rect = el.getBoundingClientRect();
+  var editPopup = document.createElement('div');
+  editPopup.className = 'inline-edit-popup';
+  editPopup.style.position = 'fixed';
+  editPopup.style.top = (rect.top + window.scrollY) + 'px';
+  editPopup.style.left = (rect.left + window.scrollX) + 'px';
+  editPopup.style.width = rect.width + 'px';
+  editPopup.style.height = rect.height + 'px';
+  editPopup.style.zIndex = '1000';
+  
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'inline-edit-input';
+  input.value = currentName;
+  input.style.width = '100%';
+  input.style.height = '100%';
+  input.style.border = '2px solid #3b82f6';
+  input.style.borderRadius = '6px';
+  input.style.padding = '0 8px';
+  input.style.fontSize = '12px';
+  input.style.outline = 'none';
+  input.style.fontFamily = 'inherit';
+  input.style.boxSizing = 'border-box';
+  
+  editPopup.appendChild(input);
+  document.body.appendChild(editPopup);
+  input.focus();
+  input.select();
+  
+  var finished = false;
+  async function finishEdit() {
+    if (finished) return;
+    finished = true;
+    var newName = input.value.trim();
+    document.body.removeChild(editPopup);
+    if (newName && newName !== currentName) {
+      if (activeSession && activeSession.id === sessionId) {
+        activeSession.taskName = newName;
+      } else {
+        var sessions = await getSessions();
+        var session = null;
+        var keys = Object.keys(sessions);
+        for (var k = 0; k < keys.length; k++) {
+          var list = sessions[keys[k]] || [];
+          var found = list.find(function(s) { return s.id === sessionId; });
+          if (found) { session = found; break; }
+        }
+        if (session) {
+          await window.db.updateSession(sessionId, { taskName: newName, tagId: session.tagId, note: session.note, goalId: session.goalId });
+        }
+      }
+      renderSessionSideBox();
+    }
+  }
+  
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      finishEdit();
+    } else if (e.key === 'Escape') {
+      finished = true;
+      document.body.removeChild(editPopup);
+    }
+  });
+  
+  setTimeout(function() {
+    document.addEventListener('click', function onClickOutside(e) {
+      if (!editPopup.contains(e.target)) {
+        document.removeEventListener('click', onClickOutside);
+        finishEdit();
+      }
+    });
+  }, 10);
+};
+
+async function renderSessionSideBox() {
+  var container = document.getElementById('pomoSideTimeline');
+  var dateLabel = document.getElementById('pomoSideDateLabel');
+  var navLabel = document.getElementById('pomoSideNavLabel');
+  var fwdBtn = document.querySelector('.pomo-side-nav button:last-child');
+  if (!container) return;
+
+  var today = todayKey();
+  var displayDate = _sideBoxDate === today ? 'Today' : formatDateLabel(_sideBoxDate);
+  if (dateLabel) dateLabel.textContent = displayDate;
+  if (navLabel) navLabel.textContent = displayDate;
+  if (fwdBtn) {
+    if (_sideBoxDate === today) fwdBtn.setAttribute('disabled', 'true');
+    else fwdBtn.removeAttribute('disabled');
+  }
+
+  var sessions = await getSessionsForDate(_sideBoxDate);
+  var activeOnDate = _sideBoxDate === today ? activeSession : null;
+
+  if (sessions.length === 0 && !activeOnDate) {
+    container.innerHTML = '<div style="color:#9ca3af;font-size:13px;text-align:center;padding:40px 0;">No focus sessions</div>';
+    return;
+  }
+
+  var allSessions = sessions.slice();
+  if (activeOnDate) allSessions.push(activeOnDate);
+
+  var html = '<table class="pomo-side-table" style="width:100%">';
+  html += '<thead><tr><th>Name</th><th>Time</th><th>Dur</th><th>Tag</th><th></th></tr></thead><tbody>';
+  
+  var tags = await getTags();
+  var gw = await getTagsWithGoals();
+  var goals = gw.goals || [];
+
+  for (var i = 0; i < allSessions.length; i++) {
+    var s = allSessions[i];
+    var isActive = activeOnDate && i === allSessions.length - 1;
+    var endT = isActive ? Date.now() + remainingSeconds * 1000 : s.endTime;
+    var timeRange = formatTimeHMShort2(s.startTime) + ' - ' + formatTimeHMShort2(endT);
+
+    var durMin = isActive
+      ? (activeSession.accumulatedMs + (activeSession.lastResumeTime ? Date.now() - activeSession.lastResumeTime : 0)) / 60000
+      : s.focusMinutes;
+    var durText = formatDurationShort(durMin);
+
+    var name = s.taskName || 'Focus Session';
+    
+    var tagHtml = '<span style="color:#9ca3af;font-size:10px;">-</span>';
+    if (s.tagId) {
+      var foundTag = tags.find(function(t) { return t.id === s.tagId; });
+      if (foundTag) {
+        tagHtml = '<span class="pomo-side-tag-bubble" style="background:rgba(' + hexToRgb(foundTag.color) + ',0.12);color:' + foundTag.color + ';border:1px solid rgba(' + hexToRgb(foundTag.color) + ',0.25)">' + foundTag.name + '</span>';
+      }
+    } else if (s.goalId) {
+      var foundGoal = goals.find(function(g) { return g.goalId === s.goalId; });
+      if (foundGoal) {
+        tagHtml = '<span class="pomo-side-tag-bubble" style="background:rgba(' + hexToRgb(foundGoal.color) + ',0.12);color:' + foundGoal.color + ';border:1px solid rgba(' + hexToRgb(foundGoal.color) + ',0.25)">' + foundGoal.name + '</span>';
+      }
+    }
+
+    var hasNote = !!s.note;
+    var noteBtnClass = hasNote ? 'pomo-side-note-btn has-note' : 'pomo-side-note-btn empty-note';
+    var noteBtnHtml = '<button class="' + noteBtnClass + '" onclick="window.openPomoSideNoteModal(\'' + s.id + '\')" title="Session Note"><span class="material-symbols-outlined" style="font-size:14px;">description</span></button>';
+
+    html += '<tr>';
+    html += '<td style="padding: 6px 4px;"><span class="pomo-side-name-rect ' + (isActive ? 'active-glow' : '') + '" data-name="' + escapeHtml(name) + '" onclick="window.startInlineEditSessionName(event, \'' + s.id + '\')">' + escapeHtml(name) + '</span></td>';
+    html += '<td style="white-space:nowrap;color:#4b5563;font-size:11px;font-weight:500;">' + timeRange + '</td>';
+    html += '<td style="color:#6b7280;font-weight:500;">' + durText + '</td>';
+    html += '<td>' + tagHtml + '</td>';
+    html += '<td style="text-align: right; padding-right: 4px; display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding-top: 5px;">' + noteBtnHtml + '<button onclick="window.deleteSession(\'' + s.id + '\')" style="background:transparent;border:none;cursor:pointer;color:#9ca3af;padding:2px;display:flex;align-items:center;" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'#9ca3af\'" title="Delete Session"><span class="material-symbols-outlined" style="font-size:14px;">delete</span></button></td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+
+  container.innerHTML = html;
+  container.scrollTop = container.scrollHeight;
+}
+
+window.deleteSession = async function(id) {
+  await window.db.deleteSession(id);
+  if (window.renderStats) await window.renderStats();
+  if (typeof renderSessionTimeline === 'function') await renderSessionTimeline();
+  await renderSessionSideBox();
+};
+
+/* ── Toggle history dropdown ── */
+window.toggleHistoryDropdown = async function() {
+  // Toggle the side box visibility explicitly if needed, but the dock item was removed.
+  // We keep it as a fallback.
+  var sideBox = document.getElementById('pomoSideBox');
+  if (sideBox) {
+    sideBox.classList.toggle('hidden-fade');
+  }
+};
+
+function saveRightPanelSession() {
+  if (!_rightPanelSession) return;
+  var noteInput = document.getElementById('pomoNoteArea');
+  var noteVal = noteInput ? noteInput.value.trim() : '';
+  _rightPanelSession.note = noteVal;
+  if (activeSession && _rightPanelSession.id === activeSession.id) {
+    activeSession.note = noteVal;
+  } else {
+    window.db.updateSession(_rightPanelSession.id, {
+      taskName: _rightPanelSession.taskName || '',
+      tagId: _rightPanelSession.tagId || null,
+      note: noteVal,
+      goalId: _rightPanelSession.goalId || null
+    });
+  }
+}
+
+/* ── Session name popup ── */
+var _taskPopupEnabled = false;
+window._pomoRightPanelOpen = false;
+
+window.togglePomoRightPanel = function(forceState) {
+  if (typeof forceState === 'boolean') {
+    _pomoRightPanelOpen = forceState;
+  } else {
+    _pomoRightPanelOpen = !_pomoRightPanelOpen;
+  }
+  var panel = document.getElementById('pomoRightPanelWrapper');
+  var btn = document.getElementById('pomoRightToggleBtn');
+  if (panel && btn) {
+    if (_pomoRightPanelOpen) {
+      panel.style.transform = 'translate(0, -50%)';
+      panel.style.opacity = '1';
+      panel.style.pointerEvents = 'auto';
+      btn.style.right = '340px';
+      document.getElementById('pomoNotePanel')?.classList.remove('hidden');
+      var activeInfo = document.getElementById('pomoActiveSessionInfo');
+      if (activeInfo) {
+        activeInfo.style.position = 'static';
+        activeInfo.style.transform = 'none';
+        activeInfo.style.top = 'auto';
+        activeInfo.style.left = 'auto';
+        activeInfo.style.width = 'auto';
+      }
+      if (!_rightPanelSession && activeSession) {
+        _rightPanelSession = activeSession;
+        _rightPanelOriginalNote = activeSession.note || '';
+        var noteArea = document.getElementById('pomoNoteArea');
+        if (noteArea) noteArea.value = activeSession.note || '';
+      }
+    } else {
+      panel.style.transform = 'translate(150%, -50%)';
+      panel.style.opacity = '0';
+      panel.style.pointerEvents = 'none';
+      btn.style.right = '0';
+      saveRightPanelSession();
+      _rightPanelSession = null;
+    }
+  }
+};
+
+window.showSessionNamePopup = async function() {
+  var popup = document.getElementById('pomoNamePopup');
+  if (!popup) return;
+  
+  // Populate tags
+  var tagSelect = document.getElementById('pomoPopupTag');
+  if (tagSelect) {
+    tagSelect.innerHTML = '<option value="">None</option>';
+    var tags = await getTags();
+    tags.forEach(function(t) {
+      var opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.name;
+      tagSelect.appendChild(opt);
+    });
+  }
+  
+  // Populate goals
+  var goalSelect = document.getElementById('pomoPopupGoal');
+  if (goalSelect) {
+    goalSelect.innerHTML = '<option value="">None</option>';
+    var data = await getTagsWithGoals();
+    var goals = data.goals || [];
+    goals.forEach(function(g) {
+      var opt = document.createElement('option');
+      opt.value = g.goalId;
+      opt.textContent = g.name;
+      goalSelect.appendChild(opt);
+    });
+  }
+
+  popup.classList.remove('hidden');
+
+  window._popupRecentlyShown = true;
+  setTimeout(function() { window._popupRecentlyShown = false; }, 100);
+};
+
+window.hideSessionNamePopup = function() {
+  var popup = document.getElementById('pomoNamePopup');
+  if (popup) popup.classList.add('hidden');
+  var backdrop = document.getElementById('pomoNamePopupBackdrop');
+  if (backdrop) backdrop.classList.add('hidden');
+  window._pendingSessionStart = false;
+};
+
+window.selectPomoPreset = function(minutes) {
+  var durationInput = document.getElementById('pomoPopupDuration');
+  if (durationInput) durationInput.value = minutes;
+  window.db.setSetting('workMinutes', minutes);
+};
+
+window.confirmSessionName = function() {
+  var tagSelect = document.getElementById('pomoPopupTag');
+  var goalSelect = document.getElementById('pomoPopupGoal');
+  
+  var name = '';
+  var tagId = tagSelect ? tagSelect.value : null;
+  var goalId = goalSelect ? goalSelect.value : null;
+  var note = '';
+  
+  var durationInput = document.getElementById('pomoPopupDuration');
+  var customDuration = durationInput && durationInput.value ? parseInt(durationInput.value) : null;
+  
+  if (customDuration && customDuration > 0 && (window.phase === 'work' || window.phase === 'idle')) {
+    window.totalSeconds = customDuration * 60;
+    window.remainingSeconds = window.totalSeconds;
+    window.db.setSetting('workMinutes', customDuration);
+  }
+  
+  window.pomoSessionName = name;
+  try { localStorage.setItem('pomoSessionName', name); } catch(e) {}
+  
+  var wasPending = window._pendingSessionStart;
+  hideSessionNamePopup();
+  
+  if (wasPending) {
+    window._pendingSessionStart = false;
+    
+    _origToggleTimer();
+    onSessionStart();
+    
+    // The user expects the popup to only show once. We disable it for future sessions.
+    window._taskPopupEnabled = false;
+    try { window.db.setSetting('taskPopup', 'false'); } catch(e) {}
+    
+    if (activeSession) {
+      activeSession.taskName = name;
+      activeSession.tagId = tagId;
+      activeSession.goalId = goalId;
+      activeSession.note = note;
+    }
+  }
+  
+  updateUI();
+  renderTimeline();
+  renderSessionTimeline();
+  renderSessionSideBox();
+};
+
+window.updateActiveSessionName = function(val) {
+  window.pomoSessionName = val;
+  try { localStorage.setItem('pomoSessionName', val); } catch(e) {}
+  if (activeSession) {
+    activeSession.taskName = val;
+    window.db.updateSession(activeSession.id, { taskName: val, tagId: activeSession.tagId || null, note: activeSession.note || '', goalId: activeSession.goalId || null });
+    renderSessionSideBox();
+  }
+  if (_rightPanelSession && _rightPanelSession !== activeSession) {
+    _rightPanelSession.taskName = val;
+    window.db.updateSession(_rightPanelSession.id, { taskName: val, tagId: _rightPanelSession.tagId || null, note: _rightPanelSession.note || '', goalId: _rightPanelSession.goalId || null });
+    renderSessionSideBox();
+  }
+};
+
+document.addEventListener('click', function(e) {
+  if (window._popupRecentlyShown) return;
+  var popup = document.getElementById('pomoNamePopup');
+  if (!popup || popup.classList.contains('hidden')) return;
+  if (!popup.contains(e.target) && !e.target.closest('.dock-item') && !e.target.closest('.sidebar-toggle-btn') && !e.target.closest('#timerCircle')) {
+    hideSessionNamePopup();
+  }
+});
+
+function renderPomoNoteTagDropdown(tags) {
+  var existing = document.getElementById('pomoNoteTagDropdown');
+  if (existing) existing.remove();
+  
+  var header = document.querySelector('.pomo-note-header');
+  if (!header) return null;
+  header.style.position = 'relative';
+  
+  var html = '<div id="pomoNoteTagDropdown" style="position:absolute; top:calc(100% + 4px); left:0; background:white; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:101; padding:4px; max-height:220px; overflow-y:auto; width:160px;">';
+  html += '<div class="goal-tag" style="padding:8px; cursor:pointer; font-size:12px; border-bottom:1px solid #f1f5f9;" onclick="window.selectPomoNoteTag(null, \'None\')">None</div>';
+  tags.forEach(function(t) {
+    var escapedTagName = t.name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    html += '<div class="goal-tag" style="padding:8px; cursor:pointer; font-size:12px; color:' + t.color + '; display:flex; align-items:center; gap:6px;" onclick="window.selectPomoNoteTag(\'' + t.id + '\', \'' + escapedTagName + '\')"><span style="width:8px;height:8px;border-radius:50%;background:' + t.color + ';display:inline-block;"></span>' + t.name + '</div>';
+  });
+  if (tags.length > 0) {
+    html += '<div style="border-top:1px solid #f1f5f9;margin:2px 0;"></div>';
+  }
+  html += '<div class="goal-tag" style="padding:8px; cursor:pointer; font-size:12px; color:#3b82f6; display:flex; align-items:center; gap:4px;" onclick="window.showPomoNoteTagForm()"><span style="font-size:14px;font-weight:bold;">+</span> Add New Tag</div>';
+  html += '</div>';
+  
+  var div = document.createElement('div');
+  div.innerHTML = html;
+  var dropdown = div.firstChild;
+  header.appendChild(dropdown);
+  
+  setTimeout(function() {
+    document.addEventListener('click', function autoClose(e) {
+      if (!dropdown.contains(e.target)) {
+        dropdown.remove();
+        document.removeEventListener('click', autoClose);
+      }
+    });
+  }, 0);
+  
+  return dropdown;
+}
+
+window.openPomoNoteTagDropdown = function() {
+  window.db.getTags().then(function(tags) {
+    if (!tags) tags = [];
+    renderPomoNoteTagDropdown(tags);
+  });
+};
+
+window.showPomoNoteTagForm = function() {
+  var existing = document.getElementById('pomoNoteTagDropdown');
+  if (existing) existing.remove();
+  
+  var header = document.querySelector('.pomo-note-header');
+  if (!header) return;
+  header.style.position = 'relative';
+  
+  var html = '<div id="pomoNoteTagDropdown" style="position:absolute; top:calc(100% + 4px); left:0; background:white; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:101; padding:12px; width:200px;">';
+  html += '<div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:8px;">New Tag</div>';
+  html += '<input id="pomoNewTagName" type="text" placeholder="Tag name..." style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;margin-bottom:8px;box-sizing:border-box;">';
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+  html += '<label style="font-size:11px;color:#64748b;">Color:</label>';
+  html += '<input id="pomoNewTagColor" type="color" value="#3b82f6" style="width:32px;height:28px;padding:0;border:1px solid #e2e8f0;border-radius:4px;cursor:pointer;">';
+  html += '</div>';
+  html += '<div style="display:flex;gap:6px;justify-content:flex-end;">';
+  html += '<button onclick="window.openPomoNoteTagDropdown()" style="padding:5px 10px;font-size:11px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#64748b;">Cancel</button>';
+  html += '<button onclick="window.savePomoNoteTag()" style="padding:5px 10px;font-size:11px;border:none;border-radius:6px;background:#3b82f6;cursor:pointer;color:white;">Save</button>';
+  html += '</div>';
+  html += '</div>';
+  
+  var div = document.createElement('div');
+  div.innerHTML = html;
+  var form = div.firstChild;
+  header.appendChild(form);
+  
+  setTimeout(function() {
+    document.getElementById('pomoNewTagName')?.focus();
+    document.addEventListener('click', function autoClose(e) {
+      if (!form.contains(e.target)) {
+        form.remove();
+        document.removeEventListener('click', autoClose);
+      }
+    });
+  }, 0);
+};
+
+window.savePomoNoteTag = async function() {
+  var nameInput = document.getElementById('pomoNewTagName');
+  var colorInput = document.getElementById('pomoNewTagColor');
+  if (!nameInput || !colorInput) return;
+  
+  var name = nameInput.value.trim();
+  if (!name) { nameInput.focus(); return; }
+  
+  var tag = {
+    id: 'tag_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
+    name: name,
+    color: colorInput.value
+  };
+  
+  var result = await window.db.saveTag(tag);
+  if (result) {
+    window.openPomoNoteTagDropdown();
+  }
+};
+
+window.selectPomoNoteTag = function(id, name) {
+  var btnText = document.getElementById('pomoTagBtnText');
+  if (btnText) btnText.textContent = id ? name : 'Add Tag';
+  if (activeSession) {
+    activeSession.tagId = id;
+  }
+  if (_rightPanelSession) {
+    _rightPanelSession.tagId = id;
+    if (_rightPanelSession !== activeSession) {
+      window.db.updateSession(_rightPanelSession.id, { taskName: _rightPanelSession.taskName || '', tagId: id, note: _rightPanelSession.note || '', goalId: _rightPanelSession.goalId || null });
+    }
+  }
+  var dropdown = document.getElementById('pomoNoteTagDropdown');
+  if (dropdown) dropdown.remove();
+};
+
+window.saveRightPanelNote = function() {
+  saveRightPanelSession();
+  var btn = document.querySelector('.pomo-note-actions button:last-child');
+  if (btn) {
+    btn.textContent = '✓ Saved';
+    btn.style.background = '#10b981';
+    setTimeout(function() {
+      btn.textContent = 'Save';
+      btn.style.background = '#3b82f6';
+    }, 1500);
+  }
+};
+
+window.cancelRightPanelNote = function() {
+  var noteArea = document.getElementById('pomoNoteArea');
+  if (noteArea) noteArea.value = _rightPanelOriginalNote || '';
+  if (_rightPanelSession) _rightPanelSession.note = _rightPanelOriginalNote || '';
+};
+
+window.deleteRightPanelNote = function() {
+  var noteArea = document.getElementById('pomoNoteArea');
+  if (noteArea) noteArea.value = '';
+  if (_rightPanelSession) {
+    _rightPanelSession.note = '';
+    if (activeSession && _rightPanelSession.id === activeSession.id) {
+      activeSession.note = '';
+    } else {
+      window.db.updateSession(_rightPanelSession.id, {
+        taskName: _rightPanelSession.taskName || '',
+        tagId: _rightPanelSession.tagId || null,
+        note: '',
+        goalId: _rightPanelSession.goalId || null
+      });
+    }
+  }
+  renderSessionSideBox();
+};
+
+window.updateTaskPopupCache = async function() {
+  var val = await window.db.getSetting('taskPopup');
+  _taskPopupEnabled = val !== 'false';
+};
+
+// --- Pomo Sidebar Resizer ---
+var pomoResizer = document.getElementById('pomoResizer');
+var pomoSideBox = document.getElementById('pomoSideBox');
+var isResizingPomo = false;
+var _rafId = null;
+
+if (pomoResizer && pomoSideBox) {
+  pomoResizer.addEventListener('mousedown', function(e) {
+    isResizingPomo = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!isResizingPomo) return;
+    if (_rafId) cancelAnimationFrame(_rafId);
+    _rafId = requestAnimationFrame(function() {
+      var rect = pomoSideBox.getBoundingClientRect();
+      var newWidth = e.clientX - rect.left;
+      if (newWidth < 250) newWidth = 250;
+      if (newWidth > 800) newWidth = 800;
+      pomoSideBox.style.width = newWidth + 'px';
+      var mainArea = document.getElementById('mainArea');
+      if (mainArea && !pomoSideBox.classList.contains('collapsed')) {
+        mainArea.style.paddingLeft = newWidth + 'px';
+      }
+    });
+  });
+
+  document.addEventListener('mouseup', function(e) {
+    if (isResizingPomo) {
+      isResizingPomo = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      if (_rafId) cancelAnimationFrame(_rafId);
+      var finalWidth = parseInt(pomoSideBox.style.width, 10);
+      if (finalWidth) {
+        window.db.setSetting('pomoSideBoxWidth', finalWidth);
+      }
+    }
+  });
+}
+
 (async function() {
+  if (window._dbInitPromise) await window._dbInitPromise;
+  var savedWidth = await window.db.getSetting('pomoSideBoxWidth');
+  if (savedWidth) {
+    var pomoSideBox = document.getElementById('pomoSideBox');
+    if (pomoSideBox) pomoSideBox.style.width = savedWidth + 'px';
+    var mainArea = document.getElementById('mainArea');
+    if (mainArea && !pomoSideBox.classList.contains('collapsed') && !pomoSideBox.classList.contains('hidden-fade')) {
+      mainArea.style.paddingLeft = savedWidth + 'px';
+    }
+  }
+  var mainArea = document.getElementById('mainArea');
+  var sb = document.getElementById('pomoSideBox');
+  if (mainArea && sb && !mainArea.style.paddingLeft && !sb.classList.contains('collapsed') && !sb.classList.contains('hidden-fade')) {
+    mainArea.style.paddingLeft = sb.offsetWidth + 'px';
+  }
+  await window.updateTaskPopupCache();
   await renderTimeline();
   await renderSessionTimeline();
+  await renderSessionSideBox();
 })();
+
+// Auto-save note textarea
+var _pomoNoteArea = document.getElementById('pomoNoteArea');
+if (_pomoNoteArea) {
+  _pomoNoteArea.addEventListener('input', function() {
+    if (_noteSaveTimer) clearTimeout(_noteSaveTimer);
+    _noteSaveTimer = setTimeout(saveRightPanelSession, 500);
+  });
+  _pomoNoteArea.addEventListener('blur', saveRightPanelSession);
+}
+
+window.cancelPomoNoteEdit = function() {
+  var p = document.getElementById('pomoNotePanel');
+  if (p) {
+    p.classList.add('hidden');
+    window.pomoNoteEditingId = null;
+    document.getElementById('pomoNoteArea').value = '';
+    document.getElementById('pomoTagBtnText').textContent = 'Add Tag';
+  }
+};
+
+/* ═══════════════════════════════════════
+   Session Note Modal Logic
+*/
+
+var _currentNoteSessionId = null;
+var _currentNoteSession = null;
+
+window.openPomoSideNoteModal = async function(sessionId) {
+  saveRightPanelSession();
+  
+  var session = null;
+  if (activeSession && activeSession.id === sessionId) {
+    session = activeSession;
+  } else {
+    session = await window.db.getSession(sessionId);
+  }
+  if (!session) return;
+  
+  _rightPanelSession = session;
+  
+  var taskInput = document.getElementById('pomoActiveTaskName');
+  if (taskInput) taskInput.value = session.taskName || '';
+  
+  var noteArea = document.getElementById('pomoNoteArea');
+  if (noteArea) noteArea.value = session.note || '';
+  _rightPanelOriginalNote = session.note || '';
+  
+  var tags = await getTags();
+  var tagBtnText = document.getElementById('pomoTagBtnText');
+  if (tagBtnText && session.tagId) {
+    var foundTag = tags.find(function(t) { return t.id === session.tagId; });
+    tagBtnText.textContent = foundTag ? foundTag.name : 'Add Tag';
+  } else if (tagBtnText) {
+    tagBtnText.textContent = 'Add Tag';
+  }
+  
+  var activeInfo = document.getElementById('pomoActiveSessionInfo');
+  if (activeInfo) activeInfo.classList.remove('hidden');
+  
+  togglePomoRightPanel(true);
+};
+
+window.closePomoSideNoteModal = function(e) {
+  if (e && e.target !== e.currentTarget) return;
+  var modal = document.getElementById('pomoSideNoteModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+  _currentNoteSessionId = null;
+  _currentNoteSession = null;
+};
+
+window.savePomoSideNote = async function() {
+  if (!_currentNoteSessionId) return;
+  var input = document.getElementById('pomoSideNoteInput');
+  var newNote = input.value.trim();
+  
+  if (_currentNoteSessionId === activeSession?.id) {
+    activeSession.note = newNote;
+  }
+  
+  if (_currentNoteSession) {
+    await window.db.updateSession(_currentNoteSessionId, { taskName: _currentNoteSession.taskName || '', tagId: _currentNoteSession.tagId || null, note: newNote, goalId: _currentNoteSession.goalId || null });
+  } else {
+    await window.db.updateSession(_currentNoteSessionId, { note: newNote });
+  }
+  window.closePomoSideNoteModal();
+  await renderSessionSideBox();
+};
+
+window.deletePomoSideNote = async function() {
+  if (!_currentNoteSessionId) return;
+  
+  if (_currentNoteSessionId === activeSession?.id) {
+    activeSession.note = '';
+  }
+  
+  if (_currentNoteSession) {
+    await window.db.updateSession(_currentNoteSessionId, { taskName: _currentNoteSession.taskName || '', tagId: _currentNoteSession.tagId || null, note: '', goalId: _currentNoteSession.goalId || null });
+  } else {
+    await window.db.updateSession(_currentNoteSessionId, { note: '' });
+  }
+  window.closePomoSideNoteModal();
+  await renderSessionSideBox();
+};
+
+window.togglePomoSideBox = function() {
+  var box = document.getElementById('pomoSideBox');
+  var resizer = document.getElementById('pomoResizer');
+  var mainArea = document.getElementById('mainArea');
+  if (box.classList.contains('collapsed')) {
+    box.classList.remove('collapsed');
+    box.style.width = box.dataset.expandedWidth || '320px';
+    if (resizer) resizer.style.display = '';
+    if (mainArea) mainArea.style.paddingLeft = (box.dataset.expandedWidth || '320px') + 'px';
+  } else {
+    box.dataset.expandedWidth = box.style.width || '320px';
+    box.style.width = ''; 
+    box.classList.add('collapsed');
+    if (resizer) resizer.style.display = 'none';
+    if (mainArea) mainArea.style.paddingLeft = '36px';
+  }
+};
+
+document.getElementById('pomoSideBox').addEventListener('click', function(e) {
+  if (this.classList.contains('collapsed')) {
+    window.togglePomoSideBox();
+  }
+});

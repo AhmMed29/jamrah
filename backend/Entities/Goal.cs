@@ -10,6 +10,8 @@ public class Goal
     public string StartDate { get; set; } = string.Empty;
     public string EndDate { get; set; } = string.Empty;
     public int Duration { get; set; }
+    public string? DurationType { get; set; }
+    public int? DurationValue { get; set; }
     public string CreatedAt { get; set; } = string.Empty;
     public string? ParentGoalId { get; set; }
 

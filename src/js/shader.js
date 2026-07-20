@@ -168,13 +168,6 @@ function createBuffers(gl) {
 
 var _shaderInstance = null;
 
-function hexToRgb(h) {
-  var r = parseInt(h.slice(1,3), 16) / 255;
-  var g = parseInt(h.slice(3,5), 16) / 255;
-  var b = parseInt(h.slice(5,7), 16) / 255;
-  return [r, g, b];
-}
-
 window.initPomoShader = async function() {
   var circle = document.getElementById('timerCircle');
   if (circle) circle.classList.add('minimal-mode');

@@ -54,6 +54,14 @@ public class SessionsController : ControllerBase
         return Ok(true);
     }
 
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(string id)
+    {
+        var session = await _db.Sessions.FindAsync(id);
+        if (session == null) return NotFound();
+        return Ok(session);
+    }
+
     [HttpGet("grouped")]
     public async Task<IActionResult> GetGrouped()
     {
@@ -154,5 +162,16 @@ public class SessionsController : ControllerBase
         }
 
         return result;
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(string id)
+    {
+        var session = await _db.Sessions.FindAsync(id);
+        if (session == null) return Ok(false);
+
+        _db.Sessions.Remove(session);
+        await _db.SaveChangesAsync();
+        return Ok(true);
     }
 }

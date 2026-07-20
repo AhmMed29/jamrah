@@ -160,7 +160,7 @@ function onSessionStart() {
     id: 's_' + Date.now(),
     startTime: Date.now(),
     accumulatedMs: 0,
-    lastResumeTime: Date.now(),
+    lastResumeTime: null,
     taskName: '',
     tagId: null,
     status: 'running'
@@ -280,6 +280,31 @@ var _origSetTimer = window.setTimer;
 window.setTimer = function() {
   _origSetTimer();
   onSessionCancel();
+};
+
+var _origResetTimer = window.resetTimer;
+window.resetTimer = function() {
+  _origResetTimer();
+  onSessionCancel();
+};
+
+var _origSkipPhase = window.skipPhase;
+window.skipPhase = function() {
+  if (_pendingSessionStart) {
+    // Don't save if not started yet
+    _pendingSessionStart = false; window._pendingSessionStart = false;
+    onSessionCancel();
+  } else if (phase === 'work' && activeSession && activeSession.lastResumeTime) {
+    // Save current session when skipping work phase
+    activeSession.accumulatedMs += Date.now() - activeSession.lastResumeTime;
+    activeSession.lastResumeTime = null;
+    var elapsedSec = totalSeconds - remainingSeconds;
+    var plannedMinutes = totalSeconds / 60;
+    onSessionComplete(elapsedSec / 60, plannedMinutes);
+  } else {
+    onSessionCancel();
+  }
+  _origSkipPhase();
 };
 
 // Tag selection functions
@@ -644,7 +669,7 @@ function renderSessionTimeline() {
       html += connector;
       html += '<div class="flex flex-col items-center flex-shrink-0 relative z-10" data-sid="' + activeSession.id + '" onclick="openSessionTimelineModal(\'' + activeSession.id + '\')" style="cursor:pointer">';
       html += '<span style="font-size:11px;color:#3B82F6;font-weight:700;white-space:nowrap;margin-bottom:8px">' + timeLabel + '</span>';
-      html += '<div style="width:32px;height:32px;border-radius:50%;background:#BFDBFE;color:#1D4ED8;display:flex;align-items:center;justify-content:center;border:4px solid #fff;flex-shrink:0;box-shadow:0 0 12px rgba(59,130,246,0.25)">';
+      html += '<div style="width:32px;height:32px;border-radius:50%;background:#BFDBFE;color:#1D4ED8;display:flex;align-items:center;justify-content:center;border:4px solid #fff;flex-shrink-0;box-shadow:0 0 12px rgba(59,130,246,0.25)">';
       html += '<div style="width:6px;height:6px;border-radius:50%;background:#1D4ED8;animation:pulse-dot 1.5s ease-in-out infinite"></div>';
       html += '</div>';
       html += '<span style="font-size:11px;color:#3B82F6;font-weight:500;margin-top:8px;white-space:nowrap">' + durLabel + '</span>';

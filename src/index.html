@@ -4,20 +4,29 @@
 <meta charset="utf-8"/>
 <style>
 #app-splash{position:fixed;inset:0;z-index:99999;background:#fff;display:flex;align-items:center;justify-content:center}
-.splash-scale{transform:scale(1.2);position:relative;width:150px;height:150px}
-@keyframes dropAndShift{0%{transform:translate(0px,15px)}16.67%{transform:translate(80px,13px)}33.34%{transform:translate(40px,10px)}50.01%{transform:translate(40px,-30px)}66.68%{transform:translate(40px,55px)}83.35%{transform:translate(40px,10px)}100%{transform:translate(0px,15px)}}
-@keyframes bubbleGlint{0%{top:3px;left:4px;opacity:0}8.335%{top:6px;left:6px;opacity:0.5}16.67%{top:3px;left:4px;opacity:0}33.34%{top:3px;left:4px;opacity:0.5}50.01%{top:3px;left:4px;opacity:0}58.345%{top:6px;left:6px;opacity:0.5}66.68%{top:3px;left:4px;opacity:0}83.35%{top:6px;left:6px;opacity:0.5}100%{top:3px;left:4px;opacity:0}}
-.Strich1{position:absolute;width:130px;height:50px;background:#000;border-radius:25px;box-shadow:0 4px 10px rgba(0,0,0,0.4);z-index:0;top:50%;left:50%;transform:translate(-50%,-50%) rotate(45deg)}
-.Strich2{position:absolute;width:130px;height:50px;background:#000;border-radius:25px;box-shadow:0 4px 10px rgba(0,0,0,0.4);z-index:0;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-90deg)}
-.bubble{position:absolute;top:0;left:15px;width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#ffb3c1,#e64980,#ff8787);animation:dropAndShift 5s ease-in-out infinite;z-index:1}
-.bubble1{position:absolute;top:0;width:20px;height:20px;background:radial-gradient(circle at 30% 30%,#edb3ff,#ac49e6,#fb87ff);border-radius:50%;left:8px;animation:dropAndShift 6s ease-in-out infinite;z-index:2}
-.bubble2{position:absolute;top:0;width:20px;height:20px;background:radial-gradient(circle at 30% 30%,#b3d8ff,#4963e6,#87a7ff);border-radius:50%;left:12px;animation:dropAndShift 4s ease-in-out infinite;z-index:3}
-.bubble3{position:absolute;top:0;width:20px;height:20px;background:radial-gradient(circle at 30% 30%,#b3ffbc,#35a32f,#75ba61);border-radius:50%;left:10px;animation:dropAndShift 7s ease-in-out infinite;z-index:4}
-.bubble4{position:absolute;top:0;width:20px;height:20px;background:radial-gradient(circle at 30% 30%,#ffe0b3,#e6a849,#ffbe5c);border-radius:50%;left:6px;animation:dropAndShift 5.5s ease-in-out infinite;z-index:1}
+.loader { position: relative; width: 75px; height: 100px; }
+.loader__bar { position: absolute; bottom: 0; width: 10px; height: 50%; background: rgb(0, 0, 0); transform-origin: center bottom; box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.2); }
+.loader__bar:nth-child(1) { left: 0px; transform: scale(1, 0.2); -webkit-animation: barUp1 4s infinite; animation: barUp1 4s infinite; }
+.loader__bar:nth-child(2) { left: 15px; transform: scale(1, 0.4); -webkit-animation: barUp2 4s infinite; animation: barUp2 4s infinite; }
+.loader__bar:nth-child(3) { left: 30px; transform: scale(1, 0.6); -webkit-animation: barUp3 4s infinite; animation: barUp3 4s infinite; }
+.loader__bar:nth-child(4) { left: 45px; transform: scale(1, 0.8); -webkit-animation: barUp4 4s infinite; animation: barUp4 4s infinite; }
+.loader__bar:nth-child(5) { left: 60px; transform: scale(1, 1); -webkit-animation: barUp5 4s infinite; animation: barUp5 4s infinite; }
+.loader__ball { position: absolute; bottom: 10px; left: 0; width: 10px; height: 10px; background: rgb(44, 143, 255); border-radius: 50%; -webkit-animation: ball624 4s infinite; animation: ball624 4s infinite; }
+@keyframes ball624 { 0% { transform: translate(0, 0); } 5% { transform: translate(8px, -14px); } 10% { transform: translate(15px, -10px); } 17% { transform: translate(23px, -24px); } 20% { transform: translate(30px, -20px); } 27% { transform: translate(38px, -34px); } 30% { transform: translate(45px, -30px); } 37% { transform: translate(53px, -44px); } 40% { transform: translate(60px, -40px); } 50% { transform: translate(60px, 0); } 57% { transform: translate(53px, -14px); } 60% { transform: translate(45px, -10px); } 67% { transform: translate(37px, -24px); } 70% { transform: translate(30px, -20px); } 77% { transform: translate(22px, -34px); } 80% { transform: translate(15px, -30px); } 87% { transform: translate(7px, -44px); } 90% { transform: translate(0, -40px); } 100% { transform: translate(0, 0); } }
+@-webkit-keyframes barUp1 { 0% { transform: scale(1, 0.2); } 40% { transform: scale(1, 0.2); } 50% { transform: scale(1, 1); } 90% { transform: scale(1, 1); } 100% { transform: scale(1, 0.2); } }
+@keyframes barUp1 { 0% { transform: scale(1, 0.2); } 40% { transform: scale(1, 0.2); } 50% { transform: scale(1, 1); } 90% { transform: scale(1, 1); } 100% { transform: scale(1, 0.2); } }
+@-webkit-keyframes barUp2 { 0% { transform: scale(1, 0.4); } 40% { transform: scale(1, 0.4); } 50% { transform: scale(1, 0.8); } 90% { transform: scale(1, 0.8); } 100% { transform: scale(1, 0.4); } }
+@keyframes barUp2 { 0% { transform: scale(1, 0.4); } 40% { transform: scale(1, 0.4); } 50% { transform: scale(1, 0.8); } 90% { transform: scale(1, 0.8); } 100% { transform: scale(1, 0.4); } }
+@-webkit-keyframes barUp3 { 0% { transform: scale(1, 0.6); } 100% { transform: scale(1, 0.6); } }
+@keyframes barUp3 { 0% { transform: scale(1, 0.6); } 100% { transform: scale(1, 0.6); } }
+@-webkit-keyframes barUp4 { 0% { transform: scale(1, 0.8); } 40% { transform: scale(1, 0.8); } 50% { transform: scale(1, 0.4); } 90% { transform: scale(1, 0.4); } 100% { transform: scale(1, 0.8); } }
+@keyframes barUp4 { 0% { transform: scale(1, 0.8); } 40% { transform: scale(1, 0.8); } 50% { transform: scale(1, 0.4); } 90% { transform: scale(1, 0.4); } 100% { transform: scale(1, 0.8); } }
+@-webkit-keyframes barUp5 { 0% { transform: scale(1, 1); } 40% { transform: scale(1, 1); } 50% { transform: scale(1, 0.2); } 90% { transform: scale(1, 0.2); } 100% { transform: scale(1, 1); } }
+@keyframes barUp5 { 0% { transform: scale(1, 1); } 40% { transform: scale(1, 1); } 50% { transform: scale(1, 0.2); } 90% { transform: scale(1, 0.2); } 100% { transform: scale(1, 1); } }
 </style>
 <script>window._splashStart = performance.now()</script>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.buymeacoffee.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self'; img-src 'self' data: https:; media-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.buymeacoffee.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; connect-src 'self' http://localhost:* ws://localhost:*; img-src 'self' data: https:; media-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'self'">
 <title>Jamrah جَمْرَه</title>
 <link rel="icon" type="image/svg+xml" href="assets/Jamrah-Icon.svg">
 <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous"></noscript>
@@ -26,6 +35,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"></noscript>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap"></noscript>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"></noscript>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap"></noscript>
 <script>
 window.tailwind={ config: {
   theme:{
@@ -41,41 +51,125 @@ window.tailwind={ config: {
 } }
 </script>
 <script defer src="https://cdn.tailwindcss.com?plugins=forms,container-queries" integrity="sha384-1DcZPGeODWbGGjS/i/n4ULX/pEc0DPcKK2WhyuWEmBXRfzOwoVTDQBN9C3C5jJHK" crossorigin="anonymous"></script>
-<link rel="stylesheet" href="css/pomodoro.css">
-<link rel="stylesheet" href="css/home.css">
-<link rel="stylesheet" href="css/habits.css">
-<link rel="stylesheet" href="css/ahmeds-styles.css">
 <link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/pomodoro.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/sidebar-new.css">
+<link rel="stylesheet" href="css/dock.css">
+<link rel="stylesheet" href="css/timer.css">
+<link rel="stylesheet" href="css/side-box.css">
+<link rel="stylesheet" href="css/session-popup.css">
+<link rel="stylesheet" href="css/settings.css">
+<link rel="stylesheet" href="css/modals.css">
+<link rel="stylesheet" href="css/goals.css">
+<link rel="stylesheet" href="css/tasks.css">
+<link rel="stylesheet" href="css/habits.css">
+<link rel="stylesheet" href="css/home.css">
+<link rel="stylesheet" href="css/stats.css">
+<link rel="stylesheet" href="css/calender.css">
 
 </head>
 <body class="h-screen w-screen overflow-hidden flex flex-col text-gray-800">
-<div id="app-splash"><div class="splash-scale"><div class="Strich1"><div class="Strich2"><div class="bubble"></div><div class="bubble1"></div><div class="bubble2"></div><div class="bubble3"></div><div class="bubble4"></div></div></div></div></div>
+<div id="app-splash">
+  <div class="loader">
+    <div class="loader__bar"></div>
+    <div class="loader__bar"></div>
+    <div class="loader__bar"></div>
+    <div class="loader__bar"></div>
+    <div class="loader__bar"></div>
+    <div class="loader__ball"></div>
+  </div>
+</div>
 <div class="flex-shrink-0 h-[32px] bg-white border-b border-gray-100 flex items-center justify-between select-none" id="titlebar">
 <div class="flex-1 h-full" id="drag-region" style="-webkit-app-region: drag"></div>
 <div class="flex h-full">
 <button onclick="window.electronAPI.minimize()" class="w-[46px] h-full flex items-center justify-center text-gray-500 hover:bg-[rgba(0,0,0,0.05)] transition-colors">
-<svg class="w-[10px] h-[1px]" viewbox="0 0 10 1"><rect width="10" height="1" fill="currentColor"></rect></svg>
+<svg class="w-[10px] h-[1px]" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"></rect></svg>
 </button>
 <button onclick="window.electronAPI.maximize()" class="w-[46px] h-full flex items-center justify-center text-gray-500 hover:bg-[rgba(0,0,0,0.05)] transition-colors">
-<svg class="w-[10px] h-[10px]" viewbox="0 0 10 10"><rect fill="none" height="10" stroke="currentColor" stroke-width="1.2" width="10"></rect></svg>
+<svg class="w-[10px] h-[10px]" viewBox="0 0 10 10"><rect fill="none" height="10" stroke="currentColor" stroke-width="1.2" width="10"></rect></svg>
 </button>
 <button onclick="window.electronAPI.close()" class="w-[46px] h-full flex items-center justify-center text-gray-500 hover:bg-[#e81123] hover:text-white transition-colors">
-<svg class="w-[10px] h-[10px]" viewbox="0 0 10 10"><path d="M1 1l8 8M9 1l-8 8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path></svg>
+<svg class="w-[10px] h-[10px]" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1l-8 8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"></path></svg>
 </button>
 </div>
 </div>
-<div class="flex flex-1 overflow-hidden">
+<div id="appContent" class="flex flex-1 overflow-hidden">
+
+<!-- App Sidebar Backdrop -->
+<div id="appSidebarBackdrop" class="app-sidebar-backdrop"></div>
+
+<!-- App Sidebar -->
+<aside id="appSidebar" class="app-sidebar">
+  <div class="sidebar-toggle-btn">
+    <input id="sidebarCheckbox" type="checkbox" onchange="toggleAppSidebar()">
+    <label for="sidebarCheckbox" style="position:relative; left:0; top:0; margin:0; width:100%; height:100%; display:flex; cursor:pointer; align-items:center; justify-content:center;">
+      <div class="dynamic-toggle">
+        <div id="bar1" class="bars"></div>
+        <div id="bar2" class="bars"></div>
+        <div id="bar3" class="bars"></div>
+      </div>
+    </label>
+  </div>
+
+  <div class="app-sidebar-content">
+    <div class="app-sidebar-menu">
+      <button class="app-sidebar-menu-item active" data-page="pomodoro" onclick="appSidebarNavigate('pomodoro')">
+        <span class="material-symbols-outlined">timer</span>
+        <span>Focus</span>
+      </button>
+      <button class="app-sidebar-menu-item" data-page="tasks" onclick="appSidebarNavigate('tasks')">
+        <span class="material-symbols-outlined">check_circle</span>
+        <span>Tasks</span>
+      </button>
+      <button class="app-sidebar-menu-item" data-page="calender" onclick="appSidebarNavigate('calender')">
+        <span class="material-symbols-outlined">calendar_month</span>
+        <span>Calender</span>
+      </button>
+      <button class="app-sidebar-menu-item" data-page="habits" onclick="appSidebarNavigate('habits')">
+        <span class="material-symbols-outlined">checklist</span>
+        <span>Habits</span>
+      </button>
+      <button class="app-sidebar-menu-item" data-page="stats" onclick="appSidebarNavigate('stats')">
+        <span class="material-symbols-outlined">bar_chart</span>
+        <span>Stats</span>
+      </button>
+    </div>
+    <div class="app-sidebar-menu" style="margin-top: auto; margin-bottom: 0;">
+      <button class="app-sidebar-menu-item" data-page="settings" onclick="appSidebarNavigate('settings')">
+        <span class="material-symbols-outlined">settings</span>
+        <span>Settings</span>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<!-- Global Session history side panel -->
+<div id="pomoSideBox" class="pomo-side-box">
+  <div class="pomo-side-box-vertical-label">SESSIONS</div>
+  <div class="pomo-side-header">
+    <span class="pomo-side-date-label" id="pomoSideDateLabel">Today</span>
+    <button class="pomo-side-collapse-btn" onclick="event.stopPropagation(); togglePomoSideBox()" title="Collapse Sessions">
+      <span class="material-symbols-outlined" style="font-size:18px">keyboard_double_arrow_left</span>
+    </button>
+  </div>
+  <div class="pomo-side-timeline" id="pomoSideTimeline"></div>
+  <div class="pomo-side-nav">
+    <button class="pomo-side-nav-btn" onclick="pomoPrevDay()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <span class="pomo-side-nav-label" id="pomoSideNavLabel">Today</span>
+    <button class="pomo-side-nav-btn" onclick="pomoNextDay()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
+  </div>
+  <div id="pomoResizer" style="width: 8px; cursor: col-resize; background: transparent; z-index: 50; position: absolute; right: 0; top: 0; bottom: 0; transition: background 0.2s;" onmouseover="this.style.background='rgba(59, 130, 246, 0.5)'" onmouseout="this.style.background='transparent'"></div>
+</div>
+
 <div id="page-home" class="hidden flex-1 flex-col items-center justify-center bg-white px-4"></div>
 
-<div id="page-pomodoro" class="flex flex-1 overflow-hidden min-h-0">
+<div id="page-pomodoro" class="flex flex-1 overflow-hidden min-h-0" dir="ltr">
 <main class="flex-1 flex flex-col relative h-full overflow-hidden bg-white" id="mainArea">
 <div class="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto px-4 relative" style="padding-top:60px;padding-bottom:60px">
 
-  <!-- Session counter -->
-  <div id="sessionCounter" class="pomo-counter"></div>
-
   <!-- Timer circle wrapper -->
-  <div class="timer-circle-wrapper" id="timerCircle" style="width:min(68vw,400px);height:min(68vw,400px);min-width:260px;min-height:260px">
+  <div class="timer-circle-wrapper" id="timerCircle" style="width:min(68vw,400px);height:min(68vw,400px);min-width:260px;min-height:260px; cursor:pointer;" onclick="window.toggleTimer()">
     <canvas id="pomoShaderCanvas" class="absolute inset-0 w-full h-full rounded-full pointer-events-none" style="z-index:1"></canvas>
     <div class="timer-bg"></div>
     <svg class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" style="z-index:2" viewBox="0 0 400 400">
@@ -84,71 +178,81 @@ window.tailwind={ config: {
     <div class="timer-face" id="timerFace">
       <div class="timer-text" id="timerText">25:00</div>
       <div class="timer-label" id="phaseLabel">Focus</div>
+      <div id="sessionCountDisplay" class="text-xs text-gray-400 mt-1" style="display:none;">Session #1</div>
     </div>
-  </div>
-
-  <!-- Session dots -->
-  <div class="flex items-center gap-2 mt-6" id="sessionDots"></div>
-
-  <!-- Controls (hover-reveal when running) -->
-  <div class="pomo-controls-area" id="pomoControlsArea">
-    <div class="pomo-controls-row" id="pomoControls">
-      <button class="pomo-btn" id="resetBtn" onclick="window.resetTimer()" title="Reset">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-      </button>
-      <button class="pomo-btn pomo-adj-btn" onclick="window.adjustTime(-5)" title="-5 min">-5</button>
-      <button class="pomo-btn pomo-adj-btn" onclick="window.adjustTime(-1)" title="-1 min">-1</button>
-      <button class="pomo-play-btn" id="playBtn" title="Play/Pause"></button>
-      <button class="pomo-btn pomo-adj-btn" onclick="window.adjustTime(1)" title="+1 min">+1</button>
-      <button class="pomo-btn pomo-adj-btn" onclick="window.adjustTime(5)" title="+5 min">+5</button>
-      <button class="pomo-btn" id="skipBtn" onclick="window.skipPhase()" title="Skip">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
-      </button>
-    </div>
-  </div>
-
-  <!-- Presets (hidden when running) -->
-  <div class="flex items-center gap-2 mt-6" id="pomoPresets">
-    <button class="pomo-preset-btn" onclick="window.setPreset(25)">25m</button>
-    <button class="pomo-preset-btn" onclick="window.setPreset(50)">50m</button>
-    <button class="pomo-preset-btn pomo-settings-btn" onclick="window.openPomoSettings()" title="Timer Settings">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
+    <!-- Hover buttons -->
+    <button class="pomo-hover-btn pomo-btn-skip" onclick="event.stopPropagation(); window.skipPhase();" title="Skip Phase">
+      <span class="material-symbols-outlined">skip_next</span>
     </button>
-    <div class="pomo-preset-divider"></div>
-    <button class="pomo-preset-btn pomo-end-btn" onclick="window.openEndPopup()">End</button>
+    <button class="pomo-hover-btn pomo-btn-reset" onclick="event.stopPropagation(); window.resetTimer();" title="Reset Timer">
+      <span class="material-symbols-outlined">restart_alt</span>
+    </button>
+    <button class="pomo-hover-btn pomo-btn-end" onclick="event.stopPropagation(); if(window.cancelSessionNow) window.cancelSessionNow(); else window.openEndPopup();" title="End Session">
+      <span class="material-symbols-outlined">stop</span>
+    </button>
   </div>
 
-  <!-- Session name -->
-  <div id="pomoNameBox" class="mt-4" style="width:min(68vw,400px);min-width:260px">
-    <input id="pomoNameInput" type="text" placeholder="Session name (optional)" class="w-full bg-transparent border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white/40 placeholder-white/20 text-center focus:outline-none focus:border-white/20 focus:text-white/70 transition-colors" style="font-family:'Inter',sans-serif">
-  </div>
-
-  <!-- Settings gear -->
-  <button class="pomo-gear-btn" onclick="window.openPomoSettings()" title="Settings">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="7" r="3"/><circle cx="7" cy="17" r="3"/></svg>
+  <!-- Right Wall Toggle Button -->
+  <button id="pomoRightToggleBtn" onclick="window.togglePomoRightPanel()" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 41; background: rgba(255,255,255,0.9); border: 1px solid rgba(195,198,213,0.5); border-right: none; border-radius: 12px 0 0 12px; padding: 16px 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: -4px 0 12px rgba(0,0,0,0.05); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); backdrop-filter: blur(8px);">
+    <span style="writing-mode: vertical-rl; font-size: 12px; font-weight: 700; color: #4b5563; letter-spacing: 0.5px; transform: rotate(180deg);">Session Note</span>
   </button>
 
-</div>
+  <!-- Session name popup (deferred start) -->
+  <div id="pomoNamePopup" class="pomo-name-popup hidden" style="position:absolute; right:40px; top:50%; transform:translateY(-50%); z-index:999;">
+    <div class="pomo-popup-field">
+      <label class="pomo-popup-label" for="pomoPopupDuration">Duration (minutes)</label>
+      <input type="number" id="pomoPopupDuration" class="pomo-popup-input" placeholder="Custom time (e.g. 25)" min="1" onkeydown="if(event.key === 'Enter') window.confirmSessionName(true)">
+      <div id="pomoPresets" class="pomo-presets">
+        <button class="pomo-preset-btn" onclick="window.selectPomoPreset(50)">50</button>
+        <button class="pomo-preset-btn" onclick="window.selectPomoPreset(25)">25</button>
+        <button class="pomo-preset-btn" onclick="window.selectPomoPreset(10)">10</button>
+        <button class="pomo-preset-btn" onclick="window.selectPomoPreset(5)">5</button>
+      </div>
+    </div>
+    <div class="pomo-popup-field" style="display:none;">
+      <label class="pomo-popup-label" for="pomoPopupGoal">Goal</label>
+      <select id="pomoPopupGoal" class="pomo-popup-select">
+        <option value="">None</option>
+      </select>
+    </div>
+    <button onclick="window.confirmSessionName(true)" class="pomo-popup-start-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 3l14 9-14 9V3z" fill="currentColor"/></svg>
+      Start Session
+    </button>
+  </div>
 
-<!-- Session Timeline -->
-<div class="pomo-timeline-container hidden">
-  <div class="pomo-timeline-inner">
-    <div class="pomo-timeline-fade-left"></div>
-    <div class="pomo-timeline-fade-right"></div>
-    <div class="pomo-timeline-scroll" id="sessionTimelineScroll">
-      <div class="pomo-timeline-track" id="sessionTimelineTrack">
-        <div class="pomo-timeline-empty" id="sessionTimelineEmpty">
-          No sessions yet. Press Start to begin your first Pomodoro.
-        </div>
+  <!-- Right side popup and note panel container -->
+  <div class="pomo-right-panel-wrapper" id="pomoRightPanelWrapper" style="position:absolute; right:40px; top:50%; transform: translate(150%, -50%); opacity: 0; pointer-events: none; z-index:40; display:flex; flex-direction:column; gap:16px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); width: 320px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid rgba(255,255,255,0.5); padding: 20px;">
+    
+    <!-- Active Session Info (shown during work phase) -->
+    <div id="pomoActiveSessionInfo" class="pomo-name-popup">
+      <h3 class="pomo-popup-title" style="color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Active Session</h3>
+      <div class="pomo-popup-field" style="margin-bottom: 0;">
+        <input type="text" id="pomoActiveTaskName" class="pomo-popup-input" placeholder="Session Name..." onchange="if(window.updateActiveSessionName) window.updateActiveSessionName(this.value)" style="font-weight: 600; font-size: 15px; color: #0b1c30; padding: 10px 14px;">
+      </div>
+    </div>
+
+    <!-- Pomo Note Panel -->
+    <div id="pomoNotePanel" class="pomo-note-panel">
+      <div class="pomo-note-header">
+        <button class="pomo-tag-btn" id="pomoTagBtn" onclick="window.openPomoNoteTagDropdown()">
+          <span class="material-symbols-outlined">label</span>
+          <span id="pomoTagBtnText">Add Tag</span>
+        </button>
+      </div>
+      <textarea id="pomoNoteArea" class="pomo-note-textarea" placeholder="Add a session note..."></textarea>
+      <div class="pomo-note-actions" style="display:flex; gap:6px; justify-content:flex-end;">
+        <button onclick="window.deleteRightPanelNote()" style="padding:6px 12px; font-size:11px; border:1px solid #fee2e2; border-radius:6px; background:white; cursor:pointer; color:#ef4444;">Delete</button>
+        <button onclick="window.cancelRightPanelNote()" style="padding:6px 12px; font-size:11px; border:1px solid #e2e8f0; border-radius:6px; background:white; cursor:pointer; color:#64748b;">Cancel</button>
+        <button onclick="window.saveRightPanelNote()" style="padding:6px 12px; font-size:11px; border:none; border-radius:6px; background:#3b82f6; cursor:pointer; color:white;">Save</button>
       </div>
     </div>
   </div>
+  
+  <!-- Backdrop is no longer used for starting session -->
+  <div id="pomoNamePopupBackdrop" class="pomo-popup-backdrop hidden" onclick="window.hideSessionNamePopup()"></div>
 </div>
 
-<!-- Settings Bottom Sheet (moved to Settings Modal) -->
 
 
 <!-- End popup -->
@@ -166,21 +270,21 @@ window.tailwind={ config: {
 </div>
 
 <!-- Confirm popup (outside page containers so it's never clipped by hidden parent) -->
-<div id="confirmPopup" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden" onclick="closeConfirmPopup(event)">
+<div id="confirmPopup" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] hidden" onclick="closeConfirmPopup(event)">
   <div class="bg-white rounded-2xl p-6 shadow-xl w-80 max-w-[90vw]" onclick="event.stopPropagation()">
-    <h3 class="text-lg font-medium text-gray-800 mb-2" id="confirmTitle">تأكيد</h3>
+    <h3 class="text-lg font-medium text-gray-800 mb-2" id="confirmTitle">Confirm</h3>
     <p class="text-sm text-gray-500 mb-6" id="confirmMessage"></p>
-    <div class="flex justify-end gap-3" dir="rtl">
-      <button onclick="cancelConfirm()" class="px-6 py-2.5 border-2 border-gray-200 rounded-xl text-sm text-gray-500 hover:border-gray-300 hover:text-gray-700 transition-colors">إلغاء</button>
-      <button onclick="confirmConfirm()" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors" id="confirmBtn">حذف</button>
+    <div class="flex justify-end gap-3" dir="ltr">
+      <button onclick="cancelConfirm()" class="px-6 py-2.5 border-2 border-gray-200 rounded-xl text-sm text-gray-500 hover:border-gray-300 hover:text-gray-700 transition-colors">Cancel</button>
+      <button onclick="confirmConfirm()" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors" id="confirmBtn">Confirm</button>
     </div>
   </div>
 </div>
 
-<div id="page-habits" class="hidden flex-1 flex flex-col overflow-hidden" dir="rtl">
+<div id="page-habits" class="hidden flex-1 flex flex-col overflow-hidden" dir="ltr">
 <header class="flex-none px-6 py-4 flex justify-between items-center border-b border-gray-100 bg-white shadow-sm">
 <div class="flex items-center gap-3">
-<h1 class="text-xl font-bold text-gray-800">جدول العادات</h1>
+<h1 class="text-xl font-bold text-gray-800">Habit Tracker</h1>
 <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
 </svg>
@@ -197,7 +301,7 @@ window.tailwind={ config: {
 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
 </svg>
-<span class="text-base">إضافة عادة</span>
+<span class="text-base">Add Habit</span>
 </button>
 </div>
 <div id="habit-modal">
@@ -211,7 +315,7 @@ window.tailwind={ config: {
 </div>
 </div>
 <div id="add-modal">
-<div class="modal-card" dir="rtl" style="width:100%; max-width:480px;">
+<div class="modal-card" dir="ltr" style="width:100%; max-width:480px;">
 <button class="close-btn" id="add-modal-close">
 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -224,8 +328,8 @@ window.tailwind={ config: {
 <script src="js/components/habits/habits.js"></script>
 
 <!-- Settings Modal (tabbed) -->
-<div id="settingsModal" style="display:none;position:fixed;inset:0;z-index:60;background:rgba(0,0,0,0.35);backdrop-filter:blur(2px);align-items:center;justify-content:center;padding:16px" onclick="closeSettings(event)">
-<div style="background:#fff;border-radius:16px;width:100%;max-width:1000px;height:85vh;display:flex;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.12);border:1px solid rgba(195,198,213,0.3)" onclick="event.stopPropagation()">
+<div id="page-settings" class="hidden flex-1 flex flex-col overflow-hidden">
+<div style="display:flex;flex:1;overflow:hidden">
   <!-- Sidebar -->
   <div style="width:200px;background:#f8f9ff;border-left:1px solid rgba(195,198,213,0.5);padding:28px 16px;flex-shrink:0;display:flex;flex-direction:column">
       <h2 style="font-size:18px;font-weight:700;color:#0b1c30;margin-bottom:24px;padding:0 12px">Settings</h2>
@@ -256,7 +360,7 @@ window.tailwind={ config: {
       </button>
     </div>
     <!-- Scrollable content -->
-    <div style="flex:1;overflow-y:auto;padding:24px 28px">
+    <div class="custom-scrollbar" style="flex:1;overflow-y:auto;padding:24px 28px">
       <div style="max-width:700px;margin:0 auto">
 
         <!-- General -->
@@ -267,14 +371,122 @@ window.tailwind={ config: {
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:20px">
               <div>
-                <label style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer" for="taskPopupToggle">Show task popup on start</label>
+                <label for="taskPopupToggle" style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer">Show task popup on start</label>
                 <p style="font-size:12px;color:#6B7280;margin-top:4px">Automatically open the add task dialog when timer starts</p>
               </div>
-              <div class="toggle-switch active" id="taskPopupToggle" onclick="toggleTaskPopup()">
-                <div class="toggle-knob"></div>
+              <label class="settings-cb-container">
+                <input type="checkbox" id="taskPopupToggle" onchange="markDirty()" checked="checked">
+                <div class="settings-cb-mark"></div>
+              </label>
+            </div>
+          </section>
+
+          <!-- Page Placements Section -->
+          <section style="margin-top:24px">
+            <div style="padding-bottom:8px;border-bottom:1px solid rgba(195,198,213,0.3);margin-bottom:16px">
+              <h4 style="font-size:16px;font-weight:600;color:#0b1c30">Page Placements</h4>
+            </div>
+            <p style="font-size:12px;color:#6B7280;margin-bottom:12px">Choose where each section appears in the app interface.</p>
+            <div style="display:flex;flex-direction:column;gap:12px;background:#fff;border:1px solid rgba(195,198,213,0.5);border-radius:10px;padding:16px;">
+              <div style="display:grid;grid-template-columns:1fr 100px 100px;font-size:12px;font-weight:700;color:#6B7280;border-bottom:1px solid #f1f5f9;padding-bottom:6px;">
+                <span>Page</span>
+                <span style="text-align:center">Sidebar</span>
+                <span style="text-align:center">Dock</span>
+              </div>
+              <!-- Focus -->
+              <div style="display:grid;grid-template-columns:1fr 100px 100px;align-items:center;font-size:14px;color:#0b1c30;">
+                <span style="font-weight:600">Focus</span>
+                <span style="display:flex;justify-content:center">
+                  <label class="settings-cb-container">
+                    <input type="checkbox" id="pref-pomodoro-sidebar" onchange="markDirty()">
+                    <div class="settings-cb-mark"></div>
+                  </label>
+                </span>
+                <span style="display:flex;justify-content:center">
+                  <label class="settings-cb-container">
+                    <input type="checkbox" id="pref-pomodoro-dock" onchange="markDirty()">
+                    <div class="settings-cb-mark"></div>
+                  </label>
+                </span>
+              </div>
+              <!-- Tasks -->
+              <div style="display:grid;grid-template-columns:1fr 100px 100px;align-items:center;font-size:14px;color:#0b1c30;margin-top:12px;">
+                <span style="font-weight:600">Tasks</span>
+                <span style="display:flex;justify-content:center">
+                  <label class="settings-cb-container">
+                    <input type="checkbox" id="pref-tasks-sidebar" onchange="markDirty()">
+                    <div class="settings-cb-mark"></div>
+                  </label>
+                </span>
+                <span style="display:flex;justify-content:center">
+                  <label class="settings-cb-container">
+                    <input type="checkbox" id="pref-tasks-dock" onchange="markDirty()">
+                    <div class="settings-cb-mark"></div>
+                  </label>
+                </span>
+              </div>
+              <!-- Calender -->
+              <div style="display:grid;grid-template-columns:1fr 100px 100px;align-items:center;font-size:14px;color:#0b1c30;margin-top:12px;">
+                <span style="font-weight:600">Calender</span>
+                <span style="display:flex;justify-content:center">
+                  <label class="settings-cb-container">
+                    <input type="checkbox" id="pref-calender-sidebar" onchange="markDirty()">
+                    <div class="settings-cb-mark"></div>
+                  </label>
+                </span>
+                <span style="display:flex;justify-content:center">
+                  <label class="settings-cb-container">
+                    <input type="checkbox" id="pref-calender-dock" onchange="markDirty()">
+                    <div class="settings-cb-mark"></div>
+                  </label>
+                </span>
+              </div>
+              <!-- Habits -->
+              <div style="display:grid;grid-template-columns:1fr 100px 100px;align-items:center;font-size:14px;color:#0b1c30;margin-top:12px;">
+                <span style="font-weight:600">Habits</span>
+                <span style="display:flex;justify-content:center">
+                  <label class="settings-cb-container">
+                    <input type="checkbox" id="pref-habits-sidebar" onchange="markDirty()">
+                    <div class="settings-cb-mark"></div>
+                  </label>
+                </span>
+                <span style="display:flex;justify-content:center">
+                  <label class="settings-cb-container">
+                    <input type="checkbox" id="pref-habits-dock" onchange="markDirty()">
+                    <div class="settings-cb-mark"></div>
+                  </label>
+                </span>
+              </div>
+              <!-- Stats -->
+              <div style="display:grid;grid-template-columns:1fr 100px 100px;align-items:center;font-size:14px;color:#0b1c30;margin-top:12px;">
+                <span style="font-weight:600">Stats</span>
+                <span style="display:flex;justify-content:center">
+                  <label class="settings-cb-container">
+                    <input type="checkbox" id="pref-stats-sidebar" onchange="markDirty()">
+                    <div class="settings-cb-mark"></div>
+                  </label>
+                </span>
+                <span style="display:flex;justify-content:center">
+                  <label class="settings-cb-container">
+                    <input type="checkbox" id="pref-stats-dock" onchange="markDirty()">
+                    <div class="settings-cb-mark"></div>
+                  </label>
+                </span>
+              </div>
+              <!-- Settings -->
+              <div style="display:grid;grid-template-columns:1fr 100px 100px;align-items:center;font-size:14px;color:#0b1c30;margin-top:12px;">
+                <span style="font-weight:600">Settings</span>
+                <span style="display:flex;justify-content:center"></span>
+                <span style="display:flex;justify-content:center">
+                  <label class="settings-cb-container">
+                    <input type="checkbox" id="pref-settings-dock" onchange="markDirty()">
+                    <div class="settings-cb-mark"></div>
+                  </label>
+                </span>
               </div>
             </div>
           </section>
+
           <section style="margin-top:24px">
             <div style="padding-bottom:8px;border-bottom:1px solid rgba(195,198,213,0.3);margin-bottom:16px">
               <h4 style="font-size:16px;font-weight:600;color:#0b1c30">Updates</h4>
@@ -287,6 +499,14 @@ window.tailwind={ config: {
               <button id="checkUpdateBtn" onclick="checkForUpdates()" style="padding:9px 20px;background:#0e58c5;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:500;transition:opacity 0.15s;white-space:nowrap" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Search for Updates</button>
             </div>
             <div id="updateSettingsStatus" style="font-size:12px;color:#9CA3AF;text-align:center;display:none"></div>
+          </section>
+          <section style="margin-top:32px">
+            <div style="padding-bottom:8px;border-bottom:1px solid rgba(195,198,213,0.3);margin-bottom:16px">
+              <h4 style="font-size:16px;font-weight:600;color:#0b1c30">Support</h4>
+            </div>
+            <div style="display:flex;justify-content:center;padding-top:8px">
+              <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="ahmedghazi" data-color="#FFDD00" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff" integrity="sha384-OibPdNn05smfqAFi21q8C4YkzZLEjwXs7kTtiqrJwOv7PtZefVaGPzKgX4rJfvWv" crossorigin="anonymous"></script>
+            </div>
           </section>
         </div>
 
@@ -325,19 +545,79 @@ window.tailwind={ config: {
 
           <section style="margin-top:32px">
             <div style="padding-bottom:8px;border-bottom:1px solid rgba(195,198,213,0.3);margin-bottom:16px">
-              <h4 style="font-size:16px;font-weight:600;color:#0b1c30">Sound</h4>
+              <h4 style="font-size:16px;font-weight:600;color:#0b1c30">Advanced</h4>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:20px">
+            
+            <div class="settings-toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:12px">
               <div>
-                <label style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer" for="pomoSoundToggle">Pomodoro sounds</label>
-                <p style="font-size:12px;color:#6B7280;margin-top:4px">Play sound on session start and end</p>
+                <label for="autoStartBreakToggle" style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer">Auto-start breaks</label>
+                <p style="font-size:12px;color:#6B7280;margin-top:4px">Automatically start break timer after focus ends</p>
               </div>
-              <div class="toggle-switch active" id="pomoSoundToggle" onclick="togglePomoSound()">
-                <div class="toggle-knob"></div>
+              <label class="settings-cb-container">
+                <input type="checkbox" id="autoStartBreakToggle" onchange="markDirty()">
+                <div class="settings-cb-mark"></div>
+              </label>
+            </div>
+
+            <div class="settings-toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:12px">
+              <div>
+                <label for="autoStartFocusToggle" style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer">Auto-start focus</label>
+                <p style="font-size:12px;color:#6B7280;margin-top:4px">Automatically start focus timer after break ends</p>
+              </div>
+              <label class="settings-cb-container">
+                <input type="checkbox" id="autoStartFocusToggle" onchange="markDirty()">
+                <div class="settings-cb-mark"></div>
+              </label>
+            </div>
+
+            <div class="settings-toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:12px">
+              <div>
+                <label for="desktopNotificationsToggle" style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer">Desktop notifications</label>
+                <p style="font-size:12px;color:#6B7280;margin-top:4px">System notifications when timer completes</p>
+              </div>
+              <label class="settings-cb-container">
+                <input type="checkbox" id="desktopNotificationsToggle" onchange="markDirty()">
+                <div class="settings-cb-mark"></div>
+              </label>
+            </div>
+
+            <div class="settings-toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:12px">
+              <div>
+                <label for="showSessionCountToggle" style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer">Session count display</label>
+                <p style="font-size:12px;color:#6B7280;margin-top:4px">Show session count on pomodoro page</p>
+              </div>
+              <label class="settings-cb-container">
+                <input type="checkbox" id="showSessionCountToggle" onchange="markDirty()">
+                <div class="settings-cb-mark"></div>
+              </label>
+            </div>
+
+            <div class="settings-timer-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:20px">
+              <div>
+                <label style="font-size:14px;font-weight:600;color:#0b1c30;display:block">Sessions before long break</label>
+                <p style="font-size:12px;color:#6B7280;margin-top:4px">Number of sessions before a long break is scheduled</p>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input type="number" id="longBreakIntervalInput" value="4" min="1" max="12" class="settings-timer-input" onchange="markDirty()" style="width: 70px;">
               </div>
             </div>
           </section>
 
+          <section style="margin-top:32px">
+            <div style="padding-bottom:8px;border-bottom:1px solid rgba(195,198,213,0.3);margin-bottom:16px">
+              <h4 style="font-size:16px;font-weight:600;color:#0b1c30">Sound</h4>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:20px">
+              <div>
+                <label for="pomoSoundToggle" style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer">Pomodoro sounds</label>
+                <p style="font-size:12px;color:#6B7280;margin-top:4px">Play sound on session start and end</p>
+              </div>
+              <label class="settings-cb-container">
+                <input type="checkbox" id="pomoSoundToggle" onchange="markDirty()" checked="checked">
+                <div class="settings-cb-mark"></div>
+              </label>
+            </div>
+          </section>
         </div>
 
                 <!-- Storage -->
@@ -382,9 +662,7 @@ window.tailwind={ config: {
             </button>
           </section>
 
-          <div style="display:flex;justify-content:center;margin-top:32px;padding-top:20px;border-top:1px solid #E5E7EB">
-            <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="ahmedghazi" data-color="#FFDD00" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff" integrity="sha384-OibPdNn05smfqAFi21q8C4YkzZLEjwXs7kTtiqrJwOv7PtZefVaGPzKgX4rJfvWv" crossorigin="anonymous"></script>
-          </div>
+
         </div>
 
         <!-- Restore Log Modal -->
@@ -403,34 +681,88 @@ window.tailwind={ config: {
       </div>
     </div>
     <!-- Footer -->
-    <div style="padding:14px 28px;background:#fff;border-top:1px solid rgba(195,198,213,0.3);display:none;justify-content:flex-end;gap:10px;flex-shrink:0" id="settingsBtnRow">
-      <button id="settingsCancelBtn" onclick="cancelSettings()" style="padding:9px 24px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;color:#6B7280;background:#fff;cursor:pointer;font-weight:500;transition:all 0.15s" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">Cancel</button>
-      <button onclick="saveSettings()" style="padding:9px 24px;background:#0e58c5;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;transition:all 0.15s" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Save Changes</button>
+    <div style="padding:14px 28px;background:#fff;border-top:1px solid rgba(195,198,213,0.3);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0" id="settingsBtnRow">
+      <button id="settingsCancelBtn" onclick="cancelSettings()" style="padding:9px 24px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;color:#6B7280;background:#fff;cursor:pointer;font-weight:500;transition:all 0.15s;display:none;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">Cancel</button>
+      <button onclick="saveSettings().then(closeSettings)" style="padding:9px 24px;background:#0e58c5;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;transition:all 0.15s" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Save Changes</button>
     </div>
   </div>
 </div>
 </div>
 
-<div id="page-goals" class="hidden flex-1 flex flex-col overflow-hidden">
-<header class="flex-none px-6 py-4 flex justify-between items-center border-b border-gray-100 bg-white shadow-sm">
-<div class="flex items-center gap-3">
-<h1 class="text-xl font-bold text-gray-800">Goals</h1>
-<svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-</svg>
-</div>
-<button id="add-goal-btn" onclick="openAddGoalModal()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl shadow-lg shadow-blue-600/30 font-medium transition-all transform hover:-translate-y-1 text-sm">
-<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-</svg>
-<span>Add New Goal</span>
-</button>
-</header>
-<main class="flex-1 overflow-auto p-6 bg-gray-50">
-<div id="goals-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-<!-- goal cards will be rendered here by JS -->
-</div>
-</main>
+<div id="page-calender" class="hidden flex-1 flex flex-col overflow-hidden" style="background:#faf9f6;padding:20px;font-family:'Patrick Hand',cursive;color:#2d2d2d;overflow-y:auto;">
+
+  <!-- Header -->
+  <div class="header">
+    <h1 id="calHeader"></h1>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn" data-tab="week" onclick="switchCalTab('week')">Week Track</button>
+    <button class="tab-btn" data-tab="calendar" onclick="switchCalTab('calendar')">Calendar</button>
+    <button class="tab-btn active" data-tab="year" onclick="switchCalTab('year')">Year</button>
+  </div>
+
+  <!-- Week Track View -->
+  <div id="view-week" class="view">
+    <div class="week-track-new">
+      <div class="week-track-header">
+        <button class="year-arrow" onclick="navigateWeek(-1)">&#8249;</button>
+        <h2 id="weekTitle"></h2>
+        <button class="year-arrow" onclick="navigateWeek(1)">&#8250;</button>
+        <button class="note-btn primary" id="weekNoteBtn" style="margin-left:auto;display:none;" onclick="openWeekNote()">&#x1F4DD; Week Note</button>
+      </div>
+      <div id="weekNotePreview" class="week-note-preview" style="display:none;margin-bottom:16px;"></div>
+      <div class="week-days-row" id="weekDaysRow"></div>
+    </div>
+  </div>
+
+  <!-- Calendar View -->
+  <div id="view-calendar" class="view">
+    <div style="display:flex;justify-content:center;align-items:center;gap:16px;margin-bottom:20px;">
+      <button class="year-arrow" onclick="navigateCalendar(-1)">&#8249;</button>
+      <span id="calRangeLabel" style="font-size:1.3rem;"></span>
+      <button class="year-arrow" onclick="navigateCalendar(1)">&#8250;</button>
+    </div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
+
+  <!-- Year View -->
+  <div id="view-year" class="view">
+    <div style="display:flex;justify-content:center;align-items:center;gap:16px;margin-bottom:20px;">
+      <button class="year-arrow" onclick="navigateYear(-1)">&#8249;</button>
+      <span id="yearTitle" style="font-size:2rem;font-weight:700;"></span>
+      <button class="year-arrow" onclick="navigateYear(1)">&#8250;</button>
+    </div>
+    <div class="year-filters" id="yearFilters">
+      <button class="year-filter active" onclick="setTagFilter('all')">All</button>
+    </div>
+    <div class="year-grid" id="yearGrid"></div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend" id="calLegend">
+    <span>Less</span>
+    <div class="legend-box" style="background:transparent"></div>
+    <div class="legend-box" style="background:#9be9a8"></div>
+    <div class="legend-box" style="background:#40c463"></div>
+    <div class="legend-box" style="background:#216e39"></div>
+    <span>More</span>
+  </div>
+
+  <!-- Note Modal -->
+  <div id="noteModal" class="note-modal-overlay" style="display:none;" onclick="if(event.target===this)closeNoteModal()">
+    <div class="note-modal">
+      <h3 id="noteModalTitle">Note</h3>
+      <textarea id="noteModalText" rows="6" placeholder="Write your note here..."></textarea>
+      <div class="note-modal-actions">
+        <button class="note-btn secondary" onclick="closeNoteModal()">Cancel</button>
+        <button id="noteDeleteBtn" class="note-btn" style="background:#ef4444;color:white;border:1.5px solid #ef4444;" onclick="deleteNoteModal()">Delete</button>
+        <button class="note-btn primary" onclick="saveNoteModal()">Save Note</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <div id="page-tasks" class="hidden flex-1 flex flex-col overflow-hidden">
@@ -463,14 +795,43 @@ window.tailwind={ config: {
   </div>
 </div>
 </header>
-<main class="flex-1 overflow-auto p-6 bg-gray-50">
-<div id="tasks-list"></div>
+<main class="flex-1 flex overflow-hidden bg-gray-50">
+  <div id="tasks-list-panel" class="flex-shrink-0 border-r border-gray-200 overflow-y-auto p-6 bg-white" style="width:340px;min-width:200px;max-width:600px;">
+    <div id="tasks-list"></div>
+  </div>
+  <div id="panel-resizer" class="panel-resizer"></div>
+  <div id="task-detail-panel" class="flex-1 flex flex-col overflow-y-auto bg-gray-50 relative">
+    <div class="h-full flex items-center justify-center text-gray-400">Select a task to view details</div>
+  </div>
 </main>
 <button id="add-task-fab" onclick="openAddTaskPopup()" class="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-blue-600 text-white shadow-xl shadow-blue-600/40 flex items-center justify-center hover:bg-blue-700 transition-all transform hover:-translate-y-1 z-30">
 <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
 </svg>
 </button>
+</div>
+
+<div id="page-stats" class="hidden flex-1 flex flex-col overflow-hidden">
+  <div class="stats-header">
+    <div style="display:flex; justify-content: space-between; align-items: center; width: 100%">
+      <h1>Stats</h1>
+      <div style="display:flex; align-items:center; gap: 16px;">
+        <div class="stats-range-controls">
+          <button class="stats-range-btn" id="statsRangePrev" title="Previous Range"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <button class="stats-range-btn" id="statsRangeNext" title="Next Range"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg></button>
+        </div>
+        <div class="stats-time-toggle" id="statsTimeToggle">
+          <button class="stats-time-btn active" data-range="week">7 Days</button>
+          <button class="stats-time-btn" data-range="month">4 Weeks</button>
+          <button class="stats-time-btn" data-range="year">12 Months</button>
+          <button class="stats-time-btn" data-range="all">All Time</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="stats-grid" id="statsGrid">
+    <!-- Widgets rendered by JS -->
+  </div>
 </div>
 
 <div id="add-task-popup" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50" style="display:none" onclick="closeAddTaskPopup(event)">
@@ -525,7 +886,7 @@ window.tailwind={ config: {
         <div id="tagList" class="max-h-40 overflow-y-auto p-2"></div>
         <div class="border-t border-gray-100 p-2">
           <button onclick="openNewTagPopup()" class="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
             New Tag
           </button>
         </div>
@@ -583,7 +944,7 @@ window.tailwind={ config: {
         <div id="addTagList" class="max-h-40 overflow-y-auto p-2"></div>
         <div class="border-t border-gray-100 p-2">
           <button onclick="openNewTagPopup()" class="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
             New Tag
           </button>
         </div>
@@ -595,68 +956,8 @@ window.tailwind={ config: {
     </div>
     </div>
   </div>
-</div>
 
-<div id="add-goal-modal">
-<div class="modal-card">
-<button class="close-btn" id="add-goal-modal-close" onclick="closeAddGoalModal()">
-<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-</svg>
-</button>
-<h2 class="text-lg font-bold text-gray-800 mb-5">Add New Goal</h2>
-<form id="add-goal-form" onsubmit="return false">
-<label class="block text-sm font-medium text-gray-600 mb-1.5">Goal Name</label>
-<input id="goal-name-input" type="text" placeholder="e.g. Learn Guitar" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none mb-4">
 
-<label class="block text-sm font-medium text-gray-600 mb-1.5">Description</label>
-<textarea id="goal-desc-input" placeholder="What's this goal about?" rows="2" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none mb-4"></textarea>
-
-<label class="block text-sm font-medium text-gray-600 mb-1.5">Color</label>
-<div class="flex gap-2.5 flex-wrap mb-4" id="goal-color-picker"></div>
-
-<div class="grid grid-cols-2 gap-4 mb-4">
-<div>
-<label class="block text-sm font-medium text-gray-600 mb-1.5">Duration</label>
-<select id="goal-duration-type" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none mb-2">
-<option value="days">Days</option>
-<option value="weeks">Weeks</option>
-<option value="months" selected>Months</option>
-</select>
-<input id="goal-duration-value" type="number" value="3" min="1" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none">
-</div>
-<div>
-<label class="block text-sm font-medium text-gray-600 mb-1.5">Start Date</label>
-<input id="goal-start-date" type="date" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none mb-2">
-<label class="block text-sm font-medium text-gray-600 mb-1.5">End Date</label>
-<input id="goal-end-date" type="date" readonly class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-500 bg-gray-50 focus:border-blue-400 focus:ring-0 transition-all outline-none">
-</div>
-</div>
-
-<div class="mb-4">
-<label class="block text-sm font-medium text-gray-600 mb-1.5">Parent Goal (optional)</label>
-<select id="goal-parent-select" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none">
-<option value="">None</option>
-</select>
-</div>
-<div class="flex gap-3 mt-6">
-<button type="button" id="save-goal-btn" onclick="saveGoal()" class="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-all hover:opacity-90" style="background:#3B82F6">Save Goal</button>
-<button type="button" id="cancel-goal-btn" onclick="closeAddGoalModal()" class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:#fff">Cancel</button>
-</div>
-</form>
-</div>
-</div>
-
-<div id="goal-detail-modal">
-<div class="modal-card" id="goal-detail-card">
-<button class="close-btn" onclick="closeGoalDetailModal()">
-<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-</svg>
-</button>
-<div id="goal-detail-content"></div>
-</div>
-</div>
 
 <div id="delete-confirm-modal" onclick="closeDeleteConfirmModal()">
 <div class="modal-card" onclick="event.stopPropagation()">
@@ -669,14 +970,14 @@ window.tailwind={ config: {
 <div class="confirm-msg" id="delete-confirm-msg">Are you sure you want to delete this goal?</div>
 <div class="confirm-actions">
 <button class="btn-confirm-cancel" onclick="closeDeleteConfirmModal()">Cancel</button>
-<button class="btn-confirm-delete" id="btn-confirm-delete-yes">Delete</button>
+<button class="btn-confirm-delete" id="btn-confirm-delete-yes" onclick="confirmDeleteGoal()">Delete</button>
 </div>
 </div>
 </div>
 
-<div id="sessionTimelineModal">
-  <div class="modal-card" style="width:100%; max-width:480px;">
-    <button class="close-btn" id="sessionTimelineModalClose">
+<div id="sessionTimelineModal" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.3);align-items:center;justify-content:center;padding:20px;display:none" onclick="closeSessionTimelineModal(event)">
+  <div class="modal-card" style="width:100%; max-width:480px;" onclick="event.stopPropagation()">
+    <button class="close-btn" id="sessionTimelineModalClose" onclick="closeSessionTimelineModal()">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
       </svg>
@@ -724,61 +1025,6 @@ window.tailwind={ config: {
   </div>
 </div>
 
-<!-- Welcome popup (shown once, first launch) -->
-<div id="welcomeModal" style="position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.35);align-items:center;justify-content:center;padding:20px;display:none">
-  <div style="background:#fff;border-radius:20px;width:100%;max-width:620px;max-height:85vh;box-shadow:0 25px 80px rgba(0,0,0,0.2);position:relative;overflow:hidden;display:flex;flex-direction:column">
-    <div style="height:6px;background:linear-gradient(90deg,#0e58c5,#3B82F6,#8B5CF6);flex-shrink:0"></div>
-    <div style="padding:32px 32px 24px;text-align:center;overflow-y:auto;flex:1">
-      <img src="assets/gifs/jewelry-for-updates.gif" alt="" style="width:90px;margin:0 auto 12px;display:block"/>
-      <h2 style="font-size:24px;font-weight:800;color:#0b1c30;margin-bottom:4px">Hi ðŸ–</h2>
-      <p style="font-size:14px;color:#4B5563;line-height:1.7;text-align:left;margin-bottom:16px">
-        I'm <strong>Ahmed</strong>, a .NET backend developer and a Computer Science student.
-      </p>
-      <p style="font-size:14px;color:#4B5563;line-height:1.7;text-align:left;margin-bottom:16px">
-        I built <strong>Jamrah</strong> to help students and anyone who wants to stay focused and productive â€” but couldn't find a simple, beautiful, and <strong>completely free</strong> app that does the job without all the clutter. So I made one.
-      </p>
-      <p style="font-size:14px;color:#4B5563;line-height:1.7;text-align:left;margin-bottom:16px">
-        My dream is to turn this into a full cross-platform mobile app someday â€” it's on my roadmap! In the meantime, it's fully <strong>open source</strong>. If anyone wants to contribute or build on it, you'd be helping the whole community.
-      </p>
-      <p style="font-size:14px;color:#4B5563;line-height:1.7;text-align:left;margin-bottom:16px">
-        I'm a backend .NET dev by trade â€” frontend isn't really my lane. This was built with <strong>vibe coding</strong>! I put a lot of effort into keeping the design clean and giving you full control over everything: colors, sounds, buttons â€” you name it. I'm still actively developing it, making it simpler every day.
-      </p>
-      <p style="font-size:14px;color:#4B5563;line-height:1.7;text-align:left;margin-bottom:16px">
-        If you just want a <strong>Pomodoro timer</strong> â€” the app will be just that. If you want <strong>habit tracking</strong> â€” it'll be just that too. Everything is under <strong>your control</strong>. You choose what to use and how to use it, exactly the way you like. No distractions. No payments.
-      </p>
-      <p style="font-size:14px;color:#4B5563;line-height:1.7;text-align:left;margin-bottom:20px">
-        I'm constantly updating the app, fixing bugs, improving the design, and adding more features. Hope you enjoy it! &#x1F604;&#x1F4AA;
-      </p>
-
-      <!-- Action boxes -->
-      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
-        <!-- Buy Me a Coffee -->
-        <a onclick="window.electronAPI.openUrl('https://buymeacoffee.com/ahmedghazi')" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 20px;background:#FFDD00;color:#000;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;transition:transform 0.15s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2a2 2 0 002-2V5a2 2 0 00-2-2zm0 5h-2V5h2v3zM2 21h18v2H2v-2z"/></svg>
-          Buy Me a Coffee
-        </a>
-        <!-- Contribute on GitHub -->
-        <a onclick="window.electronAPI.openUrl('https://github.com/AhmMed29/jamrah')" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 20px;background:#24292F;color:#fff;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;transition:transform 0.15s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"/></svg>
-          Contribute on GitHub
-        </a>
-        <!-- LinkedIn -->
-        <a onclick="window.electronAPI.openUrl('https://www.linkedin.com/in/ahmed-mohamed-56712a350/')" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 20px;background:#0A66C2;color:#fff;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;transition:transform 0.15s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-          Let's Connect on LinkedIn
-        </a>
-      </div>
-
-      <p style="font-size:13px;color:#9CA3AF;line-height:1.6;margin-bottom:16px">
-        Made with love &#x1F493;&#x1F91E;<br>
-        Hope you produce better with our app! &#x1F646;&#x200D;&#x2642;&#xFE0F;
-      </p>
-
-      <button onclick="closeWelcomeModal()" style="padding:12px 48px;background:#0b1c30;color:#fff;border:none;border-radius:12px;font-size:15px;cursor:pointer;font-weight:600;transition:opacity 0.15s;width:100%;max-width:240px" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Get Started</button>
-    </div>
-  </div>
-</div>
-
 <!-- Unsaved settings confirmation modal -->
 <div id="settingsConfirmModal" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.3);align-items:center;justify-content:center;padding:20px;display:none" onclick="closeSettingsConfirm(event)">
   <div style="background:white;border-radius:16px;padding:28px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative;text-align:center" onclick="event.stopPropagation()">
@@ -794,6 +1040,7 @@ window.tailwind={ config: {
   </div>
 </div>
 
+
 <!-- Floating Dock Navigation -->
 <div class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50">
 <div class="floating-menu-glass rounded-full px-3 py-2 sm:px-4 sm:py-2.5 flex items-center gap-1 sm:gap-2">
@@ -806,18 +1053,23 @@ window.tailwind={ config: {
 <span class="material-symbols-outlined text-lg sm:text-xl">check_circle</span>
 <span class="text-[9px] sm:text-[10px] font-medium mt-0.5 leading-tight">Tasks</span>
 </button>
-<button class="dock-item flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl transition-colors text-tickgray-500 hover:bg-blue-50 hover:text-tickblue" data-page="goals" onclick="showPage('goals');window.AudioManager?.playSound('tab-swipping.mp3')">
-<span class="material-symbols-outlined text-lg sm:text-xl">bar_chart</span>
-<span class="text-[9px] sm:text-[10px] font-medium mt-0.5 leading-tight">Goals</span>
+<button class="dock-item flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl transition-colors text-tickgray-500 hover:bg-blue-50 hover:text-tickblue" data-page="calender" onclick="showPage('calender');window.AudioManager?.playSound('tab-swipping.mp3')">
+<span class="material-symbols-outlined text-lg sm:text-xl">calendar_month</span>
+<span class="text-[9px] sm:text-[10px] font-medium mt-0.5 leading-tight">Calender</span>
 </button>
 <button class="dock-item flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl transition-colors text-tickgray-500 hover:bg-blue-50 hover:text-tickblue" data-page="habits" onclick="showPage('habits');window.AudioManager?.playSound('tab-swipping.mp3')">
 <span class="material-symbols-outlined text-lg sm:text-xl">checklist</span>
 <span class="text-[9px] sm:text-[10px] font-medium mt-0.5 leading-tight">Habits</span>
 </button>
-<button class="dock-item flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl transition-colors text-tickgray-500 hover:bg-blue-50 hover:text-tickblue" data-page="settings" onclick="openSettings();window.AudioManager?.playSound('tab-swipping.mp3')">
+<button class="dock-item flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl transition-colors text-tickgray-500 hover:bg-blue-50 hover:text-tickblue" data-page="stats" onclick="showPage('stats');window.AudioManager?.playSound('tab-swipping.mp3')">
+<span class="material-symbols-outlined text-lg sm:text-xl">bar_chart</span>
+<span class="text-[9px] sm:text-[10px] font-medium mt-0.5 leading-tight">Stats</span>
+</button>
+<button id="settingsBtn" data-page="settings" class="dock-item flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl transition-colors text-tickgray-500 hover:bg-blue-50 hover:text-tickblue" onclick="if (typeof openSettings==='function') openSettings();window.AudioManager?.playSound('tab-swipping.mp3')">
 <span class="material-symbols-outlined text-lg sm:text-xl">settings</span>
 <span class="text-[9px] sm:text-[10px] font-medium mt-0.5 leading-tight">Settings</span>
 </button>
+
 </nav>
 </div>
 </div>
@@ -831,9 +1083,28 @@ window.tailwind={ config: {
 <script src="js/theme.js"></script>
 <script src="js/utils/helpers.js"></script>
 <script src="js/components/settings/settings.js"></script>
+<script src="js/lib/chart.js"></script>
+<script src="js/components/stats/stats.js"></script>
 <script src="js/components/goals/goals.js"></script>
 <script src="js/components/tasks/tasks.js"></script>
 <script src="js/app.js"></script>
+<script src="js/calender.js"></script>
+
+<!-- Session Note Modal -->
+<div id="pomoSideNoteModal" class="fixed inset-0 bg-black/50 items-center justify-center z-50 hidden" style="backdrop-filter: blur(4px);" onclick="window.closePomoSideNoteModal(event)">
+  <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-2xl w-96 max-w-[90vw]" onclick="event.stopPropagation()">
+    <h3 class="text-lg font-bold text-gray-800 mb-4" id="pomoSideNoteModalTitle">Session Note</h3>
+    <textarea id="pomoSideNoteInput" class="w-full h-32 p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-4" placeholder="Write your note here..."></textarea>
+    <div class="flex justify-between items-center">
+      <button onclick="window.deletePomoSideNote()" class="px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded-xl font-medium transition-colors">Delete Note</button>
+      <div class="flex gap-2">
+        <button onclick="window.closePomoSideNoteModal()" class="px-4 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded-xl font-medium transition-colors">Cancel</button>
+        <button onclick="window.savePomoSideNote()" class="px-4 py-2 text-sm text-white bg-blue-500 hover:bg-blue-600 rounded-xl font-medium transition-colors shadow-sm">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/components/sidebar/sidebar.js"></script>
 </body>
 </html>
-

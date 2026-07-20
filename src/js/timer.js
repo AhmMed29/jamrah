@@ -1,4 +1,3 @@
-var SESSIONS_BEFORE_LONG_BREAK = 4;
 var PHASE_LABELS = { idle: '', work: 'Focus', shortBreak: 'Short Break', longBreak: 'Long Break' };
 
 var phase = 'idle';
@@ -63,7 +62,6 @@ async function tick() {
   if (remainingSeconds <= 0) {
     remainingSeconds = 0;
     stopTimer();
-    await window.updateSidebar();
     updateUI();
     await completeTimer();
     return;
@@ -78,25 +76,26 @@ function startTimer() {
   tick();
 }
 
-window.toggleTimer = async function() {
+window.toggleTimer = function() {
   if (phase === 'idle') {
     phase = 'work';
-    await setPhaseTime('work');
     startTimer();
     if (window.AudioManager) window.AudioManager.playSound('pomo-start.mp3');
+  } else if (isRunning) {
+    stopTimer();
+    recalcRemaining();
   } else {
-    if (isRunning) {
-      stopTimer();
-      recalcRemaining();
-    } else {
-      startTimer();
-      if (window.AudioManager) window.AudioManager.playSound('pomo-start.mp3');
-    }
+    startTimer();
+    if (window.AudioManager) window.AudioManager.playSound('pomo-start.mp3');
   }
   updateUI();
 };
 
 window.resetTimer = async function() {
+  if (window._pendingSessionStart) {
+    window._pendingSessionStart = false;
+    if (window.onSessionCancel) window.onSessionCancel();
+  }
   stopTimer();
   phase = 'idle';
   await setPhaseTime('work');
@@ -108,15 +107,21 @@ window.skipPhase = async function() {
   if (phase === 'idle') return;
   stopTimer();
   if (phase === 'work') sessionCount++;
-  phase = nextPhase(phase, sessionCount);
+  var lbiVal = parseInt(await window.db.getSetting('longBreakInterval')) || 4;
+  if (phase === 'work') {
+    phase = sessionCount % lbiVal === 0 ? 'longBreak' : 'shortBreak';
+  } else {
+    phase = 'work';
+  }
   await setPhaseTime(phase);
   updateUI();
 };
 
 async function advancePhase() {
+  var lbiVal = parseInt(await window.db.getSetting('longBreakInterval')) || 4;
   if (phase === 'work') {
     sessionCount++;
-    phase = sessionCount % SESSIONS_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak';
+    phase = sessionCount % lbiVal === 0 ? 'longBreak' : 'shortBreak';
   } else {
     phase = 'work';
   }
@@ -128,66 +133,100 @@ async function completeTimer() {
   recalcRemaining();
   updateUI();
   if (window.AudioManager) window.AudioManager.playSound('pomo-end.mp3');
-}
 
-function nextPhase(current, count) {
-  if (current === 'work') return (count + 1) % SESSIONS_BEFORE_LONG_BREAK === 0 ? 'longBreak' : 'shortBreak';
-  return 'work';
+  // Desktop notification
+  var dn = await window.db.getSetting('desktopNotifications');
+  if (dn !== 'false' && window.Notification) {
+    if (Notification.permission === 'granted') {
+      new Notification('Focus Timer', { body: phase === 'work' ? 'Break finished! Time to focus.' : 'Focus session finished! Take a break.' });
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+  }
+
+  // Auto-start next phase
+  if (phase === 'work') {
+    var asf = await window.db.getSetting('autoStartFocus');
+    if (asf === 'true') {
+      startTimer();
+      if (window.AudioManager) window.AudioManager.playSound('pomo-start.mp3');
+    }
+  } else {
+    var asb = await window.db.getSetting('autoStartBreak');
+    if (asb === 'true') {
+      startTimer();
+      if (window.AudioManager) window.AudioManager.playSound('pomo-start.mp3');
+    }
+  }
 }
 
 function updateUI() {
   var text = document.getElementById('timerText');
   var label = document.getElementById('phaseLabel');
-  var playBtn = document.getElementById('playBtn');
-
   if (text) text.textContent = formatTime(remainingSeconds);
   if (label) label.textContent = PHASE_LABELS[phase] || 'Focus';
 
-  if (playBtn) {
-    playBtn.innerHTML = isRunning
-      ? '<svg width="14" height="16" viewBox="0 0 14 16" fill="currentColor"><rect x="0" y="0" width="4" height="16" rx="1"/><rect x="10" y="0" width="4" height="16" rx="1"/></svg>'
-      : '<svg width="14" height="16" viewBox="0 0 12 16" fill="currentColor" style="margin-left:2px"><polygon points="0,0 12,8 0,16"/></svg>';
-  }
-
-  var show = phase === 'idle' || !isRunning;
-  var ctrlArea = document.getElementById('pomoControlsArea');
-  if (ctrlArea) {
-    if (show) ctrlArea.classList.add('controls-visible');
-    else ctrlArea.classList.remove('controls-visible');
-  }
-  var pres = document.getElementById('pomoPresets');
-  var nmBox = document.getElementById('pomoNameBox');
-  if (pres) pres.style.display = show ? 'flex' : 'none';
-  if (nmBox) nmBox.style.display = show ? 'block' : 'none';
-
-  var counter = document.getElementById('sessionCounter');
-  if (counter) {
-    if (!isRunning) {
-      var count = sessionCount % SESSIONS_BEFORE_LONG_BREAK + 1;
-      counter.textContent = count + '/' + SESSIONS_BEFORE_LONG_BREAK;
-      counter.style.display = '';
+  // Toggle side box visibility & main padding
+  var sideBox = document.getElementById('pomoSideBox');
+  var mainArea = document.getElementById('mainArea');
+  if (sideBox) {
+    if (isRunning) {
+      sideBox.classList.add('hidden-fade');
+      if (mainArea) mainArea.style.paddingLeft = '0px';
     } else {
-      counter.style.display = 'none';
+      sideBox.classList.remove('hidden-fade');
+      if (mainArea) mainArea.style.paddingLeft = sideBox.offsetWidth + 'px';
     }
   }
 
-  updateSessionDots();
-}
-
-function updateSessionDots() {
-  var container = document.getElementById('sessionDots');
-  if (!container) return;
-  var completed = phase === 'idle' ? 0 : sessionCount % SESSIONS_BEFORE_LONG_BREAK;
-  var dots = '';
-  for (var i = 0; i < SESSIONS_BEFORE_LONG_BREAK; i++) {
-    var filled = i < completed;
-    var current = i === completed && phase === 'work' && isRunning;
-    dots += '<div style="width:6px;height:6px;border-radius:50%;background:' +
-      (filled ? 'rgba(255,255,255,0.7)' : current ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)') +
-      '"></div>';
+  // Toggle active session info visibility
+  var activeInfo = document.getElementById('pomoActiveSessionInfo');
+  if (activeInfo) {
+    activeInfo.classList.remove('hidden');
+    var activeName = document.getElementById('pomoActiveTaskName');
+    if (activeName && document.activeElement !== activeName) {
+      if (typeof _rightPanelSession !== 'undefined' && _rightPanelSession && _rightPanelSession !== activeSession) {
+        // Keep the past session name, don't override
+      } else {
+        activeName.value = window.pomoSessionName || '';
+      }
+    }
   }
-  container.innerHTML = dots;
-  container.style.display = phase === 'idle' ? 'none' : 'flex';
+
+  // Toggle note panel visibility
+  var notePanel = document.getElementById('pomoNotePanel');
+  if (notePanel) {
+    if (phase !== 'idle') {
+      notePanel.classList.remove('hidden');
+    } else if (typeof _pomoRightPanelOpen !== 'undefined' && _pomoRightPanelOpen) {
+      notePanel.classList.remove('hidden');
+    } else {
+      notePanel.classList.add('hidden');
+    }
+  }
+
+  // Toggle timer-running on circle wrapper for hover buttons
+  var wrapper = document.getElementById('timerCircle');
+  if (wrapper) {
+    if (isRunning) {
+      wrapper.classList.add('timer-running');
+    } else {
+      wrapper.classList.remove('timer-running');
+    }
+  }
+
+  // Update session count display
+  var sCount = document.getElementById('sessionCountDisplay');
+  if (sCount) {
+    window.db.getSetting('showSessionCount').then(function(ssc) {
+      if (ssc !== 'false' && phase !== 'idle') {
+        sCount.style.display = 'block';
+        sCount.textContent = 'Session #' + (sessionCount + 1);
+      } else {
+        sCount.style.display = 'none';
+      }
+    });
+  }
 }
 
 // Settings
@@ -199,22 +238,23 @@ window.openPomoSettings = async function() {
 window.savePomoSettings = async function() {
   var w = parseInt(document.getElementById('settingWork').value) || 25;
   var sb = parseInt(document.getElementById('settingShortBreak').value) || 5;
-  var lb = parseInt(document.getElementById('settingLongBreak').value) || 90;
+  var lb = parseInt(document.getElementById('settingLongBreak').value) || 15;
   if (w < 1) w = 1; if (w > 90) w = 90;
   if (sb < 1) sb = 1; if (sb > 30) sb = 30;
   if (lb < 1) lb = 1; if (lb > 60) lb = 60;
   await window.db.setSetting('workMinutes', w);
   await window.db.setSetting('shortBreakMinutes', sb);
   await window.db.setSetting('longBreakMinutes', lb);
-  if (phase === 'idle') await setPhaseTime('work');
-  else if (!isRunning) { await setPhaseTime(phase); updateUI(); }
-  var sheet = document.getElementById('pomoSettings');
-  if (!sheet) return;
-  sheet.classList.add('closing');
-  setTimeout(function() {
-    sheet.classList.add('hidden');
-    sheet.classList.remove('closing');
-  }, 300);
+  await window.refreshTimerSettings();
+};
+
+window.refreshTimerSettings = async function() {
+  if (phase === 'idle') {
+    await setPhaseTime('work');
+  } else if (!isRunning) {
+    await setPhaseTime(phase);
+  }
+  updateUI();
 };
 
 window.stepSetting = function(id, delta) {
@@ -225,29 +265,26 @@ window.stepSetting = function(id, delta) {
   markDirty();
 };
 
-window.setTimer = function() {};
-window.openTimePopup = function() {};
-window.closeTimePopup = function() {};
-
 // Preset & time adjustment
 window.setPreset = async function(minutes) {
+  if (phase !== 'idle') return; // Only allow preset changes when idle
   await window.db.setSetting('workMinutes', minutes);
   if (phase === 'idle') {
     await setPhaseTime('work');
-  } else if (phase === 'work') {
-    var newTotal = minutes * 60;
-    var progress = totalSeconds > 0 ? (totalSeconds - remainingSeconds) / totalSeconds : 0;
-    totalSeconds = newTotal;
-    remainingSeconds = Math.max(0, Math.round(newTotal * (1 - progress)));
+    updateUI();
   }
-  updateUI();
 };
 
 window.adjustTime = function(delta) {
-  if (phase === 'idle') return;
-  var adj = delta * 60;
-  totalSeconds = Math.max(60, totalSeconds + adj);
-  remainingSeconds = Math.max(0, remainingSeconds + adj);
+  if (phase === 'idle' && !window._pendingSessionStart) {
+    var newMinutes = Math.max(1, Math.floor(remainingSeconds / 60) + delta);
+    totalSeconds = newMinutes * 60;
+    remainingSeconds = totalSeconds;
+  } else {
+    var adj = delta * 60;
+    totalSeconds = Math.max(60, totalSeconds + adj);
+    remainingSeconds = Math.max(0, remainingSeconds + adj);
+  }
   updateUI();
 };
 
@@ -258,14 +295,40 @@ window.confirmEnd = async function() {
   await advancePhase();
   recalcRemaining();
   updateUI();
+  var popup = document.getElementById('endPopup');
+  if (popup) popup.classList.add('hidden');
   if (window.AudioManager) window.AudioManager.playSound('pomo-end.mp3');
+
+  // Desktop notification
+  var dn = await window.db.getSetting('desktopNotifications');
+  if (dn !== 'false' && window.Notification && Notification.permission === 'granted') {
+    new Notification('Focus Timer', { body: 'Session ended early.' });
+  }
+
+  // Auto-start next phase
+  if (phase === 'work') {
+    var asf = await window.db.getSetting('autoStartFocus');
+    if (asf === 'true') {
+      startTimer();
+      if (window.AudioManager) window.AudioManager.playSound('pomo-start.mp3');
+    }
+  } else {
+    var asb = await window.db.getSetting('autoStartBreak');
+    if (asb === 'true') {
+      startTimer();
+      if (window.AudioManager) window.AudioManager.playSound('pomo-start.mp3');
+    }
+  }
 };
 
 window.cancelEnd = function() {
   var popup = document.getElementById('endPopup');
   if (popup) popup.classList.add('hidden');
 };
-window.closeEndPopup = window.cancelEnd;
+window.closeEndPopup = function(e) {
+  if (e && e.target !== e.currentTarget) return;
+  window.cancelEnd();
+};
 
 window.openEndPopup = function() {
   if (phase === 'idle') return;
@@ -275,36 +338,14 @@ window.openEndPopup = function() {
 
 // Init
 window.pomoSessionName = localStorage.getItem('pomoSessionName') || '';
-var nameInput = document.getElementById('pomoNameInput');
-if (nameInput) {
-  nameInput.value = window.pomoSessionName;
-  nameInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      window.pomoSessionName = this.value.trim();
-      localStorage.setItem('pomoSessionName', window.pomoSessionName);
-      this.blur();
-    }
-  });
-}
 (async function() {
+  if (window._dbInitPromise) await window._dbInitPromise;
   await setPhaseTime('work');
   updateUI();
+  
+  // Request notification permission if not asked
+  if (window.Notification && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
 })();
 
-document.getElementById('playBtn').addEventListener('click', function(e) {
-  e.stopPropagation();
-  window.toggleTimer();
-});
-
-var timerCircle = document.getElementById('timerCircle');
-if (timerCircle) {
-  timerCircle.addEventListener('click', function(e) {
-    if (e.target.closest('.pomo-btn, .pomo-play-btn, .pomo-gear-btn')) return;
-    window.toggleTimer();
-  });
-}
-
-(async function() {
-  await initStats();
-  await updateSidebar();
-})();

@@ -1165,7 +1165,8 @@ function renderPomoNoteTagDropdown(tags) {
   var html = '<div id="pomoNoteTagDropdown" style="position:absolute; top:calc(100% + 4px); left:0; background:white; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:101; padding:4px; max-height:220px; overflow-y:auto; width:160px;">';
   html += '<div class="goal-tag" style="padding:8px; cursor:pointer; font-size:12px; border-bottom:1px solid #f1f5f9;" onclick="window.selectPomoNoteTag(null, \'None\')">None</div>';
   tags.forEach(function(t) {
-    html += '<div class="goal-tag" style="padding:8px; cursor:pointer; font-size:12px; color:' + t.color + '; display:flex; align-items:center; gap:6px;" onclick="window.selectPomoNoteTag(\'' + t.id + '\', \'' + t.name.replace(/'/g, "\\'") + '\')"><span style="width:8px;height:8px;border-radius:50%;background:' + t.color + ';display:inline-block;"></span>' + t.name + '</div>';
+    var escapedTagName = t.name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    html += '<div class="goal-tag" style="padding:8px; cursor:pointer; font-size:12px; color:' + t.color + '; display:flex; align-items:center; gap:6px;" onclick="window.selectPomoNoteTag(\'' + t.id + '\', \'' + escapedTagName + '\')"><span style="width:8px;height:8px;border-radius:50%;background:' + t.color + ';display:inline-block;"></span>' + t.name + '</div>';
   });
   if (tags.length > 0) {
     html += '<div style="border-top:1px solid #f1f5f9;margin:2px 0;"></div>';

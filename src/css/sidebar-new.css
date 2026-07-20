@@ -70,7 +70,7 @@
   border-radius: 8px;
   cursor: pointer;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: #4b5563;
   text-align: left;
@@ -87,8 +87,8 @@
   font-weight: 600;
 }
 .app-sidebar-menu-item .material-symbols-outlined {
-  font-size: 20px;
-  width: 20px;
+  font-size: 22px;
+  width: 22px;
   text-align: center;
   flex-shrink: 0;
 }

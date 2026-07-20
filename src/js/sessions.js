@@ -4,9 +4,13 @@ var activeSession = null;
 var editingSessionId = null;
 var editingTagForSession = null;
 var editingGoalForSession = null;
+var _editingSessionNote = '';
 var addSessionTagId = null;
 var addSessionGoalId = null;
 var selectedTagColor = '#3B82F6';
+var _rightPanelSession = null;
+var _noteSaveTimer = null;
+var _rightPanelOriginalNote = '';
 
 async function getTags() {
   try { return await window.db.getTags() || []; } catch(e) { return []; }
@@ -111,7 +115,7 @@ async function onSessionComplete(focusMinutes, plannedMinutes) {
     activeSession.accumulatedMs += Date.now() - activeSession.lastResumeTime;
   }
   if (focusMinutes === undefined) {
-    focusMinutes = activeSession.accumulatedMs / 60000;
+    focusMinutes = Math.round(activeSession.accumulatedMs / 60000);
   }
   var endTime = Date.now();
   var session = {
@@ -126,6 +130,9 @@ async function onSessionComplete(focusMinutes, plannedMinutes) {
     goalId: activeSession.goalId || null
   };
   await window.db.saveSession(session);
+  if (_rightPanelSession && activeSession && _rightPanelSession.id === activeSession.id) {
+    _rightPanelSession = null;
+  }
   activeSession = null;
   await renderTimeline();
   await renderSessionTimeline();
@@ -136,6 +143,9 @@ function onSessionCancel() {
   if (!activeSession) return;
   window._pendingSessionStart = false;
   hideSessionNamePopup();
+  if (_rightPanelSession && activeSession && _rightPanelSession.id === activeSession.id) {
+    _rightPanelSession = null;
+  }
   activeSession = null;
   renderTimeline();
   renderSessionTimeline();
@@ -153,7 +163,7 @@ window.toggleTimer = function() {
     var isFresh = remainingSeconds === totalSeconds;
     if (isFresh && _taskPopupEnabled) {
       window._pendingSessionStart = true;
-      onSessionStart();
+      showSessionNamePopup();
       return;
     }
     _origToggleTimer();
@@ -355,6 +365,7 @@ window.openSessionPopup = async function(sessionId) {
   if (input) input.value = session.taskName || '';
   editingTagForSession = session.tagId || null;
   editingGoalForSession = session.goalId || null;
+  _editingSessionNote = session.note || '';
   await renderSessionTagDisplay();
   var popup = document.getElementById('sessionPopup');
   if (popup) popup.classList.remove('hidden');
@@ -382,7 +393,7 @@ window.saveSessionEdit = async function() {
     if (popup) popup.classList.add('hidden');
     return;
   }
-  await window.db.updateSession(editingSessionId, taskName, editingTagForSession, '', editingGoalForSession);
+  await window.db.updateSession(editingSessionId, { taskName: taskName, tagId: editingTagForSession, note: _editingSessionNote, goalId: editingGoalForSession });
   await renderTimeline();
   await renderSessionTimeline();
   await renderSessionSideBox();
@@ -686,6 +697,8 @@ async function renderSessionTimeline() {
 }
 
 var sessionTimelineEditId = null;
+var _sessionTimelineEditNote = '';
+var _sessionTimelineEditGoalId = null;
 
 window.openSessionTimelineModal = async function(sessionId) {
   sessionTimelineEditId = sessionId;
@@ -704,8 +717,12 @@ window.openSessionTimelineModal = async function(sessionId) {
       }
     }
     input.value = session ? (session.taskName || '') : '';
+    _sessionTimelineEditNote = session ? (session.note || '') : '';
+    _sessionTimelineEditGoalId = session ? (session.goalId || null) : null;
   } else {
     input.value = '';
+    _sessionTimelineEditNote = '';
+    _sessionTimelineEditGoalId = null;
   }
 
   modal.classList.add('open');
@@ -723,7 +740,7 @@ window.saveSessionTimeline = async function() {
   if (sessionTimelineEditId && activeSession && activeSession.id === sessionTimelineEditId) {
     activeSession.taskName = taskName;
   } else if (sessionTimelineEditId) {
-    await window.db.updateSession(sessionTimelineEditId, taskName, null, '');
+    await window.db.updateSession(sessionTimelineEditId, { taskName: taskName, tagId: null, note: _sessionTimelineEditNote, goalId: _sessionTimelineEditGoalId });
   }
 
   window.closeSessionTimelineModal();
@@ -774,7 +791,7 @@ async function getSessionsForDate(dateStr) {
   try {
     var grouped = await window.db.getSessionsGrouped() || {};
     var list = grouped[dateStr] || [];
-    return list.sort(function(a, b) { return a.startTime - b.startTime; });
+    return list.sort(function(a, b) { return b.startTime - a.startTime; });
   } catch(e) { return []; }
 }
 
@@ -832,7 +849,7 @@ window.startInlineEditSessionName = function(event, sessionId) {
           if (found) { session = found; break; }
         }
         if (session) {
-          await window.db.updateSession(sessionId, newName, session.tagId, session.note, session.goalId);
+          await window.db.updateSession(sessionId, { taskName: newName, tagId: session.tagId, note: session.note, goalId: session.goalId });
         }
       }
       renderSessionSideBox();
@@ -918,12 +935,16 @@ async function renderSessionSideBox() {
       }
     }
 
+    var hasNote = !!s.note;
+    var noteBtnClass = hasNote ? 'pomo-side-note-btn has-note' : 'pomo-side-note-btn empty-note';
+    var noteBtnHtml = '<button class="' + noteBtnClass + '" onclick="window.openPomoSideNoteModal(\'' + s.id + '\')" title="Session Note"><span class="material-symbols-outlined" style="font-size:14px;">description</span></button>';
+
     html += '<tr>';
     html += '<td style="padding: 6px 4px;"><span class="pomo-side-name-rect ' + (isActive ? 'active-glow' : '') + '" data-name="' + escapeHtml(name) + '" onclick="window.startInlineEditSessionName(event, \'' + s.id + '\')">' + escapeHtml(name) + '</span></td>';
     html += '<td style="white-space:nowrap;color:#4b5563;font-size:11px;font-weight:500;">' + timeRange + '</td>';
     html += '<td style="color:#6b7280;font-weight:500;">' + durText + '</td>';
     html += '<td>' + tagHtml + '</td>';
-    html += '<td style="text-align: right; padding-right: 4px;">' + (!isActive ? '<button onclick="window.deleteSession(\'' + s.id + '\')" style="background:transparent;border:none;cursor:pointer;color:#9ca3af;padding:2px;display:flex;align-items:center;" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'#9ca3af\'" title="Delete Session"><span class="material-symbols-outlined" style="font-size:14px;">delete</span></button>' : '') + '</td>';
+    html += '<td style="text-align: right; padding-right: 4px; display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding-top: 5px;">' + noteBtnHtml + '<button onclick="window.deleteSession(\'' + s.id + '\')" style="background:transparent;border:none;cursor:pointer;color:#9ca3af;padding:2px;display:flex;align-items:center;" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'#9ca3af\'" title="Delete Session"><span class="material-symbols-outlined" style="font-size:14px;">delete</span></button></td>';
     html += '</tr>';
   }
   html += '</tbody></table>';
@@ -933,21 +954,10 @@ async function renderSessionSideBox() {
 }
 
 window.deleteSession = async function(id) {
-  if (window.showConfirmModal) {
-    window.showConfirmModal('Delete Session', 'Are you sure you want to delete this session?', 'Delete', async function() {
-      await window.db.deleteSession(id);
-      if (window.renderStats) await window.renderStats();
-      if (typeof renderSessionTimeline === 'function') await renderSessionTimeline();
-      await renderSessionSideBox();
-    });
-  } else {
-    if (confirm('Are you sure you want to delete this session?')) {
-      await window.db.deleteSession(id);
-      if (window.renderStats) await window.renderStats();
-      if (typeof renderSessionTimeline === 'function') await renderSessionTimeline();
-      await renderSessionSideBox();
-    }
-  }
+  await window.db.deleteSession(id);
+  if (window.renderStats) await window.renderStats();
+  if (typeof renderSessionTimeline === 'function') await renderSessionTimeline();
+  await renderSessionSideBox();
 };
 
 /* ── Toggle history dropdown ── */
@@ -960,17 +970,70 @@ window.toggleHistoryDropdown = async function() {
   }
 };
 
+function saveRightPanelSession() {
+  if (!_rightPanelSession) return;
+  var noteInput = document.getElementById('pomoNoteArea');
+  var noteVal = noteInput ? noteInput.value.trim() : '';
+  _rightPanelSession.note = noteVal;
+  if (activeSession && _rightPanelSession.id === activeSession.id) {
+    activeSession.note = noteVal;
+  } else {
+    window.db.updateSession(_rightPanelSession.id, {
+      taskName: _rightPanelSession.taskName || '',
+      tagId: _rightPanelSession.tagId || null,
+      note: noteVal,
+      goalId: _rightPanelSession.goalId || null
+    });
+  }
+}
+
 /* ── Session name popup ── */
 var _taskPopupEnabled = false;
+window._pomoRightPanelOpen = false;
+
+window.togglePomoRightPanel = function(forceState) {
+  if (typeof forceState === 'boolean') {
+    _pomoRightPanelOpen = forceState;
+  } else {
+    _pomoRightPanelOpen = !_pomoRightPanelOpen;
+  }
+  var panel = document.getElementById('pomoRightPanelWrapper');
+  var btn = document.getElementById('pomoRightToggleBtn');
+  if (panel && btn) {
+    if (_pomoRightPanelOpen) {
+      panel.style.transform = 'translate(0, -50%)';
+      panel.style.opacity = '1';
+      panel.style.pointerEvents = 'auto';
+      btn.style.right = '340px';
+      document.getElementById('pomoNotePanel')?.classList.remove('hidden');
+      var activeInfo = document.getElementById('pomoActiveSessionInfo');
+      if (activeInfo) {
+        activeInfo.style.position = 'static';
+        activeInfo.style.transform = 'none';
+        activeInfo.style.top = 'auto';
+        activeInfo.style.left = 'auto';
+        activeInfo.style.width = 'auto';
+      }
+      if (!_rightPanelSession && activeSession) {
+        _rightPanelSession = activeSession;
+        _rightPanelOriginalNote = activeSession.note || '';
+        var noteArea = document.getElementById('pomoNoteArea');
+        if (noteArea) noteArea.value = activeSession.note || '';
+      }
+    } else {
+      panel.style.transform = 'translate(150%, -50%)';
+      panel.style.opacity = '0';
+      panel.style.pointerEvents = 'none';
+      btn.style.right = '0';
+      saveRightPanelSession();
+      _rightPanelSession = null;
+    }
+  }
+};
 
 window.showSessionNamePopup = async function() {
   var popup = document.getElementById('pomoNamePopup');
   if (!popup) return;
-  
-  var nameInput = document.getElementById('pomoPopupTaskName');
-  if (nameInput) nameInput.value = '';
-  var noteInput = document.getElementById('pomoPopupNote');
-  if (noteInput) noteInput.value = '';
   
   // Populate tags
   var tagSelect = document.getElementById('pomoPopupTag');
@@ -1000,8 +1063,6 @@ window.showSessionNamePopup = async function() {
   }
 
   popup.classList.remove('hidden');
-  var backdrop = document.getElementById('pomoNamePopupBackdrop');
-  if (backdrop) backdrop.classList.remove('hidden');
 
   window._popupRecentlyShown = true;
   setTimeout(function() { window._popupRecentlyShown = false; }, 100);
@@ -1012,44 +1073,55 @@ window.hideSessionNamePopup = function() {
   if (popup) popup.classList.add('hidden');
   var backdrop = document.getElementById('pomoNamePopupBackdrop');
   if (backdrop) backdrop.classList.add('hidden');
+  window._pendingSessionStart = false;
+};
+
+window.selectPomoPreset = function(minutes) {
+  var durationInput = document.getElementById('pomoPopupDuration');
+  if (durationInput) durationInput.value = minutes;
+  window.db.setSetting('workMinutes', minutes);
 };
 
 window.confirmSessionName = function() {
-  var nameInput = document.getElementById('pomoPopupTaskName');
   var tagSelect = document.getElementById('pomoPopupTag');
   var goalSelect = document.getElementById('pomoPopupGoal');
-  var noteInput = document.getElementById('pomoPopupNote');
   
-  var name = nameInput ? nameInput.value.trim() : '';
+  var name = '';
   var tagId = tagSelect ? tagSelect.value : null;
   var goalId = goalSelect ? goalSelect.value : null;
-  var note = noteInput ? noteInput.value.trim() : '';
+  var note = '';
   
   var durationInput = document.getElementById('pomoPopupDuration');
   var customDuration = durationInput && durationInput.value ? parseInt(durationInput.value) : null;
   
-  if (customDuration && customDuration > 0 && window.phase === 'work') {
+  if (customDuration && customDuration > 0 && (window.phase === 'work' || window.phase === 'idle')) {
     window.totalSeconds = customDuration * 60;
     window.remainingSeconds = window.totalSeconds;
+    window.db.setSetting('workMinutes', customDuration);
   }
   
   window.pomoSessionName = name;
   try { localStorage.setItem('pomoSessionName', name); } catch(e) {}
   
-  if (activeSession) {
-    activeSession.taskName = name;
-    activeSession.tagId = tagId;
-    activeSession.goalId = goalId;
-    activeSession.note = note;
-  }
-  
+  var wasPending = window._pendingSessionStart;
   hideSessionNamePopup();
-  if (window._pendingSessionStart) {
+  
+  if (wasPending) {
     window._pendingSessionStart = false;
+    
+    _origToggleTimer();
+    onSessionStart();
+    
+    // The user expects the popup to only show once. We disable it for future sessions.
+    window._taskPopupEnabled = false;
+    try { window.db.setSetting('taskPopup', 'false'); } catch(e) {}
+    
     if (activeSession) {
-      activeSession.lastResumeTime = Date.now();
+      activeSession.taskName = name;
+      activeSession.tagId = tagId;
+      activeSession.goalId = goalId;
+      activeSession.note = note;
     }
-    startTimer();
   }
   
   updateUI();
@@ -1058,14 +1130,183 @@ window.confirmSessionName = function() {
   renderSessionSideBox();
 };
 
+window.updateActiveSessionName = function(val) {
+  window.pomoSessionName = val;
+  try { localStorage.setItem('pomoSessionName', val); } catch(e) {}
+  if (activeSession) {
+    activeSession.taskName = val;
+    window.db.updateSession(activeSession.id, { taskName: val, tagId: activeSession.tagId || null, note: activeSession.note || '', goalId: activeSession.goalId || null });
+    renderSessionSideBox();
+  }
+  if (_rightPanelSession && _rightPanelSession !== activeSession) {
+    _rightPanelSession.taskName = val;
+    window.db.updateSession(_rightPanelSession.id, { taskName: val, tagId: _rightPanelSession.tagId || null, note: _rightPanelSession.note || '', goalId: _rightPanelSession.goalId || null });
+    renderSessionSideBox();
+  }
+};
+
 document.addEventListener('click', function(e) {
   if (window._popupRecentlyShown) return;
   var popup = document.getElementById('pomoNamePopup');
   if (!popup || popup.classList.contains('hidden')) return;
   if (!popup.contains(e.target) && !e.target.closest('.dock-item') && !e.target.closest('.sidebar-toggle-btn') && !e.target.closest('#timerCircle')) {
-    confirmSessionName();
+    hideSessionNamePopup();
   }
 });
+
+function renderPomoNoteTagDropdown(tags) {
+  var existing = document.getElementById('pomoNoteTagDropdown');
+  if (existing) existing.remove();
+  
+  var header = document.querySelector('.pomo-note-header');
+  if (!header) return null;
+  header.style.position = 'relative';
+  
+  var html = '<div id="pomoNoteTagDropdown" style="position:absolute; top:calc(100% + 4px); left:0; background:white; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:101; padding:4px; max-height:220px; overflow-y:auto; width:160px;">';
+  html += '<div class="goal-tag" style="padding:8px; cursor:pointer; font-size:12px; border-bottom:1px solid #f1f5f9;" onclick="window.selectPomoNoteTag(null, \'None\')">None</div>';
+  tags.forEach(function(t) {
+    html += '<div class="goal-tag" style="padding:8px; cursor:pointer; font-size:12px; color:' + t.color + '; display:flex; align-items:center; gap:6px;" onclick="window.selectPomoNoteTag(\'' + t.id + '\', \'' + t.name.replace(/'/g, "\\'") + '\')"><span style="width:8px;height:8px;border-radius:50%;background:' + t.color + ';display:inline-block;"></span>' + t.name + '</div>';
+  });
+  if (tags.length > 0) {
+    html += '<div style="border-top:1px solid #f1f5f9;margin:2px 0;"></div>';
+  }
+  html += '<div class="goal-tag" style="padding:8px; cursor:pointer; font-size:12px; color:#3b82f6; display:flex; align-items:center; gap:4px;" onclick="window.showPomoNoteTagForm()"><span style="font-size:14px;font-weight:bold;">+</span> Add New Tag</div>';
+  html += '</div>';
+  
+  var div = document.createElement('div');
+  div.innerHTML = html;
+  var dropdown = div.firstChild;
+  header.appendChild(dropdown);
+  
+  setTimeout(function() {
+    document.addEventListener('click', function autoClose(e) {
+      if (!dropdown.contains(e.target)) {
+        dropdown.remove();
+        document.removeEventListener('click', autoClose);
+      }
+    });
+  }, 0);
+  
+  return dropdown;
+}
+
+window.openPomoNoteTagDropdown = function() {
+  window.db.getTags().then(function(tags) {
+    if (!tags) tags = [];
+    renderPomoNoteTagDropdown(tags);
+  });
+};
+
+window.showPomoNoteTagForm = function() {
+  var existing = document.getElementById('pomoNoteTagDropdown');
+  if (existing) existing.remove();
+  
+  var header = document.querySelector('.pomo-note-header');
+  if (!header) return;
+  header.style.position = 'relative';
+  
+  var html = '<div id="pomoNoteTagDropdown" style="position:absolute; top:calc(100% + 4px); left:0; background:white; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:101; padding:12px; width:200px;">';
+  html += '<div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:8px;">New Tag</div>';
+  html += '<input id="pomoNewTagName" type="text" placeholder="Tag name..." style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;margin-bottom:8px;box-sizing:border-box;">';
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+  html += '<label style="font-size:11px;color:#64748b;">Color:</label>';
+  html += '<input id="pomoNewTagColor" type="color" value="#3b82f6" style="width:32px;height:28px;padding:0;border:1px solid #e2e8f0;border-radius:4px;cursor:pointer;">';
+  html += '</div>';
+  html += '<div style="display:flex;gap:6px;justify-content:flex-end;">';
+  html += '<button onclick="window.openPomoNoteTagDropdown()" style="padding:5px 10px;font-size:11px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#64748b;">Cancel</button>';
+  html += '<button onclick="window.savePomoNoteTag()" style="padding:5px 10px;font-size:11px;border:none;border-radius:6px;background:#3b82f6;cursor:pointer;color:white;">Save</button>';
+  html += '</div>';
+  html += '</div>';
+  
+  var div = document.createElement('div');
+  div.innerHTML = html;
+  var form = div.firstChild;
+  header.appendChild(form);
+  
+  setTimeout(function() {
+    document.getElementById('pomoNewTagName')?.focus();
+    document.addEventListener('click', function autoClose(e) {
+      if (!form.contains(e.target)) {
+        form.remove();
+        document.removeEventListener('click', autoClose);
+      }
+    });
+  }, 0);
+};
+
+window.savePomoNoteTag = async function() {
+  var nameInput = document.getElementById('pomoNewTagName');
+  var colorInput = document.getElementById('pomoNewTagColor');
+  if (!nameInput || !colorInput) return;
+  
+  var name = nameInput.value.trim();
+  if (!name) { nameInput.focus(); return; }
+  
+  var tag = {
+    id: 'tag_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
+    name: name,
+    color: colorInput.value
+  };
+  
+  var result = await window.db.saveTag(tag);
+  if (result) {
+    window.openPomoNoteTagDropdown();
+  }
+};
+
+window.selectPomoNoteTag = function(id, name) {
+  var btnText = document.getElementById('pomoTagBtnText');
+  if (btnText) btnText.textContent = id ? name : 'Add Tag';
+  if (activeSession) {
+    activeSession.tagId = id;
+  }
+  if (_rightPanelSession) {
+    _rightPanelSession.tagId = id;
+    if (_rightPanelSession !== activeSession) {
+      window.db.updateSession(_rightPanelSession.id, { taskName: _rightPanelSession.taskName || '', tagId: id, note: _rightPanelSession.note || '', goalId: _rightPanelSession.goalId || null });
+    }
+  }
+  var dropdown = document.getElementById('pomoNoteTagDropdown');
+  if (dropdown) dropdown.remove();
+};
+
+window.saveRightPanelNote = function() {
+  saveRightPanelSession();
+  var btn = document.querySelector('.pomo-note-actions button:last-child');
+  if (btn) {
+    btn.textContent = '✓ Saved';
+    btn.style.background = '#10b981';
+    setTimeout(function() {
+      btn.textContent = 'Save';
+      btn.style.background = '#3b82f6';
+    }, 1500);
+  }
+};
+
+window.cancelRightPanelNote = function() {
+  var noteArea = document.getElementById('pomoNoteArea');
+  if (noteArea) noteArea.value = _rightPanelOriginalNote || '';
+  if (_rightPanelSession) _rightPanelSession.note = _rightPanelOriginalNote || '';
+};
+
+window.deleteRightPanelNote = function() {
+  var noteArea = document.getElementById('pomoNoteArea');
+  if (noteArea) noteArea.value = '';
+  if (_rightPanelSession) {
+    _rightPanelSession.note = '';
+    if (activeSession && _rightPanelSession.id === activeSession.id) {
+      activeSession.note = '';
+    } else {
+      window.db.updateSession(_rightPanelSession.id, {
+        taskName: _rightPanelSession.taskName || '',
+        tagId: _rightPanelSession.tagId || null,
+        note: '',
+        goalId: _rightPanelSession.goalId || null
+      });
+    }
+  }
+  renderSessionSideBox();
+};
 
 window.updateTaskPopupCache = async function() {
   var val = await window.db.getSetting('taskPopup');
@@ -1073,37 +1314,47 @@ window.updateTaskPopupCache = async function() {
 };
 
 // --- Pomo Sidebar Resizer ---
-setTimeout(function() {
-  var pomoResizer = document.getElementById('pomoResizer');
-  var pomoSideBox = document.getElementById('pomoSideBox');
-  var isResizingPomo = false;
+var pomoResizer = document.getElementById('pomoResizer');
+var pomoSideBox = document.getElementById('pomoSideBox');
+var isResizingPomo = false;
+var _rafId = null;
 
-  if (pomoResizer && pomoSideBox) {
-    pomoResizer.addEventListener('mousedown', function(e) {
-      isResizingPomo = true;
-      document.body.style.cursor = 'col-resize';
-    });
+if (pomoResizer && pomoSideBox) {
+  pomoResizer.addEventListener('mousedown', function(e) {
+    isResizingPomo = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
 
-    document.addEventListener('mousemove', function(e) {
-      if (!isResizingPomo) return;
-      var newWidth = e.clientX - 72; // Account for the 72px left margin
+  document.addEventListener('mousemove', function(e) {
+    if (!isResizingPomo) return;
+    if (_rafId) cancelAnimationFrame(_rafId);
+    _rafId = requestAnimationFrame(function() {
+      var rect = pomoSideBox.getBoundingClientRect();
+      var newWidth = e.clientX - rect.left;
       if (newWidth < 250) newWidth = 250;
       if (newWidth > 800) newWidth = 800;
       pomoSideBox.style.width = newWidth + 'px';
-    });
-
-    document.addEventListener('mouseup', function(e) {
-      if (isResizingPomo) {
-        isResizingPomo = false;
-        document.body.style.cursor = '';
-        var finalWidth = parseInt(pomoSideBox.style.width, 10);
-        if (finalWidth) {
-          window.db.setSetting('pomoSideBoxWidth', finalWidth);
-        }
+      var mainArea = document.getElementById('mainArea');
+      if (mainArea && !pomoSideBox.classList.contains('collapsed')) {
+        mainArea.style.paddingLeft = newWidth + 'px';
       }
     });
-  }
-}, 500);
+  });
+
+  document.addEventListener('mouseup', function(e) {
+    if (isResizingPomo) {
+      isResizingPomo = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      if (_rafId) cancelAnimationFrame(_rafId);
+      var finalWidth = parseInt(pomoSideBox.style.width, 10);
+      if (finalWidth) {
+        window.db.setSetting('pomoSideBoxWidth', finalWidth);
+      }
+    }
+  });
+}
 
 (async function() {
   if (window._dbInitPromise) await window._dbInitPromise;
@@ -1111,6 +1362,15 @@ setTimeout(function() {
   if (savedWidth) {
     var pomoSideBox = document.getElementById('pomoSideBox');
     if (pomoSideBox) pomoSideBox.style.width = savedWidth + 'px';
+    var mainArea = document.getElementById('mainArea');
+    if (mainArea && !pomoSideBox.classList.contains('collapsed') && !pomoSideBox.classList.contains('hidden-fade')) {
+      mainArea.style.paddingLeft = savedWidth + 'px';
+    }
+  }
+  var mainArea = document.getElementById('mainArea');
+  var sb = document.getElementById('pomoSideBox');
+  if (mainArea && sb && !mainArea.style.paddingLeft && !sb.classList.contains('collapsed') && !sb.classList.contains('hidden-fade')) {
+    mainArea.style.paddingLeft = sb.offsetWidth + 'px';
   }
   await window.updateTaskPopupCache();
   await renderTimeline();
@@ -1118,18 +1378,128 @@ setTimeout(function() {
   await renderSessionSideBox();
 })();
 
+// Auto-save note textarea
+var _pomoNoteArea = document.getElementById('pomoNoteArea');
+if (_pomoNoteArea) {
+  _pomoNoteArea.addEventListener('input', function() {
+    if (_noteSaveTimer) clearTimeout(_noteSaveTimer);
+    _noteSaveTimer = setTimeout(saveRightPanelSession, 500);
+  });
+  _pomoNoteArea.addEventListener('blur', saveRightPanelSession);
+}
+
+window.cancelPomoNoteEdit = function() {
+  var p = document.getElementById('pomoNotePanel');
+  if (p) {
+    p.classList.add('hidden');
+    window.pomoNoteEditingId = null;
+    document.getElementById('pomoNoteArea').value = '';
+    document.getElementById('pomoTagBtnText').textContent = 'Add Tag';
+  }
+};
+
+/* ═══════════════════════════════════════
+   Session Note Modal Logic
+*/
+
+var _currentNoteSessionId = null;
+var _currentNoteSession = null;
+
+window.openPomoSideNoteModal = async function(sessionId) {
+  saveRightPanelSession();
+  
+  var session = null;
+  if (activeSession && activeSession.id === sessionId) {
+    session = activeSession;
+  } else {
+    session = await window.db.getSession(sessionId);
+  }
+  if (!session) return;
+  
+  _rightPanelSession = session;
+  
+  var taskInput = document.getElementById('pomoActiveTaskName');
+  if (taskInput) taskInput.value = session.taskName || '';
+  
+  var noteArea = document.getElementById('pomoNoteArea');
+  if (noteArea) noteArea.value = session.note || '';
+  _rightPanelOriginalNote = session.note || '';
+  
+  var tags = await getTags();
+  var tagBtnText = document.getElementById('pomoTagBtnText');
+  if (tagBtnText && session.tagId) {
+    var foundTag = tags.find(function(t) { return t.id === session.tagId; });
+    tagBtnText.textContent = foundTag ? foundTag.name : 'Add Tag';
+  } else if (tagBtnText) {
+    tagBtnText.textContent = 'Add Tag';
+  }
+  
+  var activeInfo = document.getElementById('pomoActiveSessionInfo');
+  if (activeInfo) activeInfo.classList.remove('hidden');
+  
+  togglePomoRightPanel(true);
+};
+
+window.closePomoSideNoteModal = function(e) {
+  if (e && e.target !== e.currentTarget) return;
+  var modal = document.getElementById('pomoSideNoteModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+  _currentNoteSessionId = null;
+  _currentNoteSession = null;
+};
+
+window.savePomoSideNote = async function() {
+  if (!_currentNoteSessionId) return;
+  var input = document.getElementById('pomoSideNoteInput');
+  var newNote = input.value.trim();
+  
+  if (_currentNoteSessionId === activeSession?.id) {
+    activeSession.note = newNote;
+  }
+  
+  if (_currentNoteSession) {
+    await window.db.updateSession(_currentNoteSessionId, { taskName: _currentNoteSession.taskName || '', tagId: _currentNoteSession.tagId || null, note: newNote, goalId: _currentNoteSession.goalId || null });
+  } else {
+    await window.db.updateSession(_currentNoteSessionId, { note: newNote });
+  }
+  window.closePomoSideNoteModal();
+  await renderSessionSideBox();
+};
+
+window.deletePomoSideNote = async function() {
+  if (!_currentNoteSessionId) return;
+  
+  if (_currentNoteSessionId === activeSession?.id) {
+    activeSession.note = '';
+  }
+  
+  if (_currentNoteSession) {
+    await window.db.updateSession(_currentNoteSessionId, { taskName: _currentNoteSession.taskName || '', tagId: _currentNoteSession.tagId || null, note: '', goalId: _currentNoteSession.goalId || null });
+  } else {
+    await window.db.updateSession(_currentNoteSessionId, { note: '' });
+  }
+  window.closePomoSideNoteModal();
+  await renderSessionSideBox();
+};
+
 window.togglePomoSideBox = function() {
   var box = document.getElementById('pomoSideBox');
   var resizer = document.getElementById('pomoResizer');
+  var mainArea = document.getElementById('mainArea');
   if (box.classList.contains('collapsed')) {
     box.classList.remove('collapsed');
     box.style.width = box.dataset.expandedWidth || '320px';
     if (resizer) resizer.style.display = '';
+    if (mainArea) mainArea.style.paddingLeft = (box.dataset.expandedWidth || '320px') + 'px';
   } else {
     box.dataset.expandedWidth = box.style.width || '320px';
     box.style.width = ''; 
     box.classList.add('collapsed');
     if (resizer) resizer.style.display = 'none';
+    if (mainArea) mainArea.style.paddingLeft = '36px';
   }
 };
 

@@ -79,6 +79,8 @@ public class AppDbContext : DbContext
             entity.Property(e => e.StartDate).HasColumnName("startDate");
             entity.Property(e => e.EndDate).HasColumnName("endDate");
             entity.Property(e => e.Duration).HasColumnName("duration");
+            entity.Property(e => e.DurationType).HasColumnName("durationType");
+            entity.Property(e => e.DurationValue).HasColumnName("durationValue");
             entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql("datetime('now')");
             entity.Property(e => e.ParentGoalId).HasColumnName("parentGoalId");
 
@@ -123,6 +125,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.GoalId).HasColumnName("goalId");
             entity.Property(e => e.Completed).HasColumnName("completed").HasDefaultValue(0);
             entity.Property(e => e.CreatedAt).HasColumnName("createdAt").HasDefaultValueSql("datetime('now')");
+            entity.Property(e => e.ScheduledTime).HasColumnName("scheduledTime");
             entity.Property(e => e.ParentTaskId).HasColumnName("parentTaskId");
             entity.Property(e => e.Priority).HasColumnName("priority").IsRequired().ValueGeneratedOnAdd().HasDefaultValue("none");
 

@@ -67,7 +67,10 @@ public class GoalsController : ControllerBase
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
                 Duration = dto.Duration,
-                ParentGoalId = dto.ParentGoalId
+                DurationType = dto.DurationType,
+                DurationValue = dto.DurationValue,
+                ParentGoalId = dto.ParentGoalId,
+                CreatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
             };
 
             _db.Goals.Add(goal);
@@ -98,6 +101,8 @@ public class GoalsController : ControllerBase
         goal.StartDate = dto.StartDate;
         goal.EndDate = dto.EndDate;
         goal.Duration = dto.Duration;
+        goal.DurationType = dto.DurationType;
+        goal.DurationValue = dto.DurationValue;
         goal.ParentGoalId = dto.ParentGoalId;
 
         await _db.SaveChangesAsync();

@@ -34,7 +34,8 @@
   user-select: none;
 }
 .timer-text {
-  font-family: 'Instrument Serif', serif;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
   font-size: 56px;
   letter-spacing: 0.04em;
   color: #0b1c30;
@@ -107,7 +108,7 @@
   height: 36px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(195,198,213,0.4);
+  border: none;
   color: #4b5563;
   display: flex;
   align-items: center;

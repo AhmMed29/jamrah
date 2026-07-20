@@ -26,6 +26,9 @@ public class CreateGoalDto
     [Range(1, 36500)]
     public int Duration { get; set; }
 
+    public string? DurationType { get; set; }
+    public int? DurationValue { get; set; }
+
     public string? ParentGoalId { get; set; }
 }
 
@@ -51,6 +54,9 @@ public class UpdateGoalDto
     [Required]
     [Range(1, 36500)]
     public int Duration { get; set; }
+
+    public string? DurationType { get; set; }
+    public int? DurationValue { get; set; }
 
     public string? ParentGoalId { get; set; }
 }

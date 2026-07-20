@@ -54,6 +54,14 @@ public class SessionsController : ControllerBase
         return Ok(true);
     }
 
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(string id)
+    {
+        var session = await _db.Sessions.FindAsync(id);
+        if (session == null) return NotFound();
+        return Ok(session);
+    }
+
     [HttpGet("grouped")]
     public async Task<IActionResult> GetGrouped()
     {

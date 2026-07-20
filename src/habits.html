@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html dir="rtl" lang="ar">
+<html dir="ltr" lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
@@ -158,20 +158,20 @@
 
   <!-- Sidebar -->
   <div class="fixed left-0 top-0 h-full w-16 bg-white border-r border-gray-100 shadow-sm z-50 flex flex-col items-center pt-12 gap-6">
-    <button id="pomodoro-btn" class="w-10 h-10 rounded-xl flex items-center justify-center text-red-500 hover:bg-red-50 transition-all duration-300" title="بومودورو">
+    <button id="pomodoro-btn" class="w-10 h-10 rounded-xl flex items-center justify-center text-red-500 hover:bg-red-50 transition-all duration-300" title="Pomodoro">
       <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <ellipse id="pomo-body" cx="12" cy="13" rx="7" ry="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
         <path d="M12 7c0-2 1.5-3 3-3.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
         <path d="M14.5 4.5c1 .5 1.5 1.5 1.5 2.5" stroke="currentColor" stroke-width="1" fill="none"/>
       </svg>
     </button>
-    <button id="habits-btn" class="w-10 h-10 rounded-xl flex items-center justify-center bg-purple-600 text-white shadow-md shadow-purple-600/30 transition-all" title="العادات">
+    <button id="habits-btn" class="w-10 h-10 rounded-xl flex items-center justify-center bg-purple-600 text-white shadow-md shadow-purple-600/30 transition-all" title="Habits">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
       </svg>
     </button>
     <!-- Second habits button (sidebar bottom) -->
-    <button id="habits-btn-2" class="w-10 h-10 rounded-xl flex items-center justify-center bg-purple-600 text-white shadow-md shadow-purple-600/30 transition-all" title="العادات">
+    <button id="habits-btn-2" class="w-10 h-10 rounded-xl flex items-center justify-center bg-purple-600 text-white shadow-md shadow-purple-600/30 transition-all" title="Habits">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
       </svg>
@@ -181,7 +181,7 @@
   <div style="margin-left: 64px;" class="flex flex-col h-full" id="main-app">
     <header class="flex-none px-6 py-4 flex justify-between items-center border-b border-gray-100 bg-white shadow-sm">
       <div class="flex items-center gap-3">
-        <h1 class="text-xl font-bold text-gray-800">جدول العادات</h1>
+        <h1 class="text-xl font-bold text-gray-800">Habit Tracker</h1>
         <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
         </svg>
@@ -201,13 +201,13 @@
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
       </svg>
-      <span class="text-base">إضافة عادة</span>
+      <span class="text-base">Add Habit</span>
     </button>
   </div>
 
   <!-- Habit detail modal -->
   <div id="habit-modal">
-    <div class="modal-card" dir="rtl">
+      <div class="modal-card" dir="ltr">
       <button class="close-btn" id="modal-close">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -219,7 +219,7 @@
 
   <!-- Add habit modal -->
   <div id="add-modal">
-    <div class="modal-card" dir="rtl" style="width:480px">
+    <div class="modal-card" dir="ltr" style="width:480px">
       <button class="close-btn" id="add-modal-close">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -231,7 +231,7 @@
 
   <script>
     const today = new Date();
-    const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     function formatDate(d) {
       return String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
@@ -342,8 +342,8 @@
         // Habit name
         const isEng = habit.name.includes('Dot Net');
         const spanSty = `color:${habit.textColor};font-weight:${habit.bold?'700':'500'}`;
-        b += `<th class="sticky-col py-4 px-6 text-right font-normal text-[15px] border-l ${habit.border}" data-habit-index="${idx}" style="cursor:pointer;background-color:${habit.bg};color:#333">`;
-        b += '<div class="flex items-center justify-end gap-3">';
+        b += `<th class="sticky-col py-4 px-6 text-left font-normal text-[15px] border-r ${habit.border}" data-habit-index="${idx}" style="cursor:pointer;background-color:${habit.bg};color:#333">`;
+        b += '<div class="flex items-center gap-3">';
         b += `<span style="${spanSty}"${isEng?' dir="ltr"':''}>${habit.name}</span>`;
         
         // Ring
@@ -380,7 +380,7 @@
     const sc = document.getElementById('main-scroll');
     sc.addEventListener('wheel', function(e) {
       if (e.target.closest('thead')) {
-        this.scrollBy({ left: -e.deltaY });
+        this.scrollBy({ left: e.deltaY });
         e.preventDefault();
       }
     }, { passive: false });
@@ -431,20 +431,20 @@
         <div class="grid grid-cols-3 gap-3 text-center mb-6">
           <div class="bg-gray-50 rounded-xl py-3 px-2">
             <div class="text-2xl font-bold text-gray-800">${DAY_COUNT}</div>
-            <div class="text-xs text-gray-500 mt-1">إجمالي الأيام</div>
+            <div class="text-xs text-gray-500 mt-1">Total Days</div>
           </div>
           <div class="bg-gray-50 rounded-xl py-3 px-2">
             <div class="text-2xl font-bold" style="color:${habit.color}">${checked}</div>
-            <div class="text-xs text-gray-500 mt-1">تم الإنجاز</div>
+            <div class="text-xs text-gray-500 mt-1">Done</div>
           </div>
           <div class="bg-gray-50 rounded-xl py-3 px-2">
             <div class="text-2xl font-bold text-gray-800">${streak}</div>
-            <div class="text-xs text-gray-500 mt-1">أطول سلسلة</div>
+            <div class="text-xs text-gray-500 mt-1">Best Streak</div>
           </div>
         </div>
         <div class="flex gap-3">
-          <button class="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-all hover:opacity-90" style="background:${habit.color}">تعديل العادة</button>
-          <button class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:#fff">حذف</button>
+          <button class="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-all hover:opacity-90" style="background:${habit.color}">Edit Habit</button>
+          <button class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:#fff">Delete</button>
         </div>
       `;
       modal.classList.add('open');
@@ -476,31 +476,31 @@
       ).join('');
 
       addContent.innerHTML = `
-        <h2 class="text-lg font-bold text-gray-800 mb-5">إضافة عادة جديدة</h2>
+        <h2 class="text-lg font-bold text-gray-800 mb-5">Add New Habit</h2>
 
-        <label class="block text-sm font-medium text-gray-600 mb-1.5">اسم العادة</label>
-        <input id="habit-name-input" type="text" dir="rtl" placeholder="مثال: أذكار الصباح" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none mb-4" style="font-family:'Tajawal',sans-serif">
+        <label class="block text-sm font-medium text-gray-600 mb-1.5">Habit Name</label>
+        <input id="habit-name-input" type="text" placeholder="e.g. Morning exercise" class="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:border-blue-400 focus:ring-0 transition-all outline-none mb-4">
 
-        <label class="block text-sm font-medium text-gray-600 mb-2.5">اللون</label>
+        <label class="block text-sm font-medium text-gray-600 mb-2.5">Color</label>
         <div class="flex gap-2.5 flex-wrap mb-5" id="color-picker">
           ${colorSwatches}
         </div>
 
-        <label class="block text-sm font-medium text-gray-600 mb-1.5">نوع المتابعة</label>
+        <label class="block text-sm font-medium text-gray-600 mb-1.5">Track Type</label>
         <div class="grid grid-cols-2 gap-3 mb-5" id="track-type-group">
           <label class="track-type-label flex items-center gap-3 border-2 rounded-xl px-4 py-3 cursor-pointer transition-all hover:border-blue-300" data-value="check" style="border-color:#3b82f6;background:#eff6ff">
             <input type="radio" name="track-type" value="check" checked class="text-blue-600 focus:ring-blue-400">
-            <span class="text-sm text-gray-700 font-medium">متابعة بنعم/لا</span>
+            <span class="text-sm text-gray-700 font-medium">Yes/No</span>
           </label>
           <label class="track-type-label flex items-center gap-3 border-2 border-gray-200 rounded-xl px-4 py-3 cursor-pointer transition-all hover:border-blue-300" data-value="count">
             <input type="radio" name="track-type" value="count" class="text-blue-600 focus:ring-blue-400">
-            <span class="text-sm text-gray-700 font-medium">عدد (عدّاد)</span>
+            <span class="text-sm text-gray-700 font-medium">Count</span>
           </label>
         </div>
 
         <div class="flex gap-3 mt-6">
-          <button id="save-habit-btn" class="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-all hover:opacity-90" style="background:#3b82f6">حفظ العادة</button>
-          <button id="cancel-add-btn" class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:#fff">إلغاء</button>
+          <button id="save-habit-btn" class="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-all hover:opacity-90" style="background:#3b82f6">Save Habit</button>
+          <button id="cancel-add-btn" class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:#fff">Cancel</button>
         </div>
       `;
 

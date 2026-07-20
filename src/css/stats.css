@@ -127,3 +127,66 @@
     flex-direction: column;
   }
 }
+
+/* Goals Table */
+.stats-goals-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.stats-goals-table th {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(195, 198, 213, 0.4);
+}
+
+.stats-goals-table td {
+  padding: 12px;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(195, 198, 213, 0.2);
+  vertical-align: middle;
+}
+
+.stats-goals-table tr:last-child td {
+  border-bottom: none;
+}
+
+.stats-goal-badge {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  display: inline-block;
+}
+.stats-badge-active { background: #eff6ff; color: #3b82f6; }
+.stats-badge-done { background: #ecfdf5; color: #10b981; }
+.stats-badge-cancelled { background: #fef2f2; color: #ef4444; }
+
+/* Range Controls */
+.stats-range-controls {
+  display: flex;
+  gap: 8px;
+}
+.stats-range-btn {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.stats-range-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}

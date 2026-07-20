@@ -163,24 +163,45 @@ async function completeTimer() {
 function updateUI() {
   var text = document.getElementById('timerText');
   var label = document.getElementById('phaseLabel');
-  var playBtn = document.getElementById('playBtn');
-
   if (text) text.textContent = formatTime(remainingSeconds);
   if (label) label.textContent = PHASE_LABELS[phase] || 'Focus';
 
-  if (playBtn) {
-    playBtn.innerHTML = isRunning
-      ? '<svg width="14" height="16" viewBox="0 0 14 16" fill="currentColor"><rect x="0" y="0" width="4" height="16" rx="1"/><rect x="10" y="0" width="4" height="16" rx="1"/></svg>'
-      : '<svg width="14" height="16" viewBox="0 0 12 16" fill="currentColor" style="margin-left:2px"><polygon points="0,0 12,8 0,16"/></svg>';
-  }
-
-  // Toggle side box visibility
+  // Toggle side box visibility & main padding
   var sideBox = document.getElementById('pomoSideBox');
+  var mainArea = document.getElementById('mainArea');
   if (sideBox) {
     if (isRunning) {
       sideBox.classList.add('hidden-fade');
+      if (mainArea) mainArea.style.paddingLeft = '0px';
     } else {
       sideBox.classList.remove('hidden-fade');
+      if (mainArea) mainArea.style.paddingLeft = sideBox.offsetWidth + 'px';
+    }
+  }
+
+  // Toggle active session info visibility
+  var activeInfo = document.getElementById('pomoActiveSessionInfo');
+  if (activeInfo) {
+    activeInfo.classList.remove('hidden');
+    var activeName = document.getElementById('pomoActiveTaskName');
+    if (activeName && document.activeElement !== activeName) {
+      if (typeof _rightPanelSession !== 'undefined' && _rightPanelSession && _rightPanelSession !== activeSession) {
+        // Keep the past session name, don't override
+      } else {
+        activeName.value = window.pomoSessionName || '';
+      }
+    }
+  }
+
+  // Toggle note panel visibility
+  var notePanel = document.getElementById('pomoNotePanel');
+  if (notePanel) {
+    if (phase !== 'idle') {
+      notePanel.classList.remove('hidden');
+    } else if (typeof _pomoRightPanelOpen !== 'undefined' && _pomoRightPanelOpen) {
+      notePanel.classList.remove('hidden');
+    } else {
+      notePanel.classList.add('hidden');
     }
   }
 
@@ -328,11 +349,3 @@ window.pomoSessionName = localStorage.getItem('pomoSessionName') || '';
   }
 })();
 
-var timerCircle = document.getElementById('timerCircle');
-if (timerCircle) {
-  timerCircle.addEventListener('click', function(e) {
-    if (e.target.closest('.pomo-play-btn') || e.target.closest('.pomo-hover-btn')) return;
-    window.toggleTimer();
-    updateUI();
-  });
-}

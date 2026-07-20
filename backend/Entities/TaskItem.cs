@@ -9,6 +9,8 @@ public class TaskItem
     public string CreatedAt { get; set; } = string.Empty;
     public string? ParentTaskId { get; set; }
     public string Priority { get; set; } = "none";
+    public string? CompletedAt { get; set; }
+    public string? ScheduledTime { get; set; }
 
     public Goal? Goal { get; set; }
     public TaskItem? ParentTask { get; set; }

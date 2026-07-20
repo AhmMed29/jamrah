@@ -1,6 +1,7 @@
 /* ── Stats Dashboard with Chart.js ── */
 
 var currentTimeRange = 'week'; // week, month, year, all
+var currentRangeOffset = 0; // offset in units of currentTimeRange
 var rawData = {
   sessions: [],
   goals: [],
@@ -28,8 +29,24 @@ document.addEventListener('DOMContentLoaded', function() {
         btns.forEach(b => b.classList.remove('active'));
         e.target.classList.add('active');
         currentTimeRange = e.target.getAttribute('data-range');
+        currentRangeOffset = 0; // Reset offset on range change
         drawStats();
       }
+    });
+  }
+  
+  var prevBtn = document.getElementById('statsRangePrev');
+  if (prevBtn) {
+    prevBtn.addEventListener('click', function() {
+      currentRangeOffset--;
+      drawStats();
+    });
+  }
+  var nextBtn = document.getElementById('statsRangeNext');
+  if (nextBtn) {
+    nextBtn.addEventListener('click', function() {
+      currentRangeOffset++;
+      drawStats();
     });
   }
 });
@@ -129,12 +146,19 @@ function drawStats() {
   var numLabels = 0;
   var isMonths = false;
 
+  var offsetNow = new Date(now);
   if (currentTimeRange === 'week') {
-    startDate.setDate(now.getDate() - 6);
+    offsetNow.setDate(now.getDate() + (currentRangeOffset * 7));
+    startDate = new Date(offsetNow);
+    startDate.setDate(offsetNow.getDate() - 6);
   } else if (currentTimeRange === 'month') {
-    startDate.setDate(now.getDate() - 27); // 4 weeks
+    offsetNow.setDate(now.getDate() + (currentRangeOffset * 28));
+    startDate = new Date(offsetNow);
+    startDate.setDate(offsetNow.getDate() - 27); // 4 weeks
   } else if (currentTimeRange === 'year') {
-    startDate.setMonth(now.getMonth() - 11);
+    offsetNow.setFullYear(now.getFullYear() + currentRangeOffset);
+    startDate = new Date(offsetNow);
+    startDate.setMonth(offsetNow.getMonth() - 11);
     startDate.setDate(1);
     isMonths = true;
   } else if (currentTimeRange === 'all') {
@@ -146,7 +170,7 @@ function drawStats() {
   }
   startDate.setHours(0,0,0,0);
   
-  var timePoints = isMonths ? getMonthsArray(startDate, now) : getDaysArray(startDate, now);
+  var timePoints = isMonths ? getMonthsArray(startDate, offsetNow) : getDaysArray(startDate, offsetNow);
   
   var labels = timePoints.map(d => {
     if (isMonths) {
@@ -195,11 +219,12 @@ function drawStats() {
 
   // Aggregate Habits
   var habitsData = new Array(timePoints.length).fill(0);
+  var habitsTotalCount = rawData.habits.length;
   rawData.habits.forEach(h => {
     if (h.logs) {
       h.logs.forEach(l => {
         if (l.value > 0) {
-          var ld = new Date(l.date);
+          var ld = new Date(l.date + 'T00:00:00');
           if (ld >= startDate) {
             rangeHabits++;
             var idx = timePoints.findIndex((tp, i) => {
@@ -213,29 +238,40 @@ function drawStats() {
     }
   });
 
+  // Convert habitsData to percentages for display if needed, but keeping absolute count for tooltip
+  var habitsPctData = habitsData.map(val => habitsTotalCount > 0 ? Math.round((val / habitsTotalCount) * 100) : 0);
+
   // Update Overview Cards
   var ovContainer = document.getElementById('statsOverviewCards');
   if (ovContainer) {
-    var hours = Math.floor(rangeFocus / 60);
-    var mins = Math.round(rangeFocus % 60);
-    var focusStr = hours > 0 ? hours + 'h ' + mins + 'm' : mins + 'm';
-    
     var tHours = Math.floor(totalFocus / 60);
     var tMins = Math.round(totalFocus % 60);
     var tFocusStr = tHours > 0 ? tHours + 'h ' + tMins + 'm' : tMins + 'm';
 
+    // Today's focus
+    var todayStr = todayISO();
+    var todayFocusMins = 0;
+    rawData.sessions.forEach(function(s) {
+      var st = new Date(s.startTime);
+      var stStr = st.getFullYear() + '-' + String(st.getMonth()+1).padStart(2,'0') + '-' + String(st.getDate()).padStart(2,'0');
+      if (stStr === todayStr) todayFocusMins += (s.focusMinutes || 0);
+    });
+    var tdH = Math.floor(todayFocusMins / 60);
+    var tdM = Math.round(todayFocusMins % 60);
+    var todayFocusStr = tdH > 0 ? tdH + 'h ' + tdM + 'm' : tdM + 'm';
+
+    // All-time tasks completed
+    var totalTasksDone = 0;
+    rawData.tasks.forEach(function(t) { if (t.completed) totalTasksDone++; });
+
     ovContainer.innerHTML = `
       <div class="stats-ov-card">
-        <div class="stats-ov-title">Focus Time (Period)</div>
-        <div class="stats-ov-value">${focusStr}</div>
+        <div class="stats-ov-title">Today's Focus</div>
+        <div class="stats-ov-value">${todayFocusStr}</div>
       </div>
       <div class="stats-ov-card">
         <div class="stats-ov-title">Tasks Completed</div>
-        <div class="stats-ov-value">${rangeTasks}</div>
-      </div>
-      <div class="stats-ov-card">
-        <div class="stats-ov-title">Habits Done</div>
-        <div class="stats-ov-value">${rangeHabits}</div>
+        <div class="stats-ov-value">${totalTasksDone}</div>
       </div>
       <div class="stats-ov-card">
         <div class="stats-ov-title">All-Time Focus</div>
@@ -268,7 +304,20 @@ function drawStats() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: { 
+        legend: { display: false },
+        tooltip: {
+          mode: 'index',
+          callbacks: {
+            label: function(context) {
+              var mins = context.raw;
+              var h = Math.floor(mins / 60);
+              var m = Math.round(mins % 60);
+              return (h > 0 ? h + 'h ' : '') + m + 'm focused';
+            }
+          }
+        }
+      },
       scales: {
         y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false } },
         x: { grid: { display: false }, border: { display: false } }
@@ -293,7 +342,17 @@ function drawStats() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: { 
+        legend: { display: false },
+        tooltip: {
+          mode: 'index',
+          callbacks: {
+            label: function(context) {
+              return context.raw + ' tasks completed';
+            }
+          }
+        }
+      },
       scales: {
         y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false } },
         x: { grid: { display: false }, border: { display: false } }
@@ -309,8 +368,8 @@ function drawStats() {
     data: {
       labels: labels,
       datasets: [{
-        label: 'Habits',
-        data: habitsData,
+        label: 'Habits (%)',
+        data: habitsPctData,
         borderColor: '#f59e0b',
         backgroundColor: 'rgba(245, 158, 11, 0.1)',
         borderWidth: 3,
@@ -325,39 +384,58 @@ function drawStats() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: { 
+        legend: { display: false },
+        tooltip: {
+          mode: 'index',
+          callbacks: {
+            label: function(context) {
+              var count = habitsData[context.dataIndex];
+              return count + '/' + habitsTotalCount + ' habits done';
+            }
+          }
+        }
+      },
       scales: {
-        y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false } },
+        y: { beginAtZero: true, max: 100, ticks: { stepSize: 20, callback: function(value) { return value + '%'; } }, grid: { color: 'rgba(0,0,0,0.04)' }, border: { display: false } },
         x: { grid: { display: false }, border: { display: false } }
       }
     }
   });
 
-  // Draw Goals Progress
+  // Draw Goals Progress (Redesigned Table)
   var goalsBody = document.getElementById('goalsProgressBody');
   if (goalsBody) {
     if (rawData.goals.length === 0) {
       goalsBody.innerHTML = '<div style="color:#9ca3af; font-size:13px; text-align:center; padding:20px;">No goals yet</div>';
     } else {
-      var html = '<div style="display:flex; flex-direction:column; gap:12px;">';
+      var html = '<table class="stats-goals-table">';
+      html += '<thead><tr><th>Goal Name</th><th>Duration</th><th>Progress</th><th>Status</th></tr></thead><tbody>';
       rawData.goals.forEach(g => {
         var goalTasks = rawData.tasks.filter(t => t.goalId === g.id);
         var done = goalTasks.filter(t => t.completed).length;
         var pct = goalTasks.length > 0 ? Math.round((done / goalTasks.length) * 100) : 0;
         
+        var statusBadgeClass = g.status === 'done' ? 'stats-badge-done' : (g.status === 'cancelled' ? 'stats-badge-cancelled' : 'stats-badge-active');
+        var statusText = g.status === 'done' ? 'Done' : (g.status === 'cancelled' ? 'Cancelled' : 'Active');
+
         html += `
-          <div style="display:flex; flex-direction:column; gap:4px;">
-            <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:600; color:#374151;">
-              <span>${g.name || 'Goal'}</span>
-              <span>${pct}%</span>
-            </div>
-            <div style="width:100%; height:6px; background:#f3f4f6; border-radius:3px; overflow:hidden;">
-              <div style="height:100%; width:${pct}%; background:${g.color || '#3b82f6'};"></div>
-            </div>
-          </div>
+          <tr>
+            <td style="font-weight:600; color:#374151;">${escapeHtml(g.name || 'Goal')}</td>
+            <td style="color:#6b7280; font-size:12px;">${g.startDate ? g.startDate : '-'} &rarr; ${g.endDate ? g.endDate : '-'}</td>
+            <td>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="flex:1; height:6px; background:#f3f4f6; border-radius:3px; overflow:hidden;">
+                  <div style="height:100%; width:${pct}%; background:${g.color || '#3b82f6'};"></div>
+                </div>
+                <span style="font-size:12px; font-weight:600; color:#374151; min-width:32px;">${pct}%</span>
+              </div>
+            </td>
+            <td><span class="stats-goal-badge ${statusBadgeClass}">${statusText}</span></td>
+          </tr>
         `;
       });
-      html += '</div>';
+      html += '</tbody></table>';
       goalsBody.innerHTML = html;
     }
   }

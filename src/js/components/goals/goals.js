@@ -12,17 +12,7 @@ function checkRtl(str) {
   return rtlRegex.test(str || '');
 }
 
-/* ── LocalStorage helpers for goal tasks (backend ignores tasks field) ── */
-function getGoalTasksKey(goalId) { return 'goalTasks_' + goalId; }
-
-function loadGoalTasks(goalId) {
-  try { return JSON.parse(localStorage.getItem(getGoalTasksKey(goalId))) || []; }
-  catch(e) { return []; }
-}
-
-function saveGoalTasks(goalId, tasks) {
-  try { localStorage.setItem(getGoalTasksKey(goalId), JSON.stringify(tasks)); } catch(e) {}
-}
+/* ── DB helpers for goal tasks ── */
 
 function formatGoalDate(dateStr) {
   if (!dateStr) return '-';
@@ -37,19 +27,16 @@ function todayISO() {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
+var goalsProgressData = {};
+
 async function loadGoalsData() {
   var results = await Promise.all([window.db.getGoals(), window.db.getTasks()]);
   goalsData = results[0] || [];
   tasksData = results[1] || [];
-  for (var gi = 0; gi < goalsData.length; gi++) {
-    var g = goalsData[gi];
-    var stored = loadGoalTasks(g.id);
-    if (stored.length > 0) g.tasks = stored;
-    else if (!g.tasks) g.tasks = [];
-    var savedType = localStorage.getItem('goalDurationType_' + g.id);
-    var savedVal = localStorage.getItem('goalDurationValue_' + g.id);
-    if (savedType) g.durationType = savedType;
-    if (savedVal) g.durationValue = parseInt(savedVal) || 1;
+  goalsProgressData = {};
+  for (var i = 0; i < goalsData.length; i++) {
+    var p = await window.db.getGoalProgress(goalsData[i].id);
+    goalsProgressData[goalsData[i].id] = p || [];
   }
 }
 
@@ -93,6 +80,35 @@ function formatDuration(g) {
   if (type === 'months') return val + (val === 1 ? ' month' : ' months');
   if (type === 'custom') return val + (val === 1 ? ' day' : ' days');
   return '-';
+}
+
+function renderGoalHeatmap(g) {
+  // Generate last 28 days
+  var days = [];
+  var today = new Date();
+  today.setHours(0,0,0,0);
+  for (var i = 27; i >= 0; i--) {
+    var d = new Date(today);
+    d.setDate(d.getDate() - i);
+    days.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'));
+  }
+  
+  var progMap = {};
+  var records = goalsProgressData[g.id] || [];
+  records.forEach(function(r) {
+    if (r.date) progMap[r.date.split('T')[0]] = r.progressValue || r.focusMinutes; // simple presence
+  });
+  
+  var html = '<div class="goal-heatmap" style="display:grid; grid-template-rows:repeat(7, 1fr); grid-auto-flow:column; gap:2px; height:44px; margin-top:8px;">';
+  // To align days properly, GitHub heatmap starts on Sunday. For simplicity we just flow 4 columns of 7 days.
+  days.forEach(function(d) {
+    var hasProgress = progMap[d];
+    var bg = hasProgress ? (g.color || '#3b82f6') : '#ebedf0';
+    var op = hasProgress ? 'opacity: 1;' : 'opacity: 0.6;';
+    html += '<div title="' + d + '" style="width:6px; height:6px; border-radius:1px; background:' + bg + '; ' + op + '"></div>';
+  });
+  html += '</div>';
+  return html;
 }
 
 /* ── Render ── */
@@ -173,6 +189,7 @@ function createDisplayCard(g, progress) {
   html += '<span>' + progress + '%</span>';
   html += '</div>';
   html += '<div class="goal-card-progress-bar"><div class="goal-card-progress-fill" style="width:' + progress + '%; background:' + (g.color || '#3b82f6') + '"></div></div>';
+  html += renderGoalHeatmap(g);
   html += '</div>';
 
   html += '<div class="goal-card-meta">';
@@ -184,25 +201,27 @@ function createDisplayCard(g, progress) {
   html += '<div class="goal-card-tasks-header">Tasks <button class="goal-add-task-inline" onclick="addGoalTask(\'' + g.id + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Add</button></div>';
   html += '<div class="goal-task-list">';
   
-  var tasks = g.tasks || [];
+  var tasks = tasksData.filter(function(t) { return t.goalId === g.id && !t.parentTaskId; });
   if (tasks.length === 0) {
     html += '<div style="font-size:12px; color:#9ca3af; padding: 4px;">No tasks yet</div>';
   } else {
     for (var i = 0; i < tasks.length; i++) {
       var t = tasks[i];
       var name = t.name || '';
+      var isStarred = t.priority === 'high';
+      var isCompleted = t.completed === 1;
       var tDirAttr = checkRtl(name) ? ' dir="rtl" style="text-align:right;"' : ' dir="ltr" style="text-align:left;"';
       
       html += '<div class="goal-task-item" ' + tDirAttr + '>';
-      html += '<span class="goal-task-star' + (t.starred ? ' starred' : '') + '" onclick="toggleGoalTaskStar(\'' + g.id + '\',' + i + ')" title="Toggle star">';
-      html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="' + (t.starred ? '#f59e0b' : 'none') + '" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
+      html += '<input type="checkbox" ' + (isCompleted ? 'checked' : '') + ' onchange="toggleGoalTaskCompletion(\'' + t.id + '\')" title="Toggle completion" style="cursor:pointer; width:14px; height:14px;">';
+      html += '<span class="goal-task-star' + (isStarred ? ' starred' : '') + '" onclick="toggleGoalTaskStar(\'' + t.id + '\', \'' + t.priority + '\')" title="Toggle star">';
+      html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="' + (isStarred ? '#f59e0b' : 'none') + '" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
       html += '</span>';
-      if (!name) {
-        html += '<input class="goal-task-name-input" placeholder="Task name..." onblur="saveGoalTaskName(\'' + g.id + '\',' + i + ',this.value)" autofocus>';
-      } else {
-        html += '<span class="goal-task-name-input' + (t.completed ? ' done' : '') + '">' + escapeHtml(name) + '</span>';
-      }
-      html += '<span class="goal-task-del" onclick="deleteGoalTask(\'' + g.id + '\',' + i + ')" title="Delete"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></span>';
+      
+      // The task name input should directly update the task.
+      html += '<input class="goal-task-name-input' + (isCompleted ? ' done' : '') + '" value="' + escapeHtml(name) + '" placeholder="Task name..." onblur="saveGoalTaskName(\'' + t.id + '\',this.value)">';
+      
+      html += '<span class="goal-task-del" onclick="deleteGoalTask(\'' + t.id + '\')" title="Delete"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></span>';
       html += '</div>';
     }
   }
@@ -397,6 +416,8 @@ window.saveEditGoal = async function(id) {
     startDate: startDate,
     endDate: endDate,
     duration: computeDurationDays(durationType, durationVal),
+    durationType: durationType,
+    durationValue: durationType === 'custom' ? durationVal : null,
     parentGoalId: (curGoal && curGoal.parentGoalId) || null
   };
 
@@ -431,53 +452,49 @@ function escapeHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-window.addGoalTask = function(goalId) {
-  for (var i = 0; i < goalsData.length; i++) {
-    if (goalsData[i].id === goalId) {
-      if (!goalsData[i].tasks) goalsData[i].tasks = [];
-      goalsData[i].tasks.push({ name: '', starred: false });
-      saveGoalTasks(goalId, goalsData[i].tasks);
-      expandedGoalId = goalId;
-      renderGoals();
-      setTimeout(function() {
-        var inputs = document.querySelectorAll('.goal-task-name-input');
-        if (inputs.length > 0) inputs[inputs.length - 1].focus();
-      }, 50);
-      return;
-    }
+window.addGoalTask = async function(goalId) {
+  var id = 'task_' + Date.now();
+  await window.db.createTask({
+    id: id,
+    name: '',
+    goalId: goalId
+  });
+  expandedGoalId = goalId;
+  await renderGoals();
+  setTimeout(function() {
+    var inputs = document.querySelectorAll('.goal-task-name-input');
+    if (inputs.length > 0) inputs[inputs.length - 1].focus();
+  }, 50);
+};
+
+window.deleteGoalTask = async function(taskId) {
+  await window.db.deleteTask(taskId);
+  renderGoals();
+};
+
+window.toggleGoalTaskStar = async function(taskId, currentPriority) {
+  var newPriority = currentPriority === 'high' ? 'none' : 'high';
+  var t = tasksData.find(function(x) { return x.id === taskId; });
+  if (t) {
+    await window.db.updateTask(taskId, { name: t.name, priority: newPriority });
+    renderGoals();
   }
 };
 
-window.deleteGoalTask = function(goalId, taskIndex) {
-  for (var i = 0; i < goalsData.length; i++) {
-    if (goalsData[i].id === goalId && goalsData[i].tasks) {
-      goalsData[i].tasks.splice(taskIndex, 1);
-      saveGoalTasks(goalId, goalsData[i].tasks);
-      renderGoals();
-      return;
-    }
-  }
+window.toggleGoalTaskCompletion = async function(taskId) {
+  await window.db.toggleTask(taskId);
+  renderGoals();
 };
 
-window.toggleGoalTaskStar = function(goalId, taskIndex) {
-  for (var i = 0; i < goalsData.length; i++) {
-    if (goalsData[i].id === goalId && goalsData[i].tasks) {
-      goalsData[i].tasks[taskIndex].starred = !goalsData[i].tasks[taskIndex].starred;
-      saveGoalTasks(goalId, goalsData[i].tasks);
-      renderGoals();
-      return;
+window.saveGoalTaskName = async function(taskId, name) {
+  var t = tasksData.find(function(x) { return x.id === taskId; });
+  if (t) {
+    if (!name.trim()) {
+      await window.db.deleteTask(taskId);
+    } else {
+      await window.db.updateTask(taskId, { name: name.trim() });
     }
-  }
-};
-
-window.saveGoalTaskName = function(goalId, taskIndex, name) {
-  for (var i = 0; i < goalsData.length; i++) {
-    if (goalsData[i].id === goalId && goalsData[i].tasks) {
-      goalsData[i].tasks[taskIndex].name = name.trim();
-      saveGoalTasks(goalId, goalsData[i].tasks);
-      renderGoals();
-      return;
-    }
+    renderGoals();
   }
 };
 

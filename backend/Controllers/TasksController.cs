@@ -36,7 +36,10 @@ public class TasksController : ControllerBase
             Id = dto.Id,
             Name = dto.Name,
             GoalId = dto.GoalId,
-            ParentTaskId = dto.ParentTaskId
+            ParentTaskId = dto.ParentTaskId,
+            ScheduledTime = dto.ScheduledTime,
+            Priority = dto.Priority ?? "Medium",
+            CreatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
         });
 
         await _db.SaveChangesAsync();
@@ -50,6 +53,7 @@ public class TasksController : ControllerBase
         if (task == null) return Ok(false);
 
         task.Completed = task.Completed == 0 ? 1 : 0;
+        task.CompletedAt = task.Completed == 1 ? DateTime.Now.ToString("yyyy-MM-dd") : null;
         await _db.SaveChangesAsync();
         return Ok(true);
     }
@@ -64,6 +68,7 @@ public class TasksController : ControllerBase
 
         task.Name = dto.Name;
         if (dto.Priority != null) task.Priority = dto.Priority;
+        if (dto.ScheduledTime != null) task.ScheduledTime = dto.ScheduledTime;
         await _db.SaveChangesAsync();
         return Ok(true);
     }

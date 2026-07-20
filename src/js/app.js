@@ -1,4 +1,4 @@
-﻿/* â”€â”€ Page Router â”€â”€ */
+/* â”€â”€ Page Router â”€â”€ */
 var _pendingNav = null;
 
 async function showPage(name) {
@@ -8,7 +8,7 @@ async function showPage(name) {
     document.getElementById('settingsConfirmModal').style.display = 'flex';
     return;
   }
-  var pages = ['home', 'pomodoro', 'habits', 'goals', 'tasks', 'settings', 'stats'];
+  var pages = ['home', 'pomodoro', 'habits', 'calender', 'tasks', 'settings', 'stats'];
   pages.forEach(function(p) {
     var el = document.getElementById('page-' + p);
     if (el) {
@@ -19,6 +19,21 @@ async function showPage(name) {
     await window.initPomoShader();
   } else if (name !== 'pomodoro' && window.destroyPomoShader) {
     window.destroyPomoShader();
+  }
+  
+  var pomoSideBox = document.getElementById('pomoSideBox');
+  if (pomoSideBox) {
+    pomoSideBox.style.display = (name === 'pomodoro') ? 'flex' : 'none';
+  }
+  
+  var pomoRightToggleBtn = document.getElementById('pomoRightToggleBtn');
+  if (pomoRightToggleBtn) {
+    pomoRightToggleBtn.style.display = (name === 'pomodoro') ? 'flex' : 'none';
+  }
+  
+  var pomoRightPanelWrapper = document.getElementById('pomoRightPanelWrapper');
+  if (pomoRightPanelWrapper) {
+    pomoRightPanelWrapper.style.display = (name === 'pomodoro') ? 'flex' : 'none';
   }
   var buttons = document.querySelectorAll('#navDock .dock-item');
   buttons.forEach(function(btn) {
@@ -163,41 +178,6 @@ window.closeUpdateModal = function(e) {
   }
 };
 
-/* --- Welcome popup (shown once, first launch only) --- */
-(async function checkWelcome() {
-  var shown = await window.db.getSetting('welcomeShown');
-  if (shown === 'true') return;
-  var modal = document.getElementById('welcomeModal');
-  if (!modal) return;
-  modal.style.display = 'flex';
-  // Trigger SVG draw circle animation
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      var path = document.querySelector('.draw-circle-path');
-      if (!path) return;
-      var len = path.getTotalLength();
-      if (!len) return;
-      path.style.strokeDasharray = len;
-      path.style.strokeDashoffset = len;
-      path.style.opacity = '1';
-      path.animate([
-        { strokeDashoffset: len },
-        { strokeDashoffset: 0 }
-      ], {
-        duration: 1500,
-        easing: 'ease-in-out',
-        delay: 300,
-        fill: 'forwards'
-      });
-    });
-  });
-})();
-
-window.closeWelcomeModal = async function() {
-  await window.db.setSetting('welcomeShown', 'true');
-  document.getElementById('welcomeModal').style.display = 'none';
-};
-
 /* â”€â”€ Manual update check (from settings) â”€â”€ */
 window.checkForUpdates = function() {
   var btn = document.getElementById('checkUpdateBtn');
@@ -224,8 +204,45 @@ function selectStoragePath() {
         if (result) {
           document.getElementById('storagePathDisplay').textContent = result;
           if (window.markDirty) window.markDirty();
-        }
-      });
+  }
+});
+
+/* ── Backend error toast ── */
+window.showAppToast = function(msg) {
+  var el = document.getElementById('appToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'appToast';
+    el.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;background:#ef4444;color:#fff;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 6px 20px rgba(0,0,0,0.18);opacity:0;transform:translateY(16px);transition:all 0.35s;max-width:420px;line-height:1.4;font-family:Inter,sans-serif;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el.style.transform = 'translateY(0)';
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(function() {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(16px)';
+  }, 6000);
+};
+
+window.electronAPI.onBackendError(function(msg) {
+  window.showAppToast(msg);
+});
+
+/* ── Date change checker for habits (local date, not UTC) ── */
+function _localDateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+var _lastDateStr = _localDateStr(new Date());
+setInterval(function() {
+  var nowStr = _localDateStr(new Date());
+  if (nowStr !== _lastDateStr) {
+    _lastDateStr = nowStr;
+    if (window.renderHabits) window.renderHabits();
+  }
+}, 60000);
+
     }
   });
 }
@@ -237,20 +254,17 @@ function selectStoragePath() {
   }
 })();
 
-/* â”€â”€ Page change hook: render goals/tasks when page becomes visible â”€â”€ */
+/* â”€â”€ Page change hook: render tasks/habits/stats when page becomes visible â”€â”€ */
 var _origShowPage2 = showPage;
 showPage = async function(name) {
   await _origShowPage2(name);
-  if (name === 'goals' && typeof renderGoals === 'function') renderGoals();
+  if (name === 'calender' && typeof renderCalender === 'function') renderCalender();
   if (name === 'tasks' && typeof renderTasks === 'function') renderTasks();
   if (name === 'habits' && window.renderHabits) renderHabits();
   if (name === 'stats' && window.renderStats) renderStats();
   if (typeof updateAppSidebarActive === 'function') updateAppSidebarActive(name);
 };
 
-document.addEventListener('DOMContentLoaded', async function() {
-  await showPage('pomodoro');
-});
 window.addEventListener('load', function() {
   var elapsed = performance.now() - window._splashStart;
   var delay = Math.max(0, 1500 - elapsed);

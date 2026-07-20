@@ -9,6 +9,7 @@ const API_BASE = 'http://localhost:5200/api'
 let win
 let storagePath = null
 let backendProcess = null
+let _backendStartFailed = null
 
 function is(type, val) {
   if (type === 'string') return typeof val === 'string' && val.length > 0
@@ -60,12 +61,19 @@ async function startBackend() {
       ASPNETCORE_URLS: 'http://localhost:5200',
       DATABASE_PATH: dbFullPath
     },
-    stdio: ['ignore', 'pipe', 'pipe']
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true
   })
 
   backendProcess.stdout.on('data', function(d) { var s = d.toString().trim(); if (s) console.log('[.NET] ' + s) })
   backendProcess.stderr.on('data', function(d) { var s = d.toString().trim(); if (s) console.error('[.NET] ' + s) })
   backendProcess.on('error', function(err) { console.error('[.NET] Failed:', err.message) })
+  backendProcess.on('exit', function(code) {
+    console.error('[.NET] Exited with code', code)
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('backend-error', 'Backend service exited unexpectedly (code ' + code + '). Please restart the application.')
+    }
+  })
 
   for (var i = 0; i < 30; i++) {
     try {
@@ -75,7 +83,7 @@ async function startBackend() {
     await new Promise(function(r) { setTimeout(r, 500) })
   }
   console.warn('[.NET] Timed out waiting for backend')
-  dialog.showErrorBox('Backend Error', 'Failed to start the backend service. Please restart the application.')
+  _backendStartFailed = 'Failed to start the backend service. Some features may not work.'
 }
 
 function stopBackend() {
@@ -109,7 +117,12 @@ function createWindow () {
     }
   })
   win.maximize()
-  win.once('ready-to-show', () => win.show())
+  win.once('ready-to-show', () => {
+    win.show()
+    if (_backendStartFailed) {
+      win.webContents.send('backend-error', _backendStartFailed)
+    }
+  })
   win.loadFile('src/index.html').then(function() {
     autoUpdater.checkForUpdates()
   })
@@ -303,10 +316,16 @@ ipcMain.handle('db:save-session', async (e, session) => {
   } catch { return false }
 })
 
-ipcMain.handle('db:update-session', async (e, id, taskName, tagId, note, goalId) => {
+ipcMain.handle('db:get-session', async (e, id) => {
   if (!is('string', id)) return null
+  try { var r = await fetch(api('/sessions/' + encodeURIComponent(id))); return r.ok ? await r.json() : null }
+  catch { return null }
+})
+
+ipcMain.handle('db:update-session', async (e, id, data) => {
+  if (!is('string', id) || !is('object', data)) return null
   try {
-    var r = await fetch(api('/sessions/' + encodeURIComponent(id)), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ taskName: taskName || '', tagId: tagId || null, note: note || '', goalId: goalId || null }) })
+    var r = await fetch(api('/sessions/' + encodeURIComponent(id)), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
     return r.ok ? await r.json() : false
   } catch { return false }
 })
@@ -370,8 +389,12 @@ ipcMain.handle('db:create-goal', async (e, goal) => {
   if (!is('object', goal)) return null
   try {
     var r = await fetch(api('/goals'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(goal) })
+    if (!r.ok) {
+      var errText = await r.text().catch(function() { return 'unknown error' });
+      return { _error: true, status: r.status, body: errText };
+    }
     return r.ok ? await r.json() : false
-  } catch { return false }
+  } catch (err) { return { _error: true, message: err.message } }
 })
 
 ipcMain.handle('db:update-goal', async (e, id, goal) => {
@@ -417,8 +440,12 @@ ipcMain.handle('db:create-task', async (e, task) => {
   if (!is('object', task)) return null
   try {
     var r = await fetch(api('/tasks'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(task) })
-    return r.ok ? await r.json() : false
-  } catch { return false }
+    if (!r.ok) {
+      var errText = await r.text().catch(function() { return 'unknown error' });
+      return { _error: true, status: r.status, body: errText };
+    }
+    return await r.json()
+  } catch (err) { return { _error: true, message: err.message } }
 })
 
 ipcMain.handle('db:toggle-task', async (e, id) => {

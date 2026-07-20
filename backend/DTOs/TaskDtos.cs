@@ -13,6 +13,8 @@ public class CreateTaskItemDto
 
     public string? GoalId { get; set; }
     public string? ParentTaskId { get; set; }
+    public string? ScheduledTime { get; set; }
+    public string? Priority { get; set; }
 }
 
 public class UpdateTaskItemDto
@@ -21,4 +23,5 @@ public class UpdateTaskItemDto
     [StringLength(500, MinimumLength = 1)]
     public string Name { get; set; } = string.Empty;
     public string? Priority { get; set; }
+    public string? ScheduledTime { get; set; }
 }

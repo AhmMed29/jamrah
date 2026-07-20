@@ -17,6 +17,29 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.04);
   transform: translateY(-1px);
 }
+.task-item.selected {
+  border-color: #3b82f6;
+  background: #f0fdf4;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+.task-delete-btn {
+  opacity: 0;
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.15s, background 0.15s;
+}
+.task-item:hover .task-delete-btn {
+  opacity: 1;
+}
+.task-delete-btn:hover {
+  background: #fee2e2;
+}
 
 .task-sub {
   margin-left: 28px;
@@ -252,4 +275,19 @@
 
 .uv-checkbox:checked + .uv-checkbox-label .uv-checkbox-text {
   color: #6c5ce7;
+}
+
+/* Panel resizer */
+.panel-resizer {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.panel-resizer:hover,
+.panel-resizer.resizing {
+  background: #3b82f6;
 }

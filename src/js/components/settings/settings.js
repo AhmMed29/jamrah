@@ -43,7 +43,7 @@ function markDirty() {
   // Load Page Placements using localStorage
   if (window.getPagePrefs) {
     var prefs = window.getPagePrefs();
-    var pages = ['pomodoro', 'tasks', 'goals', 'habits', 'stats', 'settings'];
+    var pages = ['pomodoro', 'tasks', 'calender', 'habits', 'stats', 'settings'];
     pages.forEach(function(p) {
       var val = prefs[p] || 'both';
       var dInp = document.getElementById('pref-' + p + '-dock');
@@ -105,7 +105,7 @@ window.saveSettings = async function() {
   // Save Page Placements using localStorage
   if (window.savePagePrefs) {
     var prefs = {};
-    var pages = ['pomodoro', 'tasks', 'goals', 'habits', 'stats', 'settings'];
+    var pages = ['pomodoro', 'tasks', 'calender', 'habits', 'stats', 'settings'];
     pages.forEach(function(p) {
       var dInp = document.getElementById('pref-' + p + '-dock');
       var sInp = document.getElementById('pref-' + p + '-sidebar');
@@ -182,7 +182,7 @@ window.cancelSettings = async function() {
   // Restore page placements
   if (window.getPagePrefs) {
     var prefs = window.getPagePrefs();
-    var pages = ['pomodoro', 'tasks', 'goals', 'habits', 'stats'];
+    var pages = ['pomodoro', 'tasks', 'calender', 'habits', 'stats'];
     pages.forEach(function(p) {
       var val = prefs[p] || 'both';
       var dInp = document.getElementById('pref-' + p + '-dock');

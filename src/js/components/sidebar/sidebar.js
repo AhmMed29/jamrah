@@ -51,7 +51,7 @@ window.getPagePrefs = function() {
   try {
     if (prefsStr) prefs = JSON.parse(prefsStr);
   } catch(e) {}
-  var pages = ['pomodoro', 'tasks', 'goals', 'habits', 'stats', 'settings'];
+  var pages = ['pomodoro', 'tasks', 'calender', 'habits', 'stats', 'settings'];
   pages.forEach(function(p) {
     if (!prefs[p]) prefs[p] = 'both';
   });
@@ -60,7 +60,7 @@ window.getPagePrefs = function() {
 
   window.applyPagePrefs = function() {
     var prefs = window.getPagePrefs();
-    var pages = ['pomodoro', 'tasks', 'goals', 'habits', 'stats', 'settings'];
+    var pages = ['pomodoro', 'tasks', 'calender', 'habits', 'stats', 'settings'];
     pages.forEach(function(p) {
       var val = prefs[p] || 'both';
       var showInDock = (val === 'both' || val === 'dock');

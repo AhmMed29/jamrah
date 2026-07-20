@@ -148,44 +148,143 @@ body {
 /* ============================================================================================ */
 
 /* ── Session name popup ── */
+/* ── Session name popup ── */
 .pomo-name-popup {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 60;
   background: white;
   border-radius: 12px;
   box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-  padding: 20px;
-  width: 300px;
+  padding: 24px;
+  width: 320px;
+  border: 1px solid rgba(195, 198, 213, 0.4);
 }
 .pomo-name-popup.hidden { display: none; }
-.pomo-name-popup-arrow { display: none !important; }
-.pomo-name-popup-body {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+.pomo-popup-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0b1c30;
+  margin: 0 0 16px 0;
+  font-family: 'Manrope', sans-serif;
 }
-.pomo-name-popup-input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+.pomo-popup-field {
+  margin-bottom: 16px;
+}
+.pomo-popup-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.pomo-popup-input, .pomo-popup-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   font-size: 14px;
   outline: none;
+  box-sizing: border-box;
 }
-.pomo-name-popup-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
-.pomo-name-popup-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+.pomo-popup-input:focus, .pomo-popup-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+}
+
+/* Presets */
+.pomo-presets {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.pomo-preset-btn {
+  flex: 1;
+  padding: 6px 0;
+  background: #f1f5f9;
   border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.pomo-preset-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Start Button */
+.pomo-popup-start-btn {
+  width: 100%;
+  padding: 12px;
   background: #3b82f6;
   color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  transition: background 0.2s;
 }
-.pomo-name-popup-btn:hover { background: #2563eb; }
+.pomo-popup-start-btn:hover {
+  background: #2563eb;
+}
+
+/* Note Panel */
+.pomo-note-panel {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  padding: 20px;
+  width: 320px;
+  border: 1px solid rgba(195, 198, 213, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pomo-note-panel.hidden { display: none; }
+.pomo-note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.pomo-tag-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.pomo-tag-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+.pomo-tag-btn .material-symbols-outlined {
+  font-size: 14px;
+}
+.pomo-note-textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  resize: none;
+}
+.pomo-note-textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+}

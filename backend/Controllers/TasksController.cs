@@ -39,6 +39,11 @@ public class TasksController : ControllerBase
             ParentTaskId = dto.ParentTaskId,
             ScheduledTime = dto.ScheduledTime,
             Priority = dto.Priority ?? "Medium",
+            Recurrence = dto.Recurrence,
+            CustomDays = dto.CustomDays,
+            DurationStart = dto.DurationStart,
+            DurationEnd = dto.DurationEnd,
+            Notes = dto.Notes,
             CreatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
         });
 
@@ -66,9 +71,14 @@ public class TasksController : ControllerBase
         var task = await _db.TaskItems.FindAsync(id);
         if (task == null) return Ok(false);
 
-        task.Name = dto.Name;
+        if (dto.Name != null) task.Name = dto.Name;
         if (dto.Priority != null) task.Priority = dto.Priority;
         if (dto.ScheduledTime != null) task.ScheduledTime = dto.ScheduledTime;
+        if (dto.Recurrence != null) task.Recurrence = dto.Recurrence;
+        if (dto.CustomDays != null) task.CustomDays = dto.CustomDays;
+        if (dto.DurationStart != null) task.DurationStart = dto.DurationStart;
+        if (dto.DurationEnd != null) task.DurationEnd = dto.DurationEnd;
+        if (dto.Notes != null) task.Notes = dto.Notes;
         await _db.SaveChangesAsync();
         return Ok(true);
     }

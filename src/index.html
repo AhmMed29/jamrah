@@ -765,50 +765,70 @@ window.tailwind={ config: {
 
 </div>
 
-<div id="page-tasks" class="hidden flex-1 flex flex-col overflow-hidden">
-<header class="flex-none px-6 py-4 flex items-center border-b border-gray-100 bg-white shadow-sm gap-3">
-<h1 class="text-xl font-bold text-gray-800">Tasks</h1>
-<div class="mr-auto flex items-center gap-2">
-  <button onclick="openGoalsTaskPopup()" class="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Goals & Tasks">
-    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-  </button>
-  <span class="text-sm text-gray-500 font-medium">Goal Tasks</span>
-  <div class="relative" id="sort-wrap">
-    <button onclick="toggleSortDropdown(event)" class="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Sort Tasks">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9l4-4 4 4M7 5v14M21 15l-4 4-4-4M17 19V5"/></svg>
-    </button>
-    <div id="sort-dropdown" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-100 py-2 min-w-[150px] z-40" style="box-shadow:0 4px 16px rgba(0,0,0,0.12)">
-      <div class="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Sort by</div>
-      <button onclick="setSortBy('date-desc')" class="sort-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2" data-value="date-desc">
-        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m0 0l-4-4m4 4l4-4"/></svg>
-        <span>Date</span>
-      </button>
-      <button onclick="setSortBy('date-asc')" class="sort-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2" data-value="date-asc">
-        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-4 4m4-4l4 4"/></svg>
-        <span>Date</span>
-      </button>
-      <button onclick="setSortBy('priority')" class="sort-option w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2" data-value="priority">
-        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h18M3 12h18M3 20h18"/></svg>
-        Priority
-      </button>
+<div id="page-tasks" class="hidden flex-1 flex flex-col overflow-hidden" style="background:#faf9f7">
+<header style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #2d2d2d;background:#fff;padding:16px 24px">
+  <h1 style="font-size:30px;font-weight:400">Tasks</h1>
+  <div style="display:flex;align-items:center;gap:12px">
+    <button id="tasks-prev-day" style="padding:4px 8px;color:rgba(45,45,45,0.6);cursor:pointer;background:none;border:none;font-size:24px;font-family:'Patrick Hand',cursive">&lsaquo;</button>
+    <div style="text-align:center">
+      <div id="tasks-day-name" style="font-size:24px;line-height:1.2"></div>
+      <div id="tasks-date-display" style="font-size:14px;opacity:0.5"></div>
     </div>
+    <button id="tasks-next-day" style="padding:4px 8px;color:rgba(45,45,45,0.6);cursor:pointer;background:none;border:none;font-size:24px;font-family:'Patrick Hand',cursive">&rsaquo;</button>
+    <button id="tasks-today-btn" style="display:none;margin-left:8px;padding:4px 12px;border:2px solid #2d2d2d;border-radius:12px;background:#fff;cursor:pointer;font-size:14px;font-family:'Patrick Hand',cursive">Today</button>
   </div>
-</div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <button id="tasks-filter-btn" style="font-size:18px;color:rgba(45,45,45,0.7);text-transform:capitalize;cursor:pointer;background:none;border:none;font-family:'Patrick Hand',cursive">all</button>
+    <button id="tasks-archive-btn" style="font-size:18px;color:rgba(45,45,45,0.7);cursor:pointer;background:none;border:none;display:flex;align-items:center;gap:4px;font-family:'Patrick Hand',cursive">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 7v10l4 3h8l4-3V7M4 7l4-3h8l4 3M9 13l2 2 4-4"/></svg>
+      <span id="tasks-archive-label">Archive</span>
+    </button>
+  </div>
 </header>
-<main class="flex-1 flex overflow-hidden bg-gray-50">
-  <div id="tasks-list-panel" class="flex-shrink-0 border-r border-gray-200 overflow-y-auto p-6 bg-white" style="width:340px;min-width:200px;max-width:600px;">
-    <div id="tasks-list"></div>
-  </div>
-  <div id="panel-resizer" class="panel-resizer"></div>
-  <div id="task-detail-panel" class="flex-1 flex flex-col overflow-y-auto bg-gray-50 relative">
-    <div class="h-full flex items-center justify-center text-gray-400">Select a task to view details</div>
-  </div>
+<main style="display:flex;flex:1;overflow:hidden">
+  <section id="tasks-list-section" style="width:50%;display:flex;flex-direction:column;overflow-y:auto;border-right:2px solid #2d2d2d;padding:24px 0;background:#faf9f7">
+    <div style="width:100%;max-width:448px;margin:0 auto;padding:0 16px">
+      <div id="tasks-new-card" style="border-radius:16px;border:2px solid #2d2d2d;background:#fff;padding:12px 16px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <input type="text" id="tasks-new-input" placeholder="Add a task..." style="flex:1;background:transparent;font-size:20px;outline:none;border:none;color:#2d2d2d;font-family:'Patrick Hand',cursive" />
+          <button id="tasks-new-toggle" style="width:36px;height:36px;border-radius:50%;border:2px solid #2d2d2d;background:#faf9f7;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s">
+            <svg width="20" height="20" fill="none" stroke="#2d2d2d" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+          </button>
+        </div>
+        <div id="tasks-new-options" style="display:none;border-top:2px dashed rgba(45,45,45,0.2);padding-top:12px;margin-top:12px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="opacity:0.5;color:#2d2d2d"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <input type="time" id="tasks-new-time" style="border-radius:8px;border:2px solid rgba(45,45,45,0.1);background:#faf9f7;padding:6px 12px;font-size:16px;outline:none;color:#2d2d2d;font-family:'Patrick Hand',cursive" />
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="opacity:0.5;color:#2d2d2d"><path d="M4 5v14l4-3 4 3 4-3 4 3V5l-4 3-4-3-4 3-4-3z"/></svg>
+            <select id="tasks-new-recurrence" style="border-radius:8px;border:2px solid rgba(45,45,45,0.1);background:#faf9f7;padding:6px 12px;font-size:16px;outline:none;color:#2d2d2d;font-family:'Patrick Hand',cursive">
+              <option value="none">None</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="opacity:0.5;color:#2d2d2d"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+            <select id="tasks-new-priority" style="border-radius:8px;border:2px solid rgba(45,45,45,0.1);background:#faf9f7;padding:6px 12px;font-size:16px;outline:none;color:#2d2d2d;font-family:'Patrick Hand',cursive">
+              <option value="none">None</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+            </select>
+          </div>
+          <button id="tasks-new-add" style="margin-left:auto;display:block;border-radius:8px;background:#2d2d2d;color:#fff;padding:6px 16px;font-size:16px;border:none;cursor:pointer;margin-top:8px;font-family:'Patrick Hand',cursive">+ Add</button>
+        </div>
+      </div>
+      <div id="tasks-list" style="margin-top:16px"></div>
+    </div>
+  </section>
+  <section id="task-detail-panel" style="width:50%;display:flex;flex-direction:column;overflow-y:auto;background:rgba(255,255,255,0.5)">
+    <div class="task-detail-empty">Select a task to view and edit</div>
+  </section>
 </main>
-<button id="add-task-fab" onclick="openAddTaskPopup()" class="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-blue-600 text-white shadow-xl shadow-blue-600/40 flex items-center justify-center hover:bg-blue-700 transition-all transform hover:-translate-y-1 z-30">
-<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-</svg>
-</button>
 </div>
 
 <div id="page-stats" class="hidden flex-1 flex flex-col overflow-hidden">
@@ -834,24 +854,7 @@ window.tailwind={ config: {
   </div>
 </div>
 
-<div id="add-task-popup" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50" style="display:none" onclick="closeAddTaskPopup(event)">
-<div class="bg-white rounded-2xl p-8 shadow-xl w-[500px] max-w-[90vw]" onclick="event.stopPropagation()" style="animation: modalIn 0.2s ease-out;position:relative">
-<button class="close-btn" onclick="closeAddTaskPopup()" style="position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#9ca3af;cursor:pointer;transition:all 0.15s;border:none;background:none">
-<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-</button>
-<h2 class="text-lg font-bold text-gray-800 mb-5">Add New Task</h2>
-<input type="text" id="task-name-input" placeholder="e.g. Read 20 pages" class="w-full border-2 border-gray-200 rounded-xl px-5 py-4 text-base text-gray-700 focus:border-blue-400 focus:ring-0 outline-none mb-5" onkeydown="if(event.key==='Enter')saveTask()">
-<label class="text-sm font-medium text-gray-600 mb-2 block">Priority</label>
-<div class="flex gap-2 mb-5" id="priority-selector">
-  <button onclick="selectPriority('Low')" class="priority-btn priority-low flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 border-transparent cursor-pointer transition-all hover:opacity-80" data-value="Low">Low</button>
-  <button onclick="selectPriority('Medium')" class="priority-btn priority-medium selected flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 border-transparent cursor-pointer transition-all hover:opacity-80" data-value="Medium">Medium</button>
-  <button onclick="selectPriority('High')" class="priority-btn priority-high flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 border-transparent cursor-pointer transition-all hover:opacity-80" data-value="High">High</button>
-</div>
-<label class="text-sm font-medium text-gray-600 mb-2 block">Related Goal</label>
-<div id="task-goal-tags"></div>
-<button onclick="saveTask()" class="w-full py-3.5 rounded-xl text-white text-base font-medium transition-all hover:opacity-90" style="background:#3B82F6">Add Task</button>
-</div>
-</div>
+
 
 <div id="goals-task-popup" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50" style="display:none" onclick="closeGoalsTaskPopup(event)">
 <div class="bg-white rounded-2xl p-6 shadow-xl w-[420px] max-w-[90vw] max-h-[80vh] flex flex-col" onclick="event.stopPropagation()" style="animation: modalIn 0.2s ease-out;position:relative">

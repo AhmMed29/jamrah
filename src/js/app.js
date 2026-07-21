@@ -83,7 +83,10 @@ window.electronAPI.onShortcut(function(action) {
   switch (action) {
     case 'pomodoro': showPage('pomodoro'); break;
     case 'settings': if (window.openSettings) openSettings(); break;
-    case 'new-task': if (window.openAddTaskPopup) openAddTaskPopup(); break;
+    case 'new-task':
+      var inp = document.getElementById('tasks-new-input');
+      if (inp) { inp.focus(); showPage('tasks'); }
+      break;
   }
 });
 

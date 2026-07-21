@@ -34,34 +34,26 @@ public class GoalsController : ControllerBase
     {
         if (!ModelState.IsValid) return BadRequest(false);
 
-        try
+        var goal = new Goal
         {
-            var goal = new Goal
-            {
-                Id = dto.Id,
-                Name = dto.Name,
-                Description = dto.Description ?? "",
-                Color = dto.Color,
-                TagId = null,
-                StartDate = dto.StartDate,
-                EndDate = dto.EndDate,
-                Duration = dto.Duration,
-                DurationType = dto.DurationType,
-                DurationValue = dto.DurationValue,
-                ParentGoalId = dto.ParentGoalId,
-                CreatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-            };
+            Id = dto.Id,
+            Name = dto.Name,
+            Description = dto.Description ?? "",
+            Color = dto.Color,
+            TagId = null,
+            StartDate = dto.StartDate,
+            EndDate = dto.EndDate,
+            Duration = dto.Duration,
+            DurationType = dto.DurationType,
+            DurationValue = dto.DurationValue,
+            ParentGoalId = dto.ParentGoalId,
+            CreatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+        };
 
-            _db.Goals.Add(goal);
-            await _db.SaveChangesAsync();
+        _db.Goals.Add(goal);
+        await _db.SaveChangesAsync();
 
-            return Ok(true);
-        }
-        catch
-        {
-            await tx.RollbackAsync();
-            return Ok(false);
-        }
+        return Ok(true);
     }
 
     [HttpPut("{id}")]

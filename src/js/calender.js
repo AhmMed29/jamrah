@@ -520,7 +520,7 @@ window.showTagEditorPopup = function() {
       '<span class="tag-editor-dot" style="background:' + escapeHtml(tag.color) + '"></span>' +
       '<input class="tag-editor-name" value="' + escapeHtml(tag.name) + '" data-tag-id="' + escapeHtml(tag.id) + '">' +
       '<input class="tag-editor-color" type="color" value="' + escapeHtml(tag.color) + '" data-tag-id="' + escapeHtml(tag.id) + '">' +
-      '<button class="tag-editor-del" onclick="deleteTagFromEditor(\'' + escapeHtml(tag.id) + '\')" title="Delete tag">\u00d7</button>' +
+      '<button class="tag-editor-del" data-tag-id="' + escapeHtml(tag.id) + '" title="Delete tag">\u00d7</button>' +
     '</div>';
   });
 
@@ -530,15 +530,24 @@ window.showTagEditorPopup = function() {
     '<div class="tag-editor-add">' +
       '<input class="tag-editor-add-name" id="tagEditorAddName" placeholder="New tag name...">' +
       '<input class="tag-editor-add-color" id="tagEditorAddColor" type="color" value="#3b82f6">' +
-      '<button class="tag-editor-add-btn" onclick="saveTagFromEditor()">+</button>' +
+      '<button class="tag-editor-add-btn">+</button>' +
     '</div>' +
-    '<button class="note-btn secondary" style="margin-top:10px;width:100%" onclick="closeTagEditor()">Close</button>' +
+    '<button class="note-btn secondary" id="tagEditorCloseBtn" style="margin-top:10px;width:100%">Close</button>' +
   '</div>';
 
   document.getElementById('page-calender').appendChild(overlay);
 
   overlay.querySelector('.tag-editor-popup').addEventListener('click', function(e) { e.stopPropagation(); });
   overlay.addEventListener('click', function() { closeTagEditor(); });
+
+  overlay.querySelector('.tag-editor-list').addEventListener('click', function(e) {
+    var btn = e.target.closest('.tag-editor-del');
+    if (btn) deleteTagFromEditor(btn.getAttribute('data-tag-id'));
+  });
+
+  overlay.querySelector('.tag-editor-add-btn').addEventListener('click', saveTagFromEditor);
+
+  overlay.querySelector('#tagEditorCloseBtn').addEventListener('click', closeTagEditor);
 
   overlay.querySelectorAll('.tag-editor-name').forEach(function(inp) {
     inp.addEventListener('change', function() {
@@ -577,7 +586,7 @@ window.closeTagEditor = function() {
 window.deleteTagFromEditor = function(id) {
   tagEditorLoading(true);
   window.db.deleteTag(id).then(function(result) {
-    if (result === false) { console.error('Delete tag failed'); tagEditorLoading(false); return; }
+    if (result === false) { console.error('Delete tag failed'); tagEditorLoading(false); alert('Failed to delete tag'); return; }
     var idx = calState.tags.findIndex(function(t) { return t.id === id; });
     if (idx !== -1) calState.tags.splice(idx, 1);
     if (calState.filter === id) calState.filter = 'all';
@@ -597,7 +606,7 @@ window.saveTagFromEditor = function() {
   var tag = { id: id, name: name, color: color, createdAt: Date.now() };
   tagEditorLoading(true);
   window.db.saveTag(tag).then(function(result) {
-    if (result === false) { console.error('Save tag failed'); tagEditorLoading(false); return; }
+    if (result === false) { console.error('Save tag failed'); tagEditorLoading(false); alert('Failed to save tag'); return; }
     calState.tags.push(tag);
     inp.value = '';
     tagEditorLoading(false);

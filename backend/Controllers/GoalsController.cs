@@ -34,56 +34,26 @@ public class GoalsController : ControllerBase
     {
         if (!ModelState.IsValid) return BadRequest(false);
 
-        using var tx = await _db.Database.BeginTransactionAsync();
-
-        try
+        var goal = new Goal
         {
-            var existingTag = await _db.Tags.FirstOrDefaultAsync(t => t.Name == dto.Name);
+            Id = dto.Id,
+            Name = dto.Name,
+            Description = dto.Description ?? "",
+            Color = dto.Color,
+            TagId = null,
+            StartDate = dto.StartDate,
+            EndDate = dto.EndDate,
+            Duration = dto.Duration,
+            DurationType = dto.DurationType,
+            DurationValue = dto.DurationValue,
+            ParentGoalId = dto.ParentGoalId,
+            CreatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+        };
 
-            string tagId;
-            if (existingTag == null)
-            {
-                tagId = "tag_" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                _db.Tags.Add(new Tag
-                {
-                    Id = tagId,
-                    Name = dto.Name,
-                    Color = dto.Color,
-                    CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-                });
-            }
-            else
-            {
-                tagId = existingTag.Id;
-            }
+        _db.Goals.Add(goal);
+        await _db.SaveChangesAsync();
 
-            var goal = new Goal
-            {
-                Id = dto.Id,
-                Name = dto.Name,
-                Description = dto.Description ?? "",
-                Color = dto.Color,
-                TagId = tagId,
-                StartDate = dto.StartDate,
-                EndDate = dto.EndDate,
-                Duration = dto.Duration,
-                DurationType = dto.DurationType,
-                DurationValue = dto.DurationValue,
-                ParentGoalId = dto.ParentGoalId,
-                CreatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-            };
-
-            _db.Goals.Add(goal);
-            await _db.SaveChangesAsync();
-            await tx.CommitAsync();
-
-            return Ok(true);
-        }
-        catch
-        {
-            await tx.RollbackAsync();
-            return Ok(false);
-        }
+        return Ok(true);
     }
 
     [HttpPut("{id}")]

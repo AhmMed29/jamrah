@@ -3,6 +3,7 @@ const path = require('path')
 const fs = require('fs')
 const { spawn } = require('child_process')
 const { autoUpdater } = require('electron-updater')
+const updater = require('./updater')
 
 const API_BASE = 'http://localhost:5200/api'
 
@@ -123,7 +124,8 @@ function createWindow () {
       win.webContents.send('backend-error', _backendStartFailed)
     }
   })
-  win.loadFile('src/index.html').then(function() {
+  var frontendHtml = updater.getFrontendIndexPath() || path.join(__dirname, 'src', 'index.html')
+  win.loadFile(frontendHtml).then(function() {
     autoUpdater.checkForUpdates()
   })
 
@@ -248,6 +250,10 @@ ipcMain.handle('check-for-updates', async () => {
     console.error('[CheckUpdate]', e.message)
     return false
   }
+})
+
+ipcMain.handle('check-frontend-update', async () => {
+  return await updater.checkForFrontendUpdate()
 })
 
 app.on('will-quit', stopBackend)

@@ -38,10 +38,6 @@ async function loadCalenderData() {
     calState.tasks = results[1] || [];
     calState.tags = results[2] || [];
     calState.goals = results[3] || [];
-    var goalNames = calState.goals.map(function(g) { return (g.name || g.title || '').toLowerCase(); });
-    var origTagCount = calState.tags.length;
-    calState.tags = calState.tags.filter(function(t) { return !goalNames.includes(t.name.toLowerCase()); });
-    if (calState.tags.length < origTagCount && origTagCount > 0) console.log('[Calender] Filtered out ' + (origTagCount - calState.tags.length) + ' goal-linked tags from filter');
     try { calState.notes = JSON.parse(results[4] || '{}'); } catch(e) { calState.notes = {}; }
     calState.loaded = true;
   } catch(e) {
@@ -421,6 +417,7 @@ function renderCalendarMonthGoals(year, month) {
     html += '<div class="cal-goal-item">';
     html += '<span class="cal-goal-check">\u2713</span>';
     html += '<span>' + escapeHtml(g.name || g.title || 'Unnamed') + '</span>';
+    html += '<span class="cal-goal-del" onclick="deleteCalGoal(\'' + g.id + '\')" title="Delete goal">\u00d7</span>';
     html += '</div>';
   });
   html += '<button class="cal-add-goal-btn" onclick="addGoal(\'' + year + '-' + String(month + 1).padStart(2, '0') + '\')">+ Add Goal</button>';
@@ -467,6 +464,13 @@ window.addGoal = async function(monthKey) {
   };
 };
 
+window.deleteCalGoal = async function(id) {
+  var result = await window.db.deleteGoal(id);
+  if (result === false) { console.error('Delete goal failed'); return; }
+  await loadCalenderData();
+  renderCalender();
+};
+
 /* ── Year View ── */
 function renderYearView() {
   renderTagFilters();
@@ -495,6 +499,7 @@ function renderTagFilters() {
     html += escapeHtml(tag.name);
     html += '</button>';
   });
+  html += '<button class="year-filter tag-edit-btn" onclick="showTagEditorPopup()">\u270F\uFE0F</button>';
   container.innerHTML = html;
 }
 
@@ -502,6 +507,119 @@ window.setTagFilter = function(tagId) {
   calState.filter = tagId;
   renderYearView();
 };
+
+window.showTagEditorPopup = function() {
+  var existing = document.querySelector('.tag-editor-overlay');
+  if (existing) { existing.remove(); return; }
+
+  var overlay = document.createElement('div');
+  overlay.className = 'tag-editor-overlay';
+  var listHtml = '';
+  calState.tags.forEach(function(tag) {
+    listHtml += '<div class="tag-editor-row" data-tag-id="' + escapeHtml(tag.id) + '">' +
+      '<span class="tag-editor-dot" style="background:' + escapeHtml(tag.color) + '"></span>' +
+      '<input class="tag-editor-name" value="' + escapeHtml(tag.name) + '" data-tag-id="' + escapeHtml(tag.id) + '">' +
+      '<input class="tag-editor-color" type="color" value="' + escapeHtml(tag.color) + '" data-tag-id="' + escapeHtml(tag.id) + '">' +
+      '<button class="tag-editor-del" data-tag-id="' + escapeHtml(tag.id) + '" title="Delete tag">\u00d7</button>' +
+    '</div>';
+  });
+
+  overlay.innerHTML = '<div class="tag-editor-popup">' +
+    '<div class="tag-editor-header">Manage Tags</div>' +
+    '<div class="tag-editor-list">' + listHtml + '</div>' +
+    '<div class="tag-editor-add">' +
+      '<input class="tag-editor-add-name" id="tagEditorAddName" placeholder="New tag name...">' +
+      '<input class="tag-editor-add-color" id="tagEditorAddColor" type="color" value="#3b82f6">' +
+      '<button class="tag-editor-add-btn">+</button>' +
+    '</div>' +
+    '<button class="note-btn secondary" id="tagEditorCloseBtn" style="margin-top:10px;width:100%">Close</button>' +
+  '</div>';
+
+  document.getElementById('page-calender').appendChild(overlay);
+
+  overlay.querySelector('.tag-editor-popup').addEventListener('click', function(e) { e.stopPropagation(); });
+  overlay.addEventListener('click', function() { closeTagEditor(); });
+
+  overlay.querySelector('.tag-editor-list').addEventListener('click', function(e) {
+    var btn = e.target.closest('.tag-editor-del');
+    if (btn) deleteTagFromEditor(btn.getAttribute('data-tag-id'));
+  });
+
+  overlay.querySelector('.tag-editor-add-btn').addEventListener('click', saveTagFromEditor);
+
+  overlay.querySelector('#tagEditorCloseBtn').addEventListener('click', closeTagEditor);
+
+  overlay.querySelectorAll('.tag-editor-name').forEach(function(inp) {
+    inp.addEventListener('change', function() {
+      var tid = inp.getAttribute('data-tag-id');
+      var tag = calState.tags.find(function(t) { return t.id === tid; });
+      if (tag) {
+        tag.name = inp.value.trim() || tag.name;
+        window.db.saveTag(tag);
+      }
+    });
+  });
+
+  overlay.querySelectorAll('.tag-editor-color').forEach(function(inp) {
+    inp.addEventListener('input', function() {
+      var tid = inp.getAttribute('data-tag-id');
+      var tag = calState.tags.find(function(t) { return t.id === tid; });
+      if (tag) {
+        tag.color = inp.value;
+        window.db.saveTag(tag);
+      }
+    });
+  });
+
+  setTimeout(function() { document.getElementById('tagEditorAddName').focus(); }, 100);
+};
+
+window.closeTagEditor = function() {
+  var overlay = document.querySelector('.tag-editor-overlay');
+  if (overlay) {
+    overlay.remove();
+    renderTagFilters();
+    renderYearView();
+  }
+};
+
+window.deleteTagFromEditor = function(id) {
+  tagEditorLoading(true);
+  window.db.deleteTag(id).then(function(result) {
+    if (result === false) { console.error('Delete tag failed'); tagEditorLoading(false); alert('Failed to delete tag'); return; }
+    var idx = calState.tags.findIndex(function(t) { return t.id === id; });
+    if (idx !== -1) calState.tags.splice(idx, 1);
+    if (calState.filter === id) calState.filter = 'all';
+    tagEditorLoading(false);
+    closeTagEditor();
+    renderTagFilters();
+    renderYearView();
+  });
+};
+
+window.saveTagFromEditor = function() {
+  var inp = document.getElementById('tagEditorAddName');
+  if (!inp || !inp.value.trim()) return;
+  var name = inp.value.trim();
+  var color = document.getElementById('tagEditorAddColor').value;
+  var id = 'tag_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+  var tag = { id: id, name: name, color: color, createdAt: Date.now() };
+  tagEditorLoading(true);
+  window.db.saveTag(tag).then(function(result) {
+    if (result === false) { console.error('Save tag failed'); tagEditorLoading(false); alert('Failed to save tag'); return; }
+    calState.tags.push(tag);
+    inp.value = '';
+    tagEditorLoading(false);
+    closeTagEditor();
+    renderTagFilters();
+    renderYearView();
+  });
+};
+
+function tagEditorLoading(on) {
+  var btn = document.querySelector('.tag-editor-add-btn');
+  if (btn) btn.textContent = on ? '...' : '+';
+}
 
 function renderYearMonth(monthIdx) {
   var daysInMonth = new Date(calState.year, monthIdx + 1, 0).getDate();
@@ -628,6 +746,7 @@ function renderYearMonthGoals(monthIdx) {
     html += '<div class="year-goal-item">';
     html += '<span class="year-goal-check">\u2713</span>';
     html += '<span>' + escapeHtml(g.name || g.title || 'Unnamed') + '</span>';
+    html += '<span class="year-goal-del" onclick="deleteCalGoal(\'' + g.id + '\')" title="Delete goal">\u00d7</span>';
     html += '</div>';
   });
   html += '<button class="year-add-goal-btn" onclick="addGoal(\'' + calState.year + '-' + String(monthIdx + 1).padStart(2, '0') + '\')">+ Add Goal</button>';

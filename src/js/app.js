@@ -83,7 +83,10 @@ window.electronAPI.onShortcut(function(action) {
   switch (action) {
     case 'pomodoro': showPage('pomodoro'); break;
     case 'settings': if (window.openSettings) openSettings(); break;
-    case 'new-task': if (window.openAddTaskPopup) openAddTaskPopup(); break;
+    case 'new-task':
+      var inp = document.getElementById('tasks-new-input');
+      if (inp) { inp.focus(); showPage('tasks'); }
+      break;
   }
 });
 
@@ -103,7 +106,7 @@ updateClock();
 setInterval(updateClock, 1000);
 
 /* â”€â”€ Update system (electron-updater) â”€â”€ */
-var APP_VERSION = '2.3.0';
+var APP_VERSION = '2.4.0';
 var updateData = null;
 var updateDownloaded = false;
 
@@ -272,6 +275,15 @@ window.addEventListener('load', function() {
     var splash = document.getElementById('app-splash');
     if (splash) { splash.style.opacity = '0'; splash.style.transition = 'opacity 0.6s'; setTimeout(function() { splash.style.display = 'none'; }, 600); }
   }, delay);
+  window.electronAPI.checkFrontendUpdate().then(function(r) {
+    if (r && r.updated) {
+      var el = document.createElement('div')
+      el.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#7C3AED;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:99999;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.2)'
+      el.textContent = 'Update v' + r.version + ' ready \u2014 click to apply'
+      el.onclick = function() { location.reload(true) }
+      document.body.appendChild(el)
+    }
+  })
 });
 
 /* زرار الإعدادات في الـ dock */

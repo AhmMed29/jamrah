@@ -128,6 +128,11 @@ public class AppDbContext : DbContext
             entity.Property(e => e.ScheduledTime).HasColumnName("scheduledTime");
             entity.Property(e => e.ParentTaskId).HasColumnName("parentTaskId");
             entity.Property(e => e.Priority).HasColumnName("priority").IsRequired().ValueGeneratedOnAdd().HasDefaultValue("none");
+            entity.Property(e => e.Recurrence).HasColumnName("recurrence");
+            entity.Property(e => e.CustomDays).HasColumnName("customDays");
+            entity.Property(e => e.DurationStart).HasColumnName("durationStart");
+            entity.Property(e => e.DurationEnd).HasColumnName("durationEnd");
+            entity.Property(e => e.Notes).HasColumnName("notes");
 
             entity.HasOne(e => e.Goal)
                   .WithMany(g => g.Tasks)

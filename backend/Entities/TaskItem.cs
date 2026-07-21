@@ -11,6 +11,11 @@ public class TaskItem
     public string Priority { get; set; } = "none";
     public string? CompletedAt { get; set; }
     public string? ScheduledTime { get; set; }
+    public string? Recurrence { get; set; }
+    public string? CustomDays { get; set; }
+    public string? DurationStart { get; set; }
+    public string? DurationEnd { get; set; }
+    public string? Notes { get; set; }
 
     public Goal? Goal { get; set; }
     public TaskItem? ParentTask { get; set; }

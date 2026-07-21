@@ -26,6 +26,7 @@ var electronAPI = {
   startDownload: () => ipcRenderer.invoke('start-download'),
   quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  checkFrontendUpdate: () => ipcRenderer.invoke('check-frontend-update'),
   backupDo: (dir) => ipcRenderer.invoke('backup:do', dir),
   backupSelectFolder: () => ipcRenderer.invoke('backup:select-folder'),
   backupSelectFiles: () => ipcRenderer.invoke('backup:select-files'),

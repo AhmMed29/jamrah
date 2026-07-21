@@ -1,6 +1,6 @@
 {
   "name": "jamrah",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Jamrah جَــمْــرَه — ember of productivity. Pomodoro timer, habits tracker & more",
   "main": "main.js",
   "author": "AhmMed29",
@@ -10,7 +10,8 @@
     "start": "electron .",
     "prebuild": "dotnet publish backend/Jamrah.Backend.csproj -c Release -o backend/publish --self-contained -r win-x64",
     "build": "electron-builder",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win",
+    "postdist": "node scripts/prepare-frontend.js"
   },
   "build": {
     "appId": "com.ahmmed.jamrah",

@@ -21,6 +21,7 @@
     },
     "files": [
       "main.js",
+      "updater.js",
       "preload.js",
       "database.js",
       "Jamrah-Icon.png",

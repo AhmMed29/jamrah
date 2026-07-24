@@ -10,7 +10,7 @@
   height: 32px;
   border-radius: 8px;
   border: 1px dashed #d1d5db;
-  background: white;
+  background: var(--bg-card);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -35,7 +35,7 @@
 }
 
 .goal-card {
-  background: #ffffff;
+  background: var(--bg-card);
   border-radius: 16px;
   padding: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
@@ -204,7 +204,7 @@
   transition: all 0.15s;
 }
 .goal-task-item:hover {
-  background: #ffffff;
+  background: var(--bg-card);
   border-color: #e5e7eb;
 }
 
@@ -255,7 +255,7 @@
 
 /* Add/Edit Goal Card (Inline Form) */
 .goal-card-form {
-  background: #ffffff;
+  background: var(--bg-card);
   border-radius: 16px;
   padding: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
@@ -306,7 +306,7 @@
 }
 .goal-save-btn:hover { background: #2563eb; }
 .goal-cancel-btn {
-  background: white;
+  background: var(--bg-card);
   color: #6b7280;
   border: 1px solid #d1d5db;
   padding: 8px 16px;

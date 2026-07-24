@@ -150,7 +150,7 @@ body {
 /* ── Session name popup ── */
 /* ── Session name popup ── */
 .pomo-name-popup {
-  background: white;
+  background: var(--bg-card);
   border-radius: 12px;
   box-shadow: 0 8px 30px rgba(0,0,0,0.15);
   padding: 24px;
@@ -236,7 +236,7 @@ body {
 
 /* Note Panel */
 .pomo-note-panel {
-  background: white;
+  background: var(--bg-card);
   border-radius: 12px;
   box-shadow: 0 8px 30px rgba(0,0,0,0.15);
   padding: 20px;

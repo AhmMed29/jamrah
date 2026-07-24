@@ -8,6 +8,11 @@
   "scripts": {
     "postinstall": "npx @electron/rebuild",
     "start": "electron .",
+    "test": "npx jest --config jest.config.js --verbose",
+    "test:unit": "npx jest --config jest.config.js --verbose",
+    "test:ipc": "npx jest --config tests/ipc/jest.config.ipc.js --verbose",
+    "test:backend": "dotnet test backend/Tests/Jamrah.Backend.Tests.csproj --verbosity normal",
+    "test:all": "npx jest --config jest.config.js --verbose && npx jest --config tests/ipc/jest.config.ipc.js --verbose && dotnet test backend/Tests/Jamrah.Backend.Tests.csproj --verbosity normal",
     "prebuild": "dotnet publish backend/Jamrah.Backend.csproj -c Release -o backend/publish --self-contained -r win-x64",
     "build": "electron-builder",
     "dist": "electron-builder --win",
@@ -31,7 +36,9 @@
       {
         "from": "backend/publish",
         "to": "backend",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
@@ -56,6 +63,9 @@
     "electron": "^42.4.0",
     "electron-builder": "^25.1.8",
     "eslint": "^10.6.0",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
+    "nock": "^14.0.16",
     "sharp": "^0.35.2"
   },
   "dependencies": {

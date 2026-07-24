@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
 body {
   font-family: 'Inter', sans-serif;
-  background-color: #FAFAFA;
+  background-color: var(--bg-card);
 }
 .home-clock {
   font-size: 5rem;
@@ -15,7 +15,7 @@ body {
 }
 .prayer-box {
   border-radius: 16px;
-  background: #FFFFFF;
+  background: var(--bg-card);
   border: 1px solid #E5E7EB;
   padding: 1.5rem;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);

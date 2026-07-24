@@ -107,7 +107,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(250, 249, 246, 0.95);
   border: none;
   color: #4b5563;
   display: flex;
@@ -121,7 +121,7 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 .pomo-hover-btn:hover {
-  background: #ffffff;
+  background: var(--bg-card);
   color: #3b82f6;
   transform: scale(1.1);
 }

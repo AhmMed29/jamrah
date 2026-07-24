@@ -1,4 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap');
+:root { --bg-card: #faf9f6; }
+.bg-white { background-color: var(--bg-card) !important; }
+body { background: var(--bg-card); }
 html, body { user-select: none; -webkit-user-select: none; }
 input, textarea, [contenteditable] { user-select: auto; -webkit-user-select: auto; }
 body { font-family: 'Inter', sans-serif; }

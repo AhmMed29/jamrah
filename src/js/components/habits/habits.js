@@ -177,7 +177,7 @@ async function render() {
   activeHabits.forEach(function(habit) {
     var pct = calcPct(habit, logs);
     var streak = calcStreak(habit, logs);
-    b += '<tr style="background:#fff">';
+    b += '<tr style="background:var(--bg-card)">';
     for (var i = 0; i < displayDates.length; i++) {
       var dk = dateKey(displayDates[i]);
       var cv = getChecked(habit, logs, dk);
@@ -190,7 +190,7 @@ async function render() {
       b += '</td>';
     }
     b += '<td class="text-center px-1"></td>';
-    b += '<th class="sticky-col py-4 px-6 text-right font-normal text-[15px] border-l border-gray-100" data-habit-id="' + habit.id + '" style="cursor:pointer;background:#fff;color:#333">';
+    b += '<th class="sticky-col py-4 px-6 text-right font-normal text-[15px] border-l border-gray-100" data-habit-id="' + habit.id + '" style="cursor:pointer;background:var(--bg-card);color:#333">';
     b += '<div class="flex items-center justify-end gap-3">';
     b += '<span style="color:' + habit.color + ';font-weight:500">' + habit.name + '</span>';
     b += '<svg class="-rotate-90 w-[28px] h-[28px]" viewBox="0 0 36 36">';
@@ -327,7 +327,7 @@ async function openModal(habitId) {
     '</div>' +
     '<div class="flex gap-3">' +
       '<button class="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-all hover:opacity-90 edit-habit-btn" style="background:' + habit.color + '" data-id="' + habitId + '">Edit Habit</button>' +
-      '<button class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700 delete-habit-btn" style="background:#fff" data-id="' + habitId + '">Delete</button>' +
+      '<button class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700 delete-habit-btn" style="background:var(--bg-card)" data-id="' + habitId + '">Delete</button>' +
     '</div>';
 
   modalContent.querySelector('.edit-habit-btn').addEventListener('click', function() {
@@ -422,7 +422,7 @@ function showHabitForm(name, color, onSave, durationType, durationStart, duratio
     '</div>' +
     '<div class="flex gap-3 mt-4">' +
       '<button id="save-habit-btn" class="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-all hover:opacity-90" style="background:#3b82f6">' + (name ? 'Save Changes' : 'Save Habit') + '</button>' +
-      '<button id="cancel-add-btn" class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:#fff">Cancel</button>' +
+      '<button id="cancel-add-btn" class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:var(--bg-card)">Cancel</button>' +
     '</div>';
 
   addContent.querySelectorAll('.color-swatch').forEach(function(el) {

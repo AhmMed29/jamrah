@@ -10,7 +10,7 @@ input, textarea, [contenteditable] { user-select: auto; -webkit-user-select: aut
 .sticky-header:hover { background-color: #eef2ff; cursor: pointer; transition: background-color 0.15s ease; }
 #habit-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; }
 #habit-modal.open { display: flex; }
-#habit-modal .modal-card { background: #fff; border-radius: 20px; padding: 32px; width: 420px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); position: relative; animation: modalIn 0.2s ease-out; }
+#habit-modal .modal-card { background: var(--bg-card); border-radius: 20px; padding: 32px; width: 420px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); position: relative; animation: modalIn 0.2s ease-out; }
 /* ── Delete Confirmation Modal ── */
 #confirmPopup {
   z-index: 99999 !important;
@@ -28,7 +28,7 @@ input, textarea, [contenteditable] { user-select: auto; -webkit-user-select: aut
 #habit-modal .close-btn:hover { background: #f3f4f6; color: #374151; }
 #add-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; }
 #add-modal.open { display: flex; }
-#add-modal .modal-card { background: #fff; border-radius: 20px; padding: 32px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); position: relative; animation: modalIn 0.2s ease-out; }
+#add-modal .modal-card { background: var(--bg-card); border-radius: 20px; padding: 32px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); position: relative; animation: modalIn 0.2s ease-out; }
 #add-modal .close-btn { position: absolute; top: 12px; left: 12px; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #9ca3af; cursor: pointer; transition: all 0.15s; border: none; background: none; }
 #add-modal .close-btn:hover { background: #f3f4f6; color: #374151; }
 .hvo:hover, .hvo:hover .sticky-col { background-color: #f5f3ff; }
@@ -66,7 +66,7 @@ input, textarea, [contenteditable] { user-select: auto; -webkit-user-select: aut
 /* ── Delete Confirmation Modal ── */
 #delete-confirm-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; }
 #delete-confirm-modal.open { display: flex; }
-#delete-confirm-modal .modal-card { background: #fff; border-radius: 20px; padding: 28px; width: 340px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); text-align: center; position: relative; animation: modalIn 0.2s ease-out; }
+#delete-confirm-modal .modal-card { background: var(--bg-card); border-radius: 20px; padding: 28px; width: 340px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); text-align: center; position: relative; animation: modalIn 0.2s ease-out; }
 #delete-confirm-modal .confirm-icon { width: 48px; height: 48px; border-radius: 50%; background: #FEF2F2; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: #EF4444; }
 #delete-confirm-modal .confirm-title { font-size: 17px; font-weight: 600; color: #1F2937; margin-bottom: 8px; }
 #delete-confirm-modal .confirm-msg { font-size: 13px; color: #6B7280; line-height: 1.5; margin-bottom: 24px; }
@@ -82,7 +82,7 @@ input, textarea, [contenteditable] { user-select: auto; -webkit-user-select: aut
 #task-goal-tags { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 82px; overflow-y: auto; margin-bottom: 20px; scrollbar-width: thin; }
 #task-goal-tags .goal-tag { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: 2px solid transparent; text-align: center; }
 #task-goal-tags .goal-tag.selected { border-color: #3B82F6; box-shadow: 0 0 0 1px #3B82F6; }
-.task-item { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: #fff; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 10px; transition: all 0.15s; cursor: pointer; }
+.task-item { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--bg-card); border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 10px; transition: all 0.15s; cursor: pointer; }
 .task-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); transform: translateY(-1px); }
 .task-item .task-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #D1D5DB; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
 .task-item .task-check:hover { border-color: #3B82F6; }
@@ -138,7 +138,7 @@ input, textarea, [contenteditable] { user-select: auto; -webkit-user-select: aut
 .habit-toggle { width:22px; height:22px; border-radius:6px; margin:0 auto; cursor:pointer; transition:all 0.12s; display:inline-flex; align-items:center; justify-content:center; }
 .habit-toggle.checked { box-shadow:0 1px 3px rgba(0,0,0,0.1); }
 .habit-toggle.checked:hover { opacity:0.8; }
-.habit-toggle.unchecked { border:2px solid; background:#fff; }
+.habit-toggle.unchecked { border:2px solid; background:var(--bg-card); }
 .habit-toggle.unchecked:hover { opacity:0.7; }
 
 ::selection { background: #D8B4FE; color: inherit; }
@@ -238,7 +238,7 @@ input, textarea, [contenteditable] { user-select: auto; -webkit-user-select: aut
   z-index: 42;
   will-change: transform;
   width: 240px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(250, 249, 246, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-right: 1px solid rgba(195, 198, 213, 0.4);
@@ -304,7 +304,7 @@ input, textarea, [contenteditable] { user-select: auto; -webkit-user-select: aut
   height: 32px;
   border-radius: 8px;
   border: 1px dashed #d1d5db;
-  background: white;
+  background: var(--bg-card);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -400,7 +400,7 @@ input, textarea, [contenteditable] { user-select: auto; -webkit-user-select: aut
   color: #3b82f6;
   border: 1px dashed #bfdbfe;
   border-radius: 6px;
-  background: white;
+  background: var(--bg-card);
   transition: all 0.15s;
 }
 .goal-add-task-btn:hover { color: #2563eb; border-color: #2563eb; background: #eff6ff; }
@@ -454,7 +454,7 @@ input, textarea, [contenteditable] { user-select: auto; -webkit-user-select: aut
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 13px;
-  background: white;
+  background: var(--bg-card);
   outline: none;
   box-sizing: border-box;
   transition: border-color 0.15s;
@@ -466,7 +466,7 @@ input, textarea, [contenteditable] { user-select: auto; -webkit-user-select: aut
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 12px;
-  background: white;
+  background: var(--bg-card);
   outline: none;
 }
 

@@ -168,7 +168,7 @@ body { font-family: 'Patrick Hand', cursive; }
   padding: 12px;
   font-size: 18px;
   outline: none;
-  background: #fff;
+  background: var(--bg-card);
   color: #2d2d2d;
   box-sizing: border-box;
   font-family: 'Patrick Hand', cursive;
@@ -192,7 +192,7 @@ body { font-family: 'Patrick Hand', cursive; }
   border: 2px solid rgba(45,45,45,0.1);
   border-radius: 8px;
   cursor: pointer;
-  background: #fff;
+  background: var(--bg-card);
   color: rgba(45,45,45,0.4);
   transition: all 0.15s;
   font-size: 16px;
@@ -233,8 +233,7 @@ body { font-family: 'Patrick Hand', cursive; }
   align-items: center;
   justify-content: space-between;
   padding: 8px;
-  background: #fff;
-  border: 1px solid rgba(45,45,45,0.08);
+  background: var(--bg-card);
   border-radius: 8px;
   margin-bottom: 4px;
 }
@@ -266,7 +265,7 @@ body { font-family: 'Patrick Hand', cursive; }
   position: absolute;
   border-radius: 12px;
   border: 2px solid #2d2d2d;
-  background: #fff;
+  background: var(--bg-card);
   padding: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.15);
   display: flex;
@@ -288,4 +287,4 @@ body { font-family: 'Patrick Hand', cursive; }
 }
 .custom-day-btn.active { background: #2d2d2d; color: #fff; }
 .custom-day-btn:not(.active) { background: #faf9f7; }
-.custom-day-btn:not(.active):hover { background: #fff; }
+.custom-day-btn:not(.active):hover { background: var(--bg-card); }

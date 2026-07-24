@@ -4,16 +4,13 @@
 
 /* ── Sidebar Container ── */
 .app-sidebar {
-  position: fixed;
-  top: 32px;
-  left: 0;
-  bottom: 0;
+  position: relative;
+  flex-shrink: 0;
   width: 72px;
-  background: #ffffff;
+  background: var(--bg-card);
   border-right: 1px solid rgba(195,198,213,0.4);
   display: flex;
   flex-direction: column;
-  z-index: 42;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow-x: hidden;
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.04);
@@ -23,9 +20,6 @@
 }
 .app-sidebar.open .sidebar-toggle-btn {
   left: 184px;
-}
-#appContent {
-  margin-left: 72px;
 }
 
 /* ── Sidebar Content ── */
@@ -123,4 +117,5 @@
 .app-sidebar-backdrop.open {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
 }

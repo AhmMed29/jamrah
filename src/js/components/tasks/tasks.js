@@ -148,7 +148,8 @@ function renderTaskList(tasks) {
 
   if (_viewMode === 'daily') {
     filtered = tasks.filter(function(t) {
-      return (t.scheduledTime || t.createdAt || '').substring(0, 10) === dayKey || (!t.scheduledTime && dayKey === dateKey(new Date()));
+      var taskDate = t.scheduledTime || t.createdAt;
+      return taskDate ? taskDate.substring(0, 10) === dayKey : dayKey === dateKey(new Date());
     });
     if (_filterMode === 'active') filtered = filtered.filter(function(t) { return !t.completed; });
     else if (_filterMode === 'completed') filtered = filtered.filter(function(t) { return t.completed; });
@@ -405,6 +406,7 @@ window.saveDetailNote = function(id, val) {
     // Also save to .md file
     try {
       window.db.getPath().then(function(p) {
+        if (!p) return;
         var notePath = p + '/notes/task_' + id + '.md';
         window.electronAPI.writeFile(notePath, clean);
       });

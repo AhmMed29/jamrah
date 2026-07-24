@@ -28,6 +28,16 @@ AGENTS.md
 backend/bin/
 backend/obj/
 
+# Test project build artifacts
+backend/Tests/bin/
+backend/Tests/obj/
+
+# Coverage reports
+coverage/
+
+# Omo session continuation files
+.omo/
+
 # Test databases (not real user data)
 backend/jamrah.db
 backend/jamrah.db-shm

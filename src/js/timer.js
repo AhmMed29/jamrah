@@ -83,7 +83,7 @@ window.toggleTimer = function() {
     if (window.AudioManager) window.AudioManager.playSound('pomo-start.mp3');
   } else if (isRunning) {
     stopTimer();
-    recalcRemaining();
+    remainingSeconds = Math.max(0, totalSeconds - accumulatedSeconds);
   } else {
     startTimer();
     if (window.AudioManager) window.AudioManager.playSound('pomo-start.mp3');
@@ -166,16 +166,13 @@ function updateUI() {
   if (text) text.textContent = formatTime(remainingSeconds);
   if (label) label.textContent = PHASE_LABELS[phase] || 'Focus';
 
-  // Toggle side box visibility & main padding
-  var sideBox = document.getElementById('pomoSideBox');
-  var mainArea = document.getElementById('mainArea');
+  // Toggle timeline panel visibility when timer runs
+  var sideBox = document.getElementById('pomoTimelinePanel');
   if (sideBox) {
     if (isRunning) {
       sideBox.classList.add('hidden-fade');
-      if (mainArea) mainArea.style.paddingLeft = '0px';
     } else {
       sideBox.classList.remove('hidden-fade');
-      if (mainArea) mainArea.style.paddingLeft = sideBox.offsetWidth + 'px';
     }
   }
 
@@ -275,11 +272,12 @@ window.setPreset = async function(minutes) {
   }
 };
 
-window.adjustTime = function(delta) {
+window.adjustTime = async function(delta) {
   if (phase === 'idle' && !window._pendingSessionStart) {
     var newMinutes = Math.max(1, Math.floor(remainingSeconds / 60) + delta);
     totalSeconds = newMinutes * 60;
     remainingSeconds = totalSeconds;
+    await window.db.setSetting('workMinutes', newMinutes);
   } else {
     var adj = delta * 60;
     totalSeconds = Math.max(60, totalSeconds + adj);

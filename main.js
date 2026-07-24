@@ -124,9 +124,14 @@ function createWindow () {
       win.webContents.send('backend-error', _backendStartFailed)
     }
   })
-  var frontendHtml = updater.getFrontendIndexPath() || path.join(__dirname, 'src', 'index.html')
+  var frontendHtml = app.isPackaged
+    ? (updater.getFrontendIndexPath() || path.join(__dirname, 'src', 'index.html'))
+    : path.join(__dirname, 'src', 'index.html')
   win.loadFile(frontendHtml).then(function() {
     autoUpdater.checkForUpdates()
+    if (!app.isPackaged) {
+      win.webContents.session.clearCache()
+    }
   })
 
   win.webContents.on('before-input-event', function(e, input) {

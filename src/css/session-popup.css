@@ -5,7 +5,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 60;
-  background: #ffffff;
+  background: var(--bg-card);
   border: 1px solid rgba(195,198,213,0.5);
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.15);
@@ -57,7 +57,7 @@
   font-family: 'Manrope', sans-serif;
   color: #0b1c30;
   outline: none;
-  background: #fff;
+  background: var(--bg-card);
   transition: border-color 0.15s;
   box-sizing: border-box;
 }
@@ -78,7 +78,7 @@
   font-family: 'Manrope', sans-serif;
   color: #0b1c30;
   outline: none;
-  background: #fff;
+  background: var(--bg-card);
   transition: border-color 0.15s;
   box-sizing: border-box;
   resize: vertical;
@@ -99,7 +99,7 @@
   font-family: 'Manrope', sans-serif;
   color: #0b1c30;
   outline: none;
-  background: #fff;
+  background: var(--bg-card);
   cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");

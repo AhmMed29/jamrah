@@ -453,6 +453,18 @@ function escapeHtml(str) {
 }
 
 window.addGoalTask = async function(goalId) {
+  var existingEmpty = tasksData.filter(function(t) {
+    return t.goalId === goalId && (!t.name || t.name.trim() === '');
+  });
+  if (existingEmpty.length > 0) {
+    expandedGoalId = goalId;
+    await renderGoals();
+    setTimeout(function() {
+      var inputs = document.querySelectorAll('.goal-task-name-input');
+      if (inputs.length > 0) inputs[inputs.length - 1].focus();
+    }, 50);
+    return;
+  }
   var id = 'task_' + Date.now();
   await window.db.createTask({
     id: id,

@@ -216,7 +216,7 @@
   border: 2px solid var(--ink);
   border-radius: 16px;
   padding: 12px;
-  background: white;
+  background: var(--bg-card);
 }
 
 #page-calender .cal-month-title {
@@ -347,7 +347,7 @@
   padding: 6px 16px;
   border: 1.5px solid var(--ink);
   border-radius: 20px;
-  background: #fff;
+  background: var(--bg-card);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -366,7 +366,7 @@
 #page-calender .year-month-card {
   border: 2px solid var(--ink);
   border-radius: 16px;
-  background: #fff;
+  background: var(--bg-card);
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -538,7 +538,7 @@
 #page-calender .week-day-card {
   border: 2px solid var(--ink);
   border-radius: 14px;
-  background: #fff;
+  background: var(--bg-card);
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -640,7 +640,7 @@
   height: 22px;
   border: 1.5px solid var(--ink);
   border-radius: 50%;
-  background: #fff;
+  background: var(--bg-card);
   font-size: 0.75rem;
   cursor: pointer;
   display: inline-flex;
@@ -741,7 +741,7 @@
   border: 1.5px solid var(--ink);
   border-radius: 10px;
   resize: vertical;
-  background: #fff;
+  background: var(--bg-card);
 }
 
 #page-calender .note-modal-actions {
@@ -772,7 +772,7 @@
   padding: 2px 8px;
   border: 1px solid var(--ink);
   border-radius: 10px;
-  background: #fff;
+  background: var(--bg-card);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -995,7 +995,7 @@
   padding: 4px 8px;
   border: 1.5px solid var(--ink);
   border-radius: 8px;
-  background: #fff;
+  background: var(--bg-card);
   flex: 1;
   outline: none;
 }
@@ -1039,7 +1039,7 @@
   padding: 10px;
   border: 1.5px solid var(--ink);
   border-radius: 10px;
-  background: #fff;
+  background: var(--bg-card);
   width: 100%;
   outline: none;
 }
@@ -1096,7 +1096,7 @@
   padding: 10px;
   border: 1.5px solid var(--ink);
   border-radius: 10px;
-  background: #fff;
+  background: var(--bg-card);
   width: 100%;
   outline: none;
   box-sizing: border-box;
@@ -1192,7 +1192,7 @@
   border: 1.5px solid var(--ink);
   border-radius: 8px;
   outline: none;
-  background: #fff;
+  background: var(--bg-card);
 }
 #page-calender .tag-editor-color {
   width: 28px;
@@ -1236,7 +1236,7 @@
   border: 1.5px solid var(--ink);
   border-radius: 8px;
   outline: none;
-  background: #fff;
+  background: var(--bg-card);
 }
 #page-calender .tag-editor-add-color {
   width: 28px;
@@ -1252,7 +1252,7 @@
   height: 28px;
   border: 1.5px solid var(--ink);
   border-radius: 50%;
-  background: #fff;
+  background: var(--bg-card);
   font-size: 1.2rem;
   cursor: pointer;
   line-height: 1;

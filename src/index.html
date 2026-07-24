@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <style>
-#app-splash{position:fixed;inset:0;z-index:99999;background:#fff;display:flex;align-items:center;justify-content:center}
+#app-splash{position:fixed;inset:0;z-index:99999;background:var(--bg-card);display:flex;align-items:center;justify-content:center}
 .loader { position: relative; width: 75px; height: 100px; }
 .loader__bar { position: absolute; bottom: 0; width: 10px; height: 50%; background: rgb(0, 0, 0); transform-origin: center bottom; box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.2); }
 .loader__bar:nth-child(1) { left: 0px; transform: scale(1, 0.2); -webkit-animation: barUp1 4s infinite; animation: barUp1 4s infinite; }
@@ -97,7 +97,7 @@ window.tailwind={ config: {
 <div id="appContent" class="flex flex-1 overflow-hidden">
 
 <!-- App Sidebar Backdrop -->
-<div id="appSidebarBackdrop" class="app-sidebar-backdrop"></div>
+<div id="appSidebarBackdrop" class="app-sidebar-backdrop" onclick="if(_sidebarOpen) toggleAppSidebar()"></div>
 
 <!-- App Sidebar -->
 <aside id="appSidebar" class="app-sidebar">
@@ -136,7 +136,7 @@ window.tailwind={ config: {
       </button>
     </div>
     <div class="app-sidebar-menu" style="margin-top: auto; margin-bottom: 0;">
-      <button class="app-sidebar-menu-item" data-page="settings" onclick="appSidebarNavigate('settings')">
+      <button class="app-sidebar-menu-item" data-page="settings" onclick="if(typeof openSettings==='function') openSettings()">
         <span class="material-symbols-outlined">settings</span>
         <span>Settings</span>
       </button>
@@ -144,27 +144,32 @@ window.tailwind={ config: {
   </div>
 </aside>
 
-<!-- Global Session history side panel -->
-<div id="pomoSideBox" class="pomo-side-box">
-  <div class="pomo-side-box-vertical-label">SESSIONS</div>
-  <div class="pomo-side-header">
-    <span class="pomo-side-date-label" id="pomoSideDateLabel">Today</span>
-    <button class="pomo-side-collapse-btn" onclick="event.stopPropagation(); togglePomoSideBox()" title="Collapse Sessions">
-      <span class="material-symbols-outlined" style="font-size:18px">keyboard_double_arrow_left</span>
-    </button>
-  </div>
-  <div class="pomo-side-timeline" id="pomoSideTimeline"></div>
-  <div class="pomo-side-nav">
-    <button class="pomo-side-nav-btn" onclick="pomoPrevDay()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <span class="pomo-side-nav-label" id="pomoSideNavLabel">Today</span>
-    <button class="pomo-side-nav-btn" onclick="pomoNextDay()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
-  </div>
-  <div id="pomoResizer" style="width: 8px; cursor: col-resize; background: transparent; z-index: 50; position: absolute; right: 0; top: 0; bottom: 0; transition: background 0.2s;" onmouseover="this.style.background='rgba(59, 130, 246, 0.5)'" onmouseout="this.style.background='transparent'"></div>
-</div>
-
 <div id="page-home" class="hidden flex-1 flex-col items-center justify-center bg-white px-4"></div>
 
 <div id="page-pomodoro" class="flex flex-1 overflow-hidden min-h-0" dir="ltr">
+<div id="pomoTimelinePanel" class="pomo-timeline-panel">
+  <div class="pomo-timeline-panel-header">
+    <div class="flex items-center gap-2 w-full">
+      <span class="pomo-timeline-panel-date" id="pomoSideDateLabel">Today</span>
+      <span class="flex-1"></span>
+      <button class="pomo-timeline-panel-toggle-btn" onclick="togglePomoSideBox()" title="Toggle Sessions">
+        <span class="material-symbols-outlined" style="font-size:18px">chevron_left</span>
+      </button>
+    </div>
+  </div>
+  <div class="pomo-timeline-list" id="pomoSideTimeline">
+    <!-- timeline items rendered by JS -->
+  </div>
+  <div class="pomo-timeline-panel-nav">
+    <button class="pomo-timeline-nav-btn" onclick="pomoPrevDay()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <span class="pomo-timeline-nav-label" id="pomoSideNavLabel">Today</span>
+    <button class="pomo-timeline-nav-btn" onclick="pomoNextDay()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+  </div>
+</div>
 <main class="flex-1 flex flex-col relative h-full overflow-hidden bg-white" id="mainArea">
 <div class="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto px-4 relative" style="padding-top:60px;padding-bottom:60px">
 
@@ -193,7 +198,7 @@ window.tailwind={ config: {
   </div>
 
   <!-- Right Wall Toggle Button -->
-  <button id="pomoRightToggleBtn" onclick="window.togglePomoRightPanel()" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 41; background: rgba(255,255,255,0.9); border: 1px solid rgba(195,198,213,0.5); border-right: none; border-radius: 12px 0 0 12px; padding: 16px 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: -4px 0 12px rgba(0,0,0,0.05); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); backdrop-filter: blur(8px);">
+  <button id="pomoRightToggleBtn" onclick="window.togglePomoRightPanel()" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 41; background: rgba(250,249,246,0.9); border: 1px solid rgba(195,198,213,0.5); border-right: none; border-radius: 12px 0 0 12px; padding: 16px 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: -4px 0 12px rgba(0,0,0,0.05); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); backdrop-filter: blur(8px);">
     <span style="writing-mode: vertical-rl; font-size: 12px; font-weight: 700; color: #4b5563; letter-spacing: 0.5px; transform: rotate(180deg);">Session Note</span>
   </button>
 
@@ -209,7 +214,7 @@ window.tailwind={ config: {
         <button class="pomo-preset-btn" onclick="window.selectPomoPreset(5)">5</button>
       </div>
     </div>
-    <div class="pomo-popup-field" style="display:none;">
+    <div class="pomo-popup-field">
       <label class="pomo-popup-label" for="pomoPopupGoal">Goal</label>
       <select id="pomoPopupGoal" class="pomo-popup-select">
         <option value="">None</option>
@@ -222,13 +227,13 @@ window.tailwind={ config: {
   </div>
 
   <!-- Right side popup and note panel container -->
-  <div class="pomo-right-panel-wrapper" id="pomoRightPanelWrapper" style="position:absolute; right:40px; top:50%; transform: translate(150%, -50%); opacity: 0; pointer-events: none; z-index:40; display:flex; flex-direction:column; gap:16px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); width: 320px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid rgba(255,255,255,0.5); padding: 20px;">
+  <div class="pomo-right-panel-wrapper" id="pomoRightPanelWrapper" style="position:absolute; right:40px; top:50%; transform: translate(150%, -50%); opacity: 0; pointer-events: none; z-index:40; display:flex; flex-direction:column; gap:16px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); width: 320px; background: rgba(250, 249, 246, 0.95); backdrop-filter: blur(12px); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid rgba(255,255,255,0.5); padding: 20px;">
     
     <!-- Active Session Info (shown during work phase) -->
     <div id="pomoActiveSessionInfo" class="pomo-name-popup">
       <h3 class="pomo-popup-title" style="color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Active Session</h3>
       <div class="pomo-popup-field" style="margin-bottom: 0;">
-        <input type="text" id="pomoActiveTaskName" class="pomo-popup-input" placeholder="Session Name..." onchange="if(window.updateActiveSessionName) window.updateActiveSessionName(this.value)" style="font-weight: 600; font-size: 15px; color: #0b1c30; padding: 10px 14px;">
+        <input type="text" id="pomoActiveTaskName" class="pomo-popup-input" placeholder="Session Name..." oninput="if(window.updateActiveSessionName) window.updateActiveSessionName(this.value)" style="font-weight: 600; font-size: 15px; color: #0b1c30; padding: 10px 14px;">
       </div>
     </div>
 
@@ -242,8 +247,8 @@ window.tailwind={ config: {
       </div>
       <textarea id="pomoNoteArea" class="pomo-note-textarea" placeholder="Add a session note..."></textarea>
       <div class="pomo-note-actions" style="display:flex; gap:6px; justify-content:flex-end;">
-        <button onclick="window.deleteRightPanelNote()" style="padding:6px 12px; font-size:11px; border:1px solid #fee2e2; border-radius:6px; background:white; cursor:pointer; color:#ef4444;">Delete</button>
-        <button onclick="window.cancelRightPanelNote()" style="padding:6px 12px; font-size:11px; border:1px solid #e2e8f0; border-radius:6px; background:white; cursor:pointer; color:#64748b;">Cancel</button>
+        <button onclick="window.deleteRightPanelNote()" style="padding:6px 12px; font-size:11px; border:1px solid #fee2e2; border-radius:6px; background:var(--bg-card); cursor:pointer; color:#ef4444;">Delete</button>
+        <button onclick="window.cancelRightPanelNote()" style="padding:6px 12px; font-size:11px; border:1px solid #e2e8f0; border-radius:6px; background:var(--bg-card); cursor:pointer; color:#64748b;">Cancel</button>
         <button onclick="window.saveRightPanelNote()" style="padding:6px 12px; font-size:11px; border:none; border-radius:6px; background:#3b82f6; cursor:pointer; color:white;">Save</button>
       </div>
     </div>
@@ -353,7 +358,7 @@ window.tailwind={ config: {
   <!-- Content -->
   <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0">
     <!-- Header -->
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:20px 28px;border-bottom:1px solid rgba(195,198,213,0.3);background:rgba(255,255,255,0.8);backdrop-filter:blur(8px);flex-shrink:0">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:20px 28px;border-bottom:1px solid rgba(195,198,213,0.3);background:rgba(250,249,246,0.8);backdrop-filter:blur(8px);flex-shrink:0">
       <h3 style="font-size:22px;font-weight:600;color:#0b1c30" id="settingsTabTitle">General</h3>
       <button onclick="closeSettings()" style="border:none;background:none;cursor:pointer;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#6B7280;transition:all 0.15s" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
         <span class="material-symbols-outlined" style="font-size:22px">close</span>
@@ -369,7 +374,7 @@ window.tailwind={ config: {
             <div style="padding-bottom:8px;border-bottom:1px solid rgba(195,198,213,0.3);margin-bottom:20px">
               <h4 style="font-size:16px;font-weight:600;color:#0b1c30">General</h4>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-card);border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:20px">
               <div>
                 <label for="taskPopupToggle" style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer">Show task popup on start</label>
                 <p style="font-size:12px;color:#6B7280;margin-top:4px">Automatically open the add task dialog when timer starts</p>
@@ -387,7 +392,7 @@ window.tailwind={ config: {
               <h4 style="font-size:16px;font-weight:600;color:#0b1c30">Page Placements</h4>
             </div>
             <p style="font-size:12px;color:#6B7280;margin-bottom:12px">Choose where each section appears in the app interface.</p>
-            <div style="display:flex;flex-direction:column;gap:12px;background:#fff;border:1px solid rgba(195,198,213,0.5);border-radius:10px;padding:16px;">
+            <div style="display:flex;flex-direction:column;gap:12px;background:var(--bg-card);border:1px solid rgba(195,198,213,0.5);border-radius:10px;padding:16px;">
               <div style="display:grid;grid-template-columns:1fr 100px 100px;font-size:12px;font-weight:700;color:#6B7280;border-bottom:1px solid #f1f5f9;padding-bottom:6px;">
                 <span>Page</span>
                 <span style="text-align:center">Sidebar</span>
@@ -491,7 +496,7 @@ window.tailwind={ config: {
             <div style="padding-bottom:8px;border-bottom:1px solid rgba(195,198,213,0.3);margin-bottom:16px">
               <h4 style="font-size:16px;font-weight:600;color:#0b1c30">Updates</h4>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-card);border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:10px">
               <div>
                 <label style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer">Check for updates</label>
                 <p style="font-size:12px;color:#6B7280;margin-top:4px">Manually check if a new version is available</p>
@@ -548,7 +553,7 @@ window.tailwind={ config: {
               <h4 style="font-size:16px;font-weight:600;color:#0b1c30">Advanced</h4>
             </div>
             
-            <div class="settings-toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:12px">
+            <div class="settings-toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-card);border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:12px">
               <div>
                 <label for="autoStartBreakToggle" style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer">Auto-start breaks</label>
                 <p style="font-size:12px;color:#6B7280;margin-top:4px">Automatically start break timer after focus ends</p>
@@ -559,7 +564,7 @@ window.tailwind={ config: {
               </label>
             </div>
 
-            <div class="settings-toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:12px">
+            <div class="settings-toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-card);border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:12px">
               <div>
                 <label for="autoStartFocusToggle" style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer">Auto-start focus</label>
                 <p style="font-size:12px;color:#6B7280;margin-top:4px">Automatically start focus timer after break ends</p>
@@ -570,7 +575,7 @@ window.tailwind={ config: {
               </label>
             </div>
 
-            <div class="settings-toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:12px">
+            <div class="settings-toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-card);border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:12px">
               <div>
                 <label for="desktopNotificationsToggle" style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer">Desktop notifications</label>
                 <p style="font-size:12px;color:#6B7280;margin-top:4px">System notifications when timer completes</p>
@@ -581,7 +586,7 @@ window.tailwind={ config: {
               </label>
             </div>
 
-            <div class="settings-toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:12px">
+            <div class="settings-toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-card);border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:12px">
               <div>
                 <label for="showSessionCountToggle" style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer">Session count display</label>
                 <p style="font-size:12px;color:#6B7280;margin-top:4px">Show session count on pomodoro page</p>
@@ -592,7 +597,7 @@ window.tailwind={ config: {
               </label>
             </div>
 
-            <div class="settings-timer-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:20px">
+            <div class="settings-timer-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-card);border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:20px">
               <div>
                 <label style="font-size:14px;font-weight:600;color:#0b1c30;display:block">Sessions before long break</label>
                 <p style="font-size:12px;color:#6B7280;margin-top:4px">Number of sessions before a long break is scheduled</p>
@@ -607,7 +612,7 @@ window.tailwind={ config: {
             <div style="padding-bottom:8px;border-bottom:1px solid rgba(195,198,213,0.3);margin-bottom:16px">
               <h4 style="font-size:16px;font-weight:600;color:#0b1c30">Sound</h4>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#fff;border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-card);border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:20px">
               <div>
                 <label for="pomoSoundToggle" style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer">Pomodoro sounds</label>
                 <p style="font-size:12px;color:#6B7280;margin-top:4px">Play sound on session start and end</p>
@@ -627,11 +632,11 @@ window.tailwind={ config: {
               <h4 style="font-size:16px;font-weight:600;color:#0b1c30">Storage Location</h4>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <span style="display:flex;align-items:center;gap:8px;flex:1;padding:10px 14px;background:#fff;border:1px solid rgba(195,198,213,0.5);border-radius:8px;font-size:13px;color:#6B7280;overflow:hidden">
+              <span style="display:flex;align-items:center;gap:8px;flex:1;padding:10px 14px;background:var(--bg-card);border:1px solid rgba(195,198,213,0.5);border-radius:8px;font-size:13px;color:#6B7280;overflow:hidden">
                 <span class="material-symbols-outlined" style="font-size:18px;color:#9CA3AF;flex-shrink:0">folder</span>
                 <span id="storagePathDisplay" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">...</span>
               </span>
-              <button onclick="openStorageFolder()" style="padding:10px 20px;background:#fff;color:#0e58c5;border:1px solid rgba(195,198,213,0.5);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;white-space:nowrap" onmouseover="this.style.background='#f8f9ff'" onmouseout="this.style.background='#fff'">Browse...</button>
+              <button onclick="openStorageFolder()" style="padding:10px 20px;background:var(--bg-card);color:#0e58c5;border:1px solid rgba(195,198,213,0.5);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;white-space:nowrap" onmouseover="this.style.background='#f8f9ff'" onmouseout="this.style.background='#faf9f6'">Browse...</button>
             </div>
           </section>
 
@@ -641,11 +646,11 @@ window.tailwind={ config: {
             </div>
             <div id="backupStatus" style="display:none;padding:10px 16px;border-radius:8px;margin-bottom:12px;font-size:13px;font-weight:500"></div>
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
-              <span style="display:flex;align-items:center;gap:8px;flex:1;padding:10px 14px;background:#fff;border:1px solid rgba(195,198,213,0.5);border-radius:8px;font-size:13px;color:#6B7280;overflow:hidden">
+              <span style="display:flex;align-items:center;gap:8px;flex:1;padding:10px 14px;background:var(--bg-card);border:1px solid rgba(195,198,213,0.5);border-radius:8px;font-size:13px;color:#6B7280;overflow:hidden">
                 <span class="material-symbols-outlined" style="font-size:18px;color:#9CA3AF;flex-shrink:0">folder_copy</span>
                 <span id="backupPathDisplay" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Not set</span>
               </span>
-              <button onclick="selectBackupFolder()" style="padding:10px 20px;background:#fff;color:#0e58c5;border:1px solid rgba(195,198,213,0.5);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;white-space:nowrap" onmouseover="this.style.background='#f8f9ff'" onmouseout="this.style.background='#fff'">Browse</button>
+              <button onclick="selectBackupFolder()" style="padding:10px 20px;background:var(--bg-card);color:#0e58c5;border:1px solid rgba(195,198,213,0.5);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;white-space:nowrap" onmouseover="this.style.background='#f8f9ff'" onmouseout="this.style.background='#faf9f6'">Browse</button>
             </div>
             <button onclick="doBackup()" style="padding:10px 24px;background:#0e58c5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity 0.15s;display:flex;align-items:center;gap:8px" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
               <span class="material-symbols-outlined" style="font-size:18px">backup</span> Backup Now
@@ -657,7 +662,7 @@ window.tailwind={ config: {
               <h4 style="font-size:16px;font-weight:600;color:#0b1c30">Restore from Backup</h4>
             </div>
             <p style="font-size:12px;color:#6B7280;margin-bottom:12px">Expected file name: <strong>app.db</strong> (SQLite database)</p>
-            <button onclick="doRestore()" style="padding:10px 24px;background:#fff;color:#dc2626;border:1px solid #dc2626;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='#fff'">
+            <button onclick="doRestore()" style="padding:10px 24px;background:var(--bg-card);color:#dc2626;border:1px solid #dc2626;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='#faf9f6'">
               <span class="material-symbols-outlined" style="font-size:18px">restore</span> Restore
             </button>
           </section>
@@ -681,8 +686,8 @@ window.tailwind={ config: {
       </div>
     </div>
     <!-- Footer -->
-    <div style="padding:14px 28px;background:#fff;border-top:1px solid rgba(195,198,213,0.3);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0" id="settingsBtnRow">
-      <button id="settingsCancelBtn" onclick="cancelSettings()" style="padding:9px 24px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;color:#6B7280;background:#fff;cursor:pointer;font-weight:500;transition:all 0.15s;display:none;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">Cancel</button>
+    <div style="padding:14px 28px;background:var(--bg-card);border-top:1px solid rgba(195,198,213,0.3);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0" id="settingsBtnRow">
+      <button id="settingsCancelBtn" onclick="cancelSettings()" style="padding:9px 24px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;color:#6B7280;background:var(--bg-card);cursor:pointer;font-weight:500;transition:all 0.15s;display:none;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#faf9f6'">Cancel</button>
       <button onclick="saveSettings().then(closeSettings)" style="padding:9px 24px;background:#0e58c5;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;transition:all 0.15s" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Save Changes</button>
     </div>
   </div>
@@ -766,7 +771,7 @@ window.tailwind={ config: {
 </div>
 
 <div id="page-tasks" class="hidden flex-1 flex flex-col overflow-hidden" style="background:#faf9f7">
-<header style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #2d2d2d;background:#fff;padding:16px 24px">
+<header style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #2d2d2d;background:var(--bg-card);padding:16px 24px">
   <h1 style="font-size:30px;font-weight:400">Tasks</h1>
   <div style="display:flex;align-items:center;gap:12px">
     <button id="tasks-prev-day" style="padding:4px 8px;color:rgba(45,45,45,0.6);cursor:pointer;background:none;border:none;font-size:24px;font-family:'Patrick Hand',cursive">&lsaquo;</button>
@@ -775,7 +780,7 @@ window.tailwind={ config: {
       <div id="tasks-date-display" style="font-size:14px;opacity:0.5"></div>
     </div>
     <button id="tasks-next-day" style="padding:4px 8px;color:rgba(45,45,45,0.6);cursor:pointer;background:none;border:none;font-size:24px;font-family:'Patrick Hand',cursive">&rsaquo;</button>
-    <button id="tasks-today-btn" style="display:none;margin-left:8px;padding:4px 12px;border:2px solid #2d2d2d;border-radius:12px;background:#fff;cursor:pointer;font-size:14px;font-family:'Patrick Hand',cursive">Today</button>
+    <button id="tasks-today-btn" style="display:none;margin-left:8px;padding:4px 12px;border:2px solid #2d2d2d;border-radius:12px;background:var(--bg-card);cursor:pointer;font-size:14px;font-family:'Patrick Hand',cursive">Today</button>
   </div>
   <div style="display:flex;align-items:center;gap:16px">
     <button id="tasks-filter-btn" style="font-size:18px;color:rgba(45,45,45,0.7);text-transform:capitalize;cursor:pointer;background:none;border:none;font-family:'Patrick Hand',cursive">all</button>
@@ -788,7 +793,7 @@ window.tailwind={ config: {
 <main style="display:flex;flex:1;overflow:hidden">
   <section id="tasks-list-section" style="width:50%;display:flex;flex-direction:column;overflow-y:auto;border-right:2px solid #2d2d2d;padding:24px 0;background:#faf9f7">
     <div style="width:100%;max-width:448px;margin:0 auto;padding:0 16px">
-      <div id="tasks-new-card" style="border-radius:16px;border:2px solid #2d2d2d;background:#fff;padding:12px 16px">
+      <div id="tasks-new-card" style="border-radius:16px;border:2px solid #2d2d2d;background:var(--bg-card);padding:12px 16px">
         <div style="display:flex;align-items:center;gap:12px">
           <input type="text" id="tasks-new-input" placeholder="Add a task..." style="flex:1;background:transparent;font-size:20px;outline:none;border:none;color:#2d2d2d;font-family:'Patrick Hand',cursive" />
           <button id="tasks-new-toggle" style="width:36px;height:36px;border-radius:50%;border:2px solid #2d2d2d;background:#faf9f7;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s">
@@ -825,7 +830,7 @@ window.tailwind={ config: {
       <div id="tasks-list" style="margin-top:16px"></div>
     </div>
   </section>
-  <section id="task-detail-panel" style="width:50%;display:flex;flex-direction:column;overflow-y:auto;background:rgba(255,255,255,0.5)">
+  <section id="task-detail-panel" style="width:50%;display:flex;flex-direction:column;overflow-y:auto;background:rgba(250,249,246,0.5)">
     <div class="task-detail-empty">Select a task to view and edit</div>
   </section>
 </main>
@@ -1002,7 +1007,7 @@ window.tailwind={ config: {
 </div>
 
 <div id="updateModal" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.3);align-items:center;justify-content:center;padding:20px;display:none" onclick="closeUpdateModal(event)">
-  <div style="background:white;border-radius:16px;padding:28px;width:100%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative">
+  <div style="background:var(--bg-card);border-radius:16px;padding:28px;width:100%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative">
     <button onclick="closeUpdateModal(event)" style="position:absolute;top:16px;right:16px;width:28px;height:28px;border-radius:50%;border:none;background:#F3F4F6;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6B7280">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -1022,7 +1027,7 @@ window.tailwind={ config: {
     </div>
     <div id="updateStatus" style="font-size:12px;color:#9CA3AF;text-align:center;margin-bottom:12px;display:none"></div>
     <div style="display:flex;justify-content:flex-end;gap:10px">
-      <button onclick="closeUpdateModal(event)" style="padding:10px 24px;border:1px solid #D1D5DB;border-radius:10px;font-size:13px;color:#6B7280;background:white;cursor:pointer;font-weight:500">Cancel</button>
+      <button onclick="closeUpdateModal(event)" style="padding:10px 24px;border:1px solid #D1D5DB;border-radius:10px;font-size:13px;color:#6B7280;background:var(--bg-card);cursor:pointer;font-weight:500">Cancel</button>
       <button onclick="downloadUpdate()" style="padding:10px 24px;background:#3B82F6;color:white;border:none;border-radius:10px;font-size:13px;cursor:pointer;font-weight:600">Download</button>
     </div>
   </div>
@@ -1030,14 +1035,14 @@ window.tailwind={ config: {
 
 <!-- Unsaved settings confirmation modal -->
 <div id="settingsConfirmModal" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.3);align-items:center;justify-content:center;padding:20px;display:none" onclick="closeSettingsConfirm(event)">
-  <div style="background:white;border-radius:16px;padding:28px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative;text-align:center" onclick="event.stopPropagation()">
+  <div style="background:var(--bg-card);border-radius:16px;padding:28px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative;text-align:center" onclick="event.stopPropagation()">
     <h3 style="font-size:18px;font-weight:700;color:#1F2937;margin-bottom:8px">Unsaved Changes</h3>
     <p style="font-size:14px;color:#6B7280;line-height:1.6;margin-bottom:24px">
       You have unsaved settings changes. What would you like to do?
     </p>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-      <button onclick="closeSettingsConfirm(event)" style="padding:10px 20px;border:1px solid #D1D5DB;border-radius:10px;font-size:13px;color:#6B7280;background:white;cursor:pointer;font-weight:500">Cancel</button>
-      <button onclick="confirmSettingsDiscard()" style="padding:10px 20px;border:1px solid #EF4444;border-radius:10px;font-size:13px;color:#EF4444;background:white;cursor:pointer;font-weight:500">Discard</button>
+      <button onclick="closeSettingsConfirm(event)" style="padding:10px 20px;border:1px solid #D1D5DB;border-radius:10px;font-size:13px;color:#6B7280;background:var(--bg-card);cursor:pointer;font-weight:500">Cancel</button>
+      <button onclick="confirmSettingsDiscard()" style="padding:10px 20px;border:1px solid #EF4444;border-radius:10px;font-size:13px;color:#EF4444;background:var(--bg-card);cursor:pointer;font-weight:500">Discard</button>
       <button onclick="confirmSettingsSave()" style="padding:10px 20px;background:#3B82F6;color:white;border:none;border-radius:10px;font-size:13px;cursor:pointer;font-weight:600">Save</button>
     </div>
   </div>
@@ -1068,7 +1073,7 @@ window.tailwind={ config: {
 <span class="material-symbols-outlined text-lg sm:text-xl">bar_chart</span>
 <span class="text-[9px] sm:text-[10px] font-medium mt-0.5 leading-tight">Stats</span>
 </button>
-<button id="settingsBtn" data-page="settings" class="dock-item flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl transition-colors text-tickgray-500 hover:bg-blue-50 hover:text-tickblue" onclick="if (typeof openSettings==='function') openSettings();window.AudioManager?.playSound('tab-swipping.mp3')">
+<button id="settingsBtn" data-page="settings" class="dock-item flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl transition-colors text-tickgray-500 hover:bg-blue-50 hover:text-tickblue">
 <span class="material-symbols-outlined text-lg sm:text-xl">settings</span>
 <span class="text-[9px] sm:text-[10px] font-medium mt-0.5 leading-tight">Settings</span>
 </button>

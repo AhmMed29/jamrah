@@ -73,7 +73,7 @@
     }
     #habit-modal.open { display: flex; }
     #habit-modal .modal-card {
-      background: #fff;
+      background: var(--bg-card);
       border-radius: 20px;
       padding: 32px;
       width: 420px;
@@ -114,7 +114,7 @@
     }
     #add-modal.open { display: flex; }
     #add-modal .modal-card {
-      background: #fff;
+      background: var(--bg-card);
       border-radius: 20px;
       padding: 32px;
       max-width: 90vw;
@@ -444,7 +444,7 @@
         </div>
         <div class="flex gap-3">
           <button class="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-all hover:opacity-90" style="background:${habit.color}">Edit Habit</button>
-          <button class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:#fff">Delete</button>
+          <button class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:var(--bg-card)">Delete</button>
         </div>
       `;
       modal.classList.add('open');
@@ -500,7 +500,7 @@
 
         <div class="flex gap-3 mt-6">
           <button id="save-habit-btn" class="flex-1 py-2.5 rounded-xl text-white text-sm font-medium transition-all hover:opacity-90" style="background:#3b82f6">Save Habit</button>
-          <button id="cancel-add-btn" class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:#fff">Cancel</button>
+          <button id="cancel-add-btn" class="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all border-2 text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700" style="background:var(--bg-card)">Cancel</button>
         </div>
       `;
 
@@ -517,7 +517,7 @@
         label.addEventListener('click', function() {
           addContent.querySelectorAll('.track-type-label').forEach(l => {
             l.style.borderColor = '#e5e7eb';
-            l.style.background = '#fff';
+            l.style.background = '#faf9f6';
           });
           this.style.borderColor = '#3b82f6';
           this.style.background = '#eff6ff';

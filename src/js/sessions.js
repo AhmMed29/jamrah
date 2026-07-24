@@ -218,13 +218,18 @@ window.skipPhase = async function() {
     // Don't save if not started yet
     window._pendingSessionStart = false;
     onSessionCancel();
-  } else if (phase === 'work' && activeSession && activeSession.lastResumeTime) {
-    // Save current session when skipping work phase
-    activeSession.accumulatedMs += Date.now() - activeSession.lastResumeTime;
-    activeSession.lastResumeTime = null;
-    var elapsedSec = activeSession.accumulatedMs / 1000;
-    var plannedMinutes = totalSeconds / 60;
-    await onSessionComplete(elapsedSec / 60, plannedMinutes);
+  } else if (phase === 'work' && activeSession) {
+    if (activeSession.lastResumeTime) {
+      activeSession.accumulatedMs += Date.now() - activeSession.lastResumeTime;
+      activeSession.lastResumeTime = null;
+    }
+    if (activeSession.accumulatedMs === 0) {
+      onSessionCancel();
+    } else {
+      var elapsedSec = activeSession.accumulatedMs / 1000;
+      var plannedMinutes = totalSeconds / 60;
+      await onSessionComplete(elapsedSec / 60, plannedMinutes);
+    }
   } else {
     onSessionCancel();
   }
@@ -254,7 +259,6 @@ window.cancelSessionNow = async function() {
   }
   stopTimer();
   phase = 'idle';
-  await advancePhase();
   recalcRemaining();
   updateUI();
   await onSessionComplete(elapsedSec / 60, plannedMinutes);
@@ -679,7 +683,7 @@ function formatDurationShort(minutes) {
   if (minutes < 60) return Math.round(minutes) + 'm';
   var h = Math.floor(minutes / 60);
   var rm = Math.round(minutes % 60);
-  return h + (rm > 0 ? '.' + Math.round(rm * 10 / 6) : '') + 'h';
+  return h + (rm > 0 ? '.' + Math.round(rm / 6) : '') + 'h';
 }
 
 async function getTodaySessions() {
@@ -879,7 +883,7 @@ async function renderSessionSideBox() {
   var container = document.getElementById('pomoSideTimeline');
   var dateLabel = document.getElementById('pomoSideDateLabel');
   var navLabel = document.getElementById('pomoSideNavLabel');
-  var fwdBtn = document.querySelector('.pomo-side-nav button:last-child');
+  var fwdBtn = document.querySelector('.pomo-timeline-panel-nav button:last-child');
   if (!container) return;
 
   var today = todayKey();
@@ -900,58 +904,93 @@ async function renderSessionSideBox() {
   }
 
   var allSessions = sessions.slice();
-  if (activeOnDate) allSessions.push(activeOnDate);
+  if (activeOnDate) allSessions.unshift(activeOnDate);
 
-  var html = '<table class="pomo-side-table" style="width:100%">';
-  html += '<thead><tr><th>Name</th><th>Time</th><th>Dur</th><th>Tag</th><th></th></tr></thead><tbody>';
-  
+  var html = '<div class="pomo-timeline">';
+
   var tags = await getTags();
   var gw = await getTagsWithGoals();
   var goals = gw.goals || [];
 
   for (var i = 0; i < allSessions.length; i++) {
     var s = allSessions[i];
-    var isActive = activeOnDate && i === allSessions.length - 1;
+    var isActive = activeOnDate && i === 0;
+    var isLast = i === allSessions.length - 1;
+
     var endT = isActive ? Date.now() + remainingSeconds * 1000 : s.endTime;
     var timeRange = formatTimeHMShort2(s.startTime) + ' - ' + formatTimeHMShort2(endT);
 
     var durMin = isActive
       ? (activeSession.accumulatedMs + (activeSession.lastResumeTime ? Date.now() - activeSession.lastResumeTime : 0)) / 60000
       : s.focusMinutes;
-    var durText = formatDurationShort(durMin);
+    var durNum = Math.round(durMin);
 
     var name = s.taskName || 'Focus Session';
-    
-    var tagHtml = '<span style="color:#9ca3af;font-size:10px;">-</span>';
+    var note = s.note || '';
+    var isLongNote = note.split('\n').length > 7 || note.length > 500;
+
+    html += '<div class="pomo-timeline-item">';
+
+    html += '<div class="pomo-timeline-col-line">';
+    html += '<div class="pomo-timeline-dot' + (isActive ? ' active' : '') + '">' + durNum + '</div>';
+    if (!isLast) html += '<div class="pomo-timeline-line"></div>';
+    html += '</div>';
+
+    html += '<div class="pomo-timeline-col-content">';
+    html += '<div class="pomo-timeline-time">' + timeRange + '</div>';
+    html += '<div class="pomo-timeline-name" data-name="' + escapeHtml(name) + '" onclick="window.startInlineEditSessionName(event,\'' + s.id + '\')">' + escapeHtml(name) + '</div>';
+
+    var tagHtml = '';
     if (s.tagId) {
       var foundTag = tags.find(function(t) { return t.id === s.tagId; });
       if (foundTag) {
-        tagHtml = '<span class="pomo-side-tag-bubble" style="background:rgba(' + hexToRgb(foundTag.color) + ',0.12);color:' + foundTag.color + ';border:1px solid rgba(' + hexToRgb(foundTag.color) + ',0.25)">' + foundTag.name + '</span>';
+        tagHtml = '<span class="pomo-timeline-tag" style="background:rgba(' + hexToRgb(foundTag.color) + ',0.12);color:' + foundTag.color + ';border:1px solid rgba(' + hexToRgb(foundTag.color) + ',0.25)">' + escapeHtml(foundTag.name) + '</span>';
       }
     } else if (s.goalId) {
       var foundGoal = goals.find(function(g) { return g.goalId === s.goalId; });
       if (foundGoal) {
-        tagHtml = '<span class="pomo-side-tag-bubble" style="background:rgba(' + hexToRgb(foundGoal.color) + ',0.12);color:' + foundGoal.color + ';border:1px solid rgba(' + hexToRgb(foundGoal.color) + ',0.25)">' + foundGoal.name + '</span>';
+        tagHtml = '<span class="pomo-timeline-tag" style="background:rgba(' + hexToRgb(foundGoal.color) + ',0.12);color:' + foundGoal.color + ';border:1px solid rgba(' + hexToRgb(foundGoal.color) + ',0.25)">' + escapeHtml(foundGoal.name) + '</span>';
       }
     }
+    if (tagHtml) html += tagHtml;
 
-    var hasNote = !!s.note;
-    var noteBtnClass = hasNote ? 'pomo-side-note-btn has-note' : 'pomo-side-note-btn empty-note';
-    var noteBtnHtml = '<button class="' + noteBtnClass + '" onclick="window.openPomoSideNoteModal(\'' + s.id + '\')" title="Session Note"><span class="material-symbols-outlined" style="font-size:14px;">description</span></button>';
+    if (note) {
+      var noteId = 'snote-' + s.id;
+      html += '<div class="pomo-timeline-note-wrapper">';
+      html += '<div class="pomo-timeline-note' + (isLongNote ? ' truncated' : '') + '" id="' + noteId + '">' + escapeHtml(note).replace(/\n/g, '<br>') + '</div>';
+      if (isLongNote) {
+        html += '<button class="pomo-timeline-show-more" onclick="window.toggleTimelineNote(\'' + noteId + '\')">Show more</button>';
+      }
+      html += '</div>';
+    }
 
-    html += '<tr>';
-    html += '<td style="padding: 6px 4px;"><span class="pomo-side-name-rect ' + (isActive ? 'active-glow' : '') + '" data-name="' + escapeHtml(name) + '" onclick="window.startInlineEditSessionName(event, \'' + s.id + '\')">' + escapeHtml(name) + '</span></td>';
-    html += '<td style="white-space:nowrap;color:#4b5563;font-size:11px;font-weight:500;">' + timeRange + '</td>';
-    html += '<td style="color:#6b7280;font-weight:500;">' + durText + '</td>';
-    html += '<td>' + tagHtml + '</td>';
-    html += '<td style="text-align: right; padding-right: 4px; display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding-top: 5px;">' + noteBtnHtml + '<button onclick="window.deleteSession(\'' + s.id + '\')" style="background:transparent;border:none;cursor:pointer;color:#9ca3af;padding:2px;display:flex;align-items:center;" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'#9ca3af\'" title="Delete Session"><span class="material-symbols-outlined" style="font-size:14px;">delete</span></button></td>';
-    html += '</tr>';
+    html += '<div class="pomo-timeline-actions">';
+    html += '<button class="pomo-timeline-note-btn' + (note ? ' has-note' : '') + '" onclick="window.openPomoSideNoteModal(\'' + s.id + '\')" title="Note"><span class="material-symbols-outlined" style="font-size:13px">description</span></button>';
+    html += '<button class="pomo-timeline-del-btn" onclick="window.deleteSession(\'' + s.id + '\')" title="Delete"><span class="material-symbols-outlined" style="font-size:14px">delete</span></button>';
+    html += '</div>';
+
+    html += '</div>';
+    html += '</div>';
   }
-  html += '</tbody></table>';
+
+  html += '</div>';
 
   container.innerHTML = html;
   container.scrollTop = container.scrollHeight;
 }
+
+window.toggleTimelineNote = function(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var btn = el.parentElement.querySelector('.pomo-timeline-show-more');
+  if (el.classList.contains('expanded')) {
+    el.classList.remove('expanded');
+    if (btn) btn.textContent = 'Show more';
+  } else {
+    el.classList.add('expanded');
+    if (btn) btn.textContent = 'Show less';
+  }
+};
 
 window.deleteSession = async function(id) {
   await window.db.deleteSession(id);
@@ -964,7 +1003,7 @@ window.deleteSession = async function(id) {
 window.toggleHistoryDropdown = async function() {
   // Toggle the side box visibility explicitly if needed, but the dock item was removed.
   // We keep it as a fallback.
-  var sideBox = document.getElementById('pomoSideBox');
+  var sideBox = document.getElementById('pomoTimelinePanel');
   if (sideBox) {
     sideBox.classList.toggle('hidden-fade');
   }
@@ -1112,11 +1151,8 @@ window.confirmSessionName = function() {
     _origToggleTimer();
     onSessionStart();
     
-    // The user expects the popup to only show once. We disable it for future sessions.
-    window._taskPopupEnabled = false;
-    try { window.db.setSetting('taskPopup', 'false'); } catch(e) {}
-    
     if (activeSession) {
+      activeSession.lastResumeTime = Date.now();
       activeSession.taskName = name;
       activeSession.tagId = tagId;
       activeSession.goalId = goalId;
@@ -1162,7 +1198,7 @@ function renderPomoNoteTagDropdown(tags) {
   if (!header) return null;
   header.style.position = 'relative';
   
-  var html = '<div id="pomoNoteTagDropdown" style="position:absolute; top:calc(100% + 4px); left:0; background:white; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:101; padding:4px; max-height:220px; overflow-y:auto; width:160px;">';
+  var html = '<div id="pomoNoteTagDropdown" style="position:absolute; top:calc(100% + 4px); left:0; background:var(--bg-card); border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:101; padding:4px; max-height:220px; overflow-y:auto; width:160px;">';
   html += '<div class="goal-tag" style="padding:8px; cursor:pointer; font-size:12px; border-bottom:1px solid #f1f5f9;" onclick="window.selectPomoNoteTag(null, \'None\')">None</div>';
   tags.forEach(function(t) {
     var escapedTagName = t.name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
@@ -1206,7 +1242,7 @@ window.showPomoNoteTagForm = function() {
   if (!header) return;
   header.style.position = 'relative';
   
-  var html = '<div id="pomoNoteTagDropdown" style="position:absolute; top:calc(100% + 4px); left:0; background:white; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:101; padding:12px; width:200px;">';
+  var html = '<div id="pomoNoteTagDropdown" style="position:absolute; top:calc(100% + 4px); left:0; background:var(--bg-card); border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:101; padding:12px; width:200px;">';
   html += '<div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:8px;">New Tag</div>';
   html += '<input id="pomoNewTagName" type="text" placeholder="Tag name..." style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;margin-bottom:8px;box-sizing:border-box;">';
   html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
@@ -1214,7 +1250,7 @@ window.showPomoNoteTagForm = function() {
   html += '<input id="pomoNewTagColor" type="color" value="#3b82f6" style="width:32px;height:28px;padding:0;border:1px solid #e2e8f0;border-radius:4px;cursor:pointer;">';
   html += '</div>';
   html += '<div style="display:flex;gap:6px;justify-content:flex-end;">';
-  html += '<button onclick="window.openPomoNoteTagDropdown()" style="padding:5px 10px;font-size:11px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;color:#64748b;">Cancel</button>';
+  html += '<button onclick="window.openPomoNoteTagDropdown()" style="padding:5px 10px;font-size:11px;border:1px solid #e2e8f0;border-radius:6px;background:var(--bg-card);cursor:pointer;color:#64748b;">Cancel</button>';
   html += '<button onclick="window.savePomoNoteTag()" style="padding:5px 10px;font-size:11px;border:none;border-radius:6px;background:#3b82f6;cursor:pointer;color:white;">Save</button>';
   html += '</div>';
   html += '</div>';
@@ -1314,65 +1350,10 @@ window.updateTaskPopupCache = async function() {
   _taskPopupEnabled = val !== 'false';
 };
 
-// --- Pomo Sidebar Resizer ---
-var pomoResizer = document.getElementById('pomoResizer');
-var pomoSideBox = document.getElementById('pomoSideBox');
-var isResizingPomo = false;
-var _rafId = null;
 
-if (pomoResizer && pomoSideBox) {
-  pomoResizer.addEventListener('mousedown', function(e) {
-    isResizingPomo = true;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  });
-
-  document.addEventListener('mousemove', function(e) {
-    if (!isResizingPomo) return;
-    if (_rafId) cancelAnimationFrame(_rafId);
-    _rafId = requestAnimationFrame(function() {
-      var rect = pomoSideBox.getBoundingClientRect();
-      var newWidth = e.clientX - rect.left;
-      if (newWidth < 250) newWidth = 250;
-      if (newWidth > 800) newWidth = 800;
-      pomoSideBox.style.width = newWidth + 'px';
-      var mainArea = document.getElementById('mainArea');
-      if (mainArea && !pomoSideBox.classList.contains('collapsed')) {
-        mainArea.style.paddingLeft = newWidth + 'px';
-      }
-    });
-  });
-
-  document.addEventListener('mouseup', function(e) {
-    if (isResizingPomo) {
-      isResizingPomo = false;
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      if (_rafId) cancelAnimationFrame(_rafId);
-      var finalWidth = parseInt(pomoSideBox.style.width, 10);
-      if (finalWidth) {
-        window.db.setSetting('pomoSideBoxWidth', finalWidth);
-      }
-    }
-  });
-}
 
 (async function() {
   if (window._dbInitPromise) await window._dbInitPromise;
-  var savedWidth = await window.db.getSetting('pomoSideBoxWidth');
-  if (savedWidth) {
-    var pomoSideBox = document.getElementById('pomoSideBox');
-    if (pomoSideBox) pomoSideBox.style.width = savedWidth + 'px';
-    var mainArea = document.getElementById('mainArea');
-    if (mainArea && !pomoSideBox.classList.contains('collapsed') && !pomoSideBox.classList.contains('hidden-fade')) {
-      mainArea.style.paddingLeft = savedWidth + 'px';
-    }
-  }
-  var mainArea = document.getElementById('mainArea');
-  var sb = document.getElementById('pomoSideBox');
-  if (mainArea && sb && !mainArea.style.paddingLeft && !sb.classList.contains('collapsed') && !sb.classList.contains('hidden-fade')) {
-    mainArea.style.paddingLeft = sb.offsetWidth + 'px';
-  }
   await window.updateTaskPopupCache();
   await renderTimeline();
   await renderSessionTimeline();
@@ -1487,25 +1468,19 @@ window.deletePomoSideNote = async function() {
 };
 
 window.togglePomoSideBox = function() {
-  var box = document.getElementById('pomoSideBox');
-  var resizer = document.getElementById('pomoResizer');
-  var mainArea = document.getElementById('mainArea');
+  var box = document.getElementById('pomoTimelinePanel');
   if (box.classList.contains('collapsed')) {
     box.classList.remove('collapsed');
-    box.style.width = box.dataset.expandedWidth || '320px';
-    if (resizer) resizer.style.display = '';
-    if (mainArea) mainArea.style.paddingLeft = (box.dataset.expandedWidth || '320px') + 'px';
   } else {
-    box.dataset.expandedWidth = box.style.width || '320px';
-    box.style.width = ''; 
     box.classList.add('collapsed');
-    if (resizer) resizer.style.display = 'none';
-    if (mainArea) mainArea.style.paddingLeft = '36px';
   }
 };
 
-document.getElementById('pomoSideBox').addEventListener('click', function(e) {
-  if (this.classList.contains('collapsed')) {
-    window.togglePomoSideBox();
-  }
-});
+var _pomoTimelinePanel = document.getElementById('pomoTimelinePanel');
+if (_pomoTimelinePanel) {
+  _pomoTimelinePanel.addEventListener('click', function(e) {
+    if (this.classList.contains('collapsed')) {
+      window.togglePomoSideBox();
+    }
+  });
+}

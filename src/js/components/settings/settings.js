@@ -138,35 +138,22 @@ window.saveSettings = async function() {
 
 window.cancelSettings = async function() {
   var taskEl = document.getElementById('taskPopupToggle');
-  var savedTaskPopup = await window.db.getSetting('taskPopup');
-  if (savedTaskPopup === 'false') taskEl.classList.remove('active');
-  else taskEl.classList.add('active');
+  if (taskEl) taskEl.checked = (await window.db.getSetting('taskPopup')) !== 'false';
 
   var soundEl = document.getElementById('pomoSoundToggle');
-  var savedSound = await window.db.getSetting('playPomoSound');
-  if (savedSound === 'false') soundEl.classList.remove('active');
-  else soundEl.classList.add('active');
+  if (soundEl) soundEl.checked = (await window.db.getSetting('playPomoSound')) !== 'false';
 
-  // Cancel new settings
   var asbEl = document.getElementById('autoStartBreakToggle');
-  var savedAsb = await window.db.getSetting('autoStartBreak');
-  if (savedAsb === 'true') asbEl.classList.add('active');
-  else asbEl.classList.remove('active');
+  if (asbEl) asbEl.checked = (await window.db.getSetting('autoStartBreak')) === 'true';
 
   var asfEl = document.getElementById('autoStartFocusToggle');
-  var savedAsf = await window.db.getSetting('autoStartFocus');
-  if (savedAsf === 'true') asfEl.classList.add('active');
-  else asfEl.classList.remove('active');
+  if (asfEl) asfEl.checked = (await window.db.getSetting('autoStartFocus')) === 'true';
 
   var dnEl = document.getElementById('desktopNotificationsToggle');
-  var savedDn = await window.db.getSetting('desktopNotifications');
-  if (savedDn === 'false') dnEl.classList.remove('active');
-  else dnEl.classList.add('active');
+  if (dnEl) dnEl.checked = (await window.db.getSetting('desktopNotifications')) !== 'false';
 
   var sscEl = document.getElementById('showSessionCountToggle');
-  var savedSsc = await window.db.getSetting('showSessionCount');
-  if (savedSsc === 'false') sscEl.classList.remove('active');
-  else sscEl.classList.add('active');
+  if (sscEl) sscEl.checked = (await window.db.getSetting('showSessionCount')) !== 'false';
 
   var savedLbi = await window.db.getSetting('longBreakInterval');
   var lbiInput = document.getElementById('longBreakIntervalInput');

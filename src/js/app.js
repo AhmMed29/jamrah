@@ -21,9 +21,9 @@ async function showPage(name) {
     window.destroyPomoShader();
   }
   
-  var pomoSideBox = document.getElementById('pomoSideBox');
-  if (pomoSideBox) {
-    pomoSideBox.style.display = (name === 'pomodoro') ? 'flex' : 'none';
+  var pomoTimelinePanel = document.getElementById('pomoTimelinePanel');
+  if (pomoTimelinePanel) {
+    pomoTimelinePanel.style.display = (name === 'pomodoro') ? 'flex' : 'none';
   }
   
   var pomoRightToggleBtn = document.getElementById('pomoRightToggleBtn');
@@ -199,7 +199,7 @@ window.checkForUpdates = function() {
   });
 };
 
-/* â”€â”€ Settings Page â”€â”€ */
+/* ── Settings Page ── */
 function selectStoragePath() {
   window.electronAPI.selectFolder().then(function(newPath) {
     if (newPath) {
@@ -207,8 +207,11 @@ function selectStoragePath() {
         if (result) {
           document.getElementById('storagePathDisplay').textContent = result;
           if (window.markDirty) window.markDirty();
-  }
-});
+        }
+      });
+    }
+  });
+}
 
 /* ── Backend error toast ── */
 window.showAppToast = function(msg) {
@@ -246,9 +249,6 @@ setInterval(function() {
   }
 }, 60000);
 
-    }
-  });
-}
 (async function() {
   var pathEl = document.getElementById('storagePathDisplay');
   if (pathEl) {

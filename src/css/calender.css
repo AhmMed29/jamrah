@@ -1267,3 +1267,152 @@
 
 /* Existing quick-task-input styles hidden by default (inline replaced by popup) */
 #page-calender .quick-task-input-wrap { display: none; }
+
+/* ── Week Track Timeline ── */
+#page-calender .week-timeline-container {
+  position: relative;
+  padding-left: 50px;
+  margin: 8px 0;
+}
+#page-calender .week-timeline-container::before {
+  content: '';
+  position: absolute;
+  left: 40px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #2d2d2d;
+  border-radius: 2px;
+}
+#page-calender .wt-hour-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  min-height: 22px;
+}
+#page-calender .wt-time-label {
+  position: absolute;
+  left: -50px;
+  width: 36px;
+  text-align: right;
+  padding-right: 12px;
+  font-size: 11px;
+  color: #aaa;
+  line-height: 20px;
+}
+#page-calender .wt-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #2d2d2d;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+  background: #faf9f6;
+}
+#page-calender .wt-event { flex: 1; }
+#page-calender .wt-free { flex: 1; }
+
+/* ── Day Popup Timeline ── */
+.day-popup-timeline {
+  position: relative;
+  padding-left: 50px;
+}
+.day-popup-timeline::before {
+  content: '';
+  position: absolute;
+  left: 40px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #2d2d2d;
+  border-radius: 2px;
+}
+.dp-hour-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  min-height: 22px;
+}
+.dp-time-label {
+  position: absolute;
+  left: -50px;
+  width: 36px;
+  text-align: right;
+  padding-right: 10px;
+  font-size: 11px;
+  color: #aaa;
+  line-height: 18px;
+}
+.dp-dot {
+  position: absolute;
+  left: 34px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #2d2d2d;
+  border-radius: 50%;
+  z-index: 3;
+  background: #faf9f6;
+  top: 4px;
+}
+.dp-dot-small {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1.5px solid #2d2d2d;
+}
+.dp-items {
+  flex: 1;
+  padding-left: 14px;
+  padding-top: 2px;
+}
+.dp-item { cursor: default; }
+.dp-item-name { font-size: 13px; color: #2d2d2d; }
+.dp-free {
+  flex: 1;
+  padding-left: 16px;
+  color: #ddd;
+  font-size: 10px;
+  font-style: italic;
+  line-height: 20px;
+}
+
+/* Year day cell clickable */
+.year-day-cell { cursor: pointer; transition: background 0.15s; }
+.year-day-cell:hover { background: #f3f4f6; border-radius: 4px; }
+
+/* ── Week Track To Do Toggle ── */
+.wt-todo-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: rgba(45,45,45,0.5);
+  transition: color 0.15s;
+  user-select: none;
+}
+.wt-todo-toggle:hover { color: rgba(45,45,45,0.8); }
+.wt-todo-icon { font-size: 10px; transition: transform 0.15s; }
+.wt-todo-label { font-size: 12px; }
+.wt-todo-list {
+  padding: 2px 8px 6px 20px;
+}
+.wt-todo-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 12px;
+}
+.wt-todo-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1.5px solid #2d2d2d;
+}
+.wt-todo-name { color: #2d2d2d; }
+.wt-todo-name.done { text-decoration: line-through; opacity: 0.4; }

@@ -288,3 +288,51 @@ body { font-family: 'Patrick Hand', cursive; }
 .custom-day-btn.active { background: #2d2d2d; color: #fff; }
 .custom-day-btn:not(.active) { background: #faf9f7; }
 .custom-day-btn:not(.active):hover { background: var(--bg-card); }
+
+/* ── View-Only Detail Panel ── */
+.task-detail-title-view {
+  flex: 1;
+  font-size: 30px;
+  color: #2d2d2d;
+  line-height: 1.2;
+  padding: 4px 0;
+}
+.task-detail-title-view.done { opacity: 0.4; text-decoration: line-through; }
+.detail-notes-view {
+  font-size: 18px;
+  color: #2d2d2d;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.detail-edit-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  border: 2px solid rgba(45,45,45,0.2);
+  background: var(--bg-card);
+  padding: 12px;
+  font-size: 18px;
+  color: #2d2d2d;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Patrick Hand', cursive;
+}
+.detail-edit-btn:hover { border-color: rgba(45,45,45,0.4); background: #f3f3f3; }
+
+/* ── Resizable Divider ── */
+#tasks-resize-handle {
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  position: relative;
+  z-index: 1;
+}
+#tasks-resize-handle:hover,
+#tasks-resize-handle:active {
+  background: rgba(45,45,45,0.1);
+}

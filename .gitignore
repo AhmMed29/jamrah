@@ -51,3 +51,6 @@ backend/publish/
 
 
 .superpowers/
+
+# OpenCode agents (personal, not shared)
+.opencode/

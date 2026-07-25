@@ -5,7 +5,8 @@ function newTaskId() {
 /* ── State ── */
 var _currentDate = new Date();
 var _filterMode = 'all'; // all | active | completed
-var _viewMode = 'daily'; // daily | archive
+var _sortMode = 'priority-desc'; // priority-desc | date-asc | date-desc
+
 var _selectedId = null;
 var _showNewOptions = false;
 var _newCustomDays = [];
@@ -25,6 +26,26 @@ function recLabel(r, customDays) {
   if (r === 'weekly') return 'Weekly';
   if (r === 'monthly') return 'Monthly';
   return r;
+}
+
+function sortTasks(tasks) {
+  var sorted = tasks.slice();
+  sorted.sort(function(a, b) {
+    if (_sortMode === 'priority-desc') {
+      var pa = a.priority === 'High' ? 3 : a.priority === 'Medium' ? 2 : a.priority === 'Low' ? 1 : 0;
+      var pb = b.priority === 'High' ? 3 : b.priority === 'Medium' ? 2 : b.priority === 'Low' ? 1 : 0;
+      return pb - pa;
+    } else if (_sortMode === 'date-asc') {
+      var da = a.scheduledTime || a.createdAt || '';
+      var db = b.scheduledTime || b.createdAt || '';
+      return da.localeCompare(db);
+    } else {
+      var da = a.scheduledTime || a.createdAt || '';
+      var db = b.scheduledTime || b.createdAt || '';
+      return db.localeCompare(da);
+    }
+  });
+  return sorted;
 }
 
 function toggleCustomDay(list, day) {
@@ -123,12 +144,6 @@ function renderHeaderDate() {
   var ddEl = document.getElementById('tasks-date-display');
   var todayBtn = document.getElementById('tasks-today-btn');
   if (!dnEl || !ddEl) return;
-  if (_viewMode === 'archive') {
-    dnEl.textContent = 'Archive';
-    ddEl.textContent = '';
-    if (todayBtn) todayBtn.style.display = 'none';
-    return;
-  }
   var day = _currentDate.getDate();
   var month = MONTH_NAMES[_currentDate.getMonth()];
   var year = _currentDate.getFullYear();
@@ -144,37 +159,15 @@ function renderTaskList(tasks) {
   if (!listEl) return;
 
   var dayKey = dateKey(_currentDate);
-  var filtered = tasks;
+  var filtered = sortTasks(tasks);
+  filtered = filtered.filter(function(t) { return !t.parentTaskId; });
 
-  if (_viewMode === 'daily') {
-    filtered = tasks.filter(function(t) {
-      var taskDate = t.scheduledTime || t.createdAt;
-      return taskDate ? taskDate.substring(0, 10) === dayKey : dayKey === dateKey(new Date());
-    });
-    if (_filterMode === 'active') filtered = filtered.filter(function(t) { return !t.completed; });
-    else if (_filterMode === 'completed') filtered = filtered.filter(function(t) { return t.completed; });
-  }
-
-  if (_viewMode === 'archive') {
-    var groups = {};
-    tasks.forEach(function(t) {
-      var dk = (t.scheduledTime || t.createdAt || '').substring(0, 10);
-      if (!dk) dk = dateKey(new Date());
-      if (!groups[dk]) groups[dk] = [];
-      groups[dk].push(t);
-    });
-    var sortedDates = Object.keys(groups).sort().reverse();
-    var html = '';
-    sortedDates.forEach(function(dk) {
-      html += '<div class="archive-date-header">' + formatArchiveDate(dk) + '</div>';
-      groups[dk].forEach(function(t) {
-        html += renderTaskItem(t, tasks);
-      });
-    });
-    if (!sortedDates.length) html = '<div class="no-tasks-msg">No tasks.</div>';
-    listEl.innerHTML = html;
-    return;
-  }
+  filtered = filtered.filter(function(t) {
+    var taskDate = t.scheduledTime || t.createdAt;
+    return taskDate ? taskDate.substring(0, 10) === dayKey : dayKey === dateKey(new Date());
+  });
+  if (_filterMode === 'active') filtered = filtered.filter(function(t) { return !t.completed; });
+  else if (_filterMode === 'completed') filtered = filtered.filter(function(t) { return t.completed; });
 
   if (!filtered.length) {
     listEl.innerHTML = '<div class="no-tasks-msg">No tasks.</div>';
@@ -183,13 +176,6 @@ function renderTaskList(tasks) {
   var html = '';
   filtered.forEach(function(t) { html += renderTaskItem(t, tasks); });
   listEl.innerHTML = html;
-}
-
-function formatArchiveDate(dk) {
-  var parts = dk.split('-');
-  if (parts.length !== 3) return dk;
-  var d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-  return DAY_NAMES[d.getDay()] + ', ' + MONTH_NAMES[d.getMonth()] + ' ' + parseInt(parts[2]);
 }
 
 function renderTaskItem(t, allTasks) {
@@ -528,7 +514,6 @@ function addNewTask() {
 
   window.db.createTask(task).then(function(result) {
     if (result === false) { alert('Failed to save task'); return; }
-    if (_viewMode === 'archive') { _viewMode = 'daily'; }
     window.renderTasks();
     _selectedId = id;
   });
@@ -540,15 +525,12 @@ function initHeaderEvents() {
   var nextBtn = document.getElementById('tasks-next-day');
   var todayBtn = document.getElementById('tasks-today-btn');
   var filterBtn = document.getElementById('tasks-filter-btn');
-  var archiveBtn = document.getElementById('tasks-archive-btn');
 
   if (prevBtn) prevBtn.addEventListener('click', function() {
-    if (_viewMode === 'archive') return;
     _currentDate.setDate(_currentDate.getDate() - 1);
     window.renderTasks();
   });
   if (nextBtn) nextBtn.addEventListener('click', function() {
-    if (_viewMode === 'archive') return;
     _currentDate.setDate(_currentDate.getDate() + 1);
     window.renderTasks();
   });
@@ -557,24 +539,23 @@ function initHeaderEvents() {
     window.renderTasks();
   });
   if (filterBtn) filterBtn.addEventListener('click', function() {
-    if (_viewMode === 'daily') {
-      if (_filterMode === 'all') _filterMode = 'active';
-      else if (_filterMode === 'active') _filterMode = 'completed';
-      else _filterMode = 'all';
-      filterBtn.textContent = _filterMode;
-      window.renderTasks();
-    }
+    if (_filterMode === 'all') _filterMode = 'active';
+    else if (_filterMode === 'active') _filterMode = 'completed';
+    else _filterMode = 'all';
+    filterBtn.textContent = _filterMode;
+    window.renderTasks();
   });
-  if (archiveBtn) archiveBtn.addEventListener('click', function() {
-    if (_viewMode === 'daily') {
-      _viewMode = 'archive';
-      archiveBtn.querySelector('span').textContent = 'Daily';
-      window.renderTasks();
-    } else {
-      _viewMode = 'daily';
-      archiveBtn.querySelector('span').textContent = 'Archive';
-      window.renderTasks();
-    }
+  var sortBtn = document.getElementById('tasks-sort-btn');
+  if (sortBtn) sortBtn.addEventListener('click', function() {
+    if (_sortMode === 'priority-desc') _sortMode = 'date-asc';
+    else if (_sortMode === 'date-asc') _sortMode = 'date-desc';
+    else _sortMode = 'priority-desc';
+    var label = document.getElementById('tasks-sort-label');
+    var icon = document.getElementById('tasks-sort-icon');
+    if (_sortMode === 'priority-desc') { label.textContent = 'Priority'; icon.textContent = '\u2193'; }
+    else if (_sortMode === 'date-asc') { label.textContent = 'Date'; icon.textContent = '\u2191'; }
+    else { label.textContent = 'Date'; icon.textContent = '\u2193'; }
+    window.renderTasks();
   });
 }
 

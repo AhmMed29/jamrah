@@ -34,7 +34,7 @@
   user-select: none;
 }
 .timer-text {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Patrick Hand', cursive;
   font-weight: 600;
   font-size: 56px;
   letter-spacing: 0.04em;
@@ -53,7 +53,7 @@
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: #6B7280;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Patrick Hand', cursive;
 }
 
 /* ── Play button (inside timer face) ── */
@@ -94,7 +94,7 @@
   position:static; pointer-events:auto;
 }
 .timer-circle-wrapper.minimal-mode .timer-text {
-  font-size:72px; color:#0b1c30; font-family:'Manrope','Tajawal',sans-serif;
+  font-size:72px; color:#0b1c30; font-family:'Patrick Hand',cursive;
   letter-spacing:2px; margin-bottom:4px;
 }
 .timer-circle-wrapper.minimal-mode .timer-label {

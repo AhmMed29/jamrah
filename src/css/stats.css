@@ -10,7 +10,7 @@
   font-size: 28px;
   font-weight: 800;
   color: #0b1c30;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Patrick Hand', cursive;
   margin: 0;
 }
 
@@ -32,7 +32,7 @@
   color: #64748b;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Patrick Hand', cursive;
 }
 
 .stats-time-btn:hover {
@@ -79,14 +79,14 @@
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Patrick Hand', cursive;
 }
 
 .stats-ov-value {
   font-size: 32px;
   font-weight: 800;
   color: #0b1c30;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Patrick Hand', cursive;
   line-height: 1;
 }
 
@@ -112,7 +112,7 @@
   font-weight: 700;
   color: #0b1c30;
   margin-bottom: 20px;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Patrick Hand', cursive;
 }
 
 .stats-chart-body {

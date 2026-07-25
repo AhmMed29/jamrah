@@ -1,5 +1,5 @@
 {
-  "version": "2.3.0",
-  "downloadUrl": "https://github.com/AhmMed29/jamrah/releases/download/v2.3.0/Jamrah.Setup.2.3.0.exe",
-  "releaseNotes": "✨ v2.3.0\n- Redesigned session side box with timeline, day navigation, and inline editing\n- New sidebar design: single toggle button with overlay (no content push)\n- Session name popup: enter name before starting (optional)\n- Pomodoro button delay fixes - fully synchronous toggleTimer\n- Settings toggle fix: Show popup task on start now works correctly\n- Clicking outside session name popup closes it without starting timer\n- Updated welcome screen with animated release version\n- Various bug fixes and performance improvements"
+  "version": "3.0.0",
+  "downloadUrl": "https://github.com/AhmMed29/jamrah/releases/download/v3.0.0/Jamrah.Setup.3.0.0.exe",
+  "releaseNotes": "🔥 v3.0.0 — The Session Timeline Release\n\nMajor:\n- Session Timeline Side Box — hour-by-hour timeline, day nav, inline editing, session notes\n- Redesigned Sidebar — single toggle button, overlay mode with backdrop\n\nNew Features:\n- Session name popup on timer start\n- Calendar timeline view (day & week)\n- Goals tag editor popup\n- Frontend auto-update system\n- Page placement preferences\n- Welcome popup with full app overview (one-time)\n\nUI & UX:\n- Timer interaction fixes — sync toggleTimer, no stop button delay\n- Minimal mode on first load — no layout shift\n- Session side box spacing & timeline dots fix\n- Phase words positioned correctly\n- Habits & Tasks improvements\n\nBug Fixes:\n- Stop button no longer restarts timer\n- Settings button delay eliminated\n- Updater.js bundled in electron-builder"
 }

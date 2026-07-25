@@ -58,7 +58,7 @@ exports.checkForFrontendUpdate = async function() {
       var vf = path.join(frontendDir(), 'version.txt')
       var localVer = '0.0.0'
       if (fs.existsSync(vf)) localVer = fs.readFileSync(vf, 'utf-8').trim()
-      if (cmpVer(localVer, tag) >= 0) return { updated: false }
+      if (cmpVer(localVer, tag) > 0) return { updated: false }
     }
 
     var zr = await fetch(zipAsset.browser_download_url)
@@ -78,7 +78,11 @@ exports.checkForFrontendUpdate = async function() {
     fs.writeFileSync(zp, buf)
 
     var psCmd = 'Expand-Archive -Path "' + zp.replace(/"/g, '\\"') + '" -DestinationPath "' + dir.replace(/"/g, '\\"') + '" -Force'
-    psExec(psCmd)
+    var psResult = psExec(psCmd)
+    if (psResult.status !== 0) {
+      try { if (fs.existsSync(old)) { fs.rmSync(dir, { recursive: true }); fs.renameSync(old, dir) } } catch {}
+      return { updated: false }
+    }
 
     try { fs.rmSync(zp) } catch {}
     try { if (fs.existsSync(old)) fs.rmSync(old, { recursive: true }) } catch {}

@@ -17,6 +17,24 @@ exports.getFrontendIndexPath = function() {
   return fs.existsSync(fp) ? fp : null
 }
 
+function metaFile() {
+  return path.join(frontendDir(), 'frontend-meta.json')
+}
+
+function readMeta() {
+  var fp = metaFile()
+  if (!fs.existsSync(fp)) return null
+  try { return JSON.parse(fs.readFileSync(fp, 'utf-8')) } catch { return null }
+}
+
+function writeMeta(version, assetId, updatedAt) {
+  var dir = frontendDir()
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+  var m = { version: version, assetId: assetId, updatedAt: updatedAt }
+  fs.writeFileSync(metaFile(), JSON.stringify(m), 'utf-8')
+  fs.writeFileSync(path.join(dir, 'version.txt'), version, 'utf-8')
+}
+
 exports.checkForFrontendUpdate = async function() {
   try {
     var r = await fetch('https://api.github.com/repos/AhmMed29/jamrah/releases/latest', {
@@ -27,15 +45,21 @@ exports.checkForFrontendUpdate = async function() {
     var rel = await r.json()
     var tag = rel.tag_name.replace(/^v/, '')
 
-    var vf = path.join(frontendDir(), 'version.txt')
-    var localVer = '0.0.0'
-    if (fs.existsSync(vf)) localVer = fs.readFileSync(vf, 'utf-8').trim()
-    if (cmpVer(localVer, tag) >= 0) return { updated: false }
-
     var zipAsset = rel.assets.find(function(a) {
       return a.name.startsWith('frontend-') && a.name.endsWith('.zip')
     })
     if (!zipAsset) return { updated: false }
+
+    var localMeta = readMeta()
+    if (localMeta) {
+      if (cmpVer(localMeta.version, tag) > 0) return { updated: false }
+      if (cmpVer(localMeta.version, tag) === 0 && localMeta.assetId === zipAsset.id) return { updated: false }
+    } else {
+      var vf = path.join(frontendDir(), 'version.txt')
+      var localVer = '0.0.0'
+      if (fs.existsSync(vf)) localVer = fs.readFileSync(vf, 'utf-8').trim()
+      if (cmpVer(localVer, tag) >= 0) return { updated: false }
+    }
 
     var zr = await fetch(zipAsset.browser_download_url)
     if (!zr.ok) return { updated: false }
@@ -58,7 +82,7 @@ exports.checkForFrontendUpdate = async function() {
 
     try { fs.rmSync(zp) } catch {}
     try { if (fs.existsSync(old)) fs.rmSync(old, { recursive: true }) } catch {}
-    fs.writeFileSync(vf, tag, 'utf-8')
+    writeMeta(tag, zipAsset.id, zipAsset.updated_at)
     return { updated: true, version: tag }
   } catch (e) {
     return { updated: false }

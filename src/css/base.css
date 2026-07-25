@@ -1,10 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
 :root { --bg-card: #faf9f6; }
 .bg-white { background-color: var(--bg-card) !important; }
 body { background: var(--bg-card); }
 html, body { user-select: none; -webkit-user-select: none; }
-input, textarea, [contenteditable] { user-select: auto; -webkit-user-select: auto; }
-body { font-family: 'Inter', sans-serif; }
+input, textarea, [contenteditable] { user-select: auto; -webkit-user-select: auto; unicode-bidi: plaintext; }
+body { font-family: 'Patrick Hand', cursive; }
 
 .text-purple-brand { color: #8A7CFB; }
 .bg-purple-brand { background-color: #8A7CFB; }
@@ -53,3 +53,50 @@ body { font-family: 'Inter', sans-serif; }
 
 .sort-option.active { background: #EFF6FF; color: #2563EB; }
 .sort-option.active svg { color: #2563EB; }
+
+input, select, textarea {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1rem;
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #2d2d2d;
+  border-radius: 10px;
+  background: #faf9f6;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: #555;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.btn-primary, .pomo-popup-start-btn, .note-btn.primary {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1rem;
+  padding: 6px 18px;
+  border: 2px solid #2d2d2d;
+  border-radius: 10px;
+  cursor: pointer;
+  background: #40c463;
+  color: white;
+  transition: opacity 0.15s;
+}
+.btn-primary:hover { opacity: 0.85; }
+
+.btn-secondary, .note-btn.secondary {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1rem;
+  padding: 6px 18px;
+  border: 2px solid #2d2d2d;
+  border-radius: 10px;
+  cursor: pointer;
+  background: transparent;
+  color: #2d2d2d;
+  transition: background 0.15s;
+}
+.btn-secondary:hover { background: #f3f3f3; }

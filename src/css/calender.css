@@ -655,7 +655,7 @@
 }
 
 #page-calender .note-dot.has-note {
-  background: var(--green-light);
+  background: #f0f0f0;
 }
 
 #page-calender .note-btn {

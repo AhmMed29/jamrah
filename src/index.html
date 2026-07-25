@@ -32,15 +32,13 @@
 <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous"></noscript>
 <link href="https://fonts.googleapis.com" rel="preconnect">
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"></noscript>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap"></noscript>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"></noscript>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap"></noscript>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" onload="this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"></noscript>
 <script>
 window.tailwind={ config: {
   theme:{
     extend:{
-      fontFamily:{sans:['Manrope','Tajawal','sans-serif']},
+      fontFamily:{sans:['Patrick Hand','cursive']},
       colors:{
         tickblue:{DEFAULT:'#3b82f6',light:'#eff6ff'},
         tickgray:{100:'#f3f4f6',200:'#e5e7eb',300:'#d1d5db',400:'#9ca3af',500:'#6b7280',600:'#4b5563'},
@@ -704,6 +702,7 @@ window.tailwind={ config: {
   <!-- Tabs -->
   <div class="tabs">
     <button class="tab-btn" data-tab="week" onclick="switchCalTab('week')">Week Track</button>
+    <button class="tab-btn" data-tab="timeline" onclick="switchCalTab('timeline')">TimeLine</button>
     <button class="tab-btn" data-tab="calendar" onclick="switchCalTab('calendar')">Calendar</button>
     <button class="tab-btn active" data-tab="year" onclick="switchCalTab('year')">Year</button>
   </div>
@@ -719,6 +718,13 @@ window.tailwind={ config: {
       </div>
       <div id="weekNotePreview" class="week-note-preview" style="display:none;margin-bottom:16px;"></div>
       <div class="week-days-row" id="weekDaysRow"></div>
+    </div>
+  </div>
+
+  <!-- Timeline View (placeholder) -->
+  <div id="view-timeline" class="view" style="display:none">
+    <div style="display:flex;justify-content:center;align-items:center;height:300px;color:rgba(45,45,45,0.4);font-size:20px">
+      Timeline view coming soon
     </div>
   </div>
 
@@ -784,10 +790,11 @@ window.tailwind={ config: {
   </div>
   <div style="display:flex;align-items:center;gap:16px">
     <button id="tasks-filter-btn" style="font-size:18px;color:rgba(45,45,45,0.7);text-transform:capitalize;cursor:pointer;background:none;border:none;font-family:'Patrick Hand',cursive">all</button>
-    <button id="tasks-archive-btn" style="font-size:18px;color:rgba(45,45,45,0.7);cursor:pointer;background:none;border:none;display:flex;align-items:center;gap:4px;font-family:'Patrick Hand',cursive">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 7v10l4 3h8l4-3V7M4 7l4-3h8l4 3M9 13l2 2 4-4"/></svg>
-      <span id="tasks-archive-label">Archive</span>
+    <button id="tasks-sort-btn" style="font-size:18px;color:rgba(45,45,45,0.7);cursor:pointer;background:none;border:none;font-family:'Patrick Hand',cursive;display:flex;align-items:center;gap:4px" title="Sort tasks">
+      <span id="tasks-sort-label">Priority</span>
+      <span id="tasks-sort-icon" style="font-size:14px">↓</span>
     </button>
+    
   </div>
 </header>
 <main style="display:flex;flex:1;overflow:hidden">

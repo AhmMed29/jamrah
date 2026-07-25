@@ -5,6 +5,7 @@ function formatDate(d) {
 }
 var today, startDate, DAY_COUNT, dates;
 var _habitsMonthOffset = 0;
+var _habitsScrolledOnce = false;
 
 function refreshDateGlobals() {
   today = new Date();
@@ -123,6 +124,12 @@ function calcPct(habit, logs) {
 }
 
 async function render() {
+  if (!window._habitsLastMonth) window._habitsLastMonth = _habitsMonthOffset;
+  if (window._habitsLastMonth !== _habitsMonthOffset) {
+    _habitsScrolledOnce = false;
+    window._habitsLastMonth = _habitsMonthOffset;
+  }
+
   refreshDateGlobals();
   var data = await loadHabitsFromDB();
   var habits = data.habits;
@@ -181,8 +188,11 @@ async function render() {
     for (var i = 0; i < displayDates.length; i++) {
       var dk = dateKey(displayDates[i]);
       var cv = getChecked(habit, logs, dk);
+      var isFuture = dk > todayKey();
       b += '<td class="text-center" style="padding:6px 0">';
-      if (cv) {
+      if (isFuture) {
+        b += '<div class="habit-toggle future" style="border-color:' + habit.color + '20;cursor:not-allowed;opacity:0.4" data-habit-id="' + habit.id + '" data-date="' + dk + '"></div>';
+      } else if (cv) {
         b += '<div class="habit-toggle checked" style="background-color:' + habit.color + '" data-habit-id="' + habit.id + '" data-date="' + dk + '" data-value="0"><svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></div>';
       } else {
         b += '<div class="habit-toggle unchecked" style="border-color:' + habit.color + '40" data-habit-id="' + habit.id + '" data-date="' + dk + '" data-value="1"></div>';
@@ -246,14 +256,17 @@ async function render() {
   if (sc) {
     requestAnimationFrame(function() {
       if (_habitsMonthOffset === 0) {
-        var todayTh = document.getElementById('table-head').querySelector('.sticky-header');
-        if (todayTh) {
-          var ths = document.getElementById('table-head').querySelectorAll('th.sticky-header');
-          for (var ti = 0; ti < ths.length; ti++) {
-            var cellDate = displayDates[ti];
-            if (cellDate && dateKey(cellDate) === todayKey()) {
-              sc.scrollLeft = ths[ti].offsetLeft - 20;
-              break;
+        if (!_habitsScrolledOnce) {
+          _habitsScrolledOnce = true;
+          var todayTh = document.getElementById('table-head').querySelector('.sticky-header');
+          if (todayTh) {
+            var ths = document.getElementById('table-head').querySelectorAll('th.sticky-header');
+            for (var ti = 0; ti < ths.length; ti++) {
+              var cellDate = displayDates[ti];
+              if (cellDate && dateKey(cellDate) === todayKey()) {
+                sc.scrollLeft = ths[ti].offsetLeft - 20;
+                break;
+              }
             }
           }
         }
@@ -500,6 +513,7 @@ document.getElementById('table-body').addEventListener('click', async function(e
   var toggle = e.target.closest('.habit-toggle');
   if (toggle) {
     if (toggle.classList.contains('done')) return;
+    if (toggle.classList.contains('future')) return;
     var habitId = toggle.getAttribute('data-habit-id');
     var date = toggle.getAttribute('data-date');
     var value = parseInt(toggle.getAttribute('data-value'));

@@ -28,7 +28,7 @@
   font-weight: 700;
   color: #0b1c30;
   margin: 0 0 20px 0;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Patrick Hand', cursive;
 }
 
 .pomo-popup-field {
@@ -54,7 +54,7 @@
   border: 1px solid rgba(195,198,213,0.5);
   border-radius: 8px;
   font-size: 14px;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Patrick Hand', cursive;
   color: #0b1c30;
   outline: none;
   background: var(--bg-card);
@@ -75,7 +75,7 @@
   border: 1px solid rgba(195,198,213,0.5);
   border-radius: 8px;
   font-size: 13px;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Patrick Hand', cursive;
   color: #0b1c30;
   outline: none;
   background: var(--bg-card);
@@ -96,7 +96,7 @@
   border: 1px solid rgba(195,198,213,0.5);
   border-radius: 8px;
   font-size: 14px;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Patrick Hand', cursive;
   color: #0b1c30;
   outline: none;
   background: var(--bg-card);
@@ -120,7 +120,7 @@
   border-radius: 10px;
   font-size: 15px;
   font-weight: 600;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Patrick Hand', cursive;
   cursor: pointer;
   transition: background 0.15s;
   display: flex;

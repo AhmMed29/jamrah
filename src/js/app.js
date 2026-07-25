@@ -219,7 +219,7 @@ window.showAppToast = function(msg) {
   if (!el) {
     el = document.createElement('div');
     el.id = 'appToast';
-    el.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;background:#ef4444;color:#fff;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 6px 20px rgba(0,0,0,0.18);opacity:0;transform:translateY(16px);transition:all 0.35s;max-width:420px;line-height:1.4;font-family:Inter,sans-serif;';
+    el.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;background:#ef4444;color:#fff;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 6px 20px rgba(0,0,0,0.18);opacity:0;transform:translateY(16px);transition:all 0.35s;max-width:420px;line-height:1.4;font-family:\"Patrick Hand\",cursive;';
     document.body.appendChild(el);
   }
   el.textContent = msg;

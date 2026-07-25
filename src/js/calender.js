@@ -103,7 +103,7 @@ function renderCalender() {
     btn.classList.toggle('active', btn.dataset.tab === calState.tab);
   });
 
-  ['week', 'calendar', 'year'].forEach(function(v) {
+  ['week', 'timeline', 'calendar', 'year'].forEach(function(v) {
     var el = document.getElementById('view-' + v);
     if (el) el.classList.toggle('active', v === calState.tab);
   });
@@ -112,12 +112,13 @@ function renderCalender() {
 
   switch(calState.tab) {
     case 'week': renderWeekView(); break;
+    case 'timeline': renderTimelineView(); break;
     case 'calendar': renderCalendarView(); break;
     case 'year': renderYearView(); break;
   }
 
   var legend = document.getElementById('calLegend');
-  if (legend) legend.style.display = calState.tab === 'year' ? 'none' : 'flex';
+  if (legend) legend.style.display = calState.tab === 'year' || calState.tab === 'timeline' ? 'none' : 'flex';
 }
 
 function renderHeader() {
@@ -128,6 +129,9 @@ function renderHeader() {
       var bounds = getCurrentWeekBounds();
       el.innerHTML = '<span class="year-title"></span>' + formatShortDate(bounds.start) + ' \u2013 ' + formatShortDate(bounds.end);
       break;
+    case 'timeline':
+      el.textContent = 'Timeline';
+      break;
     case 'calendar':
       el.textContent = 'Calendar';
       break;
@@ -135,6 +139,11 @@ function renderHeader() {
       el.innerHTML = '<span class="year-title"></span>' + calState.year + ' Yearly Glance';
       break;
   }
+}
+
+function renderTimelineView() {
+  var title = document.getElementById('calHeader');
+  if (title) title.textContent = 'Timeline';
 }
 
 /* ── Week Logic ── */
@@ -182,10 +191,10 @@ function renderWeekView() {
   var wkNote = calState.notes['week:' + wk];
   if (wkNote) {
     if (preview) { preview.textContent = wkNote; preview.style.display = 'block'; }
-    if (noteBtn) { noteBtn.style.display = 'inline-flex'; noteBtn.textContent = '\u{1F4DD} Edit Week Note'; }
+    if (noteBtn) { noteBtn.style.display = 'inline-flex'; noteBtn.textContent = '+ Edit Week Note'; }
   } else {
     if (preview) preview.style.display = 'none';
-    if (noteBtn) { noteBtn.style.display = 'inline-flex'; noteBtn.textContent = '\u{1F4DD} Week Note'; }
+    if (noteBtn) { noteBtn.style.display = 'inline-flex'; noteBtn.textContent = '+ Week Note'; }
   }
 
   var html = '';
@@ -210,7 +219,7 @@ function renderWeekDayCard(dateKey, date, isToday) {
   var focusText = fh > 0 ? fh + 'h ' + fm + 'm' : fm + 'm';
 
   var dayNote = calState.notes['day:' + dateKey] || '';
-  var dayNoteText = dayNote ? '\u{1F4DD}' : '\uFF0B';
+  var dayNoteText = dayNote ? '\u{1F4DD}' : '+';
   var dayNoteClass = dayNote ? 'note-dot has-note' : 'note-dot';
 
   var html = '<div class="week-day-card' + (isToday ? ' today' : '') + '">';
@@ -229,7 +238,7 @@ function renderWeekDayCard(dateKey, date, isToday) {
       html += '<label class="week-task' + (t.completed ? ' done' : '') + '">';
       html += '<input type="checkbox" ' + (t.completed ? 'checked' : '') + ' onchange="toggleTaskComplete(\'' + t.id + '\')">';
       html += '<span>' + escapeHtml(t.name) + '</span>';
-      html += '<button class="task-del-btn" onclick="deleteTask(\'' + t.id + '\')"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1l-8 8" stroke="white" stroke-width="1.8" fill="none"/></svg></button>';
+      html += '<button class="task-del-btn" onclick="calDeleteTask(\'' + t.id + '\')"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1l-8 8" stroke="white" stroke-width="1.8" fill="none"/></svg></button>';
       html += '</label>';
     });
   }
@@ -321,7 +330,7 @@ window.toggleTaskComplete = async function(taskId) {
   renderCalender();
 };
 
-window.deleteTask = async function(taskId) {
+window.calDeleteTask = async function(taskId) {
   await window.db.deleteTask(taskId);
   await loadCalenderData();
   renderCalender();
@@ -645,7 +654,7 @@ function renderYearMonth(monthIdx) {
   if (currentWeek.length > 0) weeks.push(currentWeek);
 
   var monthNote = calState.notes['month:' + monthKey] || '';
-  var monthNoteText = monthNote ? '\u{1F4DD}' : '\uFF0B';
+  var monthNoteText = monthNote ? '\u{1F4DD}' : '+';
   var monthNoteClass = monthNote ? 'note-dot has-note' : 'note-dot';
 
   var html = '<div class="year-month-card">';
@@ -682,7 +691,7 @@ function renderYearMonth(monthIdx) {
       });
 
       var dayNote = calState.notes['day:' + key] || '';
-      var dayNoteText = dayNote ? '\u{1F4DD}' : '\uFF0B';
+      var dayNoteText = dayNote ? '\u{1F4DD}' : '+';
       var dayNoteClass = dayNote ? 'note-dot has-note' : 'note-dot';
 
       html += '<div class="year-day">';
@@ -718,7 +727,7 @@ function renderYearMonth(monthIdx) {
     html += '<div class="year-week-note-row">';
     var weekNote = calState.notes['week:' + wkKey] || '';
     html += '<button class="year-week-note-btn" onclick="openNoteModal(\'week\',\'' + wkKey + '\',\'Week Note: ' + CAL_MONTH_NAMES[monthIdx] + ' ' + weekDays[0] + ' \u2013 ' + weekDays[weekDays.length - 1] + ', ' + calState.year + '\')">';
-    html += weekNote ? '\u{1F4DD} Edit Week Note' : '\uFF0B Week Note';
+    html += weekNote ? '+ Edit Week Note' : '+ Week Note';
     html += '</button>';
     html += '</div>';
 

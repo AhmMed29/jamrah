@@ -57,3 +57,6 @@ backend/publish/
 
 # Release notes HTML (GitHub release asset, not in repo)
 RELEASE_NOTES_v3.html
+
+# Frontend update ZIP (GitHub release asset, built artifact)
+frontend-*.zip

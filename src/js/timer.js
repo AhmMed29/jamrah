@@ -360,7 +360,7 @@ window.pomoSessionName = localStorage.getItem('pomoSessionName') || '';
       var modal = document.getElementById('releaseNotesModal');
       if (modal) {
         modal.classList.remove('hidden');
-        await window.db.saveSetting('seenReleaseNotesV3', 'true');
+        await window.db.setSetting('seenReleaseNotesV3', 'true');
       }
     }
   } catch(e) {

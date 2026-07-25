@@ -227,6 +227,34 @@ ipcMain.handle('select-folder', async () => {
   return result.canceled ? null : result.filePaths[0]
 })
 
+ipcMain.handle('ensure-dir', async (e, dirPath) => {
+  try {
+    if (!dirPath || typeof dirPath !== 'string') return false
+    if (!dirPath.startsWith(storagePath)) return false
+    fs.mkdirSync(dirPath, { recursive: true })
+    return true
+  } catch { return false }
+})
+
+ipcMain.handle('delete-file', async (e, filePath) => {
+  try {
+    if (!filePath || typeof filePath !== 'string') return false
+    if (!filePath.startsWith(storagePath)) return false
+    if (!fs.existsSync(filePath)) return true
+    fs.unlinkSync(filePath)
+    return true
+  } catch { return false }
+})
+
+ipcMain.handle('list-files', async (e, dirPath) => {
+  try {
+    if (!dirPath || typeof dirPath !== 'string') return []
+    if (!dirPath.startsWith(storagePath)) return []
+    if (!fs.existsSync(dirPath)) return []
+    return fs.readdirSync(dirPath)
+  } catch { return [] }
+})
+
 ipcMain.handle('get-default-path', async () => {
   return path.join(app.getPath('userData'), 'data')
 })

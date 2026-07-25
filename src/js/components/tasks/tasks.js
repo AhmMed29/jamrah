@@ -11,6 +11,7 @@ var _selectedId = null;
 var _showNewOptions = false;
 var _newCustomDays = [];
 var _expandedTasks = {};
+var _detailEditMode = false;
 
 var DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -36,16 +37,62 @@ function sortTasks(tasks) {
       var pb = b.priority === 'High' ? 3 : b.priority === 'Medium' ? 2 : b.priority === 'Low' ? 1 : 0;
       return pb - pa;
     } else if (_sortMode === 'date-asc') {
-      var da = a.scheduledTime || a.createdAt || '';
-      var db = b.scheduledTime || b.createdAt || '';
+      var da = a._instanceDate || a.scheduledTime || a.createdAt || '';
+      var db = b._instanceDate || b.scheduledTime || b.createdAt || '';
       return da.localeCompare(db);
     } else {
-      var da = a.scheduledTime || a.createdAt || '';
-      var db = b.scheduledTime || b.createdAt || '';
+      var da = a._instanceDate || a.scheduledTime || a.createdAt || '';
+      var db = b._instanceDate || b.scheduledTime || b.createdAt || '';
       return db.localeCompare(da);
     }
   });
   return sorted;
+}
+
+function expandRecurringTasks(tasks) {
+  var expanded = [];
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+  var todayKey = dateKey(today);
+
+  tasks.forEach(function(task) {
+    if (!task.recurrence || task.recurrence === 'none' || task.parentTaskId) {
+      expanded.push(task);
+      return;
+    }
+
+    var startDate = task.durationStart ? new Date(task.durationStart + 'T00:00:00') : new Date((task.createdAt || task.scheduledTime || todayKey).substring(0, 10) + 'T00:00:00');
+    var endDate = task.durationEnd ? new Date(task.durationEnd + 'T00:00:00') : new Date(today.getFullYear() + 1, 0, 1);
+
+    if (isNaN(startDate.getTime())) startDate = new Date(today);
+    if (isNaN(endDate.getTime())) endDate = new Date(today.getFullYear() + 1, 0, 1);
+
+    var current = new Date(startDate);
+    while (current <= endDate) {
+      var dk = dateKey(current);
+      if (dk >= todayKey) {
+        var copy = Object.assign({}, task, {
+          _baseId: task.id,
+          _instanceDate: dk
+        });
+        expanded.push(copy);
+      }
+      if (task.recurrence === 'daily') {
+        current.setDate(current.getDate() + 1);
+      } else if (task.recurrence === 'weekly') {
+        current.setDate(current.getDate() + 7);
+      } else if (task.recurrence === 'monthly') {
+        current.setMonth(current.getMonth() + 1);
+      } else if (task.recurrence === 'custom') {
+        current.setDate(current.getDate() + 1);
+      } else {
+        break;
+      }
+      if (expanded.length > 2000) break;
+    }
+  });
+
+  return expanded;
 }
 
 function toggleCustomDay(list, day) {
@@ -70,7 +117,8 @@ function closeOnOutsideClick(refEl, closeFn) {
 
 function renderCustomDaysPanel(days, onChange, idSuffix) {
   var idS = idSuffix || '';
-  var html = '<div class="custom-days-panel" id="customDaysPanel' + idS + '">';
+  var panelId = idS === '_detail' ? 'detail-custom-days-panel' : 'customDaysPanel' + idS;
+  var html = '<div class="custom-days-panel" id="' + panelId + '">';
   for (var i = 0; i < 7; i++) {
     var active = days.indexOf(i) >= 0;
     html += '<div class="custom-day-btn' + (active ? ' active' : '') + '" data-day="' + i + '" onclick="event.stopPropagation();window._toggleCustomDayBtn(' + i + ',\'' + idS + '\')">' + DAY_NAMES[i][0] + '</div>';
@@ -80,7 +128,8 @@ function renderCustomDaysPanel(days, onChange, idSuffix) {
 }
 
 window._toggleCustomDayBtn = function(day, idS) {
-  var panel = document.getElementById('customDaysPanel' + idS);
+  var panelId = idS === '_detail' ? 'detail-custom-days-panel' : 'customDaysPanel' + idS;
+  var panel = document.getElementById(panelId);
   if (!panel) return;
   var btns = panel.querySelectorAll('.custom-day-btn');
   var days = [];
@@ -92,8 +141,6 @@ window._toggleCustomDayBtn = function(day, idS) {
   days.sort(function(a,b){return a-b});
   if (idS === '_new') {
     _newCustomDays = days;
-  } else if (idS === '_detail' && _selectedId) {
-    window.db.updateTask(_selectedId, { customDays: JSON.stringify(days) }).then(function() { window.renderTasks(); });
   }
 };
 
@@ -129,9 +176,10 @@ window.renderTasks = function() {
     if (!tasks || !tasks.length) { tasks = []; }
     renderHeaderDate();
     renderTaskList(tasks);
+    if (_detailEditMode) return;
     if (_selectedId) {
       var t = tasks.find(function(x) { return x.id === _selectedId; });
-      if (t) renderDetailPanel(t, tasks);
+      if (t) renderDetailView(t, tasks);
       else { _selectedId = null; renderDetailEmpty(); }
     } else {
       renderDetailEmpty();
@@ -162,9 +210,10 @@ function renderTaskList(tasks) {
   var filtered = sortTasks(tasks);
   filtered = filtered.filter(function(t) { return !t.parentTaskId; });
 
-  filtered = filtered.filter(function(t) {
-    var taskDate = t.scheduledTime || t.createdAt;
-    return taskDate ? taskDate.substring(0, 10) === dayKey : dayKey === dateKey(new Date());
+  var expanded = expandRecurringTasks(filtered);
+  filtered = expanded.filter(function(t) {
+    var td = (t._instanceDate || t.scheduledTime || t.createdAt || '').substring(0, 10);
+    return td === dayKey;
   });
   if (_filterMode === 'active') filtered = filtered.filter(function(t) { return !t.completed; });
   else if (_filterMode === 'completed') filtered = filtered.filter(function(t) { return t.completed; });
@@ -236,14 +285,90 @@ window.toggleExpanded = function(id) {
 /* ── Detail Panel ── */
 window.selectTask = function(id) {
   _selectedId = id;
+  _detailEditMode = false;
   document.querySelectorAll('.task-item').forEach(function(el) {
     el.classList.toggle('selected', el.getAttribute('data-task-id') === id);
   });
   window.db.getTasks().then(function(tasks) {
     var t = tasks.find(function(x) { return x.id === id; });
-    if (t) renderDetailPanel(t, tasks);
+    if (t) renderDetailView(t, tasks);
   });
 };
+
+function renderDetailView(task, allTasks) {
+  var panel = document.getElementById('task-detail-panel');
+  if (!panel) return;
+
+  var subtasks = allTasks ? allTasks.filter(function(t) { return t.parentTaskId === task.id; }) : [];
+  var dotColor = prioColor(task.priority);
+  var metaHtml = '';
+  var pLabel = (task.priority && task.priority !== 'none') ? task.priority : 'None';
+  metaHtml += '<span class="task-detail-meta-item"><span class="task-priority-dot" style="background:' + dotColor + ';width:10px;height:10px"></span>' + pLabel + '</span>';
+  if (task.scheduledTime) {
+    var t = task.scheduledTime.split('T')[1];
+    if (t) metaHtml += '<span class="task-detail-meta-item"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' + t.substring(0,5) + '</span>';
+  }
+  if (task.recurrence && task.recurrence !== 'none') {
+    metaHtml += '<span class="task-detail-meta-item"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 5v14l4-3 4 3 4-3 4 3V5l-4 3-4-3-4 3-4-3z"/></svg>' + recLabel(task.recurrence, task.customDays) + '</span>';
+  }
+  var taskDate = (task.scheduledTime || task.createdAt || '').substring(0, 10);
+  if (taskDate) {
+    var parts = taskDate.split('-');
+    if (parts.length === 3) metaHtml += '<span class="task-detail-meta-item">' + MONTH_NAMES[parseInt(parts[1])-1] + ' ' + parseInt(parts[2]) + '</span>';
+  }
+  if (task.durationStart || task.durationEnd) {
+    metaHtml += '<span class="task-detail-meta-item"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M4 4h16a2 2 0 012 2v14a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>' + (task.durationStart || '...') + ' \u2014 ' + (task.durationEnd || '...') + '</span>';
+  }
+
+  var subHtml = '';
+  subtasks.forEach(function(st) {
+    subHtml += '<div class="detail-subtask-item">' +
+      '<div style="display:flex;align-items:center;gap:8px">' +
+        (st.completed ? '<span style="color:#10b981">&#10003;</span><span style="text-decoration:line-through;color:rgba(45,45,45,0.4)">' : '<span style="color:rgba(45,45,45,0.3)">&#9675;</span><span>') + escapeHtml(st.name) + '</span>' +
+      '</div>' +
+      '<button onclick="event.stopPropagation();window.deleteTask(\'' + escapeHtml(st.id) + '\')" style="border:none;background:none;cursor:pointer;color:#ef4444;padding:4px">' +
+        '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>' +
+      '</button></div>';
+  });
+
+  var panelHtml = '<div class="task-detail-editor">' +
+    '<div class="task-detail-title-row">' +
+      '<div class="task-detail-title-checkbox' + (task.completed ? ' checked' : '') + '" onclick="toggleTask(' + (task.completed ? 1 : 0) + ', \'' + escapeHtml(task.id) + '\');event.stopPropagation()">' +
+        (task.completed ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>' : '') +
+      '</div>' +
+      '<div class="task-detail-title-view' + (task.completed ? ' done' : '') + '">' + escapeHtml(task.name) + '</div>' +
+      '<button class="task-detail-close-btn" onclick="closeDetail()"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>' +
+    '</div>' +
+    '<div class="task-detail-meta">' + metaHtml + '</div>' +
+
+    /* Notes */
+    '<div style="margin-top:24px">' +
+    '<div class="detail-field-label">Notes</div>' +
+    '<div class="detail-notes-view">' + (task.notes ? escapeHtml(task.notes).replace(/\n/g, '<br>') : '<span style="color:rgba(45,45,45,0.4)">No notes.</span>') + '</div>' +
+    '</div>' +
+
+    /* Subtasks */
+    '<div class="detail-subtasks-section">' +
+    '<div class="detail-field-label">Subtasks</div>' +
+    (subHtml || '<div style="color:rgba(45,45,45,0.4);font-size:14px;margin-bottom:8px">No subtasks.</div>') +
+    '</div>' +
+
+    /* Edit and Delete buttons */
+    '<div style="margin-top:32px;display:flex;gap:8px">' +
+    '<button class="detail-edit-btn" onclick="window.enterEditMode(\'' + escapeHtml(task.id) + '\')">' +
+      '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>' +
+      ' Edit' +
+    '</button>' +
+    '<button class="detail-delete-btn" onclick="window.deleteTask(\'' + escapeHtml(task.id) + '\')">' +
+      '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>' +
+      ' Delete task' +
+    '</button>' +
+    '</div>' +
+
+  '</div>';
+
+  panel.innerHTML = panelHtml;
+}
 
 function renderDetailEmpty() {
   var panel = document.getElementById('task-detail-panel');
@@ -251,7 +376,7 @@ function renderDetailEmpty() {
   panel.innerHTML = '<div class="task-detail-empty">Select a task to view and edit</div>';
 }
 
-function renderDetailPanel(task, allTasks) {
+function renderDetailEdit(task, allTasks) {
   var panel = document.getElementById('task-detail-panel');
   if (!panel) return;
 
@@ -290,7 +415,7 @@ function renderDetailPanel(task, allTasks) {
         (task.completed ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>' : '') +
       '</div>' +
       '<input type="text" class="task-detail-title-input' + (task.completed ? ' done' : '') + '" value="' + escapeHtml(task.name) + '" onblur="saveDetailField(\'' + escapeHtml(task.id) + '\',\'name\',this.value)" placeholder="Task title..." />' +
-      '<button class="task-detail-close-btn" onclick="closeDetail()"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>' +
+      '<button class="task-detail-close-btn" onclick="cancelDetailEdit(\'' + escapeHtml(task.id) + '\')"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>' +
     '</div>' +
     '<div class="task-detail-meta">' + metaHtml + '</div>' +
 
@@ -318,13 +443,21 @@ function renderDetailPanel(task, allTasks) {
           '<option value="monthly"' + (task.recurrence === 'monthly' ? ' selected' : '') + '>Monthly</option>' +
           '<option value="custom"' + (task.recurrence === 'custom' ? ' selected' : '') + '>Custom</option>' +
         '</select>' +
-        (task.recurrence === 'custom' ? renderCustomDaysPanel(parseCustomDays(task.customDays), null, '_detail') : '') +
+        (task.recurrence === 'custom'
+          ? '<div id="detail-custom-days-wrap">' +
+              renderCustomDaysPanel(parseCustomDays(task.customDays), null, '_detail') +
+              '<div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">' +
+                '<button onclick="cancelCustomDays(\'' + escapeHtml(task.id) + '\')" style="padding:4px 12px;border:2px solid rgba(45,45,45,0.2);border-radius:8px;background:transparent;cursor:pointer;font-size:13px;font-family:\'Patrick Hand\',cursive">Cancel</button>' +
+                '<button onclick="confirmCustomDays(\'' + escapeHtml(task.id) + '\')" style="padding:4px 12px;border:2px solid #2d2d2d;border-radius:8px;background:#2d2d2d;color:#fff;cursor:pointer;font-size:13px;font-family:\'Patrick Hand\',cursive">OK</button>' +
+              '</div>' +
+            '</div>'
+          : '') +
       '</div>' +
     '</div>' +
     '</div>' +
 
     /* Duration */
-    '<div style="margin-top:24px">' +
+    '<div id="detail-duration-fields" style="margin-top:24px;' + ((!task.recurrence || task.recurrence === 'none') ? 'display:none' : '') + '">' +
     '<div class="detail-field-label">Duration</div>' +
     '<div class="detail-grid-2">' +
       '<input type="date" class="detail-input" value="' + (task.durationStart || '') + '" placeholder="Start" onblur="saveDetailField(\'' + escapeHtml(task.id) + '\',\'durationStart\',this.value)" />' +
@@ -348,8 +481,12 @@ function renderDetailPanel(task, allTasks) {
     '</div>' +
     '</div>' +
 
-    /* Delete */
-    '<div style="margin-top:32px">' +
+    /* Actions */
+    '<div style="margin-top:32px;display:flex;gap:8px">' +
+    '<button onclick="cancelDetailEdit(\'' + escapeHtml(task.id) + '\')" style="flex:1;border-radius:12px;border:2px solid rgba(45,45,45,0.2);background:var(--bg-card);padding:12px;font-size:18px;color:#2d2d2d;cursor:pointer;font-family:\'Patrick Hand\',cursive">Cancel</button>' +
+    '<button onclick="saveDetailEdit(\'' + escapeHtml(task.id) + '\')" style="flex:1;border-radius:12px;border:2px solid #2d2d2d;background:#2d2d2d;padding:12px;font-size:18px;color:#fff;cursor:pointer;font-family:\'Patrick Hand\',cursive">Save</button>' +
+    '</div>' +
+    '<div style="margin-top:12px">' +
     '<button class="detail-delete-btn" onclick="window.deleteTask(\'' + escapeHtml(task.id) + '\')">' +
       '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>' +
       ' Delete task' +
@@ -360,6 +497,28 @@ function renderDetailPanel(task, allTasks) {
 
   panel.innerHTML = panelHtml;
 }
+
+/* ── Edit Mode Control ── */
+window.enterEditMode = function(id) {
+  _detailEditMode = true;
+  window.db.getTasks().then(function(tasks) {
+    var t = tasks.find(function(x) { return x.id === id; });
+    if (t) renderDetailEdit(t, tasks);
+  });
+};
+
+window.cancelDetailEdit = function(id) {
+  _detailEditMode = false;
+  window.db.getTasks().then(function(tasks) {
+    var t = tasks.find(function(x) { return x.id === id; });
+    if (t) renderDetailView(t, tasks);
+  });
+};
+
+window.saveDetailEdit = function(id) {
+  _detailEditMode = false;
+  window.renderTasks();
+};
 
 /* ── Detail Save Helpers ── */
 window.saveDetailField = function(id, field, value) {
@@ -389,12 +548,18 @@ window.saveDetailNote = function(id, val) {
     var t = tasks.find(function(x) { return x.id === id; });
     if (!t) return;
     window.db.updateTask(id, { notes: clean }).then(function() {});
-    // Also save to .md file
     try {
       window.db.getPath().then(function(p) {
         if (!p) return;
-        var notePath = p + '/notes/task_' + id + '.md';
-        window.electronAPI.writeFile(notePath, clean);
+        var noteDir = p + '/notes/task';
+        var notePath = noteDir + '/' + id + '.md';
+        if (clean) {
+          window.electronAPI.ensureDir(noteDir).then(function() {
+            window.electronAPI.writeFile(notePath, clean);
+          });
+        } else {
+          window.electronAPI.deleteFile(notePath);
+        }
       });
     } catch(e) {}
   });
@@ -410,6 +575,30 @@ window.detailRepeatChange = function(id, val) {
     if (!t) return;
     var customDays = (val === 'custom') ? (parseCustomDays(t.customDays).length ? t.customDays : JSON.stringify([0,1,2,3,4,5,6])) : '';
     window.db.updateTask(id, { recurrence: val, customDays: customDays }).then(function() { window.renderTasks(); });
+    var durationFields = document.getElementById('detail-duration-fields');
+    if (durationFields) {
+      durationFields.style.display = (val === 'none') ? 'none' : 'block';
+    }
+  });
+};
+
+window.cancelCustomDays = function(id) {
+  window.db.getTasks().then(function(tasks) {
+    var t = tasks.find(function(x) { return x.id === id; });
+    if (t) renderDetailEdit(t, tasks);
+  });
+};
+
+window.confirmCustomDays = function(id) {
+  var panel = document.getElementById('detail-custom-days-panel');
+  if (!panel) return;
+  var checkedDays = [];
+  panel.querySelectorAll('.custom-day-btn.active').forEach(function(btn) {
+    checkedDays.push(parseInt(btn.getAttribute('data-day')));
+  });
+  var customDays = checkedDays.length > 0 ? JSON.stringify(checkedDays) : JSON.stringify([0,1,2,3,4,5,6]);
+  window.db.updateTask(id, { customDays: customDays }).then(function() {
+    window.renderTasks();
   });
 };
 
@@ -500,7 +689,7 @@ function addNewTask() {
     id: id,
     name: name,
     priority: document.getElementById('tasks-new-priority') ? document.getElementById('tasks-new-priority').value : 'none',
-    scheduledTime: (timeVal || recVal !== 'none') ? scheduledTime : dateStr,
+    scheduledTime: timeVal ? scheduledTime : (recVal !== 'none' ? scheduledTime : null),
     recurrence: recVal,
     customDays: customDays,
     createdAt: new Date().toISOString()
@@ -563,6 +752,34 @@ function initHeaderEvents() {
 document.addEventListener('DOMContentLoaded', function() {
   initNewTaskEvents();
   initHeaderEvents();
+
+  /* Resizable divider */
+  (function() {
+    var handle = document.getElementById('tasks-resize-handle');
+    var leftSection = document.getElementById('tasks-list-section');
+    if (!handle || !leftSection) return;
+    var isDragging = false;
+    handle.addEventListener('mousedown', function(e) {
+      isDragging = true;
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    });
+    document.addEventListener('mousemove', function(e) {
+      if (!isDragging) return;
+      var main = leftSection.parentElement;
+      var mainRect = main.getBoundingClientRect();
+      var pct = (e.clientX - mainRect.left) / mainRect.width * 100;
+      pct = Math.max(20, Math.min(70, pct));
+      leftSection.style.width = pct + '%';
+    });
+    document.addEventListener('mouseup', function() {
+      if (isDragging) {
+        isDragging = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    });
+  })();
 });
 
 /* ── 5-min OS Reminders ── */

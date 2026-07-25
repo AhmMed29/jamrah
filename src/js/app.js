@@ -26,15 +26,7 @@ async function showPage(name) {
     pomoTimelinePanel.style.display = (name === 'pomodoro') ? 'flex' : 'none';
   }
   
-  var pomoRightToggleBtn = document.getElementById('pomoRightToggleBtn');
-  if (pomoRightToggleBtn) {
-    pomoRightToggleBtn.style.display = (name === 'pomodoro') ? 'flex' : 'none';
-  }
-  
-  var pomoRightPanelWrapper = document.getElementById('pomoRightPanelWrapper');
-  if (pomoRightPanelWrapper) {
-    pomoRightPanelWrapper.style.display = (name === 'pomodoro') ? 'flex' : 'none';
-  }
+
   var buttons = document.querySelectorAll('#navDock .dock-item');
   buttons.forEach(function(btn) {
     btn.classList.remove('active');
@@ -269,6 +261,7 @@ showPage = async function(name) {
 };
 
 window.addEventListener('load', function() {
+  if (window.initPomoShader) window.initPomoShader();
   var elapsed = performance.now() - window._splashStart;
   var delay = Math.max(0, 1500 - elapsed);
   setTimeout(function() {

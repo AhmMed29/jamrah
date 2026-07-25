@@ -146,6 +146,10 @@ body {
 }
 /* ============================================================================================ */
 
+.pomo-phase-word { transition: color 0.15s; }
+.pomo-phase-word:hover { color: rgba(45,45,45,0.8); }
+.pomo-phase-word.active { color: #2d2d2d; font-weight: 600; }
+
 /* ── Session name popup ── */
 /* ── Session name popup ── */
 .pomo-name-popup {
@@ -286,4 +290,134 @@ body {
 .pomo-note-textarea:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+}
+
+/* ── Pomodoro Timeline Hour Grid (from timeline-style.html) ── */
+.pomo-timeline-hour-grid {
+  position: relative;
+  margin: 4px 0;
+}
+
+.pomo-timeline-hour-grid::before {
+  content: '';
+  position: absolute;
+  left: 90px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #2d2d2d;
+  border-radius: 2px;
+}
+
+.pomo-tl-hour-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  min-height: 36px;
+  margin-bottom: 0;
+}
+
+.pomo-tl-time-label {
+  width: 70px;
+  text-align: right;
+  padding-right: 16px;
+  font-size: 14px;
+  color: #888;
+  line-height: 20px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.pomo-tl-time-arrow {
+  position: absolute;
+  left: 46px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 11px;
+  color: #2d2d2d;
+  z-index: 2;
+  white-space: nowrap;
+  line-height: 1;
+  letter-spacing: 1px;
+  top: 2px;
+  transform: rotate(180deg);
+  opacity: 0.6;
+}
+
+.pomo-tl-session-dot {
+  position: absolute;
+  left: 83px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #2d2d2d;
+  border-radius: 50%;
+  z-index: 3;
+  top: 4px;
+  background: #faf9f6;
+}
+
+.pomo-tl-session-dot.active {
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+  border-color: #8b5cf6;
+}
+
+.pomo-tl-session-items {
+  flex: 1;
+  padding-left: 20px;
+  padding-top: 2px;
+  padding-bottom: 4px;
+}
+
+.pomo-tl-session-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 0;
+  cursor: pointer;
+  transition: transform 0.1s;
+  flex-wrap: wrap;
+}
+
+.pomo-tl-session-item:hover {
+  transform: translateX(3px);
+}
+
+.pomo-tl-session-item.active .pomo-tl-sess-name {
+  color: #8b5cf6;
+}
+
+.pomo-tl-sess-name {
+  font-size: 16px;
+  color: #2d2d2d;
+}
+
+.pomo-tl-tag {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  border: 1px solid rgba(45,45,45,0.2);
+}
+
+.pomo-tl-sess-dur {
+  font-size: 17px;
+  font-weight: bold;
+  margin-left: auto;
+  padding-left: 10px;
+  color: #2d2d2d;
+}
+
+.pomo-tl-dur-unit {
+  font-size: 12px;
+  font-weight: normal;
+  color: #888;
+}
+
+.pomo-tl-free {
+  flex: 1;
+  padding-left: 20px;
+  color: #ccc;
+  font-size: 13px;
+  font-style: italic;
+  line-height: 28px;
 }

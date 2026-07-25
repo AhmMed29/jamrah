@@ -12,7 +12,7 @@ var calState = {
   tasks: [],
   tags: [],
   goals: [],
-  notes: {},
+  noteKeys: {},
   modal: null,
   loaded: false
 };
@@ -24,6 +24,44 @@ var CAL_MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+/* ── Note File Helpers ── */
+async function getNotesDir() {
+  var p = await window.db.getPath();
+  return p ? p + '/notes' : null;
+}
+
+async function ensureNoteDir() {
+  var dir = await getNotesDir();
+  if (dir) await window.electronAPI.ensureDir(dir);
+}
+
+async function readNoteFile(type, id) {
+  var p = await window.db.getPath();
+  if (!p) return '';
+  var fp = p + '/notes/' + type + '/' + id + '.md';
+  return (await window.electronAPI.readFile(fp)) || '';
+}
+
+async function writeNoteFile(type, id, content) {
+  var p = await window.db.getPath();
+  if (!p) return false;
+  var dir = p + '/notes/' + type;
+  var fp = dir + '/' + id + '.md';
+  await window.electronAPI.ensureDir(dir);
+  return await window.electronAPI.writeFile(fp, content);
+}
+
+async function deleteNoteFile(type, id) {
+  var p = await window.db.getPath();
+  if (!p) return false;
+  var fp = p + '/notes/' + type + '/' + id + '.md';
+  return await window.electronAPI.deleteFile(fp);
+}
+
+function getNoteFilePath(type, id) {
+  return 'notes/' + type + '/' + id + '.md';
+}
+
 /* ── Data Loading ── */
 async function loadCalenderData() {
   try {
@@ -31,14 +69,38 @@ async function loadCalenderData() {
       window.db.getSessionsGrouped(),
       window.db.getTasks(),
       window.db.getTags(),
-      window.db.getGoals(),
-      window.db.getSetting('calenderNotes')
+      window.db.getGoals()
     ]);
     calState.sessions = results[0] || {};
     calState.tasks = results[1] || [];
     calState.tags = results[2] || [];
     calState.goals = results[3] || [];
-    try { calState.notes = JSON.parse(results[4] || '{}'); } catch(e) { calState.notes = {}; }
+    calState.noteKeys = {};
+    try {
+      var p = await window.db.getPath();
+      if (p) {
+        var notesBase = p + '/notes';
+        var types = ['day', 'week', 'month'];
+        for (var ti = 0; ti < types.length; ti++) {
+          var t = types[ti];
+          var dir = notesBase + '/' + t;
+          var files = await window.electronAPI.listDir(dir);
+          if (files && files.length) {
+            for (var fi = 0; fi < files.length; fi++) {
+              var f = files[fi];
+              if (f.endsWith('.md')) {
+                var id = f.slice(0, -3);
+                var key = t + ':' + id;
+                var content = await window.electronAPI.readFile(dir + '/' + f);
+                calState.noteKeys[key] = content || '';
+              }
+            }
+          }
+        }
+      }
+    } catch(e) {
+      console.error('Calender notes load error:', e);
+    }
     calState.loaded = true;
   } catch(e) {
     console.error('Calender load error:', e);
@@ -46,7 +108,7 @@ async function loadCalenderData() {
 }
 
 function logNotesState(tag) {
-  var dayKeys = Object.keys(calState.notes).filter(function(k) { return k.startsWith('day:'); });
+  var dayKeys = Object.keys(calState.noteKeys).filter(function(k) { return k.startsWith('day:'); });
   console.log('[' + tag + '] day notes count:', dayKeys.length, 'sample:', dayKeys.slice(0, 3));
 }
 
@@ -69,7 +131,10 @@ function getActivityLevel(dateKey) {
 function getFocusMinutes(dateKey) {
   var daySessions = calState.sessions[dateKey] || [];
   var total = 0;
-  daySessions.forEach(function(s) { total += s.focusMinutes || 0; });
+  daySessions.forEach(function(s) {
+    if (s.phase && s.phase !== 'work') return;
+    total += s.focusMinutes || 0;
+  });
   return Math.round(total);
 }
 
@@ -188,10 +253,10 @@ function renderWeekView() {
   title.textContent = 'Week of ' + formatShortDate(bounds.start) + ' \u2013 ' + formatShortDate(bounds.end);
 
   var wk = weekKeyStr();
-  var wkNote = calState.notes['week:' + wk];
+  var wkNote = calState.noteKeys['week:' + wk];
   if (wkNote) {
     if (preview) { preview.textContent = wkNote; preview.style.display = 'block'; }
-    if (noteBtn) { noteBtn.style.display = 'inline-flex'; noteBtn.textContent = '+ Edit Week Note'; }
+    if (noteBtn) { noteBtn.style.display = 'inline-flex'; noteBtn.textContent = '\u{1F441} Edit Week Note'; }
   } else {
     if (preview) preview.style.display = 'none';
     if (noteBtn) { noteBtn.style.display = 'inline-flex'; noteBtn.textContent = '+ Week Note'; }
@@ -218,8 +283,8 @@ function renderWeekDayCard(dateKey, date, isToday) {
   var fm = focusMinutes % 60;
   var focusText = fh > 0 ? fh + 'h ' + fm + 'm' : fm + 'm';
 
-  var dayNote = calState.notes['day:' + dateKey] || '';
-  var dayNoteText = dayNote ? '\u{1F4DD}' : '+';
+  var dayNote = calState.noteKeys['day:' + dateKey] || '';
+  var dayNoteText = dayNote ? '\u{1F441}' : '+';
   var dayNoteClass = dayNote ? 'note-dot has-note' : 'note-dot';
 
   var html = '<div class="week-day-card' + (isToday ? ' today' : '') + '">';
@@ -230,19 +295,49 @@ function renderWeekDayCard(dateKey, date, isToday) {
 
   html += '<div class="week-focus-time">\u23F1 ' + focusText + ' focus</div>';
 
-  html += '<div class="week-task-list" id="tasks-' + dateKey + '">';
-  if (dayTasks.length === 0) {
-    html += '<div class="week-task-empty">No tasks yet</div>';
-  } else {
-    dayTasks.forEach(function(t) {
-      html += '<label class="week-task' + (t.completed ? ' done' : '') + '">';
-      html += '<input type="checkbox" ' + (t.completed ? 'checked' : '') + ' onchange="toggleTaskComplete(\'' + t.id + '\')">';
-      html += '<span>' + escapeHtml(t.name) + '</span>';
-      html += '<button class="task-del-btn" onclick="calDeleteTask(\'' + t.id + '\')"><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1l-8 8" stroke="white" stroke-width="1.8" fill="none"/></svg></button>';
-      html += '</label>';
+  html += '<div class="week-timeline-container">';
+  for (var hour = 0; hour < 24; hour++) {
+    var hourTasks = dayTasks.filter(function(t) {
+      if (!t.scheduledTime) return false;
+      var taskHour = parseInt((t.scheduledTime.split('T')[1] || '00:00').split(':')[0]);
+      return taskHour === hour;
     });
+    var ampm = hour === 0 ? '12am' : hour < 12 ? hour + 'am' : hour === 12 ? '12pm' : (hour - 12) + 'pm';
+    html += '<div class="wt-hour-row">';
+    html += '<div class="wt-time-label">' + ampm + '</div>';
+    if (hourTasks.length > 0) {
+      hourTasks.forEach(function(t) {
+        var dotColor = t.priority === 'High' ? '#ef4444' : t.priority === 'Medium' ? '#10b981' : '#9ca3af';
+        var taskTime = (t.scheduledTime.split('T')[1] || '').substring(0, 5);
+        html += '<div class="wt-event" style="display:flex;align-items:center;gap:6px;padding:2px 0">';
+        html += '<span class="wt-dot" style="background:' + dotColor + '"></span>';
+        html += '<span class="wt-event-time" style="font-size:11px;color:rgba(45,45,45,0.4)">' + taskTime + '</span>';
+        html += '<span class="wt-event-name" style="font-size:14px;color:#2d2d2d">' + escapeHtml(t.name) + '</span>';
+        html += '</div>';
+      });
+    } else {
+      html += '<div class="wt-free" style="color:#ddd;font-size:11px;font-style:italic;padding:2px 14px">— free —</div>';
+    }
+    html += '</div>';
   }
   html += '</div>';
+
+  var unscheduledTasks = dayTasks.filter(function(t) { return !t.scheduledTime; });
+  if (unscheduledTasks.length > 0) {
+    html += '<div class="wt-todo-toggle" onclick="toggleUnscheduled(this, \'' + dateKey + '\')">';
+    html += '<span class="wt-todo-icon">▶</span>';
+    html += '<span class="wt-todo-label">' + unscheduledTasks.length + ' unscheduled</span>';
+    html += '</div>';
+    html += '<div class="wt-todo-list" id="wt-todo-' + dateKey + '" style="display:none">';
+    unscheduledTasks.forEach(function(t) {
+      var dotColor = t.priority === 'High' ? '#ef4444' : t.priority === 'Medium' ? '#f59e0b' : t.priority === 'Low' ? '#22c55e' : '#9ca3af';
+      html += '<div class="wt-todo-item">';
+      html += '<span class="wt-todo-dot" style="background:' + dotColor + '"></span>';
+      html += '<span class="wt-todo-name' + (t.completed ? ' done' : '') + '">' + escapeHtml(t.name) + '</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
 
   html += '<button class="add-task-btn" onclick="showAddTaskInput(\'' + dateKey + '\')">+ Add Task</button>';
 
@@ -257,6 +352,19 @@ function renderWeekDayCard(dateKey, date, isToday) {
   html += '</div>';
   return html;
 }
+
+window.toggleUnscheduled = function(el, dateKey) {
+  var list = document.getElementById('wt-todo-' + dateKey);
+  if (!list) return;
+  var icon = el.querySelector('.wt-todo-icon');
+  if (list.style.display === 'none') {
+    list.style.display = 'block';
+    if (icon) icon.textContent = '▼';
+  } else {
+    list.style.display = 'none';
+    if (icon) icon.textContent = '▶';
+  }
+};
 
 window.showAddTaskInput = function(dateKey) {
   removeTaskPopup();
@@ -314,7 +422,7 @@ window.confirmTaskPopup = function() {
   overlay.remove();
 
   var id = 'task_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
-  window.db.createTask({ id: id, name: name, priority: priority, createdAt: dateKey + ' 00:00:00', scheduledTime: dateKey }).then(async function(result) {
+  window.db.createTask({ id: id, name: name, priority: priority, createdAt: dateKey + ' 00:00:00', scheduledTime: null }).then(async function(result) {
     if (result && result._error) { console.error('Task API error:', result); return; }
     if (result === false) { console.error('Task create returned false'); return; }
     logNotesState('before-create-task');
@@ -653,8 +761,8 @@ function renderYearMonth(monthIdx) {
   }
   if (currentWeek.length > 0) weeks.push(currentWeek);
 
-  var monthNote = calState.notes['month:' + monthKey] || '';
-  var monthNoteText = monthNote ? '\u{1F4DD}' : '+';
+  var monthNote = calState.noteKeys['month:' + monthKey] || '';
+  var monthNoteText = monthNote ? '\u{1F441}' : '+';
   var monthNoteClass = monthNote ? 'note-dot has-note' : 'note-dot';
 
   var html = '<div class="year-month-card">';
@@ -690,11 +798,11 @@ function renderYearMonth(monthIdx) {
         return t.tagId === calState.filter;
       });
 
-      var dayNote = calState.notes['day:' + key] || '';
-      var dayNoteText = dayNote ? '\u{1F4DD}' : '+';
+      var dayNote = calState.noteKeys['day:' + key] || '';
+      var dayNoteText = dayNote ? '\u{1F441}' : '+';
       var dayNoteClass = dayNote ? 'note-dot has-note' : 'note-dot';
 
-      html += '<div class="year-day">';
+      html += '<div class="year-day year-day-cell" onclick="openDayPopup(\'' + key + '\')" style="cursor:pointer">';
       html += '<div class="year-day-header">';
       html += '<span class="year-day-number">' + d + '</span>';
       html += '<span class="year-day-weekday">' + weekday + '.</span>';
@@ -725,9 +833,9 @@ function renderYearMonth(monthIdx) {
 
     // Week note button after each week
     html += '<div class="year-week-note-row">';
-    var weekNote = calState.notes['week:' + wkKey] || '';
+    var weekNote = calState.noteKeys['week:' + wkKey] || '';
     html += '<button class="year-week-note-btn" onclick="openNoteModal(\'week\',\'' + wkKey + '\',\'Week Note: ' + CAL_MONTH_NAMES[monthIdx] + ' ' + weekDays[0] + ' \u2013 ' + weekDays[weekDays.length - 1] + ', ' + calState.year + '\')">';
-    html += weekNote ? '+ Edit Week Note' : '+ Week Note';
+    html += weekNote ? '\u{1F441} Edit Week Note' : '+ Week Note';
     html += '</button>';
     html += '</div>';
 
@@ -764,15 +872,17 @@ function renderYearMonthGoals(monthIdx) {
 }
 
 /* ── Note Modal ── */
-window.openNoteModal = function(type, id, label) {
+window.openNoteModal = async function(type, id, label) {
   calState.modal = { type: type, id: id, label: label };
   var modal = document.getElementById('noteModal');
   var title = document.getElementById('noteModalTitle');
   var text = document.getElementById('noteModalText');
   if (title) title.textContent = label;
   if (text) {
+    var content = await readNoteFile(type, id);
     var key = type + ':' + id;
-    text.value = calState.notes[key] || '';
+    calState.noteKeys[key] = content;
+    text.value = content;
   }
   if (modal) modal.style.display = 'flex';
 };
@@ -787,14 +897,14 @@ window.saveNoteModal = async function() {
   var text = document.getElementById('noteModalText');
   if (!text) return;
   var key = calState.modal.type + ':' + calState.modal.id;
-  if (text.value.trim()) {
-    calState.notes[key] = text.value.trim();
+  var clean = text.value.trim();
+  if (clean) {
+    calState.noteKeys[key] = clean;
+    await writeNoteFile(calState.modal.type, calState.modal.id, clean);
   } else {
-    delete calState.notes[key];
+    delete calState.noteKeys[key];
+    await deleteNoteFile(calState.modal.type, calState.modal.id);
   }
-  logNotesState('before-save-note');
-  await window.db.setSetting('calenderNotes', JSON.stringify(calState.notes));
-  logNotesState('after-save-note');
   closeNoteModal();
   renderCalender();
 };
@@ -802,8 +912,8 @@ window.saveNoteModal = async function() {
 window.deleteNoteModal = async function() {
   if (!calState.modal) return;
   var key = calState.modal.type + ':' + calState.modal.id;
-  delete calState.notes[key];
-  await window.db.setSetting('calenderNotes', JSON.stringify(calState.notes));
+  delete calState.noteKeys[key];
+  await deleteNoteFile(calState.modal.type, calState.modal.id);
   closeNoteModal();
   renderCalender();
 };
@@ -831,6 +941,99 @@ function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
+
+/* ── Day Popup ── */
+window.openDayPopup = async function(dateKey) {
+  var d = new Date(dateKey + 'T00:00:00');
+  var titleEl = document.getElementById('dayPopupTitle');
+  if (titleEl) titleEl.textContent = formatDate(d);
+
+  var contentEl = document.getElementById('dayPopupContent');
+  if (!contentEl) return;
+
+  var tasks = calState.tasks.filter(function(t) {
+    var td = (t.scheduledTime || t.createdAt || '').substring(0, 10);
+    return td === dateKey && !t.parentTaskId;
+  });
+  var sessions = calState.sessions[dateKey] || [];
+
+  var html = '';
+
+  // Timeline section
+  html += '<div class="day-popup-timeline">';
+  for (var hour = 0; hour < 24; hour++) {
+    var hourTasks = tasks.filter(function(t) {
+      if (!t.scheduledTime) return false;
+      var taskHour = parseInt((t.scheduledTime.split('T')[1] || '00:00').split(':')[0]);
+      return taskHour === hour;
+    });
+    var hourSessions = sessions.filter(function(s) {
+      var sd = new Date(s.startTime);
+      return sd.getHours() === hour;
+    });
+    var ampm = hour === 0 ? '12am' : hour < 12 ? hour + 'am' : hour === 12 ? '12pm' : (hour - 12) + 'pm';
+
+    html += '<div class="dp-hour-row">';
+    html += '<div class="dp-time-label">' + ampm + '</div>';
+
+    if (hourTasks.length > 0 || hourSessions.length > 0) {
+      html += '<div class="dp-dot"></div>';
+      html += '<div class="dp-items">';
+      hourTasks.forEach(function(t) {
+        var dotColor = t.priority === 'High' ? '#ef4444' : t.priority === 'Medium' ? '#f59e0b' : t.priority === 'Low' ? '#22c55e' : '#9ca3af';
+        var taskTime = (t.scheduledTime.split('T')[1] || '').substring(0, 5);
+        html += '<div class="dp-item" style="display:flex;align-items:center;gap:6px;padding:2px 0">';
+        html += '<span class="dp-dot-small" style="background:' + dotColor + '"></span>';
+        html += '<span class="dp-item-time" style="font-size:11px;color:rgba(45,45,45,0.4)">' + taskTime + '</span>';
+        html += '<span class="dp-item-name">' + escapeHtml(t.name) + '</span>';
+        if (t.completed) html += '<span style="color:#10b981;font-size:12px">✓</span>';
+        html += '</div>';
+      });
+      hourSessions.forEach(function(s) {
+        var sd = new Date(s.startTime);
+        var ed = s.endTime ? new Date(s.endTime) : sd;
+        var sTime = sd.getHours() + ':' + String(sd.getMinutes()).padStart(2, '0');
+        var eTime = ed.getHours() + ':' + String(ed.getMinutes()).padStart(2, '0');
+        html += '<div class="dp-item" style="display:flex;align-items:center;gap:6px;padding:2px 0">';
+        html += '<span class="dp-dot-small" style="background:#8b5cf6"></span>';
+        html += '<span class="dp-item-time" style="font-size:11px;color:rgba(45,45,45,0.4)">' + sTime + '</span>';
+        html += '<span class="dp-item-name" style="font-style:italic">' + escapeHtml(s.taskName || 'Session') + '</span>';
+        html += '<span style="font-size:11px;color:rgba(45,45,45,0.3)">' + Math.round(s.focusMinutes) + 'm</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div class="dp-free">— free —</div>';
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // To Do section (unscheduled tasks)
+  var unscheduledTasks = tasks.filter(function(t) { return !t.scheduledTime; });
+  if (unscheduledTasks.length > 0) {
+    html += '<div style="margin-top:16px;padding-top:12px;border-top:2px dashed #e5e7eb">';
+    html += '<div style="font-size:13px;font-weight:600;color:#6b7280;margin-bottom:8px">📋 To Do</div>';
+    unscheduledTasks.forEach(function(t) {
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0">';
+      html += '<span style="width:8px;height:8px;border-radius:50%;background:' + (t.priority === 'High' ? '#ef4444' : t.priority === 'Medium' ? '#f59e0b' : '#9ca3af') + '"></span>';
+      html += '<span style="font-size:14px;' + (t.completed ? 'text-decoration:line-through;opacity:0.4' : '') + '">' + escapeHtml(t.name) + '</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  contentEl.innerHTML = html;
+  var modal = document.getElementById('dayPopupModal');
+  if (modal) modal.classList.remove('hidden');
+};
+
+window.closeDayPopup = function(e) {
+  if (!e || e.target === e.currentTarget) {
+    var modal = document.getElementById('dayPopupModal');
+    if (modal) modal.classList.add('hidden');
+  }
+};
 
 /* ── Midnight Refresh ── */
 function scheduleMidnightRefresh() {

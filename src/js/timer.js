@@ -92,10 +92,6 @@ window.toggleTimer = function() {
 };
 
 window.resetTimer = async function() {
-  if (window._pendingSessionStart) {
-    window._pendingSessionStart = false;
-    if (window.onSessionCancel) window.onSessionCancel();
-  }
   stopTimer();
   phase = 'idle';
   await setPhaseTime('work');
@@ -273,7 +269,7 @@ window.setPreset = async function(minutes) {
 };
 
 window.adjustTime = async function(delta) {
-  if (phase === 'idle' && !window._pendingSessionStart) {
+  if (phase === 'idle') {
     var newMinutes = Math.max(1, Math.floor(remainingSeconds / 60) + delta);
     totalSeconds = newMinutes * 60;
     remainingSeconds = totalSeconds;
@@ -332,6 +328,17 @@ window.openEndPopup = function() {
   if (phase === 'idle') return;
   var popup = document.getElementById('endPopup');
   if (popup) popup.classList.remove('hidden');
+};
+
+window.setPomoPhase = async function(p) {
+  if (phase === 'idle' || !isRunning) {
+    phase = p;
+    await setPhaseTime(p);
+    document.querySelectorAll('.pomo-phase-word').forEach(function(el) { el.classList.remove('active'); });
+    var el = document.getElementById('pomoPhase' + p.charAt(0).toUpperCase() + p.slice(1));
+    if (el) el.classList.add('active');
+    updateUI();
+  }
 };
 
 // Init

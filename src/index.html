@@ -1042,6 +1042,95 @@ window.tailwind={ config: {
   </div>
 </div>
 
+<div id="releaseNotesModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-[300] hidden" onclick="closeReleaseNotes(event)">
+  <div onclick="event.stopPropagation()" class="release-notes-modal">
+    <div class="release-notes-scroll">
+      <div class="release-notes-header">
+        <div class="release-notes-logo">
+          <img src="assets/Jamrah-Icon.svg" alt="Jamrah" width="56">
+        </div>
+        <h1 class="release-notes-title">Welcome to Jamrah <span style="color:#888;font-size:20px">جَمْرَه</span></h1>
+        <p class="release-notes-subtitle">Your all-in-one productivity hub — v3.0.0</p>
+      </div>
+
+      <div class="release-notes-section">
+        <h2 class="release-notes-h2">🍅 What is Jamrah?</h2>
+        <p class="release-notes-p">Jamrah is a full-featured <strong>Electron desktop app</strong> that combines a Pomodoro timer, session tracking, task management, goal setting, habit tracking, calendar analytics, and stats — all in one place. Powered by a <strong>.NET 9 + SQLite</strong> backend with smooth GLSL shader backgrounds.</p>
+      </div>
+
+      <div class="release-notes-section">
+        <h2 class="release-notes-h2">🔥 Features at a Glance</h2>
+        <div class="release-notes-grid">
+          <div class="release-notes-card">
+            <div class="rn-card-icon">🍅</div>
+            <div class="rn-card-title">Pomodoro Timer</div>
+            <div class="rn-card-desc">Focus / Short Break / Long Break with configurable durations. Live shader backgrounds (5 themes + custom). Minimal mode. Auto-start breaks. Desktop notifications.</div>
+          </div>
+          <div class="release-notes-card">
+            <div class="rn-card-icon">📜</div>
+            <div class="rn-card-title">Session Timeline</div>
+            <div class="rn-card-desc">Every focus session logged in an interactive hour-by-hour timeline. Color-coded dots, day navigation, inline name editing, session notes, active session glow.</div>
+          </div>
+          <div class="release-notes-card">
+            <div class="rn-card-icon">✔</div>
+            <div class="rn-card-title">Task Manager</div>
+            <div class="rn-card-desc">Create, organize, and prioritize tasks with High / Medium / Low / None priority levels. Subtasks with expand/collapse. Recurrence, custom days, goals integration, detail panel with notes.</div>
+          </div>
+          <div class="release-notes-card">
+            <div class="rn-card-icon">🎯</div>
+            <div class="rn-card-title">Goals</div>
+            <div class="rn-card-desc">Set weekly, monthly, quarterly, yearly, or custom-length goals. Track progress as you complete linked tasks. Goal hierarchy with progress bars and status badges.</div>
+          </div>
+          <div class="release-notes-card">
+            <div class="rn-card-icon">🤸</div>
+            <div class="rn-card-title">Habit Tracker</div>
+            <div class="rn-card-desc">Paper-like habit grid with daily logging. Click sound feedback. Year view with color density. Monthly stats.</div>
+          </div>
+          <div class="release-notes-card">
+            <div class="rn-card-icon">📊</div>
+            <div class="rn-card-title">Calendar & Stats</div>
+            <div class="rn-card-desc">Year, month, and week calendar views with session heatmap. Day/week timeline views. Focus time analytics, session counts, and trends.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="release-notes-section">
+        <h2 class="release-notes-h2">⚙️ Customization</h2>
+        <p class="release-notes-p">Every component can be shown or hidden in the sidebar and dock. Toggle the task popup on timer start. Choose your shader theme, custom colors, sound preferences, and more. <strong>You control what you see.</strong></p>
+      </div>
+
+      <div class="release-notes-section">
+        <h2 class="release-notes-h2">📦 What's New in v3.0.0</h2>
+        <ul class="release-notes-ul">
+          <li><strong>Session Timeline Side Box</strong> — full session history with hour grid, day nav, inline editing</li>
+          <li><strong>Redesigned Sidebar</strong> — single toggle button, overlay mode with backdrop</li>
+          <li><strong>Session Name Popup</strong> — name your session before starting (toggle in Settings)</li>
+          <li><strong>Calendar Timeline View</strong> — day and week timeline with session details</li>
+          <li><strong>Frontend Auto-Update</strong> — lightweight ZIP updates (no full EXE download)</li>
+          <li><strong>Page Placement Preferences</strong> — choose sidebar and/or dock per page</li>
+          <li><strong>Faster Timer</strong> — no button delays, synchronous toggle, minimal mode on load</li>
+        </ul>
+      </div>
+
+      <div class="release-notes-section">
+        <h2 class="release-notes-h2">🔧 For Developers</h2>
+        <p class="release-notes-p">Built with Electron + vanilla JS + .NET 9 + EF Core SQLite. Data stored locally. Open source under the PolyForm Noncommercial License.</p>
+        <div class="release-notes-code">git clone https://github.com/AhmMed29/jamrah.git && cd jamrah && npm install && npm start</div>
+      </div>
+    </div>
+
+    <div class="release-notes-footer">
+      <span class="release-notes-footer-text">
+        Made with 🔥 by <strong>AhmMed29</strong>
+        <a href="https://www.buymeacoffee.com/ahmedghazi" target="_blank" class="release-notes-coffee" title="Buy me a coffee">
+          <span>☕</span> Buy me a coffee
+        </a>
+      </span>
+      <button class="release-notes-gotit" onclick="closeReleaseNotes()">Got it! 🚀</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/components/sidebar/sidebar.js"></script>
 </body>
 </html>

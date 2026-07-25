@@ -54,3 +54,6 @@ backend/publish/
 
 # OpenCode agents (personal, not shared)
 .opencode/
+
+# Release notes HTML (GitHub release asset, not in repo)
+RELEASE_NOTES_v3.html

@@ -352,5 +352,25 @@ window.pomoSessionName = localStorage.getItem('pomoSessionName') || '';
   if (window.Notification && Notification.permission === 'default') {
     Notification.requestPermission();
   }
+  
+  // Show release notes welcome popup once
+  try {
+    var seen = await window.db.getSetting('seenReleaseNotesV3');
+    if (seen !== 'true') {
+      var modal = document.getElementById('releaseNotesModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        await window.db.saveSetting('seenReleaseNotesV3', 'true');
+      }
+    }
+  } catch(e) {
+    // Silently fail if DB not available
+  }
 })();
+
+window.closeReleaseNotes = function(e) {
+  if (e && e.target !== e.currentTarget) return;
+  var modal = document.getElementById('releaseNotesModal');
+  if (modal) modal.classList.add('hidden');
+};
 

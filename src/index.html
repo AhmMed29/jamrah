@@ -55,7 +55,6 @@ window.tailwind={ config: {
 <link rel="stylesheet" href="css/sidebar-new.css">
 <link rel="stylesheet" href="css/dock.css">
 <link rel="stylesheet" href="css/timer.css">
-<link rel="stylesheet" href="css/side-box.css">
 
 <link rel="stylesheet" href="css/settings.css">
 <link rel="stylesheet" href="css/modals.css">
@@ -144,31 +143,8 @@ window.tailwind={ config: {
 
 <div id="page-home" class="hidden flex-1 flex-col items-center justify-center bg-white px-4"></div>
 
-<div id="page-pomodoro" class="flex flex-1 overflow-hidden min-h-0" dir="ltr">
-<div id="pomoTimelinePanel" class="pomo-timeline-panel">
-  <!-- <div class="pomo-timeline-panel-header">
-    <div class="flex items-center gap-2 w-full">
-      <span class="pomo-timeline-panel-date" id="pomoSideDateLabel">Today</span>
-      <span class="flex-1"></span>
-      <button class="pomo-timeline-panel-toggle-btn" onclick="togglePomoSideBox()" title="Toggle Sessions">
-        <span class="material-symbols-outlined" style="font-size:18px">chevron_left</span>
-      </button>
-    </div>
-  </div> -->
-  <div class="pomo-timeline-list" id="pomoSideTimeline">
-    <!-- timeline items rendered by JS -->
-  </div>
-  <!-- <div class="pomo-timeline-panel-nav">
-    <button class="pomo-timeline-nav-btn" onclick="pomoPrevDay()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-    </button>
-    <span class="pomo-timeline-nav-label" id="pomoSideNavLabel">Today</span>
-    <button class="pomo-timeline-nav-btn" onclick="pomoNextDay()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-    </button>
-  </div> -->
-</div>
-<main class="flex-1 flex flex-col relative h-full overflow-hidden bg-white" id="mainArea">
+<div id="page-pomodoro" class="flex flex-1 flex-col min-h-0 bg-white" dir="ltr">
+<main class="flex-1 flex flex-col relative h-full overflow-hidden" id="mainArea">
 <div class="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto px-4 relative" style="padding-top:60px;padding-bottom:60px">
 
   <div style="display:flex;gap:32px;justify-content:center;margin-bottom:8px;font-size:24px;font-family:'Patrick Hand',cursive;color:rgba(45,45,45,0.5)">
@@ -187,8 +163,7 @@ window.tailwind={ config: {
     <div class="timer-face" id="timerFace">
       <div class="timer-text" id="timerText">25:00</div>
       <div class="timer-label" id="phaseLabel">Focus</div>
-      <div id="sessionCountDisplay" class="text-xs text-gray-400 mt-1" style="display:none;">Session #1</div>
-    </div>
+        </div>
     <!-- Hover buttons -->
     <button class="pomo-hover-btn pomo-btn-skip" onclick="event.stopPropagation(); window.skipPhase();" title="Skip Phase">
       <span class="material-symbols-outlined">skip_next</span>
@@ -532,26 +507,7 @@ window.tailwind={ config: {
               </label>
             </div>
 
-            <div class="settings-toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-card);border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:12px">
-              <div>
-                <label for="showSessionCountToggle" style="font-size:14px;font-weight:600;color:#0b1c30;display:block;cursor:pointer">Session count display</label>
-                <p style="font-size:12px;color:#6B7280;margin-top:4px">Show session count on pomodoro page</p>
-              </div>
-              <label class="settings-cb-container">
-                <input type="checkbox" id="showSessionCountToggle" onchange="markDirty()">
-                <div class="settings-cb-mark"></div>
-              </label>
-            </div>
 
-            <div class="settings-timer-row" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-card);border-radius:10px;border:1px solid rgba(195,198,213,0.5);margin-bottom:20px">
-              <div>
-                <label style="font-size:14px;font-weight:600;color:#0b1c30;display:block">Sessions before long break</label>
-                <p style="font-size:12px;color:#6B7280;margin-top:4px">Number of sessions before a long break is scheduled</p>
-              </div>
-              <div style="display:flex;align-items:center;gap:8px">
-                <input type="number" id="longBreakIntervalInput" value="4" min="1" max="12" class="settings-timer-input" onchange="markDirty()" style="width: 70px;">
-              </div>
-            </div>
           </section>
 
           <section style="margin-top:32px">
@@ -827,59 +783,7 @@ window.tailwind={ config: {
 </div>
 </div>
 
-<div id="sessionPopup" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 hidden" onclick="closeSessionPopup(event)">
-  <div class="bg-white rounded-2xl p-8 shadow-xl w-96 max-w-[90vw]" onclick="event.stopPropagation()">
-    <h3 class="text-xl font-medium mb-5 text-gray-800">Edit Session</h3>
-    <div class="mb-4">
-      <label class="text-sm text-gray-500 mb-1 block">Task Name</label>
-      <div class="flex gap-2">
-        <input type="text" id="sessionTaskInput" class="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="e.g. Coding">
-        <button onclick="toggleSessionTaskDropdown(event)" class="px-3 py-2.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors whitespace-nowrap">Tasks</button>
-      </div>
-      <div id="sessionTaskDropdown" class="hidden mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-10" style="position:relative">
-        <div id="sessionTaskList" class="max-h-40 overflow-y-auto p-2"></div>
-      </div>
-    </div>
-    <div class="mb-6">
-      <div class="flex items-center justify-between mb-2">
-        <label class="text-sm text-gray-500">Tag</label>
-        <button onclick="toggleTagDropdown(event)" class="text-xs text-purple-brand hover:underline">Tags</button>
-      </div>
-      <div id="sessionTagDisplay" class="min-h-[32px]"></div>
-      <div id="tagDropdown" class="absolute mt-1 w-56 bg-white border border-gray-200 rounded-xl shadow-lg z-10 hidden" style="position:relative">
-        <div id="tagList" class="max-h-40 overflow-y-auto p-2"></div>
-        <div class="border-t border-gray-100 p-2">
-          <button onclick="openNewTagPopup()" class="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
-            New Tag
-          </button>
-        </div>
-      </div>
-    </div>
-    <div class="flex justify-end gap-3">
-      <button onclick="closeSessionPopup()" class="px-6 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium">Cancel</button>
-      <button onclick="saveSessionEdit()" class="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-opacity-90 transition-colors">Save</button>
-    </div>
-  </div>
-</div>
 
-<div id="newTagPopup" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 hidden" onclick="closeNewTagPopup(event)">
-  <div class="bg-white rounded-2xl p-8 shadow-xl w-80 max-w-[90vw]" onclick="event.stopPropagation()">
-    <h3 class="text-xl font-medium mb-5 text-gray-800">New Tag</h3>
-    <div class="mb-4">
-      <label class="text-sm text-gray-500 mb-1 block">Tag Name</label>
-      <input type="text" id="newTagNameInput" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="e.g. Design">
-    </div>
-    <div class="mb-6">
-      <label class="text-sm text-gray-500 mb-2 block">Color</label>
-      <div class="flex gap-2 flex-wrap" id="colorPalette"></div>
-    </div>
-    <div class="flex justify-end gap-3">
-      <button onclick="closeNewTagPopup()" class="px-6 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium">Cancel</button>
-      <button onclick="saveNewTag()" class="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-opacity-90 transition-colors">Add Tag</button>
-    </div>
-  </div>
-</div>
 
 <div id="delete-confirm-modal" onclick="closeDeleteConfirmModal()">
 <div class="modal-card" onclick="event.stopPropagation()">
@@ -897,28 +801,7 @@ window.tailwind={ config: {
 </div>
 </div>
 
-<div id="sessionTimelineModal" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.3);align-items:center;justify-content:center;padding:20px;display:none" onclick="closeSessionTimelineModal(event)">
-  <div class="modal-card" style="width:100%; max-width:480px;" onclick="event.stopPropagation()">
-    <button class="close-btn" id="sessionTimelineModalClose" onclick="closeSessionTimelineModal()">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-      </svg>
-    </button>
-    <h3 class="text-xl font-medium mb-5 text-gray-800">Session Details</h3>
-    <div class="mb-4">
-      <label class="text-sm text-gray-500 mb-1 block">Task Name</label>
-      <input type="text" id="sessionTimelineTaskInput" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-base focus:outline-none" placeholder="e.g. Coding">
-    </div>
-    <div class="mb-6">
-      <label class="text-sm text-gray-500 mb-1 block">Tags</label>
-      <div id="sessionTimelineTagDisplay" class="text-xs text-gray-400">Coming soon</div>
-    </div>
-    <div class="flex justify-end gap-3">
-      <button onclick="closeSessionTimelineModal()" class="px-6 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium">Cancel</button>
-      <button onclick="saveSessionTimeline()" class="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-opacity-90 transition-colors">Save</button>
-    </div>
-  </div>
-</div>
+
 
 <div id="updateModal" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.3);align-items:center;justify-content:center;padding:20px;display:none" onclick="closeUpdateModal(event)">
   <div style="background:var(--bg-card);border-radius:16px;padding:28px;width:100%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,0.15);position:relative">
@@ -1001,7 +884,6 @@ window.tailwind={ config: {
 <script src="js/shader.js"></script>
 <script src="js/utils/audio.js"></script>
 <script src="js/timer.js"></script>
-<script src="js/sessions.js"></script>
 <script src="js/theme.js"></script>
 <script src="js/utils/helpers.js"></script>
 <script src="js/components/settings/settings.js"></script>
@@ -1012,20 +894,7 @@ window.tailwind={ config: {
 <script src="js/app.js"></script>
 <script src="js/calender.js"></script>
 
-<!-- Session Note Modal -->
-<div id="pomoSideNoteModal" class="fixed inset-0 bg-black/50 items-center justify-center z-50 hidden" style="backdrop-filter: blur(4px);" onclick="window.closePomoSideNoteModal(event)">
-  <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-2xl w-96 max-w-[90vw]" onclick="event.stopPropagation()">
-    <h3 class="text-lg font-bold text-gray-800 mb-4" id="pomoSideNoteModalTitle">Session Note</h3>
-    <textarea id="pomoSideNoteInput" class="w-full h-32 p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-4" placeholder="Write your note here..."></textarea>
-    <div class="flex justify-between items-center">
-      <button onclick="window.deletePomoSideNote()" class="px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded-xl font-medium transition-colors">Delete Note</button>
-      <div class="flex gap-2">
-        <button onclick="window.closePomoSideNoteModal()" class="px-4 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded-xl font-medium transition-colors">Cancel</button>
-        <button onclick="window.savePomoSideNote()" class="px-4 py-2 text-sm text-white bg-blue-500 hover:bg-blue-600 rounded-xl font-medium transition-colors shadow-sm">Save</button>
-      </div>
-    </div>
-  </div>
-</div>
+
 
 <!-- Day Popup Modal -->
 <div id="dayPopupModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50 hidden" onclick="closeDayPopup(event)">

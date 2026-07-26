@@ -47,9 +47,7 @@ body { font-family: 'Patrick Hand', cursive; }
 .hor:hover, .hor:hover .sticky-col { background-color: #fff7ed; }
 .hpu:hover, .hpu:hover .sticky-col { background-color: #faf5ff; }
 
-#page-pomodoro { overflow: hidden !important; }
 #mainArea { overflow: hidden; }
-#page-pomodoro .flex-1.flex-col.items-center.justify-center { overflow-y: auto; }
 
 .sort-option.active { background: #EFF6FF; color: #2563EB; }
 .sort-option.active svg { color: #2563EB; }

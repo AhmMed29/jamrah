@@ -124,6 +124,7 @@ function createWindow () {
       win.webContents.send('backend-error', _backendStartFailed)
     }
   })
+  if (app.isPackaged) updater.invalidateCacheIfNeeded()
   var frontendHtml = app.isPackaged
     ? (updater.getFrontendIndexPath() || path.join(__dirname, 'src', 'index.html'))
     : path.join(__dirname, 'src', 'index.html')

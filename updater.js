@@ -12,6 +12,20 @@ function psExec(cmd) {
   return spawnSync('powershell', ['-NoProfile', '-EncodedCommand', b], { stdio: 'pipe', windowsHide: true })
 }
 
+exports.invalidateCacheIfNeeded = function() {
+  var dir = frontendDir()
+  var vf = path.join(dir, 'version.txt')
+  if (!fs.existsSync(dir) || !fs.existsSync(vf)) return false
+
+  var cachedVer = fs.readFileSync(vf, 'utf-8').trim()
+  var pkg = require(path.join(__dirname, 'package.json'))
+  if (cmpVer(pkg.version, cachedVer) > 0) {
+    try { fs.rmSync(dir, { recursive: true }) } catch {}
+    return true
+  }
+  return false
+}
+
 exports.getFrontendIndexPath = function() {
   var fp = path.join(frontendDir(), 'index.html')
   return fs.existsSync(fp) ? fp : null

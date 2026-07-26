@@ -95,6 +95,7 @@ using (var scope = app.Services.CreateScope())
         "ALTER TABLE tasks ADD COLUMN durationStart TEXT",
         "ALTER TABLE tasks ADD COLUMN durationEnd TEXT",
         "ALTER TABLE tasks ADD COLUMN notes TEXT",
+        "ALTER TABLE tasks ADD COLUMN updatedAt TEXT",
         "ALTER TABLE goals ADD COLUMN durationType TEXT",
         "ALTER TABLE goals ADD COLUMN durationValue INTEGER",
     ];

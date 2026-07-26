@@ -20,12 +20,6 @@ async function showPage(name) {
   } else if (name !== 'pomodoro' && window.destroyPomoShader) {
     window.destroyPomoShader();
   }
-  
-  var pomoTimelinePanel = document.getElementById('pomoTimelinePanel');
-  if (pomoTimelinePanel) {
-    pomoTimelinePanel.style.display = (name === 'pomodoro') ? 'flex' : 'none';
-  }
-  
 
   var buttons = document.querySelectorAll('#navDock .dock-item');
   buttons.forEach(function(btn) {

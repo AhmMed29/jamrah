@@ -83,6 +83,16 @@ window.getPagePrefs = function() {
         sidebarItem.style.display = showInSidebar ? '' : 'none';
       }
     });
+
+    var glassContainer = document.querySelector('.floating-menu-glass');
+    if (glassContainer) {
+      var dockItems = document.querySelectorAll('#navDock .dock-item');
+      var anyVisible = false;
+      dockItems.forEach(function(item) {
+        if (item.style.display !== 'none') anyVisible = true;
+      });
+      glassContainer.style.display = anyVisible ? '' : 'none';
+    }
   };
 
 // Initialize preferences on load

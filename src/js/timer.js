@@ -162,42 +162,6 @@ function updateUI() {
   if (text) text.textContent = formatTime(remainingSeconds);
   if (label) label.textContent = PHASE_LABELS[phase] || 'Focus';
 
-  // Toggle timeline panel visibility when timer runs
-  var sideBox = document.getElementById('pomoTimelinePanel');
-  if (sideBox) {
-    if (isRunning) {
-      sideBox.classList.add('hidden-fade');
-    } else {
-      sideBox.classList.remove('hidden-fade');
-    }
-  }
-
-  // Toggle active session info visibility
-  var activeInfo = document.getElementById('pomoActiveSessionInfo');
-  if (activeInfo) {
-    activeInfo.classList.remove('hidden');
-    var activeName = document.getElementById('pomoActiveTaskName');
-    if (activeName && document.activeElement !== activeName) {
-      if (typeof _rightPanelSession !== 'undefined' && _rightPanelSession && _rightPanelSession !== activeSession) {
-        // Keep the past session name, don't override
-      } else {
-        activeName.value = window.pomoSessionName || '';
-      }
-    }
-  }
-
-  // Toggle note panel visibility
-  var notePanel = document.getElementById('pomoNotePanel');
-  if (notePanel) {
-    if (phase !== 'idle') {
-      notePanel.classList.remove('hidden');
-    } else if (typeof _pomoRightPanelOpen !== 'undefined' && _pomoRightPanelOpen) {
-      notePanel.classList.remove('hidden');
-    } else {
-      notePanel.classList.add('hidden');
-    }
-  }
-
   // Toggle timer-running on circle wrapper for hover buttons
   var wrapper = document.getElementById('timerCircle');
   if (wrapper) {
@@ -208,18 +172,6 @@ function updateUI() {
     }
   }
 
-  // Update session count display
-  var sCount = document.getElementById('sessionCountDisplay');
-  if (sCount) {
-    window.db.getSetting('showSessionCount').then(function(ssc) {
-      if (ssc !== 'false' && phase !== 'idle') {
-        sCount.style.display = 'block';
-        sCount.textContent = 'Session #' + (sessionCount + 1);
-      } else {
-        sCount.style.display = 'none';
-      }
-    });
-  }
 }
 
 // Settings

@@ -30,16 +30,6 @@ function markDirty() {
   var dnToggle = document.getElementById('desktopNotificationsToggle');
   if (dnToggle) dnToggle.checked = (dn !== 'false');
 
-  var ssc = await window.db.getSetting('showSessionCount');
-  var sscToggle = document.getElementById('showSessionCountToggle');
-  if (sscToggle) sscToggle.checked = (ssc !== 'false');
-
-  var lbi = await window.db.getSetting('longBreakInterval');
-  var lbiInput = document.getElementById('longBreakIntervalInput');
-  if (lbiInput) {
-    lbiInput.value = parseInt(lbi) || 4;
-  }
-
   // Load Page Placements using localStorage
   if (window.getPagePrefs) {
     var prefs = window.getPagePrefs();
@@ -77,16 +67,6 @@ window.saveSettings = async function() {
   var dnEl = document.getElementById('desktopNotificationsToggle');
   var desktopNotifications = dnEl ? dnEl.checked : true;
   await window.db.setSetting('desktopNotifications', desktopNotifications ? 'true' : 'false');
-
-  var sscEl = document.getElementById('showSessionCountToggle');
-  var showSessionCount = sscEl ? sscEl.checked : true;
-  await window.db.setSetting('showSessionCount', showSessionCount ? 'true' : 'false');
-
-  var lbiInput = document.getElementById('longBreakIntervalInput');
-  var lbi = lbiInput ? parseInt(lbiInput.value) || 4 : 4;
-  if (lbi < 1) lbi = 1; if (lbi > 12) lbi = 12;
-  await window.db.setSetting('longBreakInterval', lbi);
-  if (lbiInput) lbiInput.value = lbi;
 
   var w = parseInt(document.getElementById('settingWork').value) || 25;
   var sb = parseInt(document.getElementById('settingShortBreak').value) || 5;
@@ -151,13 +131,6 @@ window.cancelSettings = async function() {
 
   var dnEl = document.getElementById('desktopNotificationsToggle');
   if (dnEl) dnEl.checked = (await window.db.getSetting('desktopNotifications')) !== 'false';
-
-  var sscEl = document.getElementById('showSessionCountToggle');
-  if (sscEl) sscEl.checked = (await window.db.getSetting('showSessionCount')) !== 'false';
-
-  var savedLbi = await window.db.getSetting('longBreakInterval');
-  var lbiInput = document.getElementById('longBreakIntervalInput');
-  if (lbiInput) lbiInput.value = parseInt(savedLbi) || 4;
 
   var w = parseInt(await window.db.getSetting('workMinutes')) || 25;
   var sb = parseInt(await window.db.getSetting('shortBreakMinutes')) || 5;

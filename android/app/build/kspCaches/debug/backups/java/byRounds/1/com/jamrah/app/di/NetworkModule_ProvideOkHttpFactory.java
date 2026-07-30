@@ -1,6 +1,6 @@
 package com.jamrah.app.di;
 
-import com.jamrah.app.data.local.AppPreferences;
+import com.jamrah.app.data.local.preferences.AppPreferences;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
 import dagger.internal.Preconditions;

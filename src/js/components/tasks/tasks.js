@@ -72,18 +72,22 @@ function expandRecurringTasks(tasks) {
     var current = new Date(startDate);
     while (current <= endDate) {
       var dk = dateKey(current);
-      if (task.recurrence === 'daily') {
-        expanded.push(Object.assign({}, task, { _baseId: task.id, _instanceDate: dk }));
-        current.setDate(current.getDate() + 1);
-      } else if (task.recurrence === 'custom') {
-        var cDays = parseCustomDays(task.customDays);
-        if (cDays.length === 0 || cDays.indexOf(current.getDay()) >= 0) {
+      // Check if there is an override for this date
+      var hasOverride = allTasks.some(function(t) { return t.parentTaskId === task.id && t.scheduledTime && t.scheduledTime.indexOf(dk) === 0 && t.recurrence === 'none'; });
+      if (!hasOverride) {
+        if (task.recurrence === 'daily') {
           expanded.push(Object.assign({}, task, { _baseId: task.id, _instanceDate: dk }));
+        } else if (task.recurrence === 'custom') {
+          var cDays = parseCustomDays(task.customDays);
+          if (cDays.length === 0 || cDays.indexOf(current.getDay()) >= 0) {
+            expanded.push(Object.assign({}, task, { _baseId: task.id, _instanceDate: dk }));
+          }
+        } else {
+          break; // Unknown recurrence
         }
-        current.setDate(current.getDate() + 1);
-      } else {
-        break;
       }
+      current.setDate(current.getDate() + 1);
+
       if (expanded.length > 2000) break;
     }
   });
@@ -286,7 +290,11 @@ function renderTaskItem(t, allTasks) {
 
   var subtaskCount = 0;
   if (allTasks) {
-    allTasks.forEach(function(st) { if (st.parentTaskId === t.id) subtaskCount++; });
+    allTasks.forEach(function(st) { 
+      if (st.parentTaskId === t.id && (!st.scheduledTime || st.recurrence !== 'none')) {
+        subtaskCount++; 
+      }
+    });
   }
   var isExpanded = _expandedTasks[t.id];
 
@@ -313,7 +321,7 @@ function renderTaskItem(t, allTasks) {
     '</button></div>';
 
   if (subtaskCount > 0 && isExpanded) {
-    var subs = allTasks.filter(function(st) { return st.parentTaskId === t.id; });
+    var subs = allTasks.filter(function(st) { return st.parentTaskId === t.id && (!st.scheduledTime || st.recurrence !== 'none'); });
     subs = sortTasks(subs);
     subs.forEach(function(st) {
       html += '<div style="padding-left:36px">' + renderTaskItem(st, allTasks) + '</div>';
@@ -644,7 +652,15 @@ window.detailRepeatChange = function(id, val) {
     var t = tasks.find(function(x) { return x.id === id; });
     if (!t) return;
     var customDays = (val === 'custom') ? (parseCustomDays(t.customDays).length ? t.customDays : JSON.stringify([0,1,2,3,4,5,6])) : '';
-    window.db.updateTask(id, { recurrence: val, customDays: customDays }).then(function() { window.renderTasks(); });
+    window.db.updateTask(id, { recurrence: val, customDays: customDays }).then(function() { 
+      window.renderTasks(); 
+      if (val === 'custom' && _detailEditMode) {
+        window.db.getTasks().then(function(newTasks) {
+          var updatedT = newTasks.find(function(x) { return x.id === id; });
+          if (updatedT) renderDetailEdit(updatedT, newTasks);
+        });
+      }
+    });
     var durationFields = document.getElementById('detail-duration-fields');
     if (durationFields) {
       durationFields.style.display = (val === 'none') ? 'none' : 'block';
@@ -732,19 +748,34 @@ function initNewTaskEvents() {
       var wrap = document.getElementById('tasks-new-recurrence').parentNode;
       if (wrap) {
         var div = document.createElement('div');
-        div.innerHTML = renderCustomDaysPanel(_newCustomDays, null, '_new');
-        wrap.appendChild(div.firstElementChild);
-        closeOnOutsideClick(div.firstElementChild, function() {
-          var p = document.getElementById('customDaysPanel_new');
-          if (p) p.remove();
-        });
+        div.id = 'customDaysPanel_new_wrap';
+        div.innerHTML = renderCustomDaysPanel(_newCustomDays, null, '_new') +
+          '<div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">' +
+            '<button onclick="cancelNewCustomDays()" style="padding:4px 12px;border:2px solid rgba(45,45,45,0.2);border-radius:8px;background:transparent;cursor:pointer;font-size:13px;font-family:\'Patrick Hand\',cursive">Cancel</button>' +
+            '<button onclick="confirmNewCustomDays()" style="padding:4px 12px;border:2px solid #2d2d2d;border-radius:8px;background:#2d2d2d;color:#fff;cursor:pointer;font-size:13px;font-family:\'Patrick Hand\',cursive">OK</button>' +
+          '</div>';
+        wrap.appendChild(div);
       }
     } else {
       if (customPanel) customPanel.remove();
+      var wrapP = document.getElementById('customDaysPanel_new_wrap');
+      if (wrapP) wrapP.remove();
       _newCustomDays = [];
     }
   });
 }
+
+window.cancelNewCustomDays = function() {
+  var wrapP = document.getElementById('customDaysPanel_new_wrap');
+  if (wrapP) wrapP.remove();
+  var recEl = document.getElementById('tasks-new-recurrence');
+  if (recEl) recEl.value = 'none';
+};
+
+window.confirmNewCustomDays = function() {
+  var wrapP = document.getElementById('customDaysPanel_new_wrap');
+  if (wrapP) wrapP.remove();
+};
 
 function addNewTask() {
   var input = document.getElementById('tasks-new-input');
@@ -776,6 +807,10 @@ function addNewTask() {
   durBtns.forEach(function(b) { b.classList.remove('active'); });
   var prioEl = document.getElementById('tasks-new-priority');
   if (prioEl) prioEl.value = 'Low';
+  var timeEl = document.getElementById('tasks-new-time');
+  if (timeEl) timeEl.value = '';
+  var recEl = document.getElementById('tasks-new-recurrence');
+  if (recEl) recEl.value = 'none';
   _newCustomDays = [];
   var optEl = document.getElementById('tasks-new-options');
   if (optEl) optEl.style.display = 'none';
@@ -976,3 +1011,27 @@ window.toggleGoalsTaskNode = function(e, id) {
   if (!ch) return;
   ch.style.display = ch.style.display === 'none' ? 'block' : 'none';
 };
+
+window.refreshTasks = function() {
+  var btn = document.getElementById('tasks-sync-btn');
+  if (btn) {
+    btn.style.transition = 'transform 0.5s ease';
+    btn.style.transform = 'rotate(360deg)';
+  }
+  if (typeof appSidebarNavigate === 'function') {
+    appSidebarNavigate('tasks');
+  }
+  setTimeout(function() {
+    if (btn) {
+      btn.style.transition = 'none';
+      btn.style.transform = 'rotate(0deg)';
+    }
+  }, 500);
+};
+
+window.addEventListener('focus', function() {
+  var activePage = document.querySelector('.app-sidebar-menu-item.active');
+  if (activePage && activePage.dataset.page === 'tasks' && typeof window.refreshTasks === 'function') {
+    window.refreshTasks();
+  }
+});

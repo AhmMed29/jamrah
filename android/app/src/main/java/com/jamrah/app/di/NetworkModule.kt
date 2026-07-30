@@ -2,7 +2,7 @@ package com.jamrah.app.di
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.jamrah.app.data.local.AppPreferences
+import com.jamrah.app.data.local.preferences.AppPreferences
 import com.jamrah.app.data.remote.api.TasksApi
 import dagger.Module
 import dagger.Provides
@@ -34,7 +34,13 @@ object NetworkModule {
         .writeTimeout(15, TimeUnit.SECONDS)
         .addInterceptor { chain ->
             val request = chain.request()
-            val newUrlString = runBlocking { appPreferences.backendUrl.first() }
+            var ip = appPreferences.serverIpAddress.trim()
+            if (ip.startsWith("http://")) ip = ip.removePrefix("http://")
+            if (ip.startsWith("https://")) ip = ip.removePrefix("https://")
+            if (ip.contains(":")) ip = ip.substringBefore(":")
+            if (ip.endsWith("/")) ip = ip.removeSuffix("/")
+            
+            val newUrlString = "http://$ip:5200/"
             val newBaseUrl = newUrlString.toHttpUrlOrNull()
             
             if (newBaseUrl != null) {
@@ -64,7 +70,7 @@ object NetworkModule {
         okHttp: OkHttpClient,
         gson: Gson
     ): Retrofit {
-        val baseUrl = AppPreferences.DEFAULT_URL
+        val baseUrl = "http://10.0.2.2:5200/"
         return Retrofit.Builder()
             .baseUrl(baseUrl.trimEnd('/') + "/")
             .client(okHttp)

@@ -18,6 +18,7 @@ import com.jamrah.app.data.local.JamrahDatabase;
 import com.jamrah.app.data.local.dao.GoalDao;
 import com.jamrah.app.data.local.dao.GoalProgressDao;
 import com.jamrah.app.data.local.dao.TaskDao;
+import com.jamrah.app.data.local.preferences.AppPreferences;
 import com.jamrah.app.data.remote.api.GoalsApi;
 import com.jamrah.app.data.remote.api.TasksApi;
 import com.jamrah.app.data.repository.GoalRepositoryImpl;
@@ -508,7 +509,7 @@ public final class DaggerJamrahApplication_HiltComponents_SingletonC {
           return (T) new GoalsViewModel(singletonCImpl.goalRepositoryImplProvider.get(), singletonCImpl.taskRepositoryImplProvider.get());
 
           case 1: // com.jamrah.app.ui.tasks.TasksViewModel 
-          return (T) new TasksViewModel(singletonCImpl.taskRepositoryImplProvider.get());
+          return (T) new TasksViewModel(singletonCImpl.taskRepositoryImplProvider.get(), singletonCImpl.appPreferencesProvider.get());
 
           default: throw new AssertionError(id);
         }
@@ -594,6 +595,8 @@ public final class DaggerJamrahApplication_HiltComponents_SingletonC {
 
     private Provider<TaskDao> provideTaskDaoProvider;
 
+    private Provider<AppPreferences> appPreferencesProvider;
+
     private Provider<OkHttpClient> provideOkHttpProvider;
 
     private Provider<Gson> provideGsonProvider;
@@ -633,15 +636,16 @@ public final class DaggerJamrahApplication_HiltComponents_SingletonC {
     private void initialize(final ApplicationContextModule applicationContextModuleParam) {
       this.provideDatabaseProvider = DoubleCheck.provider(new SwitchingProvider<JamrahDatabase>(singletonCImpl, 3));
       this.provideTaskDaoProvider = DoubleCheck.provider(new SwitchingProvider<TaskDao>(singletonCImpl, 2));
+      this.appPreferencesProvider = DoubleCheck.provider(new SwitchingProvider<AppPreferences>(singletonCImpl, 7));
       this.provideOkHttpProvider = DoubleCheck.provider(new SwitchingProvider<OkHttpClient>(singletonCImpl, 6));
-      this.provideGsonProvider = DoubleCheck.provider(new SwitchingProvider<Gson>(singletonCImpl, 7));
+      this.provideGsonProvider = DoubleCheck.provider(new SwitchingProvider<Gson>(singletonCImpl, 8));
       this.provideRetrofitProvider = DoubleCheck.provider(new SwitchingProvider<Retrofit>(singletonCImpl, 5));
       this.provideTasksApiProvider = DoubleCheck.provider(new SwitchingProvider<TasksApi>(singletonCImpl, 4));
       this.taskRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<TaskRepositoryImpl>(singletonCImpl, 1));
-      this.provideGoalDaoProvider = DoubleCheck.provider(new SwitchingProvider<GoalDao>(singletonCImpl, 9));
-      this.provideGoalProgressDaoProvider = DoubleCheck.provider(new SwitchingProvider<GoalProgressDao>(singletonCImpl, 10));
-      this.provideGoalsApiProvider = DoubleCheck.provider(new SwitchingProvider<GoalsApi>(singletonCImpl, 11));
-      this.goalRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<GoalRepositoryImpl>(singletonCImpl, 8));
+      this.provideGoalDaoProvider = DoubleCheck.provider(new SwitchingProvider<GoalDao>(singletonCImpl, 10));
+      this.provideGoalProgressDaoProvider = DoubleCheck.provider(new SwitchingProvider<GoalProgressDao>(singletonCImpl, 11));
+      this.provideGoalsApiProvider = DoubleCheck.provider(new SwitchingProvider<GoalsApi>(singletonCImpl, 12));
+      this.goalRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<GoalRepositoryImpl>(singletonCImpl, 9));
       this.syncWorker_AssistedFactoryProvider = SingleCheck.provider(new SwitchingProvider<SyncWorker_AssistedFactory>(singletonCImpl, 0));
     }
 
@@ -709,21 +713,24 @@ public final class DaggerJamrahApplication_HiltComponents_SingletonC {
           return (T) NetworkModule_ProvideRetrofitFactory.provideRetrofit(singletonCImpl.provideOkHttpProvider.get(), singletonCImpl.provideGsonProvider.get());
 
           case 6: // okhttp3.OkHttpClient 
-          return (T) NetworkModule_ProvideOkHttpFactory.provideOkHttp();
+          return (T) NetworkModule_ProvideOkHttpFactory.provideOkHttp(singletonCImpl.appPreferencesProvider.get());
 
-          case 7: // com.google.gson.Gson 
+          case 7: // com.jamrah.app.data.local.preferences.AppPreferences 
+          return (T) new AppPreferences(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 8: // com.google.gson.Gson 
           return (T) NetworkModule_ProvideGsonFactory.provideGson();
 
-          case 8: // com.jamrah.app.data.repository.GoalRepositoryImpl 
+          case 9: // com.jamrah.app.data.repository.GoalRepositoryImpl 
           return (T) new GoalRepositoryImpl(singletonCImpl.provideGoalDaoProvider.get(), singletonCImpl.provideGoalProgressDaoProvider.get(), singletonCImpl.provideGoalsApiProvider.get());
 
-          case 9: // com.jamrah.app.data.local.dao.GoalDao 
+          case 10: // com.jamrah.app.data.local.dao.GoalDao 
           return (T) DatabaseModule_ProvideGoalDaoFactory.provideGoalDao(singletonCImpl.provideDatabaseProvider.get());
 
-          case 10: // com.jamrah.app.data.local.dao.GoalProgressDao 
+          case 11: // com.jamrah.app.data.local.dao.GoalProgressDao 
           return (T) DatabaseModule_ProvideGoalProgressDaoFactory.provideGoalProgressDao(singletonCImpl.provideDatabaseProvider.get());
 
-          case 11: // com.jamrah.app.data.remote.api.GoalsApi 
+          case 12: // com.jamrah.app.data.remote.api.GoalsApi 
           return (T) NetworkModule_ProvideGoalsApiFactory.provideGoalsApi(singletonCImpl.provideRetrofitProvider.get());
 
           default: throw new AssertionError(id);

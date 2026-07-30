@@ -329,7 +329,6 @@ window.pomoSessionName = localStorage.getItem('pomoSessionName') || '';
       var modal = document.getElementById('releaseNotesModal');
       if (modal) {
         modal.classList.remove('hidden');
-        await window.db.setSetting('seenReleaseNotesV3', 'true');
       }
     }
   } catch(e) {
@@ -337,9 +336,14 @@ window.pomoSessionName = localStorage.getItem('pomoSessionName') || '';
   }
 })();
 
-window.closeReleaseNotes = function(e) {
+window.closeReleaseNotes = async function(e) {
   if (e && e.target !== e.currentTarget) return;
   var modal = document.getElementById('releaseNotesModal');
   if (modal) modal.classList.add('hidden');
+  try {
+    if (window.db && window.db.setSetting) {
+      await window.db.setSetting('seenReleaseNotesV3', 'true');
+    }
+  } catch(err) {}
 };
 

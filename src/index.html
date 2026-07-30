@@ -307,7 +307,9 @@ window.tailwind={ config: {
                   <label style="font-size:14px;font-weight:600;color:#0b1c30;display:block;">Local IP Address</label>
                   <p style="font-size:12px;color:#6B7280;margin-top:4px;margin-bottom:12px">Enter this IP address in the Jamrah mobile app settings to sync your tasks over Wi-Fi.</p>
                   <div style="display:flex;align-items:center;gap:12px">
-                    <input type="text" id="localIpAddress" readonly value="Loading..." style="padding:8px 12px;border-radius:6px;border:1px solid #c3c6d5;font-size:14px;color:#0b1c30;background:#f8fafc;width:200px">
+                    <select id="localIpAddress" style="padding:8px 12px;border-radius:6px;border:1px solid #c3c6d5;font-size:14px;color:#0b1c30;background:#f8fafc;width:200px">
+                      <option>Loading...</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -698,6 +700,9 @@ window.tailwind={ config: {
   </div>
   <div style="display:flex;align-items:center;gap:16px">
     <button id="tasks-filter-btn" style="font-size:18px;color:rgba(45,45,45,0.7);text-transform:capitalize;cursor:pointer;background:none;border:none;font-family:'Patrick Hand',cursive">all</button>
+    <button id="tasks-sync-btn" onclick="if(window.refreshTasks) window.refreshTasks()" style="font-size:18px;color:rgba(45,45,45,0.7);cursor:pointer;background:none;border:none;font-family:'Patrick Hand',cursive;display:flex;align-items:center;justify-content:center;transition:color 0.2s" onmouseover="this.style.color='#0e58c5'" onmouseout="this.style.color='rgba(45,45,45,0.7)'" title="Sync Tasks">
+      <span class="material-symbols-outlined" style="font-size:22px">sync</span>
+    </button>
     <button id="tasks-sort-btn" style="font-size:18px;color:rgba(45,45,45,0.7);cursor:pointer;background:none;border:none;font-family:'Patrick Hand',cursive;display:flex;align-items:center;gap:4px" title="Sort tasks">
       <span id="tasks-sort-label">Priority</span>
       <span id="tasks-sort-icon" style="font-size:14px">↓</span>

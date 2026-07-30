@@ -149,13 +149,13 @@ npm run dist
 
 Output in `dist/` — NSIS installer.
 
-## Linux & Mobile
+## 📱 Mobile App & 🔄 Sync
 
-Linux and mobile support are community-driven contributions. PRs welcome!
+The official **Android App** is now available! 
+You can sync your tasks, goals, habits, and sessions between your PC and Android phone locally over Wi-Fi.
+The PC app acts as a local server, and the Android app connects to it to keep your data in sync instantly.
 
-## 🔄 Sync
-
-Cross-platform sync planned after the first mobile release.
+Linux support is a community-driven contribution. PRs welcome!
 
 ---
 

@@ -32,6 +32,9 @@ class TasksViewModel @Inject constructor(
                 _state.update { it.copy(tasks = tasks) }
             }
         }
+        viewModelScope.launch {
+            repo.sync()
+        }
     }
 
     fun onEvent(event: TasksEvent) {
@@ -98,6 +101,7 @@ class TasksViewModel @Inject constructor(
                     } else {
                         repo.toggleTask(task.id)
                     }
+                    repo.sync()
                 }
             }
             is TasksEvent.DeleteTask -> {
@@ -106,6 +110,7 @@ class TasksViewModel @Inject constructor(
                     if (_state.value.selectedTaskId == event.id) {
                         _state.update { it.copy(selectedTaskId = null) }
                     }
+                    repo.sync()
                 }
             }
             is TasksEvent.AddTask -> {
@@ -128,10 +133,14 @@ class TasksViewModel @Inject constructor(
                     )
                     repo.createTask(task)
                     _state.update { it.copy(selectedTaskId = task.id) }
+                    repo.sync()
                 }
             }
             is TasksEvent.UpdateTask -> {
-                viewModelScope.launch { repo.updateTask(event.task) }
+                viewModelScope.launch { 
+                    repo.updateTask(event.task) 
+                    repo.sync()
+                }
             }
             is TasksEvent.AddSubtask -> {
                 if (event.name.isBlank()) return
@@ -142,6 +151,7 @@ class TasksViewModel @Inject constructor(
                         createdAt = nowFmt.format(Date())
                     )
                     repo.createTask(subtask)
+                    repo.sync()
                 }
             }
             is TasksEvent.Sync -> {

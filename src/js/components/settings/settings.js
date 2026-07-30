@@ -13,9 +13,21 @@ function markDirty() {
 
   if (window.electronAPI && window.electronAPI.getLocalIp) {
     try {
-      var ip = await window.electronAPI.getLocalIp();
+      var ips = await window.electronAPI.getLocalIp();
       var ipEl = document.getElementById('localIpAddress');
-      if (ipEl) ipEl.value = ip;
+      if (ipEl && Array.isArray(ips)) {
+        ipEl.innerHTML = '';
+        var bestIndex = 0;
+        ips.forEach(function(ip, idx) {
+          var opt = document.createElement('option');
+          opt.value = ip;
+          opt.textContent = ip;
+          ipEl.appendChild(opt);
+          if (ip.startsWith('192.168.1.')) bestIndex = idx;
+          else if (bestIndex === 0 && ip.startsWith('192.168.')) bestIndex = idx;
+        });
+        if (ips.length > 0) ipEl.selectedIndex = bestIndex;
+      }
     } catch (e) {
       console.error(e);
     }

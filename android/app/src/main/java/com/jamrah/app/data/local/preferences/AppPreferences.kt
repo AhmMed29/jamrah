@@ -14,7 +14,7 @@ class AppPreferences @Inject constructor(
 
     var serverIpAddress: String
         get() = prefs.getString("server_ip", "10.0.2.2") ?: "10.0.2.2"
-        set(value) = prefs.edit().putString("server_ip", value).apply()
+        set(value) = prefs.edit().putString("server_ip", value.trim()).apply()
 
     fun getBaseUrl(): String {
         val ip = serverIpAddress

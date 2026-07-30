@@ -625,12 +625,14 @@ ipcMain.handle('backup:open-folder', async (e, folderPath) => {
 ipcMain.handle('get-local-ip', async () => {
   const os = require('os');
   const interfaces = os.networkInterfaces();
+  let ips = [];
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
       if (iface.family === 'IPv4' && !iface.internal) {
-        return iface.address;
+        ips.push(iface.address);
       }
     }
   }
-  return '127.0.0.1';
+  if (ips.length === 0) ips.push('127.0.0.1');
+  return ips;
 })

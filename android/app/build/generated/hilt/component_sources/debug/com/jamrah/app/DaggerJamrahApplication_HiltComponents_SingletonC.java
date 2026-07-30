@@ -14,11 +14,11 @@ import androidx.work.ListenableWorker;
 import androidx.work.WorkerParameters;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
-import com.jamrah.app.data.local.AppPreferences;
 import com.jamrah.app.data.local.JamrahDatabase;
 import com.jamrah.app.data.local.dao.GoalDao;
 import com.jamrah.app.data.local.dao.GoalProgressDao;
 import com.jamrah.app.data.local.dao.TaskDao;
+import com.jamrah.app.data.local.preferences.AppPreferences;
 import com.jamrah.app.data.remote.api.GoalsApi;
 import com.jamrah.app.data.remote.api.TasksApi;
 import com.jamrah.app.data.repository.GoalRepositoryImpl;
@@ -421,15 +421,15 @@ public final class DaggerJamrahApplication_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_jamrah_app_ui_tasks_TasksViewModel = "com.jamrah.app.ui.tasks.TasksViewModel";
-
       static String com_jamrah_app_ui_goals_GoalsViewModel = "com.jamrah.app.ui.goals.GoalsViewModel";
 
-      @KeepFieldType
-      TasksViewModel com_jamrah_app_ui_tasks_TasksViewModel2;
+      static String com_jamrah_app_ui_tasks_TasksViewModel = "com.jamrah.app.ui.tasks.TasksViewModel";
 
       @KeepFieldType
       GoalsViewModel com_jamrah_app_ui_goals_GoalsViewModel2;
+
+      @KeepFieldType
+      TasksViewModel com_jamrah_app_ui_tasks_TasksViewModel2;
     }
   }
 
@@ -473,15 +473,15 @@ public final class DaggerJamrahApplication_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_jamrah_app_ui_tasks_TasksViewModel = "com.jamrah.app.ui.tasks.TasksViewModel";
-
       static String com_jamrah_app_ui_goals_GoalsViewModel = "com.jamrah.app.ui.goals.GoalsViewModel";
 
-      @KeepFieldType
-      TasksViewModel com_jamrah_app_ui_tasks_TasksViewModel2;
+      static String com_jamrah_app_ui_tasks_TasksViewModel = "com.jamrah.app.ui.tasks.TasksViewModel";
 
       @KeepFieldType
       GoalsViewModel com_jamrah_app_ui_goals_GoalsViewModel2;
+
+      @KeepFieldType
+      TasksViewModel com_jamrah_app_ui_tasks_TasksViewModel2;
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {
@@ -509,7 +509,7 @@ public final class DaggerJamrahApplication_HiltComponents_SingletonC {
           return (T) new GoalsViewModel(singletonCImpl.goalRepositoryImplProvider.get(), singletonCImpl.taskRepositoryImplProvider.get());
 
           case 1: // com.jamrah.app.ui.tasks.TasksViewModel 
-          return (T) new TasksViewModel(singletonCImpl.taskRepositoryImplProvider.get(), singletonCImpl.appPreferencesProvider2.get());
+          return (T) new TasksViewModel(singletonCImpl.taskRepositoryImplProvider.get(), singletonCImpl.appPreferencesProvider.get());
 
           default: throw new AssertionError(id);
         }
@@ -617,8 +617,6 @@ public final class DaggerJamrahApplication_HiltComponents_SingletonC {
 
     private Provider<SyncWorker_AssistedFactory> syncWorker_AssistedFactoryProvider;
 
-    private Provider<com.jamrah.app.data.local.preferences.AppPreferences> appPreferencesProvider2;
-
     private SingletonCImpl(ApplicationContextModule applicationContextModuleParam) {
       this.applicationContextModule = applicationContextModuleParam;
       initialize(applicationContextModuleParam);
@@ -649,7 +647,6 @@ public final class DaggerJamrahApplication_HiltComponents_SingletonC {
       this.provideGoalsApiProvider = DoubleCheck.provider(new SwitchingProvider<GoalsApi>(singletonCImpl, 12));
       this.goalRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<GoalRepositoryImpl>(singletonCImpl, 9));
       this.syncWorker_AssistedFactoryProvider = SingleCheck.provider(new SwitchingProvider<SyncWorker_AssistedFactory>(singletonCImpl, 0));
-      this.appPreferencesProvider2 = DoubleCheck.provider(new SwitchingProvider<com.jamrah.app.data.local.preferences.AppPreferences>(singletonCImpl, 13));
     }
 
     @Override
@@ -718,7 +715,7 @@ public final class DaggerJamrahApplication_HiltComponents_SingletonC {
           case 6: // okhttp3.OkHttpClient 
           return (T) NetworkModule_ProvideOkHttpFactory.provideOkHttp(singletonCImpl.appPreferencesProvider.get());
 
-          case 7: // com.jamrah.app.data.local.AppPreferences 
+          case 7: // com.jamrah.app.data.local.preferences.AppPreferences 
           return (T) new AppPreferences(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           case 8: // com.google.gson.Gson 
@@ -735,9 +732,6 @@ public final class DaggerJamrahApplication_HiltComponents_SingletonC {
 
           case 12: // com.jamrah.app.data.remote.api.GoalsApi 
           return (T) NetworkModule_ProvideGoalsApiFactory.provideGoalsApi(singletonCImpl.provideRetrofitProvider.get());
-
-          case 13: // com.jamrah.app.data.local.preferences.AppPreferences 
-          return (T) new com.jamrah.app.data.local.preferences.AppPreferences(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           default: throw new AssertionError(id);
         }

@@ -162,6 +162,18 @@ function updateUI() {
   if (text) text.textContent = formatTime(remainingSeconds);
   if (label) label.textContent = PHASE_LABELS[phase] || 'Focus';
 
+  // Sync phase word highlights with current phase
+  document.querySelectorAll('.pomo-phase-word').forEach(function(el) { el.classList.remove('active'); });
+  var phaseMap = { work: 'pomoPhaseWork', shortBreak: 'pomoPhaseShortBreak', longBreak: 'pomoPhaseLongBreak' };
+  var activePhaseEl = document.getElementById(phaseMap[phase]);
+  if (activePhaseEl) activePhaseEl.classList.add('active');
+
+  // Hide phase words while running
+  var phaseWordsContainer = document.getElementById('pomoPhaseWork');
+  if (phaseWordsContainer && phaseWordsContainer.parentElement) {
+    phaseWordsContainer.parentElement.style.visibility = isRunning ? 'hidden' : 'visible';
+  }
+
   // Toggle timer-running on circle wrapper for hover buttons
   var wrapper = document.getElementById('timerCircle');
   if (wrapper) {
@@ -278,6 +290,11 @@ window.closeEndPopup = function(e) {
 
 window.openEndPopup = function() {
   if (phase === 'idle') return;
+  var elapsed = accumulatedSeconds + (isRunning ? (Date.now() - runStartTime) / 1000 : 0);
+  if (elapsed >= totalSeconds / 2) {
+    window.confirmEnd();
+    return;
+  }
   var popup = document.getElementById('endPopup');
   if (popup) popup.classList.remove('hidden');
 };

@@ -24,8 +24,6 @@ function recLabel(r, customDays) {
     return 'Custom (' + days.map(function(d) { return DAY_NAMES[d]; }).join(', ') + ')';
   }
   if (r === 'daily') return 'Daily';
-  if (r === 'weekly') return 'Weekly';
-  if (r === 'monthly') return 'Monthly';
   return r;
 }
 
@@ -67,23 +65,21 @@ function expandRecurringTasks(tasks) {
     if (isNaN(startDate.getTime())) startDate = new Date(today);
     if (isNaN(endDate.getTime())) endDate = new Date(today.getFullYear() + 1, 0, 1);
 
+    // Don't expand earlier than 365 days ago
+    var lowerBound = new Date(today);
+    lowerBound.setDate(lowerBound.getDate() - 365);
+    if (startDate < lowerBound) startDate = new Date(lowerBound);
     var current = new Date(startDate);
     while (current <= endDate) {
       var dk = dateKey(current);
-      if (dk >= todayKey) {
-        var copy = Object.assign({}, task, {
-          _baseId: task.id,
-          _instanceDate: dk
-        });
-        expanded.push(copy);
-      }
       if (task.recurrence === 'daily') {
+        expanded.push(Object.assign({}, task, { _baseId: task.id, _instanceDate: dk }));
         current.setDate(current.getDate() + 1);
-      } else if (task.recurrence === 'weekly') {
-        current.setDate(current.getDate() + 7);
-      } else if (task.recurrence === 'monthly') {
-        current.setMonth(current.getMonth() + 1);
       } else if (task.recurrence === 'custom') {
+        var cDays = parseCustomDays(task.customDays);
+        if (cDays.length === 0 || cDays.indexOf(current.getDay()) >= 0) {
+          expanded.push(Object.assign({}, task, { _baseId: task.id, _instanceDate: dk }));
+        }
         current.setDate(current.getDate() + 1);
       } else {
         break;
@@ -170,6 +166,20 @@ function prioColor(p) {
   return '#d1d5db';
 }
 
+window.selectDurationPreset = function(minutes, btn) {
+  var durEl = document.getElementById('tasks-new-duration');
+  if (durEl) durEl.value = minutes;
+  document.querySelectorAll('.duration-preset-btn').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+};
+
+window.selectDetailDurationPreset = function(minutes, btn) {
+  var durEl = document.getElementById('detail-duration-input');
+  if (durEl) durEl.value = minutes;
+  document.querySelectorAll('.detail-duration-preset-btn').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+};
+
 /* ── Render ── */
 window.renderTasks = function() {
   window.db.getTasks().then(function(tasks) {
@@ -218,12 +228,41 @@ function renderTaskList(tasks) {
   if (_filterMode === 'active') filtered = filtered.filter(function(t) { return !t.completed; });
   else if (_filterMode === 'completed') filtered = filtered.filter(function(t) { return t.completed; });
 
-  if (!filtered.length) {
+  // Split into scheduled (has time) and todo (no time)
+  var scheduledTasks = [];
+  var todoTasks = [];
+  filtered.forEach(function(t) {
+    if (t.scheduledTime && t.scheduledTime.indexOf('T') >= 0 && t.scheduledTime.split('T')[1]) {
+      scheduledTasks.push(t);
+    } else {
+      todoTasks.push(t);
+    }
+  });
+
+  // Sort scheduled by time ascending (always)
+  scheduledTasks.sort(function(a, b) {
+    var ta = (a.scheduledTime || '').split('T')[1] || '99:99';
+    var tb = (b.scheduledTime || '').split('T')[1] || '99:99';
+    return ta.localeCompare(tb);
+  });
+
+  // Sort todo by current sort mode
+  todoTasks = sortTasks(todoTasks);
+
+  if (!scheduledTasks.length && !todoTasks.length) {
     listEl.innerHTML = '<div class="no-tasks-msg">No tasks.</div>';
     return;
   }
+
   var html = '';
-  filtered.forEach(function(t) { html += renderTaskItem(t, tasks); });
+  if (scheduledTasks.length) {
+    html += '<div class="task-section-header"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Scheduled</div>';
+    scheduledTasks.forEach(function(t) { html += renderTaskItem(t, tasks); });
+  }
+  if (todoTasks.length) {
+    html += '<div class="task-section-header"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg> To Do</div>';
+    todoTasks.forEach(function(t) { html += renderTaskItem(t, tasks); });
+  }
   listEl.innerHTML = html;
 }
 
@@ -240,6 +279,9 @@ function renderTaskItem(t, allTasks) {
   if (t.recurrence && t.recurrence !== 'none') {
     metaParts.push(recLabel(t.recurrence, t.customDays));
   }
+  if (t.taskDuration) {
+    metaParts.push('(' + t.taskDuration + 'm)');
+  }
   var metaHtml = metaParts.length ? '<div class="task-meta">' + metaParts.join(' &middot; ') + '</div>' : '';
 
   var subtaskCount = 0;
@@ -248,11 +290,16 @@ function renderTaskItem(t, allTasks) {
   }
   var isExpanded = _expandedTasks[t.id];
 
-  var clickHandler = subtaskCount > 0
-    ? 'ondblclick="selectTask(\'' + escapeHtml(t.id) + '\')" onclick="event.stopPropagation();toggleExpanded(\'' + escapeHtml(t.id) + '\')"'
-    : 'onclick="selectTask(\'' + escapeHtml(t.id) + '\')"';
+  var clickHandler = 'onclick="selectTask(\'' + escapeHtml(t.id) + '\')"';
 
-  var html = '<div class="task-item' + (doneClass ? ' ' + doneClass : '') + selClass + '" data-task-id="' + escapeHtml(t.id) + '" ' + clickHandler + '>' +
+  var html = '<div class="task-item' + (doneClass ? ' ' + doneClass : '') + selClass + '" data-task-id="' + escapeHtml(t.id) + '" ' + clickHandler + '>';
+  var chevronHtml = '';
+  if (subtaskCount > 0) {
+    chevronHtml = '<span class="task-expand-chevron' + (isExpanded ? ' expanded' : '') + '" onclick="event.stopPropagation();toggleExpanded(\'' + escapeHtml(t.id) + '\')">' +
+      '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>' +
+    '</span>';
+  }
+  html += chevronHtml +
     '<div class="task-checkbox' + (t.completed ? ' checked' : '') + '" onclick="event.stopPropagation();toggleTask(' + t.completed + ', \'' + escapeHtml(t.id) + '\')">' +
       (t.completed ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>' : '') +
     '</div>' +
@@ -266,10 +313,10 @@ function renderTaskItem(t, allTasks) {
     '</button></div>';
 
   if (subtaskCount > 0 && isExpanded) {
-    allTasks.forEach(function(st) {
-      if (st.parentTaskId === t.id) {
-        html += '<div style="padding-left:36px">' + renderTaskItem(st, allTasks) + '</div>';
-      }
+    var subs = allTasks.filter(function(st) { return st.parentTaskId === t.id; });
+    subs = sortTasks(subs);
+    subs.forEach(function(st) {
+      html += '<div style="padding-left:36px">' + renderTaskItem(st, allTasks) + '</div>';
     });
   }
 
@@ -284,6 +331,12 @@ window.toggleExpanded = function(id) {
 
 /* ── Detail Panel ── */
 window.selectTask = function(id) {
+  if (_selectedId === id && !_detailEditMode) {
+    _selectedId = null;
+    document.querySelectorAll('.task-item').forEach(function(el) { el.classList.remove('selected'); });
+    renderDetailEmpty();
+    return;
+  }
   _selectedId = id;
   _detailEditMode = false;
   document.querySelectorAll('.task-item').forEach(function(el) {
@@ -439,8 +492,6 @@ function renderDetailEdit(task, allTasks) {
         '<select class="detail-input" onchange="detailRepeatChange(\'' + escapeHtml(task.id) + '\',this.value)" style="cursor:pointer">' +
           '<option value="none"' + ((!task.recurrence || task.recurrence === 'none') ? ' selected' : '') + '>None</option>' +
           '<option value="daily"' + (task.recurrence === 'daily' ? ' selected' : '') + '>Daily</option>' +
-          '<option value="weekly"' + (task.recurrence === 'weekly' ? ' selected' : '') + '>Weekly</option>' +
-          '<option value="monthly"' + (task.recurrence === 'monthly' ? ' selected' : '') + '>Monthly</option>' +
           '<option value="custom"' + (task.recurrence === 'custom' ? ' selected' : '') + '>Custom</option>' +
         '</select>' +
         (task.recurrence === 'custom'
@@ -465,6 +516,19 @@ function renderDetailEdit(task, allTasks) {
     '</div>' +
     '</div>' +
 
+    /* Task Duration */
+    '<div style="margin-top:24px">' +
+    '<div class="detail-field-label">Task Duration</div>' +
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+      '<button class="detail-duration-preset-btn' + (task.taskDuration == 5 ? ' active' : '') + '" onclick="selectDetailDurationPreset(5,this)">5m</button>' +
+      '<button class="detail-duration-preset-btn' + (task.taskDuration == 10 ? ' active' : '') + '" onclick="selectDetailDurationPreset(10,this)">10m</button>' +
+      '<button class="detail-duration-preset-btn' + (task.taskDuration == 15 ? ' active' : '') + '" onclick="selectDetailDurationPreset(15,this)">15m</button>' +
+      '<button class="detail-duration-preset-btn' + (task.taskDuration == 30 ? ' active' : '') + '" onclick="selectDetailDurationPreset(30,this)">30m</button>' +
+      '<input type="number" id="detail-duration-input" class="detail-input" value="' + (task.taskDuration || '') + '" placeholder="Custom" style="width:80px;padding:6px 10px" min="1" onblur="saveDetailField(\'' + escapeHtml(task.id) + '\',\'taskDuration\',this.value)" />' +
+      '<span style="font-size:14px;color:rgba(45,45,45,0.5)">minutes</span>' +
+    '</div>' +
+    '</div>' +
+
     /* Notes */
     '<div style="margin-top:24px">' +
     '<div class="detail-field-label">Notes</div>' +
@@ -475,8 +539,13 @@ function renderDetailEdit(task, allTasks) {
     '<div class="detail-subtasks-section">' +
     '<div class="detail-field-label">Subtasks</div>' +
     (subHtml || '<div style="color:rgba(45,45,45,0.4);font-size:14px;margin-bottom:8px">No subtasks.</div>') +
-    '<div style="display:flex;gap:8px">' +
-      '<input type="text" id="detail-sub-input" class="detail-input" placeholder="Add subtask..." style="padding:8px 12px;font-size:16px" onkeydown="if(event.key===\'Enter\')addDetailSubtask(\'' + escapeHtml(task.id) + '\')" />' +
+    '<div style="display:flex;gap:8px;align-items:center">' +
+      '<input type="text" id="detail-sub-input" class="detail-input" placeholder="Add subtask..." style="padding:8px 12px;font-size:16px;flex:1" onkeydown="if(event.key===\'Enter\')addDetailSubtask(\'' + escapeHtml(task.id) + '\')" />' +
+      '<select id="detail-sub-priority" class="detail-input" style="padding:6px 10px;font-size:14px;width:auto;cursor:pointer">' +
+        '<option value="Low">Low</option>' +
+        '<option value="Medium" selected>Medium</option>' +
+        '<option value="High">High</option>' +
+      '</select>' +
       '<button onclick="addDetailSubtask(\'' + escapeHtml(task.id) + '\')" style="border-radius:8px;background:#2d2d2d;color:#fff;padding:6px 16px;font-size:16px;border:none;cursor:pointer;font-family:\'Patrick Hand\',cursive">+ Add</button>' +
     '</div>' +
     '</div>' +
@@ -539,6 +608,7 @@ window.saveDetailField = function(id, field, value) {
   else if (field === 'durationStart') { updates.durationStart = value; }
   else if (field === 'durationEnd') { updates.durationEnd = value; }
   else if (field === 'customDays') { updates.customDays = value; }
+  else if (field === 'taskDuration') { updates.taskDuration = value ? parseInt(value) : null; }
   window.db.updateTask(id, updates).then(function() { window.renderTasks(); });
 };
 
@@ -612,7 +682,9 @@ window.addDetailSubtask = function(parentId) {
   var input = document.getElementById('detail-sub-input');
   if (!input || !input.value.trim()) return;
   var name = input.value.trim();
-  var task = { id: newTaskId(), name: name, parentTaskId: parentId, priority: 'Medium' };
+  var prioEl = document.getElementById('detail-sub-priority');
+  var subPrio = prioEl ? prioEl.value : 'Medium';
+  var task = { id: newTaskId(), name: name, parentTaskId: parentId, priority: subPrio, createdAt: new Date().toISOString() };
   window.db.createTask(task).then(function() {
     input.value = '';
     window.renderTasks();
@@ -684,6 +756,7 @@ function addNewTask() {
   var recVal = document.getElementById('tasks-new-recurrence') ? document.getElementById('tasks-new-recurrence').value : 'none';
   var scheduledTime = dateStr + (timeVal ? 'T' + timeVal : '');
   var customDays = (recVal === 'custom' && _newCustomDays.length) ? JSON.stringify(_newCustomDays) : '';
+  var durationVal = document.getElementById('tasks-new-duration') ? document.getElementById('tasks-new-duration').value : '';
 
   var task = {
     id: id,
@@ -692,10 +765,17 @@ function addNewTask() {
     scheduledTime: timeVal ? scheduledTime : (recVal !== 'none' ? scheduledTime : null),
     recurrence: recVal,
     customDays: customDays,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    taskDuration: durationVal || null
   };
 
   input.value = '';
+  var durEl = document.getElementById('tasks-new-duration');
+  if (durEl) durEl.value = '';
+  var durBtns = document.querySelectorAll('.duration-preset-btn');
+  durBtns.forEach(function(b) { b.classList.remove('active'); });
+  var prioEl = document.getElementById('tasks-new-priority');
+  if (prioEl) prioEl.value = 'Low';
   _newCustomDays = [];
   var optEl = document.getElementById('tasks-new-options');
   if (optEl) optEl.style.display = 'none';

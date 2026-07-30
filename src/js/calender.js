@@ -3,7 +3,7 @@
    ═══════════════════════════════════════ */
 
 var calState = {
-  tab: 'year',
+  tab: 'week',
   year: new Date().getFullYear(),
   weekOffset: 0,
   calOffset: 0,
@@ -17,7 +17,7 @@ var calState = {
   loaded: false
 };
 
-var CAL_WEEKDAYS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+var CAL_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 var CAL_SHORT_WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 var CAL_MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -295,49 +295,42 @@ function renderWeekDayCard(dateKey, date, isToday) {
 
   html += '<div class="week-focus-time">\u23F1 ' + focusText + ' focus</div>';
 
-  html += '<div class="week-timeline-container">';
-  for (var hour = 0; hour < 24; hour++) {
-    var hourTasks = dayTasks.filter(function(t) {
-      if (!t.scheduledTime) return false;
-      var taskHour = parseInt((t.scheduledTime.split('T')[1] || '00:00').split(':')[0]);
-      return taskHour === hour;
-    });
-    var ampm = hour === 0 ? '12am' : hour < 12 ? hour + 'am' : hour === 12 ? '12pm' : (hour - 12) + 'pm';
-    html += '<div class="wt-hour-row">';
-    html += '<div class="wt-time-label">' + ampm + '</div>';
-    if (hourTasks.length > 0) {
-      hourTasks.forEach(function(t) {
-        var dotColor = t.priority === 'High' ? '#ef4444' : t.priority === 'Medium' ? '#10b981' : '#9ca3af';
-        var taskTime = (t.scheduledTime.split('T')[1] || '').substring(0, 5);
-        html += '<div class="wt-event" style="display:flex;align-items:center;gap:6px;padding:2px 0">';
-        html += '<span class="wt-dot" style="background:' + dotColor + '"></span>';
-        html += '<span class="wt-event-time" style="font-size:11px;color:rgba(45,45,45,0.4)">' + taskTime + '</span>';
-        html += '<span class="wt-event-name" style="font-size:14px;color:#2d2d2d">' + escapeHtml(t.name) + '</span>';
-        html += '</div>';
-      });
-    } else {
-      html += '<div class="wt-free" style="color:#ddd;font-size:11px;font-style:italic;padding:2px 14px">— free —</div>';
-    }
-    html += '</div>';
-  }
-  html += '</div>';
+    // Tasks split into scheduled/todo
+    var scheduled = dayTasks.filter(function(t) { return t.scheduledTime && t.scheduledTime.indexOf('T') >= 0 && t.scheduledTime.split('T')[1]; });
+    var unscheduled = dayTasks.filter(function(t) { return !t.scheduledTime || t.scheduledTime.indexOf('T') < 0 || !t.scheduledTime.split('T')[1]; });
+    scheduled.sort(function(a,b) { return ((a.scheduledTime||'').split('T')[1]||'').localeCompare((b.scheduledTime||'').split('T')[1]||''); });
 
-  var unscheduledTasks = dayTasks.filter(function(t) { return !t.scheduledTime; });
-  if (unscheduledTasks.length > 0) {
-    html += '<div class="wt-todo-toggle" onclick="toggleUnscheduled(this, \'' + dateKey + '\')">';
-    html += '<span class="wt-todo-icon">▶</span>';
-    html += '<span class="wt-todo-label">' + unscheduledTasks.length + ' unscheduled</span>';
-    html += '</div>';
-    html += '<div class="wt-todo-list" id="wt-todo-' + dateKey + '" style="display:none">';
-    unscheduledTasks.forEach(function(t) {
-      var dotColor = t.priority === 'High' ? '#ef4444' : t.priority === 'Medium' ? '#f59e0b' : t.priority === 'Low' ? '#22c55e' : '#9ca3af';
-      html += '<div class="wt-todo-item">';
-      html += '<span class="wt-todo-dot" style="background:' + dotColor + '"></span>';
-      html += '<span class="wt-todo-name' + (t.completed ? ' done' : '') + '">' + escapeHtml(t.name) + '</span>';
-      html += '</div>';
-    });
-    html += '</div>';
-  }
+    var taskHtml = '';
+    if (scheduled.length) {
+      taskHtml += '<div style="font-size:12px;font-weight:600;color:rgba(45,45,45,0.4);text-transform:uppercase;letter-spacing:0.06em;padding:8px 0 4px">Scheduled</div>';
+      scheduled.forEach(function(t) {
+        var time = (t.scheduledTime||'').split('T')[1] || '';
+        var pColor = t.priority === 'High' ? '#ef4444' : t.priority === 'Medium' ? '#10b981' : '#9ca3af';
+        taskHtml += '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px">' +
+          '<span style="width:6px;height:6px;border-radius:50%;background:' + pColor + ';flex-shrink:0"></span>' +
+          '<span style="color:rgba(45,45,45,0.45);min-width:36px;font-size:12px">' + time.substring(0,5) + '</span>' +
+          '<span' + (t.completed ? ' style="text-decoration:line-through;color:rgba(45,45,45,0.35)"' : '') + '>' + escapeHtml(t.name) + '</span>' +
+          (t.completed ? '<span style="color:#10b981;margin-left:auto;font-size:12px">✓</span>' : '') +
+        '</div>';
+      });
+    }
+    if (unscheduled.length) {
+      taskHtml += '<div style="font-size:12px;font-weight:600;color:rgba(45,45,45,0.4);text-transform:uppercase;letter-spacing:0.06em;padding:8px 0 4px">To Do</div>';
+      unscheduled.forEach(function(t) {
+        var pColor = t.priority === 'High' ? '#ef4444' : t.priority === 'Medium' ? '#10b981' : '#9ca3af';
+        taskHtml += '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px">' +
+          '<span style="width:6px;height:6px;border-radius:50%;background:' + pColor + ';flex-shrink:0"></span>' +
+          '<span' + (t.completed ? ' style="text-decoration:line-through;color:rgba(45,45,45,0.35)"' : '') + '>' + escapeHtml(t.name) + '</span>' +
+          (t.completed ? '<span style="color:#10b981;margin-left:auto;font-size:12px">✓</span>' : '') +
+        '</div>';
+      });
+    }
+    if (!scheduled.length && !unscheduled.length) {
+      taskHtml += '<div style="color:rgba(45,45,45,0.25);font-size:13px;padding:8px 0;text-align:center">No tasks</div>';
+    }
+    html += taskHtml;
+
+  var dayNoteClass = dayNote ? 'note-dot has-note' : 'note-dot';
 
   html += '<button class="add-task-btn" onclick="showAddTaskInput(\'' + dateKey + '\')">+ Add Task</button>';
 
@@ -352,19 +345,6 @@ function renderWeekDayCard(dateKey, date, isToday) {
   html += '</div>';
   return html;
 }
-
-window.toggleUnscheduled = function(el, dateKey) {
-  var list = document.getElementById('wt-todo-' + dateKey);
-  if (!list) return;
-  var icon = el.querySelector('.wt-todo-icon');
-  if (list.style.display === 'none') {
-    list.style.display = 'block';
-    if (icon) icon.textContent = '▼';
-  } else {
-    list.style.display = 'none';
-    if (icon) icon.textContent = '▶';
-  }
-};
 
 window.showAddTaskInput = function(dateKey) {
   removeTaskPopup();
@@ -466,7 +446,7 @@ function renderCalendarView() {
 function renderCalendarMonth(name, year, month) {
   var firstDay = new Date(year, month, 1).getDay();
   var daysInMonth = new Date(year, month + 1, 0).getDate();
-  var firstCol = (firstDay + 1) % 7;
+  var firstCol = firstDay;
 
   var html = '<div class="cal-month">';
   html += '<div class="cal-month-title">' + name + ' ' + year + '</div>';
@@ -502,7 +482,8 @@ function renderCalendarMonth(name, year, month) {
 
     var style = level > 0 ? ' style="background:' + bgColor + ';' + (level === 3 ? 'color:white;' : '') + '"' : '';
 
-    html += '<div class="cal-day l' + level + (isToday ? ' today' : '') + '"' + style + '>';
+    var cellDateKey = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    html += '<div class="cal-day l' + level + (isToday ? ' today' : '') + '"' + style + ' onclick="openDayPopup(\'' + cellDateKey + '\')" style="cursor:pointer">';
     html += '<span class="cal-day-num">' + d + '</span>';
     html += '<div class="tooltip calendar-day-tooltip">';
     html += '<div class="tooltip-date">' + formatDate(date) + '</div>';
@@ -944,88 +925,213 @@ function escapeHtml(str) {
 
 /* ── Day Popup ── */
 window.openDayPopup = async function(dateKey) {
+  var popup = document.getElementById('dayPopupModal');
+  var title = document.getElementById('dayPopupTitle');
+  var content = document.getElementById('dayPopupContent');
+  if (!popup || !content) return;
+
   var d = new Date(dateKey + 'T00:00:00');
-  var titleEl = document.getElementById('dayPopupTitle');
-  if (titleEl) titleEl.textContent = formatDate(d);
+  var dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  if (title) title.textContent = dayNames[d.getDay()] + ', ' + monthNames[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
 
-  var contentEl = document.getElementById('dayPopupContent');
-  if (!contentEl) return;
-
-  var tasks = calState.tasks.filter(function(t) {
+  // Gather data
+  var dayTasks = (calState.tasks || []).filter(function(t) {
+    if (t.parentTaskId) return false;
     var td = (t.scheduledTime || t.createdAt || '').substring(0, 10);
-    return td === dateKey && !t.parentTaskId;
+    return td === dateKey;
   });
   var sessions = calState.sessions[dateKey] || [];
+  var totalFocus = 0;
+  sessions.forEach(function(s) { totalFocus += (s.durationMinutes || 0); });
 
-  var html = '';
+  var completedCount = 0, uncheckedCount = 0;
+  dayTasks.forEach(function(t) { if (t.completed) completedCount++; else uncheckedCount++; });
 
-  // Timeline section
-  html += '<div class="day-popup-timeline">';
-  for (var hour = 0; hour < 24; hour++) {
-    var hourTasks = tasks.filter(function(t) {
-      if (!t.scheduledTime) return false;
-      var taskHour = parseInt((t.scheduledTime.split('T')[1] || '00:00').split(':')[0]);
-      return taskHour === hour;
-    });
-    var hourSessions = sessions.filter(function(s) {
-      var sd = new Date(s.startTime);
-      return sd.getHours() === hour;
-    });
-    var ampm = hour === 0 ? '12am' : hour < 12 ? hour + 'am' : hour === 12 ? '12pm' : (hour - 12) + 'pm';
-
-    html += '<div class="dp-hour-row">';
-    html += '<div class="dp-time-label">' + ampm + '</div>';
-
-    if (hourTasks.length > 0 || hourSessions.length > 0) {
-      html += '<div class="dp-dot"></div>';
-      html += '<div class="dp-items">';
-      hourTasks.forEach(function(t) {
-        var dotColor = t.priority === 'High' ? '#ef4444' : t.priority === 'Medium' ? '#f59e0b' : t.priority === 'Low' ? '#22c55e' : '#9ca3af';
-        var taskTime = (t.scheduledTime.split('T')[1] || '').substring(0, 5);
-        html += '<div class="dp-item" style="display:flex;align-items:center;gap:6px;padding:2px 0">';
-        html += '<span class="dp-dot-small" style="background:' + dotColor + '"></span>';
-        html += '<span class="dp-item-time" style="font-size:11px;color:rgba(45,45,45,0.4)">' + taskTime + '</span>';
-        html += '<span class="dp-item-name">' + escapeHtml(t.name) + '</span>';
-        if (t.completed) html += '<span style="color:#10b981;font-size:12px">✓</span>';
-        html += '</div>';
+  // Fetch habits
+  var habitsChecked = 0;
+  try {
+    var habits = await window.db.getHabits();
+    var logs = await window.db.getHabitLogs();
+    if (habits && logs) {
+      habits.forEach(function(h) {
+        var dayLog = logs.find(function(l) { return l.habitId === h.id && l.date === dateKey; });
+        if (dayLog && dayLog.checked) habitsChecked++;
       });
-      hourSessions.forEach(function(s) {
-        var sd = new Date(s.startTime);
-        var ed = s.endTime ? new Date(s.endTime) : sd;
-        var sTime = sd.getHours() + ':' + String(sd.getMinutes()).padStart(2, '0');
-        var eTime = ed.getHours() + ':' + String(ed.getMinutes()).padStart(2, '0');
-        html += '<div class="dp-item" style="display:flex;align-items:center;gap:6px;padding:2px 0">';
-        html += '<span class="dp-dot-small" style="background:#8b5cf6"></span>';
-        html += '<span class="dp-item-time" style="font-size:11px;color:rgba(45,45,45,0.4)">' + sTime + '</span>';
-        html += '<span class="dp-item-name" style="font-style:italic">' + escapeHtml(s.taskName || 'Session') + '</span>';
-        html += '<span style="font-size:11px;color:rgba(45,45,45,0.3)">' + Math.round(s.focusMinutes) + 'm</span>';
-        html += '</div>';
-      });
-      html += '</div>';
-    } else {
-      html += '<div class="dp-free">— free —</div>';
     }
-    html += '</div>';
-  }
+  } catch(e) {}
+
+  // Build HTML
+  var html = '<div style="font-family:\'Patrick Hand\',cursive;color:#2d2d2d;padding:8px 0">';
+
+  // Stats summary
+  html += '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px">';
+  html += '<div style="flex:1;min-width:100px;text-align:center;padding:12px;border-radius:12px;border:2px solid rgba(45,45,45,0.1);background:rgba(45,45,45,0.02)">' +
+    '<div style="font-size:28px;font-weight:600">' + (totalFocus >= 60 ? Math.floor(totalFocus/60) + 'h ' + (totalFocus%60) + 'm' : totalFocus + 'm') + '</div>' +
+    '<div style="font-size:13px;color:rgba(45,45,45,0.5)">Focus Time</div></div>';
+  html += '<div style="flex:1;min-width:100px;text-align:center;padding:12px;border-radius:12px;border:2px solid rgba(16,185,129,0.2);background:rgba(16,185,129,0.04)">' +
+    '<div style="font-size:28px;font-weight:600;color:#10b981">' + completedCount + '</div>' +
+    '<div style="font-size:13px;color:rgba(45,45,45,0.5)">Tasks Done</div></div>';
+  html += '<div style="flex:1;min-width:100px;text-align:center;padding:12px;border-radius:12px;border:2px solid rgba(239,68,68,0.2);background:rgba(239,68,68,0.04)">' +
+    '<div style="font-size:28px;font-weight:600;color:#ef4444">' + uncheckedCount + '</div>' +
+    '<div style="font-size:13px;color:rgba(45,45,45,0.5)">Unchecked</div></div>';
+  html += '<div style="flex:1;min-width:100px;text-align:center;padding:12px;border-radius:12px;border:2px solid rgba(139,92,246,0.2);background:rgba(139,92,246,0.04)">' +
+    '<div style="font-size:28px;font-weight:600;color:#8b5cf6">' + habitsChecked + '</div>' +
+    '<div style="font-size:13px;color:rgba(45,45,45,0.5)">Habits</div></div>';
   html += '</div>';
 
-  // To Do section (unscheduled tasks)
-  var unscheduledTasks = tasks.filter(function(t) { return !t.scheduledTime; });
-  if (unscheduledTasks.length > 0) {
-    html += '<div style="margin-top:16px;padding-top:12px;border-top:2px dashed #e5e7eb">';
-    html += '<div style="font-size:13px;font-weight:600;color:#6b7280;margin-bottom:8px">📋 To Do</div>';
-    unscheduledTasks.forEach(function(t) {
-      html += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0">';
-      html += '<span style="width:8px;height:8px;border-radius:50%;background:' + (t.priority === 'High' ? '#ef4444' : t.priority === 'Medium' ? '#f59e0b' : '#9ca3af') + '"></span>';
-      html += '<span style="font-size:14px;' + (t.completed ? 'text-decoration:line-through;opacity:0.4' : '') + '">' + escapeHtml(t.name) + '</span>';
-      html += '</div>';
+  // Tasks sections
+  var scheduled = dayTasks.filter(function(t) { return t.scheduledTime && t.scheduledTime.indexOf('T') >= 0 && t.scheduledTime.split('T')[1]; });
+  var todo = dayTasks.filter(function(t) { return !t.scheduledTime || t.scheduledTime.indexOf('T') < 0 || !t.scheduledTime.split('T')[1]; });
+  scheduled.sort(function(a,b) { return ((a.scheduledTime||'').split('T')[1]||'').localeCompare((b.scheduledTime||'').split('T')[1]||''); });
+
+  if (scheduled.length) {
+    html += '<div style="font-size:15px;font-weight:600;color:rgba(45,45,45,0.5);text-transform:uppercase;letter-spacing:0.08em;margin:16px 0 8px;display:flex;align-items:center;gap:6px">' +
+      '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Scheduled</div>';
+    scheduled.forEach(function(t) {
+      var time = (t.scheduledTime||'').split('T')[1] || '';
+      var pColor = t.priority === 'High' ? '#ef4444' : t.priority === 'Medium' ? '#10b981' : '#d1d5db';
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;margin-bottom:4px;background:rgba(45,45,45,0.02)">' +
+        '<span style="width:8px;height:8px;border-radius:50%;background:' + pColor + ';flex-shrink:0"></span>' +
+        '<span style="font-size:13px;color:rgba(45,45,45,0.5);min-width:40px">' + time.substring(0,5) + '</span>' +
+        '<span style="font-size:15px' + (t.completed ? ';text-decoration:line-through;color:rgba(45,45,45,0.4)' : '') + '">' + escapeHtml(t.name) + '</span>' +
+        (t.completed ? '<span style="color:#10b981;margin-left:auto">✓</span>' : '') +
+      '</div>';
     });
-    html += '</div>';
   }
 
-  contentEl.innerHTML = html;
-  var modal = document.getElementById('dayPopupModal');
-  if (modal) modal.classList.remove('hidden');
+  if (todo.length) {
+    html += '<div style="font-size:15px;font-weight:600;color:rgba(45,45,45,0.5);text-transform:uppercase;letter-spacing:0.08em;margin:16px 0 8px;display:flex;align-items:center;gap:6px">' +
+      '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg> To Do</div>';
+    todo.forEach(function(t) {
+      var pColor = t.priority === 'High' ? '#ef4444' : t.priority === 'Medium' ? '#10b981' : '#d1d5db';
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;margin-bottom:4px;background:rgba(45,45,45,0.02)">' +
+        '<span style="width:8px;height:8px;border-radius:50%;background:' + pColor + ';flex-shrink:0"></span>' +
+        '<span style="font-size:15px' + (t.completed ? ';text-decoration:line-through;color:rgba(45,45,45,0.4)' : '') + '">' + escapeHtml(t.name) + '</span>' +
+        (t.completed ? '<span style="color:#10b981;margin-left:auto">✓</span>' : '') +
+      '</div>';
+    });
+  }
+
+  if (!dayTasks.length) {
+    html += '<div style="text-align:center;color:rgba(45,45,45,0.3);padding:16px;font-size:16px">No tasks for this day.</div>';
+  }
+
+  // PIE CHART — Focus time by task (hand-drawn SVG)
+  if (sessions.length > 0) {
+    var taskFocus = {};
+    sessions.forEach(function(s) {
+      var name = s.taskName || s.name || 'Unnamed';
+      taskFocus[name] = (taskFocus[name] || 0) + (s.durationMinutes || 0);
+    });
+    var pieColors = ['#8b5cf6','#3b82f6','#10b981','#f59e0b','#ef4444','#ec4899','#6366f1','#14b8a6'];
+    var entries = Object.keys(taskFocus).map(function(k,i) { return { name: k, value: taskFocus[k], color: pieColors[i % pieColors.length] }; });
+    var pieTotal = 0;
+    entries.forEach(function(e) { pieTotal += e.value; });
+
+    if (pieTotal > 0) {
+      html += '<div style="margin-top:24px">';
+      html += '<div style="font-size:15px;font-weight:600;color:rgba(45,45,45,0.5);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">Focus by Task</div>';
+      html += '<div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">';
+      // SVG pie
+      var svgSize = 140, cx = 70, cy = 70, r = 60;
+      html += '<svg width="' + svgSize + '" height="' + svgSize + '" viewBox="0 0 ' + svgSize + ' ' + svgSize + '">';
+      var startAngle = -Math.PI / 2;
+      entries.forEach(function(e) {
+        var sliceAngle = (e.value / pieTotal) * 2 * Math.PI;
+        var endAngle = startAngle + sliceAngle;
+        var largeArc = sliceAngle > Math.PI ? 1 : 0;
+        var x1 = cx + r * Math.cos(startAngle), y1 = cy + r * Math.sin(startAngle);
+        var x2 = cx + r * Math.cos(endAngle), y2 = cy + r * Math.sin(endAngle);
+        if (entries.length === 1) {
+          html += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + e.color + '" stroke="#faf9f7" stroke-width="2"/>';
+        } else {
+          html += '<path d="M' + cx + ',' + cy + ' L' + x1.toFixed(2) + ',' + y1.toFixed(2) + ' A' + r + ',' + r + ' 0 ' + largeArc + ',1 ' + x2.toFixed(2) + ',' + y2.toFixed(2) + ' Z" fill="' + e.color + '" stroke="#faf9f7" stroke-width="2" stroke-linejoin="round"/>';
+        }
+        startAngle = endAngle;
+      });
+      html += '</svg>';
+      // Legend
+      html += '<div style="display:flex;flex-direction:column;gap:6px">';
+      entries.forEach(function(e) {
+        html += '<div style="display:flex;align-items:center;gap:8px;font-size:14px">' +
+          '<span style="width:10px;height:10px;border-radius:50%;background:' + e.color + ';flex-shrink:0"></span>' +
+          '<span>' + escapeHtml(e.name) + '</span>' +
+          '<span style="color:rgba(45,45,45,0.4)">' + e.value + 'm</span>' +
+        '</div>';
+      });
+      html += '</div></div></div>';
+    }
+  }
+
+  // LINE CHART — Focus & tasks per day across the month (hand-drawn SVG)
+  var year = d.getFullYear(), month = d.getMonth();
+  var daysInMonth = new Date(year, month + 1, 0).getDate();
+  var dailyFocus = [], dailyTasks = [];
+  for (var di = 1; di <= daysInMonth; di++) {
+    var dk = year + '-' + String(month+1).padStart(2,'0') + '-' + String(di).padStart(2,'0');
+    var dSessions = calState.sessions[dk] || [];
+    var fm = 0;
+    dSessions.forEach(function(s) { fm += (s.durationMinutes || 0); });
+    dailyFocus.push(fm);
+    var dTasks = (calState.tasks||[]).filter(function(t) {
+      if (t.parentTaskId) return false;
+      var td = (t.scheduledTime||t.createdAt||'').substring(0,10);
+      return td === dk && t.completed;
+    });
+    dailyTasks.push(dTasks.length);
+  }
+
+  var maxFocus = Math.max.apply(null, dailyFocus) || 1;
+  var maxTasks = Math.max.apply(null, dailyTasks) || 1;
+  var chartW = 460, chartH = 120, padL = 30, padR = 10, padT = 10, padB = 20;
+  var innerW = chartW - padL - padR, innerH = chartH - padT - padB;
+
+  html += '<div style="margin-top:24px">';
+  html += '<div style="font-size:15px;font-weight:600;color:rgba(45,45,45,0.5);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">Monthly Overview</div>';
+  html += '<svg width="100%" viewBox="0 0 ' + chartW + ' ' + chartH + '" style="max-width:' + chartW + 'px">';
+  // Grid lines
+  for (var gi = 0; gi <= 4; gi++) {
+    var gy = padT + (innerH / 4) * gi;
+    html += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (chartW-padR) + '" y2="' + gy + '" stroke="rgba(45,45,45,0.08)" stroke-width="1" stroke-dasharray="4,3"/>';
+  }
+  // Focus line (purple)
+  var focusPoints = [];
+  for (var fi = 0; fi < daysInMonth; fi++) {
+    var fx = padL + (fi / (daysInMonth-1||1)) * innerW;
+    var fy = padT + innerH - (dailyFocus[fi] / maxFocus) * innerH;
+    focusPoints.push(fx.toFixed(1) + ',' + fy.toFixed(1));
+  }
+  html += '<polyline points="' + focusPoints.join(' ') + '" fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>';
+  // Tasks line (green)
+  var taskPoints = [];
+  for (var ti = 0; ti < daysInMonth; ti++) {
+    var tx = padL + (ti / (daysInMonth-1||1)) * innerW;
+    var ty = padT + innerH - (dailyTasks[ti] / maxTasks) * innerH;
+    taskPoints.push(tx.toFixed(1) + ',' + ty.toFixed(1));
+  }
+  html += '<polyline points="' + taskPoints.join(' ') + '" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>';
+  // Highlight current day
+  var dayIdx = d.getDate() - 1;
+  var hx = padL + (dayIdx / (daysInMonth-1||1)) * innerW;
+  html += '<line x1="' + hx.toFixed(1) + '" y1="' + padT + '" x2="' + hx.toFixed(1) + '" y2="' + (padT+innerH) + '" stroke="rgba(45,45,45,0.15)" stroke-width="1" stroke-dasharray="3,2"/>';
+  html += '<circle cx="' + hx.toFixed(1) + '" cy="' + (padT + innerH - (dailyFocus[dayIdx]/maxFocus)*innerH).toFixed(1) + '" r="4" fill="#8b5cf6" stroke="#faf9f7" stroke-width="2"/>';
+  html += '<circle cx="' + hx.toFixed(1) + '" cy="' + (padT + innerH - (dailyTasks[dayIdx]/maxTasks)*innerH).toFixed(1) + '" r="4" fill="#10b981" stroke="#faf9f7" stroke-width="2"/>';
+  // Day labels
+  for (var li = 0; li < daysInMonth; li += Math.ceil(daysInMonth/10)) {
+    var lx = padL + (li / (daysInMonth-1||1)) * innerW;
+    html += '<text x="' + lx.toFixed(1) + '" y="' + (chartH-2) + '" text-anchor="middle" fill="rgba(45,45,45,0.35)" font-size="10" font-family="\'Patrick Hand\',cursive">' + (li+1) + '</text>';
+  }
+  html += '</svg>';
+  // Legend
+  html += '<div style="display:flex;gap:16px;margin-top:6px;font-size:13px;color:rgba(45,45,45,0.5)">' +
+    '<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:3px;background:#8b5cf6;border-radius:2px"></span> Focus</span>' +
+    '<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:3px;background:#10b981;border-radius:2px"></span> Tasks Done</span>' +
+  '</div></div>';
+
+  html += '</div>';
+  content.innerHTML = html;
+  popup.classList.remove('hidden');
 };
 
 window.closeDayPopup = function(e) {

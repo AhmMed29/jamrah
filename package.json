@@ -69,6 +69,7 @@
     "sharp": "^0.35.2"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "better-sqlite3": "^12.11.1",
     "electron-updater": "^6.3.9"
   }

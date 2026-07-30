@@ -336,3 +336,64 @@ body { font-family: 'Patrick Hand', cursive; }
 #tasks-resize-handle:active {
   background: rgba(45,45,45,0.1);
 }
+
+/* ── Section Headers ── */
+.task-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(45,45,45,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 12px 4px 6px;
+  margin-top: 8px;
+  font-family: 'Patrick Hand', cursive;
+}
+.task-section-header svg {
+  opacity: 0.5;
+}
+
+/* ── Expand Chevron ── */
+.task-expand-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgba(45,45,45,0.4);
+  transition: transform 0.2s, color 0.15s;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+.task-expand-chevron:hover {
+  color: rgba(45,45,45,0.7);
+}
+.task-expand-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+/* ── Duration preset buttons ── */
+.duration-preset-btn,
+.detail-duration-preset-btn {
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: 2px solid rgba(45,45,45,0.15);
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: 'Patrick Hand', cursive;
+  color: #2d2d2d;
+  transition: all 0.15s;
+}
+.duration-preset-btn:hover,
+.detail-duration-preset-btn:hover {
+  border-color: rgba(45,45,45,0.4);
+  background: rgba(45,45,45,0.05);
+}
+.duration-preset-btn.active,
+.detail-duration-preset-btn.active {
+  background: #2d2d2d;
+  color: #fff;
+  border-color: #2d2d2d;
+}

@@ -53,7 +53,7 @@ window.getPagePrefs = function() {
   } catch(e) {}
   var pages = ['pomodoro', 'tasks', 'calender', 'habits', 'stats', 'settings'];
   pages.forEach(function(p) {
-    if (!prefs[p]) prefs[p] = 'both';
+    if (!prefs[p]) prefs[p] = 'sidebar';
   });
   return prefs;
 };

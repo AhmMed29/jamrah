@@ -9,9 +9,17 @@ function markDirty() {
   if (window._dbInitPromise) await window._dbInitPromise;
   
   // Load standard settings
-  var tp = await window.db.getSetting('taskPopup');
-  var toggle = document.getElementById('taskPopupToggle');
-  if (toggle) toggle.checked = (tp !== 'false');
+
+
+  if (window.electronAPI && window.electronAPI.getLocalIp) {
+    try {
+      var ip = await window.electronAPI.getLocalIp();
+      var ipEl = document.getElementById('localIpAddress');
+      if (ipEl) ipEl.value = ip;
+    } catch (e) {
+      console.error(e);
+    }
+  }
   
   var ps = await window.db.getSetting('playPomoSound');
   var soundToggle = document.getElementById('pomoSoundToggle');
@@ -30,12 +38,23 @@ function markDirty() {
   var dnToggle = document.getElementById('desktopNotificationsToggle');
   if (dnToggle) dnToggle.checked = (dn !== 'false');
 
+  // Load Pomodoro timer values from DB
+  var dbWork = await window.db.getSetting('workMinutes');
+  var dbSB = await window.db.getSetting('shortBreakMinutes');
+  var dbLB = await window.db.getSetting('longBreakMinutes');
+  var workEl = document.getElementById('settingWork');
+  var sbEl = document.getElementById('settingShortBreak');
+  var lbEl = document.getElementById('settingLongBreak');
+  if (workEl && dbWork) workEl.value = parseInt(dbWork) || 25;
+  if (sbEl && dbSB) sbEl.value = parseInt(dbSB) || 5;
+  if (lbEl && dbLB) lbEl.value = parseInt(dbLB) || 15;
+
   // Load Page Placements using localStorage
   if (window.getPagePrefs) {
     var prefs = window.getPagePrefs();
     var pages = ['pomodoro', 'tasks', 'calender', 'habits', 'stats', 'settings'];
     pages.forEach(function(p) {
-      var val = prefs[p] || 'both';
+      var val = prefs[p] || 'sidebar';
       var dInp = document.getElementById('pref-' + p + '-dock');
       var sInp = document.getElementById('pref-' + p + '-sidebar');
       if (dInp) dInp.checked = (val === 'both' || val === 'dock');
@@ -47,11 +66,6 @@ function markDirty() {
 })();
 
 window.saveSettings = async function() {
-  var tpEl = document.getElementById('taskPopupToggle');
-  var taskPopup = tpEl ? tpEl.checked : true;
-  await window.db.setSetting('taskPopup', taskPopup ? 'true' : 'false');
-  if (window.updateTaskPopupCache) await window.updateTaskPopupCache();
-
   var psEl = document.getElementById('pomoSoundToggle');
   var playSound = psEl ? psEl.checked : true;
   await window.db.setSetting('playPomoSound', playSound ? 'true' : 'false');
@@ -105,9 +119,6 @@ window.saveSettings = async function() {
   var cancel = document.getElementById('settingsCancelBtn');
   if (cancel) cancel.style.display = '';
   
-  if (window.updateTaskPopupCache) {
-    await window.updateTaskPopupCache();
-  }
   if (window.applyPagePrefs) {
     await window.applyPagePrefs();
   }
@@ -117,9 +128,6 @@ window.saveSettings = async function() {
 };
 
 window.cancelSettings = async function() {
-  var taskEl = document.getElementById('taskPopupToggle');
-  if (taskEl) taskEl.checked = (await window.db.getSetting('taskPopup')) !== 'false';
-
   var soundEl = document.getElementById('pomoSoundToggle');
   if (soundEl) soundEl.checked = (await window.db.getSetting('playPomoSound')) !== 'false';
 
@@ -144,7 +152,7 @@ window.cancelSettings = async function() {
     var prefs = window.getPagePrefs();
     var pages = ['pomodoro', 'tasks', 'calender', 'habits', 'stats'];
     pages.forEach(function(p) {
-      var val = prefs[p] || 'both';
+      var val = prefs[p] || 'sidebar';
       var dInp = document.getElementById('pref-' + p + '-dock');
       var sInp = document.getElementById('pref-' + p + '-sidebar');
       if (dInp) dInp.checked = (val === 'both' || val === 'dock');

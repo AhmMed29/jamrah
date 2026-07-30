@@ -12,109 +12,110 @@ An all-in-one **Electron** desktop app: Pomodoro timer with live GLSL shader bac
 
 ## Table of Contents
 - [✨ Features](#-features)
-  - [Pomodoro Focus Timer 🍅](#pomodoro-focus-timer-)
-  - [Session Timeline & History 📜](#session-timeline--history-)
-  - [Tasks ✔](#tasks-)
-  - [Goals 🎯](#goals-)
-  - [Habit Tracker 🤸‍♀️](#habit-tracker-)
-  - [Calendar & Stats 📊](#calendar--stats-)
-  - [Customizable Preferences ⚙](#customizable-preferences-)
-- [🚀 For Developers](#-for-developers)
+  - [Pomodoro-Focus Timer](#pomodoro-focus-timer-)
+  - [Session Timeline](#session-timeline--history-)
+  - [Tasks](#tasks-)
+  - [Goals](#goals-)
+  - [Habit Tracker](#habit-tracker-)
+  - [Calendar & Stats](#calendar--stats-)
+  - [Customizable Preferences](#customizable-preferences-)
+- [For Developers](#-for-developers)
   - [Getting Started](#getting-started)
   - [Project Structure](#project-structure)
-- [🗄️ Data](#️-data)
-- [🔧 Build for Windows](#-build-for-windows)
+- [Data](#️-data)
+- [Build for Windows](#-build-for-windows)
 - [Linux & Mobile](#linux--mobile)
-- [🔄 Sync](#-sync)
-- [📦 Updates](#-updates)
-- [⚖️ License](#️-license)
+- [Sync](#-sync)
+- [Updates](#-updates)
+- [License](#️-license)
 
 ---
 
 # ✨ Features
 
-## Pomodoro Focus Timer 🍅
+## Pomodoro Focus Timer 
 
-Full-featured Pomodoro timer with configurable Focus / Short Break / Long Break durations. Includes live GLSL shader backgrounds with 5 themes plus custom color picker and minimal mode.
-
-- Phase word selector (Focus / Short Break / Long Break)
-- Auto-start breaks and focus sessions
-- Session count display
-- Desktop notifications
-- Task name popup on start (optional)
-- Hover controls: skip, reset, end session
+Simple Pomodoro Timer with three phases :
+- Phase word selector *(Focus / Short Break / Long Break)*
+- Auto-start breaks and focus sessions : After every 4 sessions of FOCUS you will get a *long break*.
+- Desktop notifications after each phase with a simple Sound that you could be disabled according to your preferences (setting --> pomodoro).
+- Hover the timer while running will appear : skip, reset, end session.
 
 ![Simple Pomodoro](src/assets/screenshots/Simple%20Pomodoro.png)
+## Tasks 
 
-## Session Timeline & History 📜
+tasks page has three sections ... 
+- scheduled tasks per the hour selected when adding a task.
+- To Do Tasks (unscheduled tasks but you should do).
+- right panel to view the task detail, notes and subtasks.
 
-Every focus session is tracked and displayed in an interactive timeline sidebar:
-
-- Hour-by-hour timeline with sessions grouped by time
-- Color-coded dots for tags and goals
-- Inline session name editing
-- Day navigation (back / forward arrows, forward hidden on today)
-- Active session highlighted with purple glow
-- Session notes panel
-- Session popup for editing name, tag, goal, and notes
-
-## Tasks ✔
+<table>
+	<tr> 
+		<td>
+			<img src="src/assets/screenshots/Add%20Tasks.png" width="400">
+		</td> 
+		<td>
+				<img src="src/assets/screenshots/task-plus-window.png" width="400">
+		</td>
+	</tr> 
+</table>
 
 Full task management with rich features:
 
-- Create, edit, delete, and reorder tasks
-- Priority levels (High / Medium / Low / None)
-- Subtasks with expand/collapse
-- Goals integration (assign tasks to goals)
-- Custom days and recurring tasks
-- Detail panel with notes
-- Filter and sort controls
+- Create, edit, delete, and **sort** tasks by priority, date and time.
+- **Priority** levels (High / Medium / Low / None)
+- Parent Tasks with expand/collapse **Subtasks** 'if exist'.
+- **recurring** tasks & **Custom** Choices For ex : **reading** *'sun-mon-wed'* and you can select the task **duration** like "23 minutes".
+- Detail panel with notes for each task and edit button to edit everything.
 
-![Add Tasks](src/assets/screenshots/Add%20Tasks.png)
 
-## Goals 🎯
+## Goals
 
-Set goals with custom durations (weekly, monthly, quarterly, yearly, or custom). Track progress as you complete linked tasks.
+write your daily, weekly, monthly and yearly goals in the note of each one ! 
 
-- Goal hierarchy with sub-goals
-- Progress bar and status badges
-- Goal analytics
-
-![Set a Goal](src/assets/screenshots/Set%20a%20Goal.png)
-
-## Habit Tracker 🤸‍♀️
+<table>
+	<tr> 
+		<td>
+			<img src="src/assets/screenshots/day-tasks-daynote.png" width="400">
+			<img src="src/assets/screenshots/Week-note.png" width="400">
+		</td> 
+		<td>
+				<img src="src/assets/screenshots/Calender-page-daymonth-goals.png" width="400">
+				<img src="src/assets/screenshots/hover-thetask-calender.png" width="400">
+		</td>
+	</tr> 
+</table>
+---
+## Habit Tracker 
 
 Track your habits with a clean paper-like grid interface. Click sound feedback when marking habits.
 
 - Daily habit logging
-- Year view with color density
-- Monthly statistics
+- Monthly moving by arrows, scroll right & left for all month days.
+
+⚠ this section has a bug while choosing the habit duration ... 
+it must be if you choosed 3 months for ex ... it counts from 'today' till +90 days !
+but it doesnt do this right at this time.
 
 ![Habit Tracker](src/assets/screenshots/Habit%20Tracker.png)
 
-## Calendar & Stats 📊
+---
+## Stats 
 
-- **Calendar View**: Year, month, and week track views with session heatmap
-- **Timeline View**: Day and week timeline with session details
-- **Stats Page**: Focus time analytics, session counts, trends
-
-## Customizable Preferences ⚙
-
-Every component can be shown or hidden in the sidebar and dock — you control what you see.
-
-- Toggle pages in sidebar and/or dock
-- Show task popup on timer start
-- Configurable timer durations
-- Auto-start toggles
-- Sound on/off
-- Shader theme selector with custom colors
-- Minimal mode (no shader, just the timer text)
+Soon with a pretty complex and useful charts to take just a look for your achievements !
 
 ---
+## Customizable Preferences
 
-# 🚀 For Developers
+Every component can be shown Either in the sidebar or dock — you control what you see.
 
-## Getting Started
+- Toggle pages in sidebar and/or dock
+- Configurable timer durations (Setting --> Pomodoro)
+- Auto-start toggles
+- Sound on/off
+## For Developers
+
+### Getting Started
 
 ```bash
 git clone https://github.com/AhmMed29/jamrah.git
@@ -122,12 +123,11 @@ cd jamrah
 npm install
 npm start
 ```
-
 Requires **Node.js 22+**, **npm**, and **[.NET 9 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)**.
 
 ---
 
-## 🗄️ Data
+## Data  & Flow
 
 All data stored locally via **SQLite** with **Entity Framework Core** (.NET 9 backend). Default location:
 
@@ -139,7 +139,7 @@ The Electron main process spawns the .NET backend as a child process, and the re
 
 ---
 
-## 🔧 Build for Windows
+## Build for Windows
 
 Currently Windows-only.
 
@@ -149,23 +149,23 @@ npm run dist
 
 Output in `dist/` — NSIS installer.
 
-## 📱 Mobile App & 🔄 Sync
+## Mobile App &  Sync
 
 The official **Android App** is now available! 
-You can sync your tasks, goals, habits, and sessions between your PC and Android phone locally over Wi-Fi.
-The PC app acts as a local server, and the Android app connects to it to keep your data in sync instantly.
+You can sync your tasks only between your PC and Android phone locally over Wi-Fi.
+The PC app acts as a local server, and the Android app connects to it to keep your data in sync instantly. (Currently it requiers you to click on both sync buttons on both devices ! Check that you have entered the correct pc ip that appear in the setting page).
 
-Linux support is a community-driven contribution. PRs welcome!
+Linux & Mac & Iphone support is a community-driven contribution. PRs welcome!
 
 ---
 
-## 📦 Updates
+## Updates
 
 Jamrah includes a built-in frontend auto-update system (lightweight ZIP-based updates for HTML/JS/CSS, no full EXE download). Check for updates in Settings → General.
 
 ---
 
-## 🧱 Project Structure
+## Project Structure
 
 ```
 ├── src/
@@ -234,7 +234,7 @@ Renderer (HTML/JS)  →  IPC (preload.js)  →  Main Process (main.js)  →  HTT
 
 ---
 
-## ⚖️ License
+## License
 
 **PolyForm Noncommercial License 1.0.0**
 

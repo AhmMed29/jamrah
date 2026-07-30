@@ -47,7 +47,7 @@ function sortTasks(tasks) {
   return sorted;
 }
 
-function expandRecurringTasks(tasks) {
+function expandRecurringTasks(tasks, allTasks) {
   var expanded = [];
   var today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -224,7 +224,7 @@ function renderTaskList(tasks) {
   var filtered = sortTasks(tasks);
   filtered = filtered.filter(function(t) { return !t.parentTaskId; });
 
-  var expanded = expandRecurringTasks(filtered);
+  var expanded = expandRecurringTasks(filtered, tasks);
   filtered = expanded.filter(function(t) {
     var td = (t._instanceDate || t.scheduledTime || t.createdAt || '').substring(0, 10);
     return td === dayKey;
@@ -612,7 +612,21 @@ window.saveDetailField = function(id, field, value) {
     });
     return;
   }
-  else if (field === 'recurrence') { updates.recurrence = value; }
+  else if (field === 'recurrence') {
+    window.db.getTasks().then(function(tasks) {
+      var t = tasks.find(function(x) { return x.id === id; });
+      if (!t) return;
+      var updates = { recurrence: value };
+      if (value === 'none') {
+        var st = t.scheduledTime || '';
+        if (st) st = dateKey(_currentDate) + (st.indexOf('T') > -1 ? 'T' + st.split('T')[1] : '');
+        else st = dateKey(_currentDate);
+        updates.scheduledTime = st;
+      }
+      window.db.updateTask(id, updates).then(function() { window.renderTasks(); });
+    });
+    return;
+  }
   else if (field === 'durationStart') { updates.durationStart = value; }
   else if (field === 'durationEnd') { updates.durationEnd = value; }
   else if (field === 'customDays') { updates.customDays = value; }
@@ -652,7 +666,14 @@ window.detailRepeatChange = function(id, val) {
     var t = tasks.find(function(x) { return x.id === id; });
     if (!t) return;
     var customDays = (val === 'custom') ? (parseCustomDays(t.customDays).length ? t.customDays : JSON.stringify([0,1,2,3,4,5,6])) : '';
-    window.db.updateTask(id, { recurrence: val, customDays: customDays }).then(function() { 
+    var updates = { recurrence: val, customDays: customDays };
+    if (val === 'none') {
+      var st = t.scheduledTime || '';
+      if (st) st = dateKey(_currentDate) + (st.indexOf('T') > -1 ? 'T' + st.split('T')[1] : '');
+      else st = dateKey(_currentDate);
+      updates.scheduledTime = st;
+    }
+    window.db.updateTask(id, updates).then(function() { 
       window.renderTasks(); 
       if (val === 'custom' && _detailEditMode) {
         window.db.getTasks().then(function(newTasks) {

@@ -60,3 +60,10 @@ RELEASE_NOTES_v3.html
 
 # Frontend update ZIP (GitHub release asset, built artifact)
 frontend-*.zip
+
+# Android build artifacts
+android/.gradle/
+android/app/build/
+android/local.properties
+*.apk
+*.aab

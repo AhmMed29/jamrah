@@ -38,6 +38,11 @@ window.habitsNextMonth = function() {
   render();
 };
 
+window.habitsCurrentMonth = function() {
+  _habitsMonthOffset = 0;
+  render();
+};
+
 function dateKey(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
@@ -146,11 +151,12 @@ async function render() {
   }
 
   var monthName = CAL_MONTH_NAMES[displayMonth];
-  var h = '<tr><th colspan="' + (displayDates.length + 2) + '" style="padding:6px 0 8px 0">';
+  var h = '<tr><th colspan="' + (displayDates.length + 2) + '" style="padding:6px 0 8px 0;position:sticky;top:0;z-index:20;background:#faf9f7">';
   h += '<div style="display:flex;align-items:center;justify-content:center;gap:16px;font-size:14px;font-weight:600;color:#333">';
   h += '<button onclick="habitsPrevMonth()" style="background:none;border:none;cursor:pointer;font-size:18px;color:#6b7280;padding:2px 8px">&#9664;</button>';
   h += '<span>' + monthName + ' ' + displayYear + '</span>';
   h += '<button onclick="habitsNextMonth()" style="background:none;border:none;cursor:pointer;font-size:18px;color:' + (_habitsMonthOffset < 0 ? '#6b7280' : '#d1d5db') + ';padding:2px 8px"' + (_habitsMonthOffset >= 0 ? 'disabled' : '') + '>&#9654;</button>';
+  h += (_habitsMonthOffset !== 0 ? '<button onclick="habitsCurrentMonth()" style="margin-left:12px;padding:4px 12px;border-radius:8px;border:2px solid rgba(45,45,45,0.2);background:transparent;cursor:pointer;font-size:13px;font-family:\'Patrick Hand\',cursive">Current Month</button>' : '');
   h += '</div></th></tr>';
   h += '<tr>';
   for (var i = 0; i < displayDates.length; i++) {
@@ -309,13 +315,13 @@ async function openModal(habitId) {
   var modalContent = document.getElementById('modal-content');
 
   var durationLabel = '';
-  if (habit.durationType === 'daily') durationLabel = 'يومي';
-  else if (habit.durationType === 'yearly') durationLabel = 'سنوي';
-  else if (habit.durationType === '6months') durationLabel = '6 أشهر';
-  else if (habit.durationType === '4months') durationLabel = '4 أشهر';
-  else if (habit.durationType === '3months') durationLabel = '3 أشهر';
+  if (habit.durationType === 'daily') durationLabel = 'Daily';
+  else if (habit.durationType === 'yearly') durationLabel = 'Yearly';
+  else if (habit.durationType === '6months') durationLabel = '6 Months';
+  else if (habit.durationType === '4months') durationLabel = '4 Months';
+  else if (habit.durationType === '3months') durationLabel = '3 Months';
   else if (habit.durationType === 'custom' && habit.durationStart && habit.durationEnd) durationLabel = habit.durationStart + ' → ' + habit.durationEnd;
-  else durationLabel = 'سنوي';
+  else durationLabel = 'Yearly';
 
   var totalDaysDisplay = totalDays === Infinity ? '∞' : totalDays;
   var remainingDisplay = totalDays === Infinity ? '∞' : Math.max(0, totalDays - checked);
@@ -387,6 +393,21 @@ function showHabitForm(name, color, onSave, durationType, durationStart, duratio
 
   function computeEnd(startDateStr, type) {
     if (type === 'daily') return null;
+    var startInput = document.getElementById('duration-start-input');
+    if (type === 'yearly') {
+      var yr = new Date().getFullYear();
+      if (startInput) startInput.value = yr + '-01-01';
+      return yr + '-12-31';
+    }
+    if (type === '3months' || type === '4months' || type === '6months') {
+      var todayDate = new Date();
+      todayDate.setHours(0,0,0,0);
+      var todayStr = dateKey(todayDate);
+      if (startInput) startInput.value = todayStr;
+      var days = DURATION_DAYS[type];
+      var endDate = new Date(todayDate.getTime() + (days - 1) * 86400000);
+      return dateKey(endDate);
+    }
     var s = startDateStr ? new Date(startDateStr + 'T00:00:00') : new Date();
     var days = DURATION_DAYS[type];
     if (!days) return '';
@@ -402,12 +423,12 @@ function showHabitForm(name, color, onSave, durationType, durationStart, duratio
   }
 
   var typeOptions = [
-    { value: 'daily', label: 'يومي' },
-    { value: 'yearly', label: 'سنوي' },
-    { value: '6months', label: '6 أشهر' },
-    { value: '4months', label: '4 أشهر' },
-    { value: '3months', label: '3 أشهر' },
-    { value: 'custom', label: 'مخصص' }
+    { value: 'daily', label: 'Daily' },
+    { value: 'yearly', label: 'Yearly' },
+    { value: '6months', label: '6 Months' },
+    { value: '4months', label: '4 Months' },
+    { value: '3months', label: '3 Months' },
+    { value: 'custom', label: 'Custom' }
   ];
   var typeHtml = '';
   for (var ti = 0; ti < typeOptions.length; ti++) {

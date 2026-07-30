@@ -37,6 +37,7 @@ var electronAPI = {
   backupGetInfo: () => ipcRenderer.invoke('backup:get-info'),
   backupGetDefaultPath: () => ipcRenderer.invoke('backup:get-default-path'),
   backupOpenFolder: (folderPath) => ipcRenderer.invoke('backup:open-folder', folderPath),
+  getLocalIp: () => ipcRenderer.invoke('get-local-ip'),
   closeApp: () => ipcRenderer.send('close-app'),
   onShortcut: (callback) => {
     ipcRenderer.on('shortcut', (_, action) => callback(action))

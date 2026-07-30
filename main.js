@@ -59,7 +59,7 @@ async function startBackend() {
   backendProcess = spawn(backendCmd, backendArgs, {
     env: {
       ...process.env,
-      ASPNETCORE_URLS: 'http://localhost:5200',
+      ASPNETCORE_URLS: 'http://0.0.0.0:5200',
       DATABASE_PATH: dbFullPath
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -620,4 +620,17 @@ ipcMain.handle('backup:restore', async (e, files) => {
 ipcMain.handle('backup:open-folder', async (e, folderPath) => {
   if (!is('string', folderPath)) return
   try { shell.openPath(folderPath) } catch {}
+})
+
+ipcMain.handle('get-local-ip', async () => {
+  const os = require('os');
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return '127.0.0.1';
 })

@@ -129,18 +129,21 @@
   font-size: 20px;
 }
 
-/* Position around circle */
+/* Position grouped below circle */
 .pomo-btn-skip {
-  top: 10%;
-  right: 10%;
+  bottom: -52px;
+  left: calc(50% + 44px);
+  transform: translateX(-50%);
 }
 .pomo-btn-reset {
-  bottom: 10%;
-  left: 10%;
+  bottom: -52px;
+  left: calc(50% - 44px);
+  transform: translateX(-50%);
 }
 .pomo-btn-end {
-  bottom: 10%;
-  right: 10%;
+  bottom: -52px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* Only show on hover of the circle wrapper when timer is running */

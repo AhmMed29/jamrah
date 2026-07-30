@@ -88,13 +88,15 @@ class TasksViewModel @Inject constructor(
                             id = newTaskId(),
                             name = task.name,
                             parentTaskId = task.baseId,
-                            completed = 1,
+                            completed = 0,
                             scheduledTime = task.instanceDate,
                             priority = task.priority,
                             recurrence = "none",
                             createdAt = nowFmt.format(Date())
                         )
                         repo.createTask(overrideTask)
+                        repo.toggleTask(overrideTask.id)
+                        repo.sync()
                     } else if (task.parentTaskId != null && task.scheduledTime != null && task.recurrence == "none") {
                         // Unchecking an override -> delete it
                         repo.deleteTask(task.id)

@@ -41,7 +41,7 @@ Simple Pomodoro Timer with three phases :
 - Desktop notifications after each phase with a simple Sound that you could be disabled according to your preferences (setting --> pomodoro).
 - Hover the timer while running will appear : skip, reset, end session.
 
-![Simple Pomodoro](src/assets/screenshots/Simple%20Pomodoro.png)
+![Simple Pomodoro](src/assets/screenshots/SimplePomodoro.png)
 ## Tasks 
 
 tasks page has three sections ... 
@@ -52,7 +52,7 @@ tasks page has three sections ...
 <table>
 	<tr> 
 		<td>
-			<img src="src/assets/screenshots/Add%20Tasks.png" width="400">
+			<img src="src/assets/screenshots/AddTasks.png" width="400">
 		</td> 
 		<td>
 				<img src="src/assets/screenshots/task-plus-window.png" width="400">
@@ -97,7 +97,7 @@ Track your habits with a clean paper-like grid interface. Click sound feedback w
 it must be if you choosed 3 months for ex ... it counts from 'today' till +90 days !
 but it doesnt do this right at this time.
 
-![Habit Tracker](src/assets/screenshots/Habit%20Tracker.png)
+![Habit Tracker](src/assets/screenshots/HabitTracker.png)
 
 ---
 ## Stats 

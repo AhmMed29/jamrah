@@ -1,0 +1,136 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\Jamrah\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{EF8EE3B3-3A95-4A4B-89EF-04A450C556AC}|Jamrah.csproj|c:\\users\\t.b\\desktop\\my-productivity-app\\jamrah\\services\\taskstateservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EF8EE3B3-3A95-4A4B-89EF-04A450C556AC}|Jamrah.csproj|solutionrelative:services\\taskstateservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EF8EE3B3-3A95-4A4B-89EF-04A450C556AC}|Jamrah.csproj|c:\\users\\t.b\\desktop\\my-productivity-app\\jamrah\\components\\tasks\\taskpage.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{EF8EE3B3-3A95-4A4B-89EF-04A450C556AC}|Jamrah.csproj|solutionrelative:components\\tasks\\taskpage.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EF8EE3B3-3A95-4A4B-89EF-04A450C556AC}|Jamrah.csproj|c:\\users\\t.b\\desktop\\my-productivity-app\\jamrah\\data\\taskrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EF8EE3B3-3A95-4A4B-89EF-04A450C556AC}|Jamrah.csproj|solutionrelative:data\\taskrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EF8EE3B3-3A95-4A4B-89EF-04A450C556AC}|Jamrah.csproj|c:\\users\\t.b\\desktop\\my-productivity-app\\jamrah\\data\\itaskrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EF8EE3B3-3A95-4A4B-89EF-04A450C556AC}|Jamrah.csproj|solutionrelative:data\\itaskrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EF8EE3B3-3A95-4A4B-89EF-04A450C556AC}|Jamrah.csproj|c:\\users\\t.b\\desktop\\my-productivity-app\\jamrah\\models\\task.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EF8EE3B3-3A95-4A4B-89EF-04A450C556AC}|Jamrah.csproj|solutionrelative:models\\task.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EF8EE3B3-3A95-4A4B-89EF-04A450C556AC}|Jamrah.csproj|c:\\users\\t.b\\desktop\\my-productivity-app\\jamrah\\mainpage.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{EF8EE3B3-3A95-4A4B-89EF-04A450C556AC}|Jamrah.csproj|solutionrelative:mainpage.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 1,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedHeight": 256,
+          "SelectedChildIndex": 3,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "TaskPage.razor",
+              "DocumentMoniker": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\Jamrah\\Components\\Tasks\\TaskPage.razor",
+              "RelativeDocumentMoniker": "Components\\Tasks\\TaskPage.razor",
+              "ToolTip": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\Jamrah\\Components\\Tasks\\TaskPage.razor",
+              "RelativeToolTip": "Components\\Tasks\\TaskPage.razor",
+              "ViewState": "AgIAACQAAAAAAAAAAAAAABAAAAAtAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-08-09T17:56:24.161Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "TaskStateService.cs",
+              "DocumentMoniker": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\Jamrah\\Services\\TaskStateService.cs",
+              "RelativeDocumentMoniker": "Services\\TaskStateService.cs",
+              "ToolTip": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\Jamrah\\Services\\TaskStateService.cs",
+              "RelativeToolTip": "Services\\TaskStateService.cs",
+              "ViewState": "AgIAADAAAAAAAAAAAAA8wEkAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-09T17:55:17.163Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "TaskRepository.cs",
+              "DocumentMoniker": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\Jamrah\\Data\\TaskRepository.cs",
+              "RelativeDocumentMoniker": "Data\\TaskRepository.cs",
+              "ToolTip": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\Jamrah\\Data\\TaskRepository.cs",
+              "RelativeToolTip": "Data\\TaskRepository.cs",
+              "ViewState": "AgIAADgAAAAAAAAAAAA6wFYAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-09T17:54:22.597Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "ITaskRepository.cs",
+              "DocumentMoniker": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\Jamrah\\Data\\ITaskRepository.cs",
+              "RelativeDocumentMoniker": "Data\\ITaskRepository.cs",
+              "ToolTip": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\Jamrah\\Data\\ITaskRepository.cs",
+              "RelativeToolTip": "Data\\ITaskRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-09T17:54:02.337Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Task.cs",
+              "DocumentMoniker": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\Jamrah\\Models\\Task.cs",
+              "RelativeDocumentMoniker": "Models\\Task.cs",
+              "ToolTip": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\Jamrah\\Models\\Task.cs",
+              "RelativeToolTip": "Models\\Task.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAAA4AAAARAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-09T17:52:33.607Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "MainPage.xaml",
+              "DocumentMoniker": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\Jamrah\\MainPage.xaml",
+              "RelativeDocumentMoniker": "MainPage.xaml",
+              "ToolTip": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\Jamrah\\MainPage.xaml",
+              "RelativeToolTip": "MainPage.xaml",
+              "ViewState": "AgIAACIAAAAAAAAAAIAwwDEAAAAdAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-08-09T17:42:54.971Z"
+            }
+          ]
+        },
+        {
+          "DockedHeight": 256,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{0ad07096-bba9-4900-a651-0598d26f6d24}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

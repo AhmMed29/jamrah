@@ -1,0 +1,37 @@
+{
+  "Files": [
+    {
+      "Id": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\wwwroot\\css\\tasks.css",
+      "PackagePath": "staticwebassets\\css\\tasks.css"
+    },
+    {
+      "Id": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\wwwroot\\css\\tui-calendar.css",
+      "PackagePath": "staticwebassets\\css\\tui-calendar.css"
+    },
+    {
+      "Id": "C:\\Users\\T.B\\Desktop\\My-Productivity-App\\wwwroot\\index.html",
+      "PackagePath": "staticwebassets\\index.html"
+    },
+    {
+      "Id": "obj\\Debug\\net9.0-windows10.0.19041.0\\win10-x64\\staticwebassets\\msbuild.Jamrah.Microsoft.AspNetCore.StaticWebAssetEndpoints.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssetEndpoints.props"
+    },
+    {
+      "Id": "obj\\Debug\\net9.0-windows10.0.19041.0\\win10-x64\\staticwebassets\\msbuild.Jamrah.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj\\Debug\\net9.0-windows10.0.19041.0\\win10-x64\\staticwebassets\\msbuild.build.Jamrah.props",
+      "PackagePath": "build\\Jamrah.props"
+    },
+    {
+      "Id": "obj\\Debug\\net9.0-windows10.0.19041.0\\win10-x64\\staticwebassets\\msbuild.buildMultiTargeting.Jamrah.props",
+      "PackagePath": "buildMultiTargeting\\Jamrah.props"
+    },
+    {
+      "Id": "obj\\Debug\\net9.0-windows10.0.19041.0\\win10-x64\\staticwebassets\\msbuild.buildTransitive.Jamrah.props",
+      "PackagePath": "buildTransitive\\Jamrah.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

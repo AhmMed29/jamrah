@@ -1,0 +1,19 @@
+@namespace Jamrah.Components.Calendar
+
+<TimeGridView DaysCount="1"
+              SelectedDate="SelectedDate"
+              Events="Events"
+              Calendars="Calendars"
+              OnEventClick="OnEventClick"
+              OnDayClick="OnDayClick"
+              OnHeaderDateClick="OnHeaderDateClick" />
+
+@code {
+    [Parameter] public DateTime SelectedDate { get; set; } = default;
+    [Parameter] public List<CalendarEvent> Events { get; set; } = new();
+    [Parameter] public List<CalendarInfo> Calendars { get; set; } = new();
+
+    [Parameter] public EventCallback<CalendarEvent> OnEventClick { get; set; }
+    [Parameter] public EventCallback<DateTime> OnDayClick { get; set; }
+    [Parameter] public EventCallback<DateTime> OnHeaderDateClick { get; set; }
+}

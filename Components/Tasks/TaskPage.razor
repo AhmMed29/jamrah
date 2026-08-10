@@ -1,0 +1,101 @@
+﻿@namespace Jamrah.Components.Tasks
+@implements IDisposable
+@inject ITaskStateService TaskService
+
+<div class="tasks-page">
+
+    @* ─── Toolbar ─── *@
+    <div class="tasks-toolbar">
+        <span class="toolbar-title">My Tasks</span>
+    </div>
+
+    @* ─── Add Task Form ─── *@
+    <div class="task-form">
+        <input type="text" class="task-input" placeholder="Add a task..."
+               value="@_newTitle"
+               @oninput="e => _newTitle = e.Value?.ToString() ?? string.Empty"
+               @onkeydown="OnInputKeyDown" />
+        <input type="date" class="task-date" value="@FormatDueDate(_newDueDate)"
+               @onchange="e => _newDueDate = ParseDueDate(e.Value?.ToString())" />
+        <button class="task-add-btn" @onclick="AddTask"
+                disabled="@(string.IsNullOrWhiteSpace(_newTitle))">
+            + Add Task
+        </button>
+    </div>
+
+    @* ─── Task List ─── *@
+    <div class="task-list">
+        @foreach (var task in TaskService.Tasks)
+        {
+            var captured = task;
+            <div class="task-item @(captured.IsDone ? "task-item--done" : "")">
+                <input type="checkbox" class="task-checkbox" checked="@captured.IsDone"
+                       @onchange="() => ToggleTask(captured)" />
+                <span class="task-title">@captured.Title</span>
+                @if (captured.DueDate.HasValue)
+                {
+                    <span class="task-due">@captured.DueDate.Value.ToString("MMM d, yyyy")</span>
+                }
+                <button class="task-delete-btn" title="Delete" @onclick="() => DeleteTask(captured.Id)">&#x2715;</button>
+            </div>
+        }
+        @if (TaskService.Tasks.Count == 0)
+        {
+            <div class="task-empty">No tasks yet. Add your first task above.</div>
+        }
+    </div>
+
+</div>
+
+@code {
+    private string _newTitle = string.Empty;
+    private DateTime? _newDueDate;
+
+    protected override async Task OnInitializedAsync()
+    {
+        TaskService.OnStateChanged += HandleStateChanged;
+        await TaskService.InitAsync();
+    }
+
+    private void HandleStateChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task AddTask()
+    {
+        if (string.IsNullOrWhiteSpace(_newTitle)) return;
+        await TaskService.AddTaskAsync(_newTitle.Trim(), _newDueDate);
+        _newTitle = string.Empty;
+        _newDueDate = null;
+    }
+
+    private async Task ToggleTask(AppTask task)
+    {
+        await TaskService.ToggleTaskAsync(task);
+    }
+
+    private async Task DeleteTask(string id)
+    {
+        await TaskService.DeleteTaskAsync(id);
+    }
+
+    private void OnInputKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _ = AddTask();
+        }
+    }
+
+    private static string FormatDueDate(DateTime? dt)
+        => dt.HasValue ? dt.Value.ToString("yyyy-MM-dd") : string.Empty;
+
+    private static DateTime? ParseDueDate(string? raw)
+        => DateTime.TryParse(raw, out var dt) ? dt : (DateTime?)null;
+
+    public void Dispose()
+    {
+        TaskService.OnStateChanged -= HandleStateChanged;
+    }
+}

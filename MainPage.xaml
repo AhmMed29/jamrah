@@ -8,6 +8,8 @@
     <Grid>
 
         <!-- Main Content Area -->
+        
+        <!-- hello world page -->
         <Grid x:Name="MainContent">
             <!-- Default placeholder -->
             <Label x:Name="PlaceholderLabel"
@@ -48,7 +50,21 @@
                             </Grid>
                         </Border>
                     </Border>
-
+                    
+                    <Border Background="#FFFFFF" StrokeThickness="0" StrokeShape="RoundRectangle 16">
+                        <Border Margin="4" HeightRequest="48" Background="#E6E9EF" StrokeShape="RoundRectangle 12">
+                            <Grid x:Name="PomodoroButton" Padding="12,0" ColumnDefinitions="Auto,16,*,Auto">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnPomodoroTapped" />
+                                </Grid.GestureRecognizers>
+                                <Label Text="&#xE823;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="24" TextColor="#2196F3" VerticalOptions="Center" />
+                                <Label Grid.Column="2" Text="Pomodoro" FontSize="16"
+                                       TextColor="#1C1B1F" VerticalOptions="Center" />
+                            </Grid>
+                        </Border>
+                    </Border>
+                    
                     <!-- Calendar Section -->
                     <Border Background="#FFFFFF" StrokeThickness="0" StrokeShape="RoundRectangle 16">
                         <VerticalStackLayout Padding="4">
@@ -135,7 +151,7 @@
                 <PointerGestureRecognizer PointerEntered="OnHoverStripPointerEntered" />
             </BoxView.GestureRecognizers>
         </BoxView>
-
+        
     </Grid>
 
 </ContentPage>

@@ -98,6 +98,13 @@ build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xDYWxlbmRhclxXZWVrVmll
 build_metadata.AdditionalFiles.RelativePath = 
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/T.B/Desktop/My-Productivity-App/Components/Pomodoro/PomodoroPage.razor]
+build_metadata.AdditionalFiles.GenKind = 
+build_metadata.AdditionalFiles.ManifestResourceName = 
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQb21vZG9yb1xQb21vZG9yb1BhZ2UucmF6b3I=
+build_metadata.AdditionalFiles.RelativePath = 
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/T.B/Desktop/My-Productivity-App/Components/Tasks/TaskPage.razor]
 build_metadata.AdditionalFiles.GenKind = 
 build_metadata.AdditionalFiles.ManifestResourceName = 

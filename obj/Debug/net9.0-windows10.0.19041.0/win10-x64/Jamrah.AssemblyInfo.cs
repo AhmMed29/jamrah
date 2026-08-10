@@ -17,7 +17,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Jamrah")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0+04d21d043fbf6f8ca28207f4c3420eee84b4fed4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0+77772a21bc2db41f9ef20e3926fbc5d48625c253")]
 [assembly: System.Reflection.AssemblyProductAttribute("Jamrah")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Jamrah")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

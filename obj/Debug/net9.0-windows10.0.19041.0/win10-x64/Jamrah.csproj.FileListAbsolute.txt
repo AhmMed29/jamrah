@@ -1654,9 +1654,6 @@ C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\wi
 C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\rjsmrazor.dswa.cache.json
 C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\rjsmcshtml.dswa.cache.json
 C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\scopedcss\bundle\Jamrah.styles.css
-C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\compressed\1eo53zp0xh-lskfnwpom9.gz
-C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\compressed\x4gkf2evdg-a8yroh8n4y.gz
-C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\compressed\tkg9ojy0eh-ccgfsi42jj.gz
 C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\staticwebassets.build.json
 C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\staticwebassets.build.json.cache
 C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\staticwebassets.development.json
@@ -1667,9 +1664,6 @@ C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\wi
 C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\staticwebassets\msbuild.buildMultiTargeting.Jamrah.props
 C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\staticwebassets\msbuild.buildTransitive.Jamrah.props
 C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\staticwebassets.pack.json
-C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\compressed\publish\1eo53zp0xh-lskfnwpom9.br
-C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\compressed\publish\x4gkf2evdg-a8yroh8n4y.br
-C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\compressed\publish\tkg9ojy0eh-ccgfsi42jj.br
 C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\staticwebassets.publish.json
 C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\staticwebassets.publish.endpoints.json
 C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\mauiimage.inputs
@@ -1771,3 +1765,9 @@ C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\wi
 C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\qualifiers.txt
 C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\qualifiers.txt.intermediate
 C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\MultipleQualifiersPerDimensionFound.txt
+C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\compressed\1eo53zp0xh-sk63pnsgtw.gz
+C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\compressed\x4gkf2evdg-r4zuk0nvd0.gz
+C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\compressed\tkg9ojy0eh-s0ajhkfo46.gz
+C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\compressed\publish\1eo53zp0xh-sk63pnsgtw.br
+C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\compressed\publish\x4gkf2evdg-r4zuk0nvd0.br
+C:\Users\T.B\Desktop\My-Productivity-App\obj\Debug\net9.0-windows10.0.19041.0\win10-x64\compressed\publish\tkg9ojy0eh-s0ajhkfo46.br

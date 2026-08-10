@@ -1,1 +1,0 @@
-When executing tasks: do EXACTLY what the user asks, with NO additions, NO deletions, and NO modifications beyond what is explicitly requested. Never add features, change designs, refactor code, or improve things unless specifically told to. Follow every instruction to the letter.

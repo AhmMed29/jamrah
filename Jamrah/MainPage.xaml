@@ -1,0 +1,141 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:cal="clr-namespace:Jamrah.Components.Calendar;assembly=Jamrah"
+             x:Class="Jamrah.MainPage"
+             Shell.NavBarIsVisible="False">
+
+    <Grid>
+
+        <!-- Main Content Area -->
+        <Grid x:Name="MainContent">
+            <!-- Default placeholder -->
+            <Label x:Name="PlaceholderLabel"
+                   Text="Hello World"
+                   FontSize="40"
+                   FontAttributes="Bold"
+                   TextColor="#2196F3"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center" />
+        </Grid>
+
+        <!-- Sidebar -->
+        <Grid x:Name="Sidebar"
+              WidthRequest="280"
+              HorizontalOptions="Start"
+              VerticalOptions="Fill"
+              Background="#F0F0F0"
+              TranslationX="-280"
+              ZIndex="10">
+            <Grid.GestureRecognizers>
+                <PointerGestureRecognizer PointerExited="OnSidebarPointerExited" />
+            </Grid.GestureRecognizers>
+
+            <ScrollView>
+                <VerticalStackLayout Padding="8,8,8,0" Spacing="8">
+
+                    <!-- My Tasks -->
+                    <Border Background="#FFFFFF" StrokeThickness="0" StrokeShape="RoundRectangle 16">
+                        <Border Margin="4" HeightRequest="48" Background="#E6E9EF" StrokeShape="RoundRectangle 12">
+                            <Grid x:Name="MyTasksButton" Padding="12,0" ColumnDefinitions="Auto,16,*,Auto">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnMyTasksTapped" />
+                                </Grid.GestureRecognizers>
+                                <Label Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="24" TextColor="#2196F3" VerticalOptions="Center" />
+                                <Label Grid.Column="2" Text="My Tasks" FontSize="16"
+                                       TextColor="#1C1B1F" VerticalOptions="Center" />
+                            </Grid>
+                        </Border>
+                    </Border>
+
+                    <!-- Calendar Section -->
+                    <Border Background="#FFFFFF" StrokeThickness="0" StrokeShape="RoundRectangle 16">
+                        <VerticalStackLayout Padding="4">
+
+                            <!-- Calendar Toggle Header -->
+                            <Grid x:Name="CalendarHeader" Padding="12,0" HeightRequest="48" ColumnDefinitions="Auto,16,*,Auto" Background="Transparent">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnCalendarToggleTapped" />
+                                </Grid.GestureRecognizers>
+                                <Label Text="&#xE787;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="24" TextColor="#2196F3" VerticalOptions="Center" />
+                                <Label Grid.Column="2" Text="Calendar" FontSize="16"
+                                       TextColor="#1C1B1F" VerticalOptions="Center" />
+                                <Label x:Name="CalendarChevron" Grid.Column="3"
+                                       Text="&#xE70D;" FontFamily="Segoe MDL2 Assets"
+                                       FontSize="16" TextColor="#444746" VerticalOptions="Center" />
+                            </Grid>
+
+                            <!-- Sub-Items: Month / Week / Day -->
+                            <VerticalStackLayout x:Name="CalendarSubItems" IsVisible="False" Padding="0,0,0,4">
+
+                                <!-- Month -->
+                                <Grid x:Name="CalendarSubMonth" Padding="32,0,12,0" HeightRequest="40"
+                                      ColumnDefinitions="Auto,12,*" Background="Transparent">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnCalendarMonthTapped" />
+                                    </Grid.GestureRecognizers>
+                                    <Label Text="&#xE8BF;" FontFamily="Segoe MDL2 Assets"
+                                           FontSize="18" TextColor="#444746" VerticalOptions="Center" />
+                                    <Label Grid.Column="2" Text="Month" FontSize="14"
+                                           TextColor="#1C1B1F" VerticalOptions="Center" />
+                                </Grid>
+
+                                <!-- Week -->
+                                <Grid x:Name="CalendarSubWeek" Padding="32,0,12,0" HeightRequest="40"
+                                      ColumnDefinitions="Auto,12,*" Background="Transparent">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnCalendarWeekTapped" />
+                                    </Grid.GestureRecognizers>
+                                    <Label Text="&#xE8C7;" FontFamily="Segoe MDL2 Assets"
+                                           FontSize="18" TextColor="#444746" VerticalOptions="Center" />
+                                    <Label Grid.Column="2" Text="Week" FontSize="14"
+                                           TextColor="#1C1B1F" VerticalOptions="Center" />
+                                </Grid>
+
+                                <!-- Day -->
+                                <Grid x:Name="CalendarSubDay" Padding="32,0,12,0" HeightRequest="40"
+                                      ColumnDefinitions="Auto,12,*" Background="Transparent">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnCalendarDayTapped" />
+                                    </Grid.GestureRecognizers>
+                                    <Label Text="&#xE8D3;" FontFamily="Segoe MDL2 Assets"
+                                           FontSize="18" TextColor="#444746" VerticalOptions="Center" />
+                                    <Label Grid.Column="2" Text="Day" FontSize="14"
+                                           TextColor="#1C1B1F" VerticalOptions="Center" />
+                                </Grid>
+
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Settings -->
+                    <Border Background="#FFFFFF" StrokeThickness="0" StrokeShape="RoundRectangle 16">
+                        <Grid Padding="16,0" HeightRequest="48" ColumnDefinitions="Auto,16,*">
+                            <Label Text="&#xE713;" FontFamily="Segoe MDL2 Assets"
+                                   FontSize="24" TextColor="#444746" VerticalOptions="Center" />
+                            <Label Grid.Column="2" Text="Settings" FontSize="16"
+                                   TextColor="#1C1B1F" VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
+
+                </VerticalStackLayout>
+            </ScrollView>
+        </Grid>
+
+        <!-- Hover strip on screen edge -->
+        <BoxView x:Name="HoverStrip"
+                 WidthRequest="8"
+                 HorizontalOptions="Start"
+                 VerticalOptions="Fill"
+                 Background="#01000000"
+                 ZIndex="20">
+            <BoxView.GestureRecognizers>
+                <PointerGestureRecognizer PointerEntered="OnHoverStripPointerEntered" />
+            </BoxView.GestureRecognizers>
+        </BoxView>
+
+    </Grid>
+
+</ContentPage>

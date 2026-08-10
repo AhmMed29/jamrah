@@ -1,0 +1,207 @@
+@namespace Jamrah.Components.Calendar
+@implements IDisposable
+@inject CalendarLayoutEngine LayoutEngine
+@inject ICalendarStateService StateService
+
+<div class="toastui-calendar-layout month-view">
+    <!-- 1. Weekday Header Row -->
+    <div class="toastui-calendar-weekday-header month day-names month">
+        <div class="day-name-container">
+            @foreach (var day in GetWeekdayHeaders())
+            {
+                <div class="day-name-item @GetWeekdayHeaderClass(day)">
+                    <span class="day-name__name">@day.ToString().Substring(0, 3).ToUpper()</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- 2. Month Grid Matrix (5 or 6 Weeks) -->
+    <div class="toastui-calendar-month-grid month-daygrid">
+        @if (_monthMatrix != null)
+        {
+            @for (int w = 0; w < _monthMatrix.TotalWeeks; w++)
+            {
+                var weekCells = _monthMatrix.Weeks[w];
+                var weekSpans = w < _monthMatrix.WeekEventSpans.Count ? _monthMatrix.WeekEventSpans[w] : new List<MonthEventSpanUIModel>();
+
+                <div class="month-week-item">
+                    <!-- Layer A: Background Day Grid Cells -->
+                    <div class="weekday-grid">
+                        @foreach (var cell in weekCells)
+                        {
+                            <div class="toastui-calendar-daygrid-cell daygrid-cell @(!cell.IsCurrentMonth ? "other-month" : "")"
+                                 @onclick="() => HandleDayClick(cell.Date)">
+                                <span class="grid-cell-date @(cell.IsToday ? "toastui-calendar-today-badge" : "") @GetDayNumberClass(cell.Date)">
+                                    @cell.Date.Day
+                                </span>
+
+                                @if (cell.HasOverflow)
+                                {
+                                    <div class="grid-cell-footer">
+                                        <button type="button"
+                                                class="toastui-calendar-more-events grid-cell-more-events"
+                                                @onclick:stopPropagation="true"
+                                                @onclick="() => HandleSeeMoreClick(cell.Date)">
+                                            +@cell.OverflowCount more
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Layer B: Foreground Multi-Day Horizontal Event Spans -->
+                    <div class="weekday-events">
+                        @foreach (var span in weekSpans.Where(s => s.RowIndex < MaxVisibleEventsPerDay))
+                        {
+                            <div class="toastui-calendar-event-block weekday-event-block"
+                                 style="@span.InlineStyle top: @(span.RowIndex * 22)px;">
+                                <div class="weekday-event"
+                                     style="@GetEventStyle(span.Event)"
+                                     @onclick:stopPropagation="true"
+                                     @onclick="() => HandleEventClick(span.Event)">
+                                    @if (!span.Event.IsAllday && !span.Event.HasMultiDates)
+                                    {
+                                        <span class="weekday-event-dot" style="background-color: @GetEventDotColor(span.Event);"></span>
+                                    }
+                                    <span class="weekday-event-title">@span.Event.Title</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public DateTime SelectedDate { get; set; } = default;
+    [Parameter] public List<CalendarEvent> Events { get; set; } = new();
+    [Parameter] public List<CalendarInfo> Calendars { get; set; } = new();
+    [Parameter] public int MaxVisibleEventsPerDay { get; set; } = 3;
+    [Parameter] public DayOfWeek StartOfWeek { get; set; } = DayOfWeek.Sunday;
+
+    [Parameter] public EventCallback<CalendarEvent> OnEventClick { get; set; }
+    [Parameter] public EventCallback<DateTime> OnDayClick { get; set; }
+    [Parameter] public EventCallback<DateTime> OnSeeMoreClick { get; set; }
+
+    private MonthGridMatrix? _monthMatrix;
+
+    protected override void OnInitialized()
+    {
+        StateService.OnStateChanged += HandleStateChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        RecomputeMatrix();
+    }
+
+    private void HandleStateChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            RecomputeMatrix();
+            StateHasChanged();
+        });
+    }
+
+    private void RecomputeMatrix()
+    {
+        var activeDate = SelectedDate != default ? SelectedDate : StateService.SelectedDate;
+        var activeEvents = Events?.Count > 0 ? Events : StateService.CurrentEvents;
+
+        _monthMatrix = LayoutEngine.GenerateMonthGridMatrix(
+            activeDate.Year,
+            activeDate.Month,
+            activeEvents ?? new List<CalendarEvent>(),
+            MaxVisibleEventsPerDay,
+            StartOfWeek
+        );
+    }
+
+    private List<DayOfWeek> GetWeekdayHeaders()
+    {
+        var days = new List<DayOfWeek>();
+        for (int i = 0; i < 7; i++)
+        {
+            days.Add((DayOfWeek)(((int)StartOfWeek + i) % 7));
+        }
+        return days;
+    }
+
+    private string GetWeekdayHeaderClass(DayOfWeek day)
+    {
+        if (day == DayOfWeek.Sunday) return "holiday";
+        if (day == DayOfWeek.Saturday) return "saturday";
+        return string.Empty;
+    }
+
+    private string GetDayNumberClass(DateTime date)
+    {
+        if (date.DayOfWeek == DayOfWeek.Sunday) return "holiday";
+        if (date.DayOfWeek == DayOfWeek.Saturday) return "saturday";
+        return string.Empty;
+    }
+
+    private string GetEventStyle(CalendarEvent evt)
+    {
+        var calList = (Calendars?.Count > 0 ? Calendars : StateService.Calendars);
+        var cal = calList?.FirstOrDefault(c => c.Id == evt.CalendarId);
+        string bg = !string.IsNullOrEmpty(evt.BackgroundColor) ? evt.BackgroundColor : (cal?.BackgroundColor ?? "#2196F3");
+        string fg = !string.IsNullOrEmpty(evt.Color) ? evt.Color : (cal?.Color ?? "#FFFFFF");
+        string border = !string.IsNullOrEmpty(evt.BorderColor) ? evt.BorderColor : (cal?.BorderColor ?? "#0D47A1");
+
+        return $"background-color: {bg}; color: {fg}; border-left-color: {border};";
+    }
+
+    private string GetEventDotColor(CalendarEvent evt)
+    {
+        var calList = (Calendars?.Count > 0 ? Calendars : StateService.Calendars);
+        var cal = calList?.FirstOrDefault(c => c.Id == evt.CalendarId);
+        return !string.IsNullOrEmpty(evt.Color) ? evt.Color : (cal?.Color ?? "#2196F3");
+    }
+
+    private async Task HandleEventClick(CalendarEvent evt)
+    {
+        if (OnEventClick.HasDelegate)
+        {
+            await OnEventClick.InvokeAsync(evt);
+        }
+        else
+        {
+            StateService.OpenEventDetail(evt);
+        }
+    }
+
+    private async Task HandleDayClick(DateTime date)
+    {
+        if (OnDayClick.HasDelegate)
+        {
+            await OnDayClick.InvokeAsync(date);
+        }
+        else
+        {
+            StateService.OpenCreateEvent(date);
+        }
+    }
+
+    private async Task HandleSeeMoreClick(DateTime date)
+    {
+        if (OnSeeMoreClick.HasDelegate)
+        {
+            await OnSeeMoreClick.InvokeAsync(date);
+        }
+        else
+        {
+            StateService.OpenSeeMore(date);
+        }
+    }
+
+    public void Dispose()
+    {
+        StateService.OnStateChanged -= HandleStateChanged;
+    }
+}

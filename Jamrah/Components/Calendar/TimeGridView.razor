@@ -1,0 +1,267 @@
+@namespace Jamrah.Components.Calendar
+@implements IDisposable
+@inject CalendarLayoutEngine LayoutEngine
+@inject ICalendarStateService StateService
+
+<div class="toastui-calendar-layout time-grid-view">
+    <!-- 1. Header Row -->
+    <div class="toastui-calendar-weekday-header week day-names week">
+        <div class="timegrid-time-column-header" style="width: 60px; min-width: 60px; border-right: 1px solid var(--tui-calendar-border);"></div>
+        <div class="day-name-container">
+            @foreach (var day in DisplayDates)
+            {
+                var isToday = day.Date == DateTime.Today;
+                var isSaturday = day.DayOfWeek == DayOfWeek.Saturday;
+                var isSunday = day.DayOfWeek == DayOfWeek.Sunday;
+
+                <div class="day-name-item @(isSunday ? "holiday" : isSaturday ? "saturday" : "")"
+                     @onclick="() => HandleHeaderClick(day)">
+                    <span class="day-name__date @(isToday ? "weekday-grid-date-decorator" : "")">@day.Day</span>
+                    <span class="day-name__name">@day.ToString("ddd").ToUpper()</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- 2. All-Day Events Panel -->
+    <div class="allday-panel">
+        <div style="display: flex; width: 100%; height: 100%;">
+            <div style="width: 60px; min-width: 60px; border-right: 1px solid var(--tui-calendar-border); font-size: 11px; color: var(--tui-calendar-sub-text); padding: 4px; text-align: right;">
+                all-day
+            </div>
+            <div class="panel-event-wrapper" style="flex: 1; position: relative;">
+                @if (DaysCount == 7)
+                {
+                    @foreach (var span in WeekAllDaySpans)
+                    {
+                        <div class="toastui-calendar-event-block weekday-event-block" style="@span.InlineStyle top: @(span.RowIndex * 22)px;">
+                            <div class="weekday-event"
+                                 style="@GetEventStyle(span.Event)"
+                                 @onclick:stopPropagation="true"
+                                 @onclick="() => HandleEventClick(span.Event)">
+                                <span class="weekday-event-title">@span.Event.Title</span>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    @foreach (var evt in SingleDayAllDayEvents)
+                    {
+                        <div class="weekday-event"
+                             style="@GetEventStyle(evt); margin: 2px 4px;"
+                             @onclick:stopPropagation="true"
+                             @onclick="() => HandleEventClick(evt)">
+                            <span class="weekday-event-title">@evt.Title</span>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 24-Hour Scrollable Time Grid -->
+    <div class="timegrid-scroll-area">
+        <div class="toastui-calendar-timegrid timegrid">
+            <div style="display: flex; width: 100%; position: relative;">
+                <!-- Fixed 60px Time Column Labels (00:00 to 23:00) -->
+                <div class="timegrid-time-column">
+                    @for (int h = 0; h < 24; h++)
+                    {
+                        <div class="toastui-calendar-timegrid-hour timegrid-time" style="top: @(h * 60)px;">
+                            <span>@(h.ToString("D2")):00</span>
+                        </div>
+                    }
+                </div>
+
+                <!-- Columns Area (1440px height) -->
+                <div class="columns">
+                    @foreach (var dayDate in DisplayDates)
+                    {
+                        var isToday = dayDate.Date == DateTime.Today;
+                        var daySlotModels = GetTimeSlotModelsForDay(dayDate);
+
+                        <div class="column">
+                            <!-- Hour & Half-Hour Gridlines -->
+                            @for (int h = 0; h < 24; h++)
+                            {
+                                var hourIndex = h;
+                                <div class="gridline-hour"
+                                     style="top: @(h * 60)px; height: 30px;"
+                                     @onclick="() => HandleSlotClick(dayDate.AddHours(hourIndex))"></div>
+                                <div class="gridline-half"
+                                     style="top: @(h * 60 + 30)px; height: 30px;"
+                                     @onclick="() => HandleSlotClick(dayDate.AddHours(hourIndex).AddMinutes(30))"></div>
+                            }
+
+                            <!-- Events Positioning -->
+                            @foreach (var slotModel in daySlotModels)
+                            {
+                                <div class="toastui-calendar-timegrid-event event-time"
+                                     style="@slotModel.InlineStyle @GetEventStyle(slotModel.Event)"
+                                     @onclick:stopPropagation="true"
+                                     @onclick="() => HandleEventClick(slotModel.Event)">
+                                    <div class="event-time-content">
+                                        @slotModel.Event.Title
+                                    </div>
+                                    <div class="travel-time">
+                                        @slotModel.Event.Start.ToString("HH:mm") - @slotModel.Event.End.ToString("HH:mm")
+                                    </div>
+                                </div>
+                            }
+
+                            <!-- Red Current Time Indicator Line -->
+                            @if (isToday)
+                            {
+                                var nowTopPercent = GetNowIndicatorTopPercent();
+                                <div class="timegrid-now-indicator" style="top: @(nowTopPercent.ToString("F2", System.Globalization.CultureInfo.InvariantCulture))%;">
+                                    <div class="timegrid-now-indicator-marker"></div>
+                                    <div class="timegrid-now-indicator-today"></div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int DaysCount { get; set; } = 7;
+    [Parameter] public DateTime SelectedDate { get; set; } = default;
+    [Parameter] public List<CalendarEvent> Events { get; set; } = new();
+    [Parameter] public List<CalendarInfo> Calendars { get; set; } = new();
+    [Parameter] public DayOfWeek StartOfWeek { get; set; } = DayOfWeek.Sunday;
+
+    [Parameter] public EventCallback<CalendarEvent> OnEventClick { get; set; }
+    [Parameter] public EventCallback<DateTime> OnDayClick { get; set; }
+    [Parameter] public EventCallback<DateTime> OnHeaderDateClick { get; set; }
+
+    private List<DateTime> DisplayDates = new();
+    private List<MonthEventSpanUIModel> WeekAllDaySpans = new();
+    private List<CalendarEvent> SingleDayAllDayEvents = new();
+
+    protected override void OnInitialized()
+    {
+        StateService.OnStateChanged += HandleStateChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        CalculateDates();
+    }
+
+    private void HandleStateChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            CalculateDates();
+            StateHasChanged();
+        });
+    }
+
+    private void CalculateDates()
+    {
+        DisplayDates.Clear();
+        var baseDate = SelectedDate != default ? SelectedDate : StateService.SelectedDate;
+        var activeEvents = Events?.Count > 0 ? Events : StateService.CurrentEvents;
+
+        if (DaysCount == 7)
+        {
+            int daysOffset = ((int)baseDate.DayOfWeek - (int)StartOfWeek + 7) % 7;
+            var weekStart = baseDate.Date.AddDays(-daysOffset);
+            for (int i = 0; i < 7; i++)
+            {
+                DisplayDates.Add(weekStart.AddDays(i));
+            }
+
+            var start = DisplayDates[0];
+            var end = DisplayDates[6].AddDays(1).AddTicks(-1);
+
+            var alldayEvents = activeEvents
+                .Where(e => e.IsVisible && (e.IsAllday || e.Category == "allday"))
+                .ToList();
+
+            WeekAllDaySpans = LayoutEngine.ComputeWeekEventSpans(alldayEvents, start, end, 0);
+        }
+        else
+        {
+            DisplayDates.Add(baseDate.Date);
+            var dayDate = baseDate.Date;
+            SingleDayAllDayEvents = activeEvents
+                .Where(e => e.IsVisible && (e.IsAllday || e.Category == "allday") &&
+                            !(e.End < dayDate || e.Start > dayDate.AddDays(1).AddTicks(-1)))
+                .ToList();
+        }
+    }
+
+    private List<TimeSlotUIModel> GetTimeSlotModelsForDay(DateTime dayDate)
+    {
+        var dayStart = dayDate.Date;
+        var dayEnd = dayStart.AddDays(1);
+        var activeEvents = Events?.Count > 0 ? Events : StateService.CurrentEvents;
+        var timeEvents = activeEvents.Where(e => e.IsVisible).ToList();
+        return LayoutEngine.ComputeTimeSlotPositions(timeEvents, dayStart, dayEnd, true);
+    }
+
+    private double GetNowIndicatorTopPercent()
+    {
+        var now = DateTime.Now;
+        var totalMinutes = now.Hour * 60 + now.Minute + (now.Second / 60.0);
+        return (totalMinutes / 1440.0) * 100.0;
+    }
+
+    private string GetEventStyle(CalendarEvent evt)
+    {
+        var calList = (Calendars?.Count > 0 ? Calendars : StateService.Calendars);
+        var cal = calList?.FirstOrDefault(c => c.Id == evt.CalendarId);
+        string bg = !string.IsNullOrEmpty(evt.BackgroundColor) ? evt.BackgroundColor : (cal?.BackgroundColor ?? "#2196F3");
+        string fg = !string.IsNullOrEmpty(evt.Color) ? evt.Color : (cal?.Color ?? "#FFFFFF");
+        string border = !string.IsNullOrEmpty(evt.BorderColor) ? evt.BorderColor : (cal?.BorderColor ?? "#0D47A1");
+
+        return $"background-color: {bg}; color: {fg}; border-left-color: {border};";
+    }
+
+    private async Task HandleEventClick(CalendarEvent evt)
+    {
+        if (OnEventClick.HasDelegate)
+        {
+            await OnEventClick.InvokeAsync(evt);
+        }
+        else
+        {
+            StateService.OpenEventDetail(evt);
+        }
+    }
+
+    private async Task HandleSlotClick(DateTime slotTime)
+    {
+        if (OnDayClick.HasDelegate)
+        {
+            await OnDayClick.InvokeAsync(slotTime);
+        }
+        else
+        {
+            StateService.OpenCreateEvent(slotTime);
+        }
+    }
+
+    private async Task HandleHeaderClick(DateTime date)
+    {
+        if (OnHeaderDateClick.HasDelegate)
+        {
+            await OnHeaderDateClick.InvokeAsync(date);
+        }
+        else if (DaysCount == 7)
+        {
+            StateService.SelectDate(date);
+            StateService.SetView(ViewMode.Day);
+        }
+    }
+
+    public void Dispose()
+    {
+        StateService.OnStateChanged -= HandleStateChanged;
+    }
+}

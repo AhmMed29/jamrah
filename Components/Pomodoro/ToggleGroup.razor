@@ -11,14 +11,14 @@
         {
             @foreach (var child in Group.Children)
             {
-                <ToggleGroup @key="child.Id" Group="child" />
+                <ToggleGroup @key="child.Id" Group="child" OnSessionClick="OnSessionClick" />
             }
         }
         else if (Group.Sessions != null)
         {
             @foreach (var s in Group.Sessions)
             {
-                <div class="session-item">
+                <div class="session-item" @onclick="() => OnSessionClick.InvokeAsync(s)">
                     <span>
                         @s.Title
                         @if (s.Tag != null)
@@ -35,6 +35,7 @@
 
 @code {
     [Parameter] public SessionGroup Group { get; set; } = null!;
+    [Parameter] public EventCallback<Session> OnSessionClick { get; set; }
 
     private static string TagTextColor(Tag t) => t.Color == "#000000" ? "white" : "black";
 }

@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Prod</title>
+    <style>
+        :root { --black: #000000; --white: #FFFFFF; --gray: #EEEEEE; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
+        body { background-color: var(--white); color: var(--black); height: 100vh; overflow: hidden; font-size: 14px; }
+        
+        .app-container { display: flex; height: 100vh; }
+
+        /* -- الـ Sidebar الرئيسي -- */
+        .sidebar { width: 60px; border-left: 1px solid var(--black); background: var(--white); display: flex; flex-direction: column; align-items: center; padding-top: 20px; gap: 20px; z-index: 10; }
+        .sidebar-btn { width: 40px; height: 40px; border: 1px solid var(--black); background: none; cursor: pointer; font-weight: bold; font-size: 16px; font-family: inherit; display: flex; align-items: center; justify-content: center; }
+        .sidebar-btn:hover { background: var(--black); color: var(--white); }
+        .sidebar-btn.active { background: var(--black); color: var(--white); }
+
+        /* -- الـ Sidebar بتاع المهام (يفتح لما نضغط الزرار) -- */
+        .task-sidebar { position: fixed; top: 0; right: 60px; width: 350px; height: 100vh; background: var(--white); border-left: 2px solid var(--black); z-index: 5; display: none; flex-direction: column; }
+        .task-sidebar.open { display: flex; }
+        .ts-header { padding: 15px; border-bottom: 1px solid var(--black); font-weight: bold; display: flex; justify-content: space-between; }
+        .ts-close { cursor: pointer; border: 1px solid var(--black); width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+        .ts-close:hover { background: var(--black); color: var(--white); }
+        .ts-content { flex: 1; overflow-y: auto; }
+        .ts-content::-webkit-scrollbar { width: 4px; }
+        .ts-content::-webkit-scrollbar-thumb { background: var(--black); }
+
+        /* -- الجزء الأيسر: التايمر -- */
+        .left-panel { flex: 1.5; border-left: 1px solid var(--black); display: flex; flex-direction: column; padding: 40px; gap: 24px; overflow-y: auto; }
+        .left-panel.hide { display: none; }
+
+        .timer-box { border: 1px solid var(--black); padding: 20px 40px; text-align: center; cursor: pointer; }
+        .timer-box:hover { background: var(--black); color: var(--white); }
+        .timer-value { font-size: 64px; font-weight: normal; letter-spacing: -2px; line-height: 1; }
+        .timer-label { font-size: 12px; margin-top: 8px; text-transform: uppercase; }
+
+        .durations { display: flex; gap: 8px; justify-content: center; }
+        .dur-btn { border: 1px solid var(--black); padding: 4px 12px; cursor: pointer; background: none; font-family: inherit; font-size: 14px; }
+        .dur-btn:hover { background: var(--black); color: var(--white); }
+        .dur-btn.active { background: var(--black); color: var(--white); }
+
+        .actions { display: flex; gap: 16px; justify-content: center; }
+        .action-btn { background: none; border: 1px solid var(--black); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 8px; }
+        .action-btn:hover { background: var(--black); }
+        .action-btn svg { stroke: var(--black); fill: none; }
+        .action-btn:hover svg { stroke: var(--white); }
+
+        .timer-info { width: 100%; display: flex; flex-direction: column; gap: 8px; font-size: 12px; border-top: 1px solid var(--black); padding-top: 16px; }
+        .info-row { display: flex; justify-content: space-between; padding: 4px 0; cursor: pointer; }
+        .info-row:hover { background: var(--gray); }
+
+        .prayer-section { border-top: 1px solid var(--black); padding-top: 24px; margin-top: 24px; }
+        .prayer-title { font-size: 14px; font-weight: bold; margin-bottom: 12px; cursor: pointer; }
+        .prayer-table { width: 100%; border-collapse: collapse; text-align: right; }
+        .prayer-table th, .prayer-table td { padding: 8px 12px; border: 1px solid var(--black); cursor: pointer; }
+        .prayer-table th { font-weight: normal; background: var(--white); text-transform: uppercase; font-size: 12px; }
+        .prayer-table tr:hover td { background: var(--black); color: var(--white); }
+
+        /* -- الجزء الأيمن: السجلات أو المهام -- */
+        .right-panel { flex: 2; overflow-y: auto; display: flex; flex-direction: column; }
+        .right-panel::-webkit-scrollbar { width: 4px; }
+        .right-panel::-webkit-scrollbar-thumb { background: var(--black); }
+
+        .view-modes { display: flex; border-bottom: 1px solid var(--black); position: relative; }
+        .view-btn { flex: 1; text-align: center; padding: 12px; cursor: pointer; border-left: 1px solid var(--black); background: none; font-family: inherit; }
+        .view-btn:last-child { border-left: none; }
+        .view-btn:hover { background: var(--black); color: var(--white); }
+        .view-btn.active { background: var(--black); color: var(--white); }
+
+        /* زرار فتح سايدبار المهام */
+        .task-sidebar-toggle { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); border: 1px solid var(--black); padding: 4px 8px; cursor: pointer; background: var(--white); z-index: 2; }
+        .task-sidebar-toggle:hover { background: var(--black); color: var(--white); }
+
+        .toggle-group { border-bottom: 1px solid var(--black); }
+        .toggle-header { padding: 12px 16px; border-bottom: 1px solid var(--black); cursor: pointer; font-weight: bold; display: flex; justify-content: space-between; align-items: center; background: var(--white); user-select: none; }
+        .toggle-header:hover { background: var(--black); color: var(--white); }
+        .toggle-icon { font-size: 16px; line-height: 1; margin-right: 8px; }
+        .toggle-content { display: none; }
+
+        .session-item { padding: 10px 16px; border-bottom: 1px solid var(--gray); display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .session-item:hover { background: var(--black); color: var(--white); }
+        
+        /* تصميم المهمة المحدث (دايرة وكبر خط) */
+        .task-item { padding: 15px 16px; border-bottom: 1px solid var(--gray); display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 16px; }
+        .task-item:hover { background: var(--black); color: var(--white); }
+        
+        .task-check { width: 20px; height: 20px; border: 1px solid var(--black); border-radius: 50%; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-left: 12px; font-size: 12px; }
+        .task-check.checked { background: var(--black); color: var(--white); }
+
+        .time-stamp { color: #555; font-size: 12px; }
+        .session-item:hover .time-stamp, .task-item:hover .time-stamp { color: var(--white); }
+
+        .tag-badge { border: 1px solid var(--black); padding: 2px 6px; font-size: 10px; display: inline-flex; align-items: center; margin-left: 5px; }
+
+        /* -- النوافذ المنبثقة -- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; z-index: 100; display: none; justify-content: center; align-items: center; pointer-events: none; }
+        .modal-group { pointer-events: auto; display: flex; gap: 0; box-shadow: 10px 10px 0px rgba(0,0,0,0.1); }
+        .modal-box { border: 2px solid var(--black); background: var(--white); color: var(--black); padding: 32px; width: 350px; display: flex; flex-direction: column; gap: 20px; position: relative; }
+        .tags-modal-box { width: 250px; border-right: none; }
+
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--black); padding-bottom: 12px; }
+        .modal-title { font-weight: bold; text-transform: uppercase; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        .close-btn, .edit-btn { background: none; border: 1px solid var(--black); color: var(--black); width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-family: inherit; font-size: 12px; }
+        .close-btn:hover, .edit-btn:hover { background: var(--black); color: var(--white); }
+
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        .input-label { font-size: 12px; text-transform: uppercase; }
+        .minimal-input, .minimal-textarea { border: 1px solid var(--black); padding: 8px; font-family: inherit; background: none; color: var(--black); outline: none; font-size: 14px; width: 100%; }
+        .minimal-textarea { resize: vertical; min-height: 100px; }
+        .minimal-input:focus, .minimal-textarea:focus { border-color: var(--gray); background: var(--gray); }
+        .minimal-input::placeholder, .minimal-textarea::placeholder { color: #999; }
+        .minimal-input[readonly], .minimal-textarea[readonly] { background: var(--white); border-color: var(--gray); color: #555; }
+
+        .modal-actions { display: flex; justify-content: space-between; margin-top: 12px; }
+        .modal-btn { border: 1px solid var(--black); padding: 8px 16px; cursor: pointer; background: none; color: var(--black); font-family: inherit; text-transform: uppercase; font-size: 12px; }
+        .modal-btn:hover { background: var(--black); color: var(--white); }
+        .modal-btn.primary { background: var(--black); color: var(--white); }
+        .modal-btn.primary:hover { background: var(--white); color: var(--black); }
+
+        .tags-list { display: flex; flex-wrap: wrap; gap: 6px; max-height: 200px; overflow-y: auto; border: 1px solid var(--gray); padding: 8px; }
+        .tag-item { border: 1px solid var(--black); padding: 4px 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 12px; }
+        .tag-item:hover { opacity: 0.7; }
+        .tag-delete { cursor: pointer; border-left: 1px solid var(--black); padding-left: 4px; margin-left: 4px; }
+        .tag-delete:hover { color: red; }
+        .color-input { width: 30px; height: 30px; border: 1px solid var(--black); cursor: pointer; padding: 0; background: none; }
+
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <div class="sidebar">
+        <button class="sidebar-btn active" id="btnPomo" onclick="switchPage('pomo', this)">P</button>
+        <button class="sidebar-btn" id="btnTask" onclick="switchPage('tasks', this)">T</button>
+    </div>
+
+    <!-- سايد بار المهام المنفصل -->
+    <div class="task-sidebar" id="taskSidebar">
+        <div class="ts-header">
+            <span>سجل المهام</span>
+            <div class="ts-close" onclick="toggleTaskSidebar()">X</div>
+        </div>
+        <div class="view-modes" id="tsViewModes"></div>
+        <div class="ts-content" id="tsContent"></div>
+    </div>
+
+    <div class="left-panel" id="leftPanel">
+        <div class="timer-box" onclick="openPomoModals()">
+            <div class="timer-value" id="timerDisplay">25:00</div>
+            <div class="timer-label">Work</div>
+        </div>
+
+        <div class="durations">
+            <button class="dur-btn active" onclick="directStart(25, this)">25</button>
+            <button class="dur-btn" onclick="directStart(50, this)">50</button>
+            <button class="dur-btn" onclick="directStart(5, this)">5</button>
+            <button class="dur-btn" onclick="directStart(10, this)">10</button>
+        </div>
+
+        <div class="actions">
+            <button class="action-btn" title="Reset" onclick="resetTimer()">
+                <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+            </button>
+            <button class="action-btn" title="Start" id="startBtn" onclick="toggleTimer()">
+                <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            </button>
+        </div>
+
+        <div class="timer-info">
+            <div class="info-row"><span>من الساعة</span><span>00:23:12</span></div>
+            <div class="info-row"><span>نهائي</span><span>4:35</span></div>
+        </div>
+
+        <div class="prayer-section">
+            <div class="prayer-title">مواقيت الصلاة</div>
+            <table class="prayer-table">
+                <thead><tr><th>الصلاة</th><th>الأذان</th><th>الإقامة</th></tr></thead>
+                <tbody>
+                    <tr><td>الفجر</td><td>04:15</td><td>04:25</td></tr>
+                    <tr><td>الظهر</td><td>12:05</td><td>12:15</td></tr>
+                    <tr><td>العصر</td><td>03:35</td><td>03:45</td></tr>
+                    <tr><td>المغرب</td><td>06:45</td><td>06:55</td></tr>
+                    <tr><td>العشاء</td><td>08:15</td><td>08:25</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="right-panel" id="rightPanel"></div>
+</div>
+
+<!-- النافذة المدمجة (جلسة/مهمة + التاجات) -->
+<div class="modal-overlay" id="workspaceModal">
+    <div class="modal-group">
+        <div class="modal-box" id="pomoBox">
+            <div class="modal-header">
+                <span class="modal-title" id="pomoModalTitle">جلسة جديدة <span id="pomoSelectedTagBadge"></span></span>
+                <button class="close-btn" onclick="closeWorkspaceModal()">X</button>
+            </div>
+            <div class="input-group"><label class="input-label">اسم الجلسة</label><input type="text" class="minimal-input" id="pomoName" placeholder="untitled"></div>
+            <div class="input-group"><label class="input-label">ملاحظات</label><textarea class="minimal-textarea" id="pomoNote" placeholder="اكتب ملاحظاتك هنا..."></textarea></div>
+            <div class="input-group"><label class="input-label">المدة</label><input type="number" class="minimal-input" id="pomoDuration" value="25"></div>
+            <div class="modal-actions"><button class="modal-btn" onclick="closeWorkspaceModal()">إلغاء</button><button class="modal-btn primary" onclick="startSessionFromModal()">بدء</button></div>
+        </div>
+        <div class="modal-box" id="taskBox" style="display:none;">
+            <div class="modal-header">
+                <span class="modal-title" id="taskModalTitle">مهمة جديدة <span id="taskSelectedTagBadge"></span></span>
+                <button class="close-btn" onclick="closeWorkspaceModal()">X</button>
+            </div>
+            <div class="input-group"><label class="input-label">اسم المهمة</label><input type="text" class="minimal-input" id="taskName" placeholder="اعمل كذا"></div>
+            <div class="input-group"><label class="input-label">وصف</label><textarea class="minimal-textarea" id="taskDesc" placeholder="تفاصيل..."></textarea></div>
+            <div class="modal-actions"><button class="modal-btn" onclick="closeWorkspaceModal()">إلغاء</button><button class="modal-btn primary" onclick="saveTask()">حفظ</button></div>
+        </div>
+        <div class="modal-box tags-modal-box">
+            <div class="modal-header"><span class="modal-title">التاجات</span></div>
+            <div class="input-group"><input type="text" class="minimal-input" id="tagSearchInput" placeholder="بحث..." oninput="renderTagsInModal()"></div>
+            <div class="input-group">
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="text" class="minimal-input" id="newTagName" placeholder="إضافة تاج" style="flex:1;">
+                    <input type="color" class="color-input" id="newTagColor" value="#000000">
+                    <button class="modal-btn primary" onclick="addTag()" style="padding:8px;">+</button>
+                </div>
+            </div>
+            <div class="tags-list" id="tagsListContainer"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // -- State & Data --
+    let currentPage = 'pomo';
+    let currentSessionView = 'daily';
+    let currentTaskSideView = 'daily';
+    let tags = [ {id: 1, name: 'برمجة', color: '#000000'}, {id: 2, name: 'تصميم', color: '#3B82F6'}, {id: 3, name: 'كتابة', color: '#EF4444'} ];
+    let selectedTag = null;
+    let editingTaskId = null;
+    let sessions = [];
+    let tasks = [];
+    
+    function initDummyData() {
+        const tasksNames = ['تجهيز العرض', 'تحليل البيانات', 'كتابة البلان', 'مراجعة الكود'];
+        // Generate July and August Sessions
+        for (let m = 7; m <= 8; m++) {
+            let daysInM = m === 7 ? 31 : 10; // July up to 31, Aug up to 10
+            for (let day = daysInM; day >= 1; day--) {
+                let count = Math.floor(Math.random() * 3) + 1;
+                for(let i=0; i<count; i++){
+                    let startH = 8 + i;
+                    sessions.push({
+                        id: `s-${m}-${day}-${i}`, date: `2026-${m}-${day}`,
+                        title: tasksNames[Math.floor(Math.random() * tasksNames.length)],
+                        time: `${startH.toString().padStart(2,'0')}:00`, duration: 25, note: '', tag: tags[Math.floor(Math.random() * tags.length)]
+                    });
+                }
+            }
+        }
+        // Generate Tasks with Dates
+        tasks.push({id: 't-1', date: '2026-8-10', title: 'إنهاء التقرير', desc: 'كتابة التقرير النهائي', done: false, tag: tags[2]});
+        tasks.push({id: 't-2', date: '2026-8-9', title: 'تصميم الشعار', desc: 'عمل بدائل', done: true, tag: tags[1]});
+        tasks.push({id: 't-3', date: '2026-7-28', title: 'اختبار السيرفر', desc: 'تشييك الـ API', done: true, tag: tags[0]});
+    }
+    initDummyData();
+
+    // -- Core Logic --
+    function switchPage(page, btn) {
+        currentPage = page;
+        document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('leftPanel').classList.toggle('hide', page !== 'pomo');
+        if(page === 'pomo') document.getElementById('taskSidebar').classList.remove('open');
+        renderRightPanel();
+    }
+
+    function renderRightPanel() {
+        const rp = document.getElementById('rightPanel');
+        if(currentPage === 'pomo') {
+            rp.innerHTML = `<div class="view-modes" id="sessionViewModes"></div><div id="sessionContainer"></div>`;
+            renderViewButtons('sessionViewModes', 'session');
+            renderChronological(sessions, 'sessionContainer', currentSessionView, 'session');
+        } else {
+            rp.innerHTML = `<div class="view-modes">
+                <button class="view-btn active">المهام</button>
+                <button class="view-btn" onclick="openTaskModal()">+ جديدة</button>
+                <button class="task-sidebar-toggle" onclick="toggleTaskSidebar()">سجل المهام</button>
+            </div><div id="taskFlatContainer"></div>`;
+            renderFlatTasks();
+        }
+    }
+
+    // -- CHRONOLOGICAL ENGINE (القلب الجديد) --
+    function renderViewButtons(containerId, type) {
+        const v = type === 'session' ? currentSessionView : currentTaskSideView;
+        document.getElementById(containerId).innerHTML = `
+            <button class="view-btn ${v==='daily'?'active':''}" onclick="setView('daily', '${type}', this)">يومي</button>
+            <button class="view-btn ${v==='weekly'?'active':''}" onclick="setView('weekly', '${type}', this)">اسبوعي</button>
+            <button class="view-btn ${v==='monthly'?'active':''}" onclick="setView('monthly', '${type}', this)">شهري</button>
+            <button class="view-btn ${v==='yearly'?'active':''}" onclick="setView('yearly', '${type}', this)">سنوي</button>
+        `;
+    }
+
+    function setView(v, type, btn) {
+        if(type === 'session') currentSessionView = v;
+        else currentTaskSideView = v;
+        
+        document.querySelectorAll(`#${btn.parentElement.id} .view-btn`).forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        if(type === 'session') renderChronological(sessions, 'sessionContainer', v, 'session');
+        else renderChronological(tasks, 'tsContent', v, 'task');
+    }
+
+    function renderChronological(data, containerId, view, type) {
+        const container = document.getElementById(containerId);
+        let html = '';
+        
+        // Sort data by date descending
+        data.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        if(view === 'daily') {
+            const groups = groupBy(data, 'date');
+            Object.keys(groups).forEach(date => {
+                html += buildToggle(date, extractDateLabel(date), groups[date], type, 1);
+            });
+        } else if(view === 'weekly') {
+            const groups = groupByWeek(data);
+            Object.keys(groups).sort((a,b) => b-a).forEach(weekNum => {
+                let innerHtml = '';
+                const days = groupBy(groups[weekNum], 'date');
+                Object.keys(days).forEach(date => {
+                    innerHtml += buildToggle(`${weekNum}-${date}`, extractDateLabel(date), days[date], type, 2);
+                });
+                html += buildToggle(`W${weekNum}`, `الأسبوع ${weekNum}`, groups[weekNum], type, 1, innerHtml);
+            });
+        } else if(view === 'monthly') {
+            const groups = groupByMonth(data);
+            Object.keys(groups).sort().reverse().forEach(month => {
+                let innerHtml = '';
+                const days = groupBy(groups[month], 'date');
+                Object.keys(days).forEach(date => {
+                    innerHtml += buildToggle(`${month}-${date}`, extractDateLabel(date), days[date], type, 2);
+                });
+                html += buildToggle(month, extractMonthLabel(month), groups[month], type, 1, innerHtml);
+            });
+        } else if(view === 'yearly') {
+            const groups = groupByYear(data);
+            Object.keys(groups).sort().reverse().forEach(year => {
+                let monthHtml = '';
+                const months = groupByMonth(groups[year]);
+                Object.keys(months).sort().reverse().forEach(month => {
+                    let dayHtml = '';
+                    const days = groupBy(months[month], 'date');
+                    Object.keys(days).forEach(date => {
+                        dayHtml += buildToggle(`${year}-${month}-${date}`, extractDateLabel(date), days[date], type, 3);
+                    });
+                    monthHtml += buildToggle(`${year}-${month}`, extractMonthLabel(month), months[month], type, 2, dayHtml);
+                });
+                html += buildToggle(year, year, groups[year], type, 1, monthHtml);
+            });
+        }
+        container.innerHTML = html;
+    }
+
+    // Grouping Helpers
+    function groupBy(arr, key) { return arr.reduce((acc, item) => { (acc[item[key]] = acc[item[key]] || []).push(item); return acc; }, {}); }
+    function groupByMonth(arr) { return arr.reduce((acc, item) => { let m = item.date.substring(0, 7); (acc[m] = acc[m] || []).push(item); return acc; }, {}); }
+    function groupByYear(arr) { return arr.reduce((acc, item) => { let y = item.date.substring(0, 4); (acc[y] = acc[y] || []).push(item); return acc; }, {}); }
+    function groupByWeek(arr) { return arr.reduce((acc, item) => { let w = getWeekNumber(new Date(item.date)); (acc[w] = acc[w] || []).push(item); return acc; }, {}); }
+    function getWeekNumber(d) { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil((((d - yearStart) / 86400000) + 1)/7); }
+    
+    function extractDateLabel(d){ let p = d.split('-'); return `${p[2]}/${p[1]}`; }
+    function extractMonthLabel(m){ let p = m.split('-'); return `شهر ${p[1]}`; }
+
+    function buildToggle(id, label, items, type, level, customContent = '') {
+        let content = customContent;
+        if(!customContent) {
+            items.forEach(item => {
+                const tagBadge = item.tag ? `<span class="tag-badge" style="background:${item.tag.color}; color:${item.tag.color === '#000000' ? 'white' : 'black'}">${item.tag.name}</span>` : '';
+                if(type === 'session') {
+                    content += `<div class="session-item" onclick="openSessionDetail('${item.id}')"><span>${item.title} ${tagBadge}</span><span class="time-stamp">${item.time}</span></div>`;
+                } else {
+                    content += `<div class="task-item" onclick="openTaskModal('${item.id}')"><div><div class="task-check ${item.done?'checked':''}" onclick="event.stopPropagation(); toggleTaskDone('${item.id}')">${item.done?'✓':''}</div> ${item.title} ${tagBadge}</div><span class="time-stamp">${item.done ? 'تم' : 'قيد التنفيذ'}</span></div>`;
+                }
+            });
+        }
+        return `<div class="toggle-group">
+            <div class="toggle-header" onclick="toggleContent('tg-${id}')"><div><span class="toggle-icon" id="icon-tg-${id}">+</span><span>${label}</span></div><span>${items.length} ${type === 'session' ? 'جلسة' : 'مهمة'}</span></div>
+            <div id="tg-${id}" class="toggle-content">${content}</div>
+        </div>`;
+    }
+
+    // -- Tasks Logic --
+    function toggleTaskSidebar() { const ts = document.getElementById('taskSidebar'); ts.classList.toggle('open'); if(ts.classList.contains('open')) { renderViewButtons('tsViewModes', 'task_side'); renderChronological(tasks, 'tsContent', currentTaskSideView, 'task'); } }
+    
+    function renderFlatTasks() {
+        const c = document.getElementById('taskFlatContainer'); if(!c) return;
+        let html = '';
+        tasks.forEach(t => {
+            const tagBadge = t.tag ? `<span class="tag-badge" style="background:${t.tag.color}; color:${t.tag.color === '#000000' ? 'white' : 'black'}">${t.tag.name}</span>` : '';
+            html += `<div class="task-item" onclick="openTaskModal('${t.id}')"><div><div class="task-check ${t.done?'checked':''}" onclick="event.stopPropagation(); toggleTaskDone('${t.id}')">${t.done?'✓':''}</div> ${t.title} ${tagBadge}</div><span class="time-stamp">${t.done ? 'تم' : 'قيد التنفيذ'}</span></div>`;
+        });
+        c.innerHTML = html;
+    }
+
+    function toggleTaskDone(id) { const t = tasks.find(x => x.id === id); t.done = !t.done; renderRightPanel(); if(document.getElementById('taskSidebar').classList.contains('open')) renderChronological(tasks, 'tsContent', currentTaskSideView, 'task'); }
+
+    function openTaskModal(id = null) {
+        editingTaskId = id;
+        if(id) {
+            const t = tasks.find(x => x.id === id);
+            document.getElementById('taskName').value = t.title; document.getElementById('taskDesc').value = t.desc; selectedTag = t.tag; updateSelectedTagUI(); document.getElementById('taskModalTitle').innerText = 'تعديل مهمة';
+        } else {
+            document.getElementById('taskName').value = ''; document.getElementById('taskDesc').value = ''; selectedTag = null; updateSelectedTagUI(); document.getElementById('taskModalTitle').innerText = 'مهمة جديدة';
+        }
+        document.getElementById('pomoBox').style.display = 'none'; document.getElementById('taskBox').style.display = 'flex'; renderTagsInModal(); document.getElementById('workspaceModal').style.display = 'flex';
+    }
+
+    function saveTask() {
+        const name = document.getElementById('taskName').value; const desc = document.getElementById('taskDesc').value;
+        if(editingTaskId) { const t = tasks.find(x => x.id === editingTaskId); t.title = name; t.desc = desc; t.tag = selectedTag; } 
+        else { tasks.push({id: `t-${Date.now()}`, date: '2026-8-10', title: name, desc: desc, done: false, tag: selectedTag}); }
+        selectedTag = null; updateSelectedTagUI(); closeWorkspaceModal(); renderRightPanel(); if(document.getElementById('taskSidebar').classList.contains('open')) renderChronological(tasks, 'tsContent', currentTaskSideView, 'task');
+    }
+
+    // -- Tags Logic --
+    function renderTagsInModal() { const search = document.getElementById('tagSearchInput').value.toLowerCase(); const container = document.getElementById('tagsListContainer'); container.innerHTML = ''; tags.filter(t => t.name.toLowerCase().includes(search)).forEach(t => { container.innerHTML += `<div class="tag-item" style="background:${t.color}; color:${t.color === '#000000' ? 'white' : 'black'}" onclick="selectTag(${t.id})">${t.name}<span class="tag-delete" onclick="event.stopPropagation(); deleteTag(${t.id})">X</span></div>`; }); }
+    function addTag() { const name = document.getElementById('newTagName').value; const color = document.getElementById('newTagColor').value; if(name) { tags.push({id: Date.now(), name, color}); document.getElementById('newTagName').value = ''; renderTagsInModal(); } }
+    function deleteTag(id) { tags = tags.filter(t => t.id !== id); if(selectedTag && selectedTag.id === id) selectedTag = null; renderTagsInModal(); updateSelectedTagUI(); }
+    function selectTag(id) { selectedTag = tags.find(t => t.id === id); updateSelectedTagUI(); }
+    function updateSelectedTagUI() { const b = selectedTag ? `<span class="tag-badge" style="background:${selectedTag.color}; color:${selectedTag.color === '#000000' ? 'white' : 'black'}">${selectedTag.name}</span>` : ''; document.getElementById('pomoSelectedTagBadge').innerHTML = b; document.getElementById('taskSelectedTagBadge').innerHTML = b; }
+
+    // -- Pomodoro Modals --
+    function openPomoModals() { document.getElementById('pomoName').value = ''; document.getElementById('pomoNote').value = ''; document.getElementById('pomoDuration').value = 25; document.getElementById('pomoBox').style.display = 'flex'; document.getElementById('taskBox').style.display = 'none'; renderTagsInModal(); document.getElementById('workspaceModal').style.display = 'flex'; }
+    function directStart(minutes, el) { document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active')); if(el) el.classList.add('active'); timeLeft = minutes * 60; updateDisplay(); if(!isRunning) toggleTimer(); sessions.unshift({ id: `s-${Date.now()}`, date: '2026-8-10', title: 'untitled', time: new Date().toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'}), duration: minutes, note: '', tag: selectedTag }); renderRightPanel(); }
+    function startSessionFromModal() { const name = document.getElementById('pomoName').value || 'untitled'; const note = document.getElementById('pomoNote').value; const dur = parseInt(document.getElementById('pomoDuration').value) || 25; timeLeft = dur * 60; updateDisplay(); if(!isRunning) toggleTimer(); sessions.unshift({ id: `s-${Date.now()}`, date: '2026-8-10', title: name, time: new Date().toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'}), duration: dur, note: note, tag: selectedTag }); selectedTag = null; updateSelectedTagUI(); closeWorkspaceModal(); renderRightPanel(); }
+
+    // -- Session Detail & Edit --
+    function openSessionDetail(id) { const s = sessions.find(x => x.id === id); if(!s) return; const tagBadge = s.tag ? `<span class="tag-badge" style="background:${s.tag.color}; color:${s.tag.color === '#000000' ? 'white' : 'black'}">${s.tag.name}</span>` : ''; document.getElementById('detailModalTitle').innerHTML = `تفاصيل الجلسة ${tagBadge}`; document.getElementById('sessionEditActions').style.display = 'none'; document.getElementById('editSessionBtn').style.display = 'flex'; document.getElementById('sessionDetailContent').innerHTML = `<div class="input-group"><label class="input-label">الاسم</label><input type="text" class="minimal-input" id="editSName" value="${s.title}" readonly></div><div class="input-group"><label class="input-label">ملاحظات</label><textarea class="minimal-textarea" id="editSNote" readonly>${s.note}</textarea></div><div style="margin-top:10px; text-align:left;"><button class="modal-btn" style="border-color:red; color:red;" onclick="deleteSession('${s.id}')">حذف</button></div>`; document.getElementById('sessionDetailModal').style.display = 'flex'; }
+    function toggleEditSession() { document.getElementById('editSName').removeAttribute('readonly'); document.getElementById('editSNote').removeAttribute('readonly'); document.getElementById('editSessionBtn').style.display = 'none'; document.getElementById('sessionEditActions').style.display = 'flex'; }
+    function saveEditSession() { const s = sessions.find(x => x.id === editingSessionId); s.title = document.getElementById('editSName').value; s.note = document.getElementById('editSNote').value; document.getElementById('sessionDetailModal').style.display = 'none'; renderRightPanel(); }
+    function deleteSession(id) { sessions = sessions.filter(x => x.id !== id); document.getElementById('sessionDetailModal').style.display = 'none'; renderRightPanel(); }
+
+    // -- UI Utilities --
+    function toggleContent(id) { const el = document.getElementById(id); const icon = document.getElementById('icon-' + id); if (el.style.display === 'block') { el.style.display = 'none'; icon.textContent = '+'; } else { el.style.display = 'block'; icon.textContent = '-'; } }
+    function closeWorkspaceModal() { document.getElementById('workspaceModal').style.display = 'none'; selectedTag = null; updateSelectedTagUI(); }
+
+    // -- Timer Logic --
+    let timerInterval, timeLeft = 1500, isRunning = false;
+    const timerDisplay = document.getElementById('timerDisplay');
+    function updateDisplay() { const m = Math.floor(timeLeft / 60), s = timeLeft % 60; timerDisplay.textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; }
+    function toggleTimer() { if (isRunning) { clearInterval(timerInterval); isRunning = false; } else { isRunning = true; timerInterval = setInterval(() => { if (timeLeft > 0) { timeLeft--; updateDisplay(); } else { clearInterval(timerInterval); isRunning = false; alert("انتهت!"); } }, 1000); } }
+    function resetTimer() { clearInterval(timerInterval); isRunning = false; timeLeft = parseInt(timerDisplay.textContent.split(':')[0]) * 60; updateDisplay(); }
+
+    window.onload = () => { renderRightPanel(); };
+</script>
+
+</body>
+</html>

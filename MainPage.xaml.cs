@@ -1,4 +1,6 @@
 ﻿using Jamrah.Services;
+using Microsoft.AspNetCore.Components.WebView.Maui;
+using Microsoft.UI.Xaml.Controls;
 
 namespace Jamrah;
 
@@ -7,9 +9,10 @@ public partial class MainPage : ContentPage
     private bool _sidebarOpen;
     private bool _calendarExpanded;
     private readonly ICalendarStateService _calendarState;
-    private Microsoft.AspNetCore.Components.WebView.Maui.BlazorWebView? _calendarWebView;
-    private Microsoft.AspNetCore.Components.WebView.Maui.BlazorWebView? _tasksWebView;
-
+    private BlazorWebView? _calendarWebView;
+    private BlazorWebView? _tasksWebView;
+    private BlazorWebView? _pomodoroWebView;
+    
     public MainPage(ICalendarStateService calendarState)
     {
         InitializeComponent();
@@ -60,14 +63,23 @@ public partial class MainPage : ContentPage
         => OpenCalendarWithView(ViewMode.Day);
 
     // ─── Content area switching ──────────────────────────────────────────────
-
+    private void OnPomodoroTapped(object sender, TappedEventArgs e) => ShowPomodoroPage();
     private void OnMyTasksTapped(object sender, TappedEventArgs e) => ShowTasksPage();
-
+    
+    private void ShowPomodoroPage()
+    {
+        PlaceholderLabel.IsVisible = false;
+        EnsureWebViews();
+        _calendarWebView!.IsVisible = false;
+        _tasksWebView!.IsVisible = false;
+        _pomodoroWebView!.IsVisible = true;
+    }
     private void ShowCalendarPage()
     {
         PlaceholderLabel.IsVisible = false;
         EnsureWebViews();
         _tasksWebView!.IsVisible = false;
+        _pomodoroWebView!.IsVisible = false;
         _calendarWebView!.IsVisible = true;
     }
 
@@ -93,23 +105,58 @@ public partial class MainPage : ContentPage
                 ComponentType = typeof(Components.Calendar.CalendarPage)
             });
             MainContent.Children.Add(_calendarWebView);
+            DisableZoom(_calendarWebView);
         }
 
         if (_tasksWebView == null)
         {
-            _tasksWebView = new Microsoft.AspNetCore.Components.WebView.Maui.BlazorWebView
+            _tasksWebView = new BlazorWebView
             {
                 HostPage = "wwwroot/index.html",
             };
-            _tasksWebView.RootComponents.Add(new Microsoft.AspNetCore.Components.WebView.Maui.RootComponent
+            _tasksWebView.RootComponents.Add(new RootComponent
             {
                 Selector = "#app",
                 ComponentType = typeof(Components.Tasks.TaskPage)
             });
             MainContent.Children.Add(_tasksWebView);
+            DisableZoom(_tasksWebView);
+        }
+        
+        if (_pomodoroWebView == null)
+        {
+            _pomodoroWebView = new BlazorWebView
+            {
+                HostPage = "wwwroot/index.html",
+            };
+            _pomodoroWebView.RootComponents.Add(new RootComponent
+            {
+                Selector = "#app",
+                ComponentType = typeof(Components.Pomodoro.PomodoroPage)
+            });
+            MainContent.Children.Add(_pomodoroWebView);
+            DisableZoom(_pomodoroWebView);
         }
     }
 
+    // ───────────── Disable Zoom ─────────────────────────────────────────
+
+    private async void DisableZoom(BlazorWebView webView)
+    {
+        webView.HandlerChanged += async (_, _) =>
+        {
+            if (webView.Handler?.PlatformView is WebView2 platformView)
+            {
+                await platformView.EnsureCoreWebView2Async();
+                if (platformView.CoreWebView2 != null)
+                {
+                    platformView.CoreWebView2.Settings.IsZoomControlEnabled = false;
+                    platformView.CoreWebView2.Settings.IsPinchZoomEnabled = false;
+                }
+            }
+        };
+    }
+    
     // ─── Sidebar sub-item highlight ─────────────────────────────────────────
 
     private void HighlightCalendarSubItem(ViewMode view)

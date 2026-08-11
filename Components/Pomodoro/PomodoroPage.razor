@@ -67,6 +67,41 @@
 
 </div>
 
+<div class="modal-overlay" style="display: @(_modalOpen ? "flex" : "none");">
+    <div class="modal-group">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span class="modal-title">جلسة جديدة @if (_selectedTag != null) { <span class="tag-badge" style="background:@_selectedTag.Color; color:@TagTextColor(_selectedTag);">@_selectedTag.Name</span> }</span>
+                <button class="close-btn" @onclick="CloseModal">X</button>
+            </div>
+            <div class="input-group"><label class="input-label">اسم الجلسة</label><input type="text" class="minimal-input" @bind="_sessionName" placeholder="untitled" /></div>
+            <div class="input-group"><label class="input-label">ملاحظات</label><textarea class="minimal-textarea" @bind="_sessionNote" placeholder="اكتب ملاحظاتك هنا..."></textarea></div>
+            <div class="input-group"><label class="input-label">المدة</label><input type="number" class="minimal-input" @bind="_sessionDuration" /></div>
+            <div class="modal-actions"><button class="modal-btn" @onclick="CloseModal">إلغاء</button><button class="modal-btn primary" @onclick="StartSessionFromModal">بدء</button></div>
+        </div>
+        <div class="modal-box tags-modal-box">
+            <div class="modal-header"><span class="modal-title">التاجات</span></div>
+            <div class="input-group"><input type="text" class="minimal-input" @bind="_tagSearch" placeholder="بحث..." /></div>
+            <div class="input-group">
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="text" class="minimal-input" @bind="_newTagName" placeholder="إضافة تاج" style="flex:1;" />
+                    <input type="color" class="color-input" @bind="_newTagColor" />
+                    <button class="modal-btn primary" @onclick="AddTag" style="padding:8px;">+</button>
+                </div>
+            </div>
+            <div class="tags-list">
+                @foreach (var t in FilteredTags)
+                {
+                    <div class="tag-item" style="background:@t.Color; color:@TagTextColor(t);" @onclick="() => SelectTag(t)">
+                        @t.Name
+                        <span class="tag-delete" @onclick="() => DeleteTag(t)">X</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
     :root { --black: #000000; --white: #FFFFFF; --gray: #EEEEEE; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
@@ -130,6 +165,36 @@
     .session-item:hover .time-stamp { color: var(--white); }
 
     .tag-badge { border: 1px solid var(--black); padding: 2px 6px; font-size: 10px; display: inline-flex; align-items: center; margin-left: 5px; }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; z-index: 100; display: none; justify-content: center; align-items: center; pointer-events: none; }
+    .modal-group { pointer-events: auto; display: flex; gap: 0; box-shadow: 10px 10px 0px rgba(0,0,0,0.1); }
+    .modal-box { border: 2px solid var(--black); background: var(--white); color: var(--black); padding: 32px; width: 350px; display: flex; flex-direction: column; gap: 20px; position: relative; }
+    .tags-modal-box { width: 250px; border-right: none; }
+
+    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--black); padding-bottom: 12px; }
+    .modal-title { font-weight: bold; text-transform: uppercase; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+    .close-btn { background: none; border: 1px solid var(--black); color: var(--black); width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-family: inherit; font-size: 12px; }
+    .close-btn:hover { background: var(--black); color: var(--white); }
+
+    .input-group { display: flex; flex-direction: column; gap: 6px; }
+    .input-label { font-size: 12px; text-transform: uppercase; }
+    .minimal-input, .minimal-textarea { border: 1px solid var(--black); padding: 8px; font-family: inherit; background: none; color: var(--black); outline: none; font-size: 14px; width: 100%; }
+    .minimal-textarea { resize: vertical; min-height: 100px; }
+    .minimal-input:focus, .minimal-textarea:focus { border-color: var(--gray); background: var(--gray); }
+    .minimal-input::placeholder, .minimal-textarea::placeholder { color: #999; }
+
+    .modal-actions { display: flex; justify-content: space-between; margin-top: 12px; }
+    .modal-btn { border: 1px solid var(--black); padding: 8px 16px; cursor: pointer; background: none; color: var(--black); font-family: inherit; text-transform: uppercase; font-size: 12px; }
+    .modal-btn:hover { background: var(--black); color: var(--white); }
+    .modal-btn.primary { background: var(--black); color: var(--white); }
+    .modal-btn.primary:hover { background: var(--white); color: var(--black); }
+
+    .tags-list { display: flex; flex-wrap: wrap; gap: 6px; max-height: 200px; overflow-y: auto; border: 1px solid var(--gray); padding: 8px; }
+    .tag-item { border: 1px solid var(--black); padding: 4px 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 12px; }
+    .tag-item:hover { opacity: 0.7; }
+    .tag-delete { cursor: pointer; border-left: 1px solid var(--black); padding-left: 4px; margin-left: 4px; }
+    .tag-delete:hover { color: red; }
+    .color-input { width: 30px; height: 30px; border: 1px solid var(--black); cursor: pointer; padding: 0; background: none; }
 </style>
 
 @code {
@@ -139,6 +204,21 @@
     private string _viewMode = "daily";
     private List<SessionGroup> _toggles = new();
     private readonly List<Session> _sessions = new();
+    private readonly List<Tag> _tags = new()
+    {
+        new() { Id = 1, Name = "برمجة", Color = "#000000" },
+        new() { Id = 2, Name = "تصميم", Color = "#3B82F6" },
+        new() { Id = 3, Name = "كتابة", Color = "#EF4444" },
+    };
+    private int _nextTagId = 4;
+    private Tag? _selectedTag;
+    private bool _modalOpen;
+    private string _sessionName = "";
+    private string _sessionNote = "";
+    private int _sessionDuration = 25;
+    private string _tagSearch = "";
+    private string _newTagName = "";
+    private string _newTagColor = "#000000";
 
     private static readonly int[] Durations = { 25, 50, 5, 10 };
     private static readonly (string Label, string Value)[] ViewModes =
@@ -148,6 +228,7 @@
 
     private string StartTimeText => _startedAt?.ToString("HH:mm:ss") ?? "00:00:00";
     private string FinalTimeText => $"{_activeMinutes}:00";
+    private IEnumerable<Tag> FilteredTags => _tags.Where(t => t.Name.Contains(_tagSearch, StringComparison.OrdinalIgnoreCase));
 
     protected override void OnInitialized()
     {
@@ -182,6 +263,33 @@
         RebuildToggles();
     }
 
+    private void OpenModal()
+    {
+        _sessionName = "";
+        _sessionNote = "";
+        _sessionDuration = 25;
+        _modalOpen = true;
+    }
+
+    private void CloseModal()
+    {
+        _modalOpen = false;
+        _selectedTag = null;
+    }
+
+    private void StartSessionFromModal()
+    {
+        var dur = _sessionDuration > 0 ? _sessionDuration : 25;
+        _activeMinutes = dur;
+        _timer.SetDuration(TimeSpan.FromMinutes(dur));
+        if (!_timer.IsRunning) _timer.Start();
+        _startedAt = DateTime.Now;
+        _sessions.Insert(0, NewSession(string.IsNullOrWhiteSpace(_sessionName) ? "untitled" : _sessionName, _sessionNote, dur));
+        _selectedTag = null;
+        _modalOpen = false;
+        RebuildToggles();
+    }
+
     private Session NewSession(string title, string note, int minutes)
     {
         var now = DateTime.Now;
@@ -193,11 +301,26 @@
             Time = now.ToString("HH:mm"),
             Duration = minutes,
             Note = note,
-            Tag = null,
+            Tag = _selectedTag,
         };
     }
 
-    private void OpenModal() { }
+    private void SelectTag(Tag t) => _selectedTag = t;
+
+    private void DeleteTag(Tag t)
+    {
+        _tags.Remove(t);
+        if (_selectedTag == t) _selectedTag = null;
+    }
+
+    private void AddTag()
+    {
+        if (string.IsNullOrWhiteSpace(_newTagName)) return;
+        _tags.Add(new Tag { Id = _nextTagId++, Name = _newTagName.Trim(), Color = _newTagColor });
+        _newTagName = "";
+    }
+
+    private static string TagTextColor(Tag t) => t.Color == "#000000" ? "white" : "black";
 
     private void SetView(string mode)
     {

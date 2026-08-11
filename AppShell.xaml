@@ -3,28 +3,8 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:Jamrah"
-    FlyoutBehavior="Flyout">
+    FlyoutBehavior="Disabled">
 
-    <!-- Sidebar Header (Optional but looks nice) -->
-    <Shell.FlyoutHeader>
-        <Grid HeightRequest="150" BackgroundColor="#3B82F6">
-            <Label Text="Jamrah App" 
-                   TextColor="White" 
-                   FontSize="24" 
-                   FontAttributes="Bold"
-                   HorizontalOptions="Center" 
-                   VerticalOptions="Center"/>
-        </Grid>
-    </Shell.FlyoutHeader>
-
-    <!-- Sidebar Menu Item 1 -->
-    <FlyoutItem Title="Home">
-        <ShellContent Route="MainPage" ContentTemplate="{DataTemplate local:MainPage}" />
-    </FlyoutItem>
-
-    <!-- Sidebar Menu Item 2 -->
-    <FlyoutItem Title="Settings">
-        <ShellContent Route="MainPage" ContentTemplate="{DataTemplate local:MainPage}" />
-    </FlyoutItem>
+    <ShellContent Route="MainPage" ContentTemplate="{DataTemplate local:MainPage}" />
 
 </Shell>

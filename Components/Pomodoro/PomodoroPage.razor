@@ -1,79 +1,134 @@
 @namespace Jamrah.Components.Pomodoro
 @implements IDisposable
 
-<div class="pomodoro-page">
-    <div class="pomodoro-container">
-        <div class="pomodoro-time" @onclick="Toggle">@FormatTime(_timer.Remaining)</div>
-        <div class="pomodoro-controls">
-            <button class="pomodoro-btn" @onclick="Toggle">@(_timer.IsRunning ? "Pause" : "Start")</button>
-            <button class="pomodoro-btn pomodoro-btn--secondary" @onclick="Reset">Reset</button>
+<div class="app-container" dir="rtl">
+
+    <div class="sidebar">
+        <button class="sidebar-btn active">P</button>
+        <button class="sidebar-btn">T</button>
+    </div>
+
+    <div class="left-panel">
+        <div class="timer-box" @onclick="OpenModal">
+            <div class="timer-value">@FormatTime(_timer.Remaining)</div>
+            <div class="timer-label">Work</div>
+        </div>
+
+        <div class="durations">
+            @foreach (var m in Durations)
+            {
+                <button class="dur-btn @(_activeMinutes == m ? "active" : null)" @onclick="() => DirectStart(m)">@m</button>
+            }
+        </div>
+
+        <div class="actions">
+            <button class="action-btn" title="Reset" @onclick="Reset">
+                <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+            </button>
+            <button class="action-btn" title="Start" @onclick="Toggle">
+                <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            </button>
+        </div>
+
+        <div class="timer-info">
+            <div class="info-row"><span>من الساعة</span><span>@StartTimeText</span></div>
+            <div class="info-row"><span>نهائي</span><span>@FinalTimeText</span></div>
+        </div>
+
+        <div class="prayer-section">
+            <div class="prayer-title">مواقيت الصلاة</div>
+            <table class="prayer-table">
+                <thead>
+                    <tr><th>الصلاة</th><th>الأذان</th><th>الإقامة</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>الفجر</td><td>04:15</td><td>04:25</td></tr>
+                    <tr><td>الظهر</td><td>12:05</td><td>12:15</td></tr>
+                    <tr><td>العصر</td><td>03:35</td><td>03:45</td></tr>
+                    <tr><td>المغرب</td><td>06:45</td><td>06:55</td></tr>
+                    <tr><td>العشاء</td><td>08:15</td><td>08:25</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
+
+    <div class="right-panel">
+        <div class="view-modes">
+            @foreach (var v in ViewModes)
+            {
+                <button class="view-btn @(_viewMode == v.Value ? "active" : null)" @onclick="() => SetView(v.Value)">@v.Label</button>
+            }
+        </div>
+    </div>
+
 </div>
 
 <style>
-    .pomodoro-page { 
-        display: flex;
-        justify-content: flex-end; 
-        align-items: flex-start; 
-        padding: 40px 80px;      
-        
-        width: 100%; 
-        height: 100vh;           
-        box-sizing: border-box; 
-        
-        background-color: #ffffff; 
-        font-family: var(--tui-calendar-font-family); 
-        color: var(--tui-calendar-text); 
-    }
+    :root { --black: #000000; --white: #FFFFFF; --gray: #EEEEEE; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
+    body { background-color: var(--white); color: var(--black); height: 100vh; overflow: hidden; font-size: 14px; }
 
-    .pomodoro-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center; 
-        gap: 20px;      
-    }
+    .app-container { display: flex; height: 100vh; }
 
-    .pomodoro-time { 
-        font-size: 140px; 
-        font-weight: 300; 
-        letter-spacing: 4px; 
-        cursor: pointer; 
-        user-select: none; 
-        line-height: 1; 
-    }
+    .sidebar { width: 60px; border-left: 1px solid var(--black); background: var(--white); display: flex; flex-direction: column; align-items: center; padding-top: 20px; gap: 20px; z-index: 10; }
+    .sidebar-btn { width: 40px; height: 40px; border: 1px solid var(--black); background: none; cursor: pointer; font-weight: bold; font-size: 16px; font-family: inherit; display: flex; align-items: center; justify-content: center; }
+    .sidebar-btn:hover { background: var(--black); color: var(--white); }
+    .sidebar-btn.active { background: var(--black); color: var(--white); }
 
-    .pomodoro-controls { 
-        display: flex; 
-        gap: 20px; 
-        justify-content: center;
-        flex-wrap: wrap; 
-    }
+    .left-panel { flex: 1.5; border-left: 1px solid var(--black); display: flex; flex-direction: column; padding: 40px; gap: 24px; overflow-y: auto; }
 
-    .pomodoro-btn { 
-        min-width: 80px; 
-        padding: 12px 24px; 
-        font-size: 18px; 
-        border: none; 
-        border-radius: 8px; 
-        cursor: pointer; 
-        color: #ffffff; 
-        background-color: #2196F3; 
-    }
-    
-    .pomodoro-btn--secondary { 
-        background-color: #78909C; 
-    }
-    
-    .pomodoro-btn:hover { 
-        opacity: 0.9; 
-    }
+    .timer-box { border: 1px solid var(--black); padding: 20px 40px; text-align: center; cursor: pointer; }
+    .timer-box:hover { background: var(--black); color: var(--white); }
+    .timer-value { font-size: 64px; font-weight: normal; letter-spacing: -2px; line-height: 1; }
+    .timer-label { font-size: 12px; margin-top: 8px; text-transform: uppercase; }
+
+    .durations { display: flex; gap: 8px; justify-content: center; }
+    .dur-btn { border: 1px solid var(--black); padding: 4px 12px; cursor: pointer; background: none; font-family: inherit; font-size: 14px; }
+    .dur-btn:hover { background: var(--black); color: var(--white); }
+    .dur-btn.active { background: var(--black); color: var(--white); }
+
+    .actions { display: flex; gap: 16px; justify-content: center; }
+    .action-btn { background: none; border: 1px solid var(--black); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 8px; }
+    .action-btn:hover { background: var(--black); }
+    .action-btn svg { stroke: var(--black); fill: none; }
+    .action-btn:hover svg { stroke: var(--white); }
+
+    .timer-info { width: 100%; display: flex; flex-direction: column; gap: 8px; font-size: 12px; border-top: 1px solid var(--black); padding-top: 16px; }
+    .info-row { display: flex; justify-content: space-between; padding: 4px 0; cursor: pointer; }
+    .info-row:hover { background: var(--gray); }
+
+    .prayer-section { border-top: 1px solid var(--black); padding-top: 24px; margin-top: 24px; }
+    .prayer-title { font-size: 14px; font-weight: bold; margin-bottom: 12px; cursor: pointer; }
+    .prayer-table { width: 100%; border-collapse: collapse; text-align: right; }
+    .prayer-table th, .prayer-table td { padding: 8px 12px; border: 1px solid var(--black); cursor: pointer; }
+    .prayer-table th { font-weight: normal; background: var(--white); text-transform: uppercase; font-size: 12px; }
+    .prayer-table tr:hover td { background: var(--black); color: var(--white); }
+
+    .right-panel { flex: 2; overflow-y: auto; display: flex; flex-direction: column; }
+    .right-panel::-webkit-scrollbar { width: 4px; }
+    .right-panel::-webkit-scrollbar-thumb { background: var(--black); }
+
+    .view-modes { display: flex; border-bottom: 1px solid var(--black); position: relative; }
+    .view-btn { flex: 1; text-align: center; padding: 12px; cursor: pointer; border-left: 1px solid var(--black); background: none; font-family: inherit; }
+    .view-btn:last-child { border-left: none; }
+    .view-btn:hover { background: var(--black); color: var(--white); }
+    .view-btn.active { background: var(--black); color: var(--white); }
 </style>
 
 @code {
     private readonly PomodoroTimer _timer = new(TimeSpan.FromMinutes(25));
+    private int _activeMinutes = 25;
+    private DateTime? _startedAt;
+    private string _viewMode = "daily";
 
-    private string FormatTime(TimeSpan t) => $"{(int)t.TotalMinutes:D2}:{t.Seconds:D2}";
+    private static readonly int[] Durations = { 25, 50, 5, 10 };
+    private static readonly (string Label, string Value)[] ViewModes =
+    {
+        ("يومي", "daily"), ("اسبوعي", "weekly"), ("شهري", "monthly"), ("سنوي", "yearly"),
+    };
+
+    private string StartTimeText => _startedAt?.ToString("HH:mm:ss") ?? "00:00:00";
+    private string FinalTimeText => $"{_activeMinutes}:00";
 
     protected override void OnInitialized()
     {
@@ -83,18 +138,31 @@
 
     private void OnTimerEvent() => InvokeAsync(StateHasChanged);
 
+    private static string FormatTime(TimeSpan t) => $"{(int)t.TotalMinutes:D2}:{t.Seconds:D2}";
+
     private void Toggle()
     {
         if (_timer.IsRunning) _timer.Pause();
         else _timer.Start();
-        StateHasChanged();
     }
 
     private void Reset()
     {
         _timer.Reset();
-        StateHasChanged();
+        _startedAt = null;
     }
+
+    private void DirectStart(int minutes)
+    {
+        _activeMinutes = minutes;
+        _timer.SetDuration(TimeSpan.FromMinutes(minutes));
+        if (!_timer.IsRunning) _timer.Start();
+        _startedAt = DateTime.Now;
+    }
+
+    private void OpenModal() { }
+
+    private void SetView(string mode) => _viewMode = mode;
 
     public void Dispose()
     {

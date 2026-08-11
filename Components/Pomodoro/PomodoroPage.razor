@@ -59,6 +59,10 @@
                 <button class="view-btn @(_viewMode == v.Value ? "active" : null)" @onclick="() => SetView(v.Value)">@v.Label</button>
             }
         </div>
+        @foreach (var g in _toggles)
+        {
+                <ToggleGroup @key="g.Id" Group="g" />
+        }
     </div>
 
 </div>
@@ -113,6 +117,19 @@
     .view-btn:last-child { border-left: none; }
     .view-btn:hover { background: var(--black); color: var(--white); }
     .view-btn.active { background: var(--black); color: var(--white); }
+
+    .toggle-group { border-bottom: 1px solid var(--black); }
+    .toggle-header { padding: 12px 16px; border-bottom: 1px solid var(--black); cursor: pointer; font-weight: bold; display: flex; justify-content: space-between; align-items: center; background: var(--white); user-select: none; }
+    .toggle-header:hover { background: var(--black); color: var(--white); }
+    .toggle-icon { font-size: 16px; line-height: 1; margin-right: 8px; }
+
+    .session-item { padding: 10px 16px; border-bottom: 1px solid var(--gray); display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+    .session-item:hover { background: var(--black); color: var(--white); }
+
+    .time-stamp { color: #555; font-size: 12px; }
+    .session-item:hover .time-stamp { color: var(--white); }
+
+    .tag-badge { border: 1px solid var(--black); padding: 2px 6px; font-size: 10px; display: inline-flex; align-items: center; margin-left: 5px; }
 </style>
 
 @code {
@@ -120,6 +137,8 @@
     private int _activeMinutes = 25;
     private DateTime? _startedAt;
     private string _viewMode = "daily";
+    private List<SessionGroup> _toggles = new();
+    private readonly List<Session> _sessions = new();
 
     private static readonly int[] Durations = { 25, 50, 5, 10 };
     private static readonly (string Label, string Value)[] ViewModes =
@@ -134,6 +153,7 @@
     {
         _timer.Tick += OnTimerEvent;
         _timer.Completed += OnTimerEvent;
+        RebuildToggles();
     }
 
     private void OnTimerEvent() => InvokeAsync(StateHasChanged);
@@ -158,11 +178,100 @@
         _timer.SetDuration(TimeSpan.FromMinutes(minutes));
         if (!_timer.IsRunning) _timer.Start();
         _startedAt = DateTime.Now;
+        _sessions.Insert(0, NewSession("untitled", "", minutes));
+        RebuildToggles();
+    }
+
+    private Session NewSession(string title, string note, int minutes)
+    {
+        var now = DateTime.Now;
+        return new Session
+        {
+            Id = $"s-{now.Ticks}",
+            Date = $"{now.Year}-{now.Month}-{now.Day}",
+            Title = title,
+            Time = now.ToString("HH:mm"),
+            Duration = minutes,
+            Note = note,
+            Tag = null,
+        };
     }
 
     private void OpenModal() { }
 
-    private void SetView(string mode) => _viewMode = mode;
+    private void SetView(string mode)
+    {
+        _viewMode = mode;
+        RebuildToggles();
+    }
+
+    private void RebuildToggles()
+    {
+        var ordered = _sessions
+            .OrderByDescending(s => s.Date)
+            .ThenByDescending(s => s.Time)
+            .ToList();
+
+        switch (_viewMode)
+        {
+            case "weekly":
+                _toggles = ordered.GroupBy(s => WeekNumber(ParseDate(s.Date)))
+                    .OrderByDescending(g => g.Key)
+                    .Select(g => GroupWithChildren($"W{g.Key}", $"الأسبوع {g.Key}", g.Count(),
+                        g.GroupBy(s => s.Date).Select(d => Group($"{g.Key}-{d.Key}", DateLabel(d.Key), d.ToList())).ToList()))
+                    .ToList();
+                break;
+            case "monthly":
+                _toggles = ordered.GroupBy(s => s.Date[..7])
+                    .OrderByDescending(g => g.Key)
+                    .Select(g => GroupWithChildren(g.Key, MonthLabel(g.Key), g.Count(),
+                        g.GroupBy(s => s.Date).Select(d => Group($"{g.Key}-{d.Key}", DateLabel(d.Key), d.ToList())).ToList()))
+                    .ToList();
+                break;
+            case "yearly":
+                _toggles = ordered.GroupBy(s => s.Date[..4])
+                    .OrderByDescending(g => g.Key)
+                    .Select(g => GroupWithChildren(g.Key, g.Key, g.Count(),
+                        g.GroupBy(s => s.Date[..7]).Select(m => GroupWithChildren($"{g.Key}-{m.Key}", MonthLabel(m.Key), m.Count(),
+                            m.GroupBy(s => s.Date).Select(d => Group($"{g.Key}-{d.Key}", DateLabel(d.Key), d.ToList())).ToList())).ToList()))
+                    .ToList();
+                break;
+            default:
+                _toggles = ordered.GroupBy(s => s.Date)
+                    .Select(g => Group($"tg-{g.Key}", DateLabel(g.Key), g.ToList()))
+                    .ToList();
+                break;
+        }
+    }
+
+    private static SessionGroup Group(string id, string label, List<Session> sessions) =>
+        new() { Id = id, Label = label, Count = sessions.Count, Sessions = sessions };
+
+    private static SessionGroup GroupWithChildren(string id, string label, int count, List<SessionGroup> children) =>
+        new() { Id = id, Label = label, Count = count, Children = children };
+
+    private static string DateLabel(string d)
+    {
+        var p = d.Split('-');
+        return $"{p[2]}/{p[1]}";
+    }
+
+    private static string MonthLabel(string m)
+    {
+        var p = m.Split('-');
+        return $"شهر {p[1]}";
+    }
+
+    private static DateTime ParseDate(string d) =>
+        DateTime.ParseExact(d, "yyyy-M-d", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static int WeekNumber(DateTime d)
+    {
+        var day = (int)d.DayOfWeek == 0 ? 7 : (int)d.DayOfWeek;
+        var shifted = d.Date.AddDays(4 - day);
+        var yearStart = new DateTime(shifted.Year, 1, 1);
+        return (int)Math.Ceiling(((shifted - yearStart).TotalDays + 1) / 7);
+    }
 
     public void Dispose()
     {

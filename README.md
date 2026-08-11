@@ -14,6 +14,38 @@
 ---
 
 ## Table of Contents
-SOOOOON
-The license under MIT till i edit this ^-^
----
+- [Pomodoro](#pomodoro-)
+  - [Features](#features)
+  - [Pomodoro Side (Right Side)](#pomodoro-side-right-side)
+  - [Sessions Details (Left Side)](#sessions-details-left-side)
+
+#### Pomodoro 
+
+Very Very Simple Sessions Tracking System ! 
+You Can now Track Your Sessions Per Day/Weeks/Months/Years ! --> this will be used later to export a status report for your activity per week/month/year.
+
+##### Features
+
+###### Pomodoro Side (Right Side)
+  - start now buttons : 5 10 25 50 
+  - clickable timer : click the timer to start a customized session ! 
+      - Session Name
+      - Session Note 
+      - Session Tag 
+        - Full Tag Management (add-delete-color-search)
+  - Prayer Times (Soon) Under the pomo box to create sessions based on the next Salah !
+
+
+###### Sessions Details (Left Side)
+
+  - Day/Week/Month/Year _Overview_
+  - **Sessions Counter** for this Day/Week/Month/Year
+  - **Toggle** Day/Week/Month/Year
+  - Clickable Session Box 
+    - a popup window for all session details, edit and delete button.
+
+next (إن شاء الله) is Tasks Page.
+
+
+The license under MIT till i edit it ^-^
+

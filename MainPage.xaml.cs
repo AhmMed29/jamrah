@@ -6,125 +6,56 @@ namespace Jamrah;
 
 public partial class MainPage : ContentPage
 {
-    private bool _sidebarOpen;
-    private bool _calendarExpanded;
     private readonly ICalendarStateService _calendarState;
     private BlazorWebView? _calendarWebView;
     private BlazorWebView? _tasksWebView;
     private BlazorWebView? _pomodoroWebView;
-    
+    private enum ActivePage { None, Tasks, Pomodoro, Calendar }
+    private ActivePage _activePage = ActivePage.None;
+
     public MainPage(ICalendarStateService calendarState)
     {
         InitializeComponent();
         _calendarState = calendarState;
-    }
-
-    // ─── Sidebar open / close ───────────────────────────────────────────────
-
-    private async void OnHoverStripPointerEntered(object sender, PointerEventArgs e)
-    {
-        if (_sidebarOpen) return;
-        _sidebarOpen = true;
-        await Sidebar.TranslateTo(0, 0, 200, Easing.CubicOut);
-    }
-
-    private async void OnSidebarPointerExited(object sender, PointerEventArgs e)
-    {
-        if (!_sidebarOpen) return;
-        _sidebarOpen = false;
-        await Sidebar.TranslateTo(-60, 0, 200, Easing.CubicIn);
-    }
-
-    // ── Sidebar button hover effects ───────────────────────────────────────
-    private void OnTasksBtnHoverEnter(object sender, PointerEventArgs e)
-    {
-        MyTasksButton.Background = Color.FromArgb("#000000");
-        TasksBtnLabel.TextColor = Color.FromArgb("#FFFFFF");
-    }
-    private void OnTasksBtnHoverExit(object sender, PointerEventArgs e)
-    {
-        MyTasksButton.Background = Color.FromArgb("#FFFFFF");
-        TasksBtnLabel.TextColor = Color.FromArgb("#000000");
-    }
-
-    private void OnPomoBtnHoverEnter(object sender, PointerEventArgs e)
-    {
-        PomodoroButton.Background = Color.FromArgb("#000000");
-        PomoBtnLabel.TextColor = Color.FromArgb("#FFFFFF");
-    }
-    private void OnPomoBtnHoverExit(object sender, PointerEventArgs e)
-    {
-        PomodoroButton.Background = Color.FromArgb("#FFFFFF");
-        PomoBtnLabel.TextColor = Color.FromArgb("#000000");
-    }
-
-    private void OnCalBtnHoverEnter(object sender, PointerEventArgs e)
-    {
-        CalendarButton.Background = Color.FromArgb("#000000");
-        CalBtnLabel.TextColor = Color.FromArgb("#FFFFFF");
-    }
-    private void OnCalBtnHoverExit(object sender, PointerEventArgs e)
-    {
-        CalendarButton.Background = Color.FromArgb("#FFFFFF");
-        CalBtnLabel.TextColor = Color.FromArgb("#000000");
-    }
     
-    // ─── Calendar toggle ────────────────────────────────────────────────────
+        ShowTasksPage();
+    }
 
-    // private void OnCalendarToggleTapped(object sender, TappedEventArgs e)
-    // {
-    //     _calendarExpanded = !_calendarExpanded;
-    //     CalendarChevron.Text = _calendarExpanded ? "\uE70E" : "\uE70D";
-    //     CalendarSubItems.IsVisible = _calendarExpanded;
-    // }
-
-    // ─── Calendar sub-view selection ────────────────────────────────────────
-
-    // private void OpenCalendarWithView(ViewMode view)
-    // {
-    //     _calendarState.SetView(view);
-    //     ShowCalendarPage();
-    //     HighlightCalendarSubItem(view);
-    // }
-
-    // private void OnCalendarMonthTapped(object sender, TappedEventArgs e)
-    //     => OpenCalendarWithView(ViewMode.Month);
-    //
-    // private void OnCalendarWeekTapped(object sender, TappedEventArgs e)
-    //     => OpenCalendarWithView(ViewMode.Week);
-    //
-    // private void OnCalendarDayTapped(object sender, TappedEventArgs e)
-    //     => OpenCalendarWithView(ViewMode.Day);
-
+    
     // ─── Content area switching ──────────────────────────────────────────────
-    private void OnPomodoroTapped(object sender, TappedEventArgs e) => ShowPomodoroPage();
-    private void OnMyTasksTapped(object sender, TappedEventArgs e) => ShowTasksPage();
-    
+
+    private void OnPomodoroTapped(object sender, TappedEventArgs e)      => ShowPomodoroPage();
+    private void OnMyTasksTapped(object sender, TappedEventArgs e)        => ShowTasksPage();
+    private void OnCalendarMonthTapped(object sender, TappedEventArgs e)  => ShowCalendarPage();
+
     private void ShowPomodoroPage()
     {
-        PlaceholderLabel.IsVisible = false;
         EnsureWebViews();
         _calendarWebView!.IsVisible = false;
-        _tasksWebView!.IsVisible = false;
+        _tasksWebView!.IsVisible    = false;
         _pomodoroWebView!.IsVisible = true;
+        SetActivePage(ActivePage.Pomodoro);
     }
+
     private void ShowCalendarPage()
     {
-        PlaceholderLabel.IsVisible = false;
         EnsureWebViews();
-        _tasksWebView!.IsVisible = false;
+        _tasksWebView!.IsVisible    = false;
         _pomodoroWebView!.IsVisible = false;
         _calendarWebView!.IsVisible = true;
+        SetActivePage(ActivePage.Calendar);
     }
 
     private void ShowTasksPage()
     {
-        PlaceholderLabel.IsVisible = false;
         EnsureWebViews();
-        _calendarWebView!.IsVisible = false;
-        _tasksWebView!.IsVisible = true;
-        _pomodoroWebView!.IsVisible = false; 
+        _calendarWebView!.IsVisible  = false;
+        _pomodoroWebView!.IsVisible  = false;
+        _tasksWebView!.IsVisible     = true;
+        SetActivePage(ActivePage.Tasks);
     }
+
+    // ─── Ensure WebViews ────────────────────────────────────────────────────
 
     private void EnsureWebViews()
     {
@@ -136,7 +67,7 @@ public partial class MainPage : ContentPage
             };
             _calendarWebView.RootComponents.Add(new Microsoft.AspNetCore.Components.WebView.Maui.RootComponent
             {
-                Selector = "#app",
+                Selector      = "#app",
                 ComponentType = typeof(Components.Calendar.CalendarPage)
             });
             MainContent.Children.Add(_calendarWebView);
@@ -151,13 +82,13 @@ public partial class MainPage : ContentPage
             };
             _tasksWebView.RootComponents.Add(new RootComponent
             {
-                Selector = "#app",
+                Selector      = "#app",
                 ComponentType = typeof(Components.Tasks.TaskPage)
             });
             MainContent.Children.Add(_tasksWebView);
             DisableZoom(_tasksWebView);
         }
-        
+
         if (_pomodoroWebView == null)
         {
             _pomodoroWebView = new BlazorWebView
@@ -166,7 +97,7 @@ public partial class MainPage : ContentPage
             };
             _pomodoroWebView.RootComponents.Add(new RootComponent
             {
-                Selector = "#app",
+                Selector      = "#app",
                 ComponentType = typeof(Components.Pomodoro.PomodoroPage)
             });
             MainContent.Children.Add(_pomodoroWebView);
@@ -174,7 +105,7 @@ public partial class MainPage : ContentPage
         }
     }
 
-    // ───────────── Disable Zoom ─────────────────────────────────────────
+    // ─── Disable Zoom ───────────────────────────────────────────────────────
 
     private async void DisableZoom(BlazorWebView webView)
     {
@@ -186,21 +117,58 @@ public partial class MainPage : ContentPage
                 if (platformView.CoreWebView2 != null)
                 {
                     platformView.CoreWebView2.Settings.IsZoomControlEnabled = false;
-                    platformView.CoreWebView2.Settings.IsPinchZoomEnabled = false;
+                    platformView.CoreWebView2.Settings.IsPinchZoomEnabled   = false;
                 }
             }
         };
     }
-    
-    // ─── Sidebar sub-item highlight ─────────────────────────────────────────
 
-    // private void HighlightCalendarSubItem(ViewMode view)
-    // {
-    //     Color normal   = Color.FromArgb("#F0F0F0");
-    //     Color selected = Color.FromArgb("#E0EAFF");
-    //
-    //     CalendarSubMonth.Background = view == ViewMode.Month ? selected : normal;
-    //     CalendarSubWeek.Background  = view == ViewMode.Week  ? selected : normal;
-    //     CalendarSubDay.Background   = view == ViewMode.Day   ? selected : normal;
-    // }
+    // ─── Active page highlight ───────────────────────────────────────────────
+
+    private void SetActivePage(ActivePage page)
+    {
+        _activePage = page;
+
+        // Reset all
+        TasksBtnBorder.Background = Color.FromArgb("#FFFFFF");
+        PomoBtnBorder.Background  = Color.FromArgb("#FFFFFF");
+        CalBtnBorder.Background   = Color.FromArgb("#FFFFFF");
+        TasksIcon.Fill = new SolidColorBrush(Color.FromArgb("#000000"));
+        PomoIcon.Fill  = new SolidColorBrush(Color.FromArgb("#000000"));
+        CalIcon.Fill   = new SolidColorBrush(Color.FromArgb("#000000"));
+
+        // Highlight active
+        switch (page)
+        {
+            case ActivePage.Tasks:
+                TasksBtnBorder.Background = Color.FromArgb("#000000");
+                TasksIcon.Fill = new SolidColorBrush(Color.FromArgb("#FFFFFF"));
+                break;
+            case ActivePage.Pomodoro:
+                PomoBtnBorder.Background = Color.FromArgb("#000000");
+                PomoIcon.Fill = new SolidColorBrush(Color.FromArgb("#FFFFFF"));
+                break;
+            case ActivePage.Calendar:
+                CalBtnBorder.Background = Color.FromArgb("#000000");
+                CalIcon.Fill = new SolidColorBrush(Color.FromArgb("#FFFFFF"));
+                break;
+        }
+    }
+
+    // ─── Hover effects ───────────────────────────────────────────────────────
+
+    private void OnTasksBtnEnter(object sender, PointerEventArgs e)
+    { if (_activePage != ActivePage.Tasks)     TasksBtnBorder.Background = Color.FromArgb("#EEEEEE"); }
+    private void OnTasksBtnExit(object sender, PointerEventArgs e)
+    { if (_activePage != ActivePage.Tasks)     TasksBtnBorder.Background = Color.FromArgb("#FFFFFF"); }
+
+    private void OnPomoBtnEnter(object sender, PointerEventArgs e)
+    { if (_activePage != ActivePage.Pomodoro)  PomoBtnBorder.Background  = Color.FromArgb("#EEEEEE"); }
+    private void OnPomoBtnExit(object sender, PointerEventArgs e)
+    { if (_activePage != ActivePage.Pomodoro)  PomoBtnBorder.Background  = Color.FromArgb("#FFFFFF"); }
+
+    private void OnCalBtnEnter(object sender, PointerEventArgs e)
+    { if (_activePage != ActivePage.Calendar)  CalBtnBorder.Background   = Color.FromArgb("#EEEEEE"); }
+    private void OnCalBtnExit(object sender, PointerEventArgs e)
+    { if (_activePage != ActivePage.Calendar)  CalBtnBorder.Background   = Color.FromArgb("#FFFFFF"); }
 }

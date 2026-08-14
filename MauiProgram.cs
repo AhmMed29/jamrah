@@ -17,10 +17,12 @@ namespace Jamrah
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
 
+            builder.Services.AddSingleton<PrayerTimesService>();
+            
             // Register Data Access Layer
             builder.Services.AddSingleton<ICalendarRepository, CalendarRepository>();
             builder.Services.AddSingleton<ITaskRepository, TaskRepository>();
-
+            
             // Register Calendar State & Layout Engine Services
             builder.Services.AddSingleton<CalendarStateService>();
             builder.Services.AddSingleton<ICalendarStateService>(sp => sp.GetRequiredService<CalendarStateService>());

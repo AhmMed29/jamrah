@@ -8,13 +8,7 @@
 
         <!-- ① المحتوى الرئيسي -->
         <Grid x:Name="MainContent" Grid.Column="0">
-            <Label x:Name="PlaceholderLabel"
-                   Text="Hello World"
-                   FontSize="40"
-                   FontAttributes="Bold"
-                   TextColor="#2196F3"
-                   HorizontalOptions="Center"
-                   VerticalOptions="Center" />
+            
         </Grid>
 
         <!-- ② السايدبار الثابت على اليمين -->

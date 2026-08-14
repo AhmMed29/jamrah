@@ -17,8 +17,11 @@ public partial class MainPage : ContentPage
     {
         InitializeComponent();
         _calendarState = calendarState;
+    
+        ShowTasksPage();
     }
 
+    
     // ─── Content area switching ──────────────────────────────────────────────
 
     private void OnPomodoroTapped(object sender, TappedEventArgs e)      => ShowPomodoroPage();
@@ -27,7 +30,6 @@ public partial class MainPage : ContentPage
 
     private void ShowPomodoroPage()
     {
-        PlaceholderLabel.IsVisible  = false;
         EnsureWebViews();
         _calendarWebView!.IsVisible = false;
         _tasksWebView!.IsVisible    = false;
@@ -37,7 +39,6 @@ public partial class MainPage : ContentPage
 
     private void ShowCalendarPage()
     {
-        PlaceholderLabel.IsVisible  = false;
         EnsureWebViews();
         _tasksWebView!.IsVisible    = false;
         _pomodoroWebView!.IsVisible = false;
@@ -47,7 +48,6 @@ public partial class MainPage : ContentPage
 
     private void ShowTasksPage()
     {
-        PlaceholderLabel.IsVisible   = false;
         EnsureWebViews();
         _calendarWebView!.IsVisible  = false;
         _pomodoroWebView!.IsVisible  = false;

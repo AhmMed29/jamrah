@@ -5,7 +5,7 @@
 
 <div class="tasks-page" dir="rtl" @onmousemove="HandleMouseMove" @onmouseup="HandleMouseUp" @onmouseleave="HandleMouseUp">
 
-    @if (_isDragging && _draggedTask != null)
+    @if (_isDragging && _draggedTask != null && _currentView == ViewMode.Kanban)
     {
         <div class="kanban-task ghost-task" style="left: @(_mouseX)px; top: @(_mouseY)px;">
             <div class="task-header">
@@ -17,62 +17,101 @@
 
     <div class="board-header">
         <span class="board-title">المهام</span>
-        <button class="add-col-btn" @onclick="AddNewColumn">+ إضافة عمود</button>
+        <div class="header-toggles">
+            <button class="toggle-btn" @onclick="ToggleSortMode">@GetSortModeLabel()</button>
+            <button class="toggle-btn" @onclick="ToggleViewMode">عرض: @GetViewModeLabel()</button>
+        </div>
+        <button class="add-col-btn" @onclick="AddNewColumn" style="visibility: @(_currentView == ViewMode.Kanban ? "visible" : "hidden")">+ إضافة عمود</button>
     </div>
 
-    <div class="board-container">
-        @foreach (var col in TaskService.Columns)
-        {
-            var capturedCol = col;
-            <div class="kanban-column" @onmouseenter="() => HandleColEnter(capturedCol.Id)">
-                
-                <div class="col-header">
-                    @if (_editingColId == capturedCol.Id)
-                    {
-                        <input class="col-edit-input" value="@_editColTitle"
-                               @oninput="e => _editColTitle = e.Value?.ToString() ?? string.Empty"
-                               @onkeydown="e => HandleColEditKeyDown(e, capturedCol)"
-                               @onblur="() => SaveColEdit(capturedCol)" autofocus />
-                    }
-                    else
-                    {
-                        <span class="col-title" @onclick="() => StartEditingCol(capturedCol)">@capturedCol.Title</span>
-                        <button class="col-delete-btn" @onclick="() => DeleteColumn(capturedCol.Id)">×</button>
-                    }
-                </div>
+    @if (_currentView == ViewMode.Kanban)
+    {
+        <div class="board-container">
+            @foreach (var col in TaskService.Columns)
+            {
+                var capturedCol = col;
+                <div class="kanban-column" @onmouseenter="() => HandleColEnter(capturedCol.Id)">
+                    
+                    <div class="col-header">
+                        @if (_editingColId == capturedCol.Id)
+                        {
+                            <input class="col-edit-input" value="@_editColTitle"
+                                   @oninput="e => _editColTitle = e.Value?.ToString() ?? string.Empty"
+                                   @onkeydown="e => HandleColEditKeyDown(e, capturedCol)"
+                                   @onblur="() => SaveColEdit(capturedCol)" autofocus />
+                        }
+                        else
+                        {
+                            <span class="col-title" @onclick="() => StartEditingCol(capturedCol)">@capturedCol.Title</span>
+                            <button class="col-delete-btn" @onclick="() => DeleteColumn(capturedCol.Id)">×</button>
+                        }
+                    </div>
 
-                <div class="col-body">
-                    @foreach (var task in TaskService.Tasks.Where(t => t.ColumnId == capturedCol.Id))
-                    {
-                        var capturedTask = task;
-                        <div class="kanban-task @(capturedTask.IsDone ? "done" : "") @(_draggedTask == capturedTask ? "dragging-original" : "")"
-                             @onmousedown="e => HandleMouseDown(e, capturedTask)">
-                            <div class="task-header">
-                                <input type="checkbox" checked="@capturedTask.IsDone" @onchange="() => ToggleTask(capturedTask)" />
-                                <span class="task-title">@capturedTask.Title</span>
+                    <div class="col-body">
+                        @foreach (var task in GetFilteredAndSortedTasks(TaskService.Tasks.Where(t => t.ColumnId == capturedCol.Id)))
+                        {
+                            var capturedTask = task;
+                            <div class="kanban-task @(capturedTask.IsDone ? "done" : "") @(_draggedTask == capturedTask ? "dragging-original" : "")"
+                                 @onmousedown="e => HandleMouseDown(e, capturedTask)">
+                                <div class="task-header">
+                                    <input type="checkbox" checked="@capturedTask.IsDone" @onchange="() => ToggleTask(capturedTask)" />
+                                    <span class="task-title">@capturedTask.Title</span>
+                                </div>
+                                <button class="task-delete-btn" @onclick="() => DeleteTask(capturedTask.Id)">×</button>
                             </div>
+                        }
+                    </div>
+
+                    <div class="col-footer">
+                        @if (_addingTaskToColId == capturedCol.Id)
+                        {
+                            <input class="task-add-input" placeholder="اسم المهمة... (ثم اضغط Enter)"
+                                   value="@_newTaskTitle"
+                                   @oninput="e => _newTaskTitle = e.Value?.ToString() ?? string.Empty"
+                                   @onkeydown="e => HandleTaskAddKeyDown(e, capturedCol.Id)"
+                                   @onblur="() => SaveNewTask(capturedCol.Id)" autofocus />
+                        }
+                        else
+                        {
+                            <button class="task-add-btn" @onclick="() => StartAddingTask(capturedCol.Id)">+ إضافة مهمة</button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="list-container">
+            <div class="list-add-section">
+                <input class="list-add-input" placeholder="إضافة مهمة جديدة... (ثم اضغط Enter)"
+                       value="@_listNewTaskTitle"
+                       @oninput="e => _listNewTaskTitle = e.Value?.ToString() ?? string.Empty"
+                       @onkeydown="e => HandleListTaskAddKeyDown(e)" />
+            </div>
+            
+            <div class="list-items">
+                @foreach (var task in GetFilteredAndSortedTasks(TaskService.Tasks))
+                {
+                    var capturedTask = task;
+                    <div class="kanban-task list-task @(capturedTask.IsDone ? "done" : "")">
+                        <div class="task-header">
+                            <input type="checkbox" checked="@capturedTask.IsDone" @onchange="() => ToggleTask(capturedTask)" />
+                            <span class="task-title">@capturedTask.Title</span>
+                        </div>
+                        <div class="task-meta">
+                            @if(capturedTask.DueDate.HasValue) { <span class="task-date">@capturedTask.DueDate.Value.ToString("yyyy-MM-dd")</span> }
                             <button class="task-delete-btn" @onclick="() => DeleteTask(capturedTask.Id)">×</button>
                         </div>
-                    }
-                </div>
-
-                <div class="col-footer">
-                    @if (_addingTaskToColId == capturedCol.Id)
-                    {
-                        <input class="task-add-input" placeholder="اسم المهمة... (ثم اضغط Enter)"
-                               value="@_newTaskTitle"
-                               @oninput="e => _newTaskTitle = e.Value?.ToString() ?? string.Empty"
-                               @onkeydown="e => HandleTaskAddKeyDown(e, capturedCol.Id)"
-                               @onblur="() => SaveNewTask(capturedCol.Id)" autofocus />
-                    }
-                    else
-                    {
-                        <button class="task-add-btn" @onclick="() => StartAddingTask(capturedCol.Id)">+ إضافة مهمة</button>
-                    }
-                </div>
+                    </div>
+                }
+                @if (!GetFilteredAndSortedTasks(TaskService.Tasks).Any())
+                {
+                    <div class="empty-list">لا توجد مهام هنا حالياً.</div>
+                }
             </div>
-        }
-    </div>
+        </div>
+    }
 </div>
 
 <style>
@@ -81,9 +120,13 @@
     .tasks-page { height: 100vh; display: flex; flex-direction: column; background-color: var(--white); color: var(--black); position: relative; }
     .board-header { padding: 20px 40px; border-bottom: 1px solid var(--black); display: flex; justify-content: space-between; align-items: center; }
     .board-title { font-size: 24px; font-weight: bold; text-transform: uppercase; }
-    .add-col-btn { border: 1px solid var(--black); background: var(--white); color: var(--black); padding: 8px 16px; cursor: pointer; font-size: 14px; }
+    .add-col-btn { border: 1px solid var(--black); background: var(--white); color: var(--black); padding: 8px 16px; cursor: pointer; font-size: 14px; min-width: 120px; }
     .add-col-btn:hover { background: var(--black); color: var(--white); }
     
+    .header-toggles { display: flex; gap: 12px; }
+    .toggle-btn { border: 1px solid var(--black); background: var(--white); color: var(--black); padding: 8px 16px; cursor: pointer; font-size: 14px; min-width: 170px; text-align: center; }
+    .toggle-btn:hover { background: var(--black); color: var(--white); }
+
     .board-container { flex: 1; display: flex; gap: 20px; padding: 20px 40px; overflow-x: auto; align-items: flex-start; }
     .board-container::-webkit-scrollbar { height: 8px; }
     .board-container::-webkit-scrollbar-thumb { background: var(--black); }
@@ -118,14 +161,33 @@
     .task-add-btn { width: 100%; border: none; background: none; text-align: right; cursor: pointer; font-size: 14px; color: #555; }
     .task-add-btn:hover { color: var(--black); text-decoration: underline; }
     .task-add-input { width: 100%; border: 1px solid var(--black); padding: 6px; font-family: inherit; font-size: 14px; outline: none; }
+
+    /* List View Styles */
+    .list-container { flex: 1; padding: 20px 40px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
+    .list-add-section { width: 100%; max-width: 800px; margin-bottom: 20px; }
+    .list-add-input { width: 100%; border: 1px solid var(--black); padding: 12px; font-family: inherit; font-size: 14px; outline: none; background: var(--white); }
+    .list-add-input:focus { background: var(--gray); }
+    .list-items { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 12px; }
+    .list-task { cursor: default; align-items: center; }
+    .list-task:active { cursor: default; border-style: solid; }
+    .task-meta { display: flex; gap: 16px; align-items: center; }
+    .task-date { font-size: 12px; color: var(--dark-gray); }
+    .empty-list { text-align: center; color: var(--dark-gray); padding: 20px; font-size: 14px; }
 </style>
 
 @code {
+    private enum ViewMode { Kanban, All, Done, Pending }
+    private enum SortMode { Newest, Oldest, ByDate, ByPriority }
+
+    private ViewMode _currentView = ViewMode.Kanban;
+    private SortMode _currentSort = SortMode.Newest;
+
     private string _editingColId = "";
     private string _editColTitle = "";
 
     private string _addingTaskToColId = "";
     private string _newTaskTitle = "";
+    private string _listNewTaskTitle = "";
 
     // --- Custom Drag & Drop State ---
     private AppTask? _potentialDragTask;
@@ -149,6 +211,89 @@
     public void Dispose()
     {
         TaskService.OnStateChanged -= HandleStateChanged;
+    }
+
+    // --- View and Sort Toggles ---
+    private void ToggleViewMode()
+    {
+        _currentView = _currentView switch
+        {
+            ViewMode.Kanban => ViewMode.All,
+            ViewMode.All => ViewMode.Done,
+            ViewMode.Done => ViewMode.Pending,
+            ViewMode.Pending => ViewMode.Kanban,
+            _ => ViewMode.Kanban
+        };
+    }
+
+    private string GetViewModeLabel()
+    {
+        return _currentView switch
+        {
+            ViewMode.Kanban => "Kanban",
+            ViewMode.All => "الكل",
+            ViewMode.Done => "المكتملة",
+            ViewMode.Pending => "قيد التنفيذ",
+            _ => "Kanban"
+        };
+    }
+
+    private void ToggleSortMode()
+    {
+        _currentSort = _currentSort switch
+        {
+            SortMode.Newest => SortMode.Oldest,
+            SortMode.Oldest => SortMode.ByDate,
+            SortMode.ByDate => SortMode.ByPriority,
+            SortMode.ByPriority => SortMode.Newest,
+            _ => SortMode.Newest
+        };
+    }
+
+    private string GetSortModeLabel()
+    {
+        return _currentSort switch
+        {
+            SortMode.Newest => "ترتيب: الأحدث",
+            SortMode.Oldest => "ترتيب: الأقدم",
+            SortMode.ByDate => "ترتيب: حسب التاريخ",
+            SortMode.ByPriority => "ترتيب: حسب الأولوية",
+            _ => "ترتيب: الأحدث"
+        };
+    }
+
+    private IEnumerable<AppTask> GetFilteredAndSortedTasks(IEnumerable<AppTask> input)
+    {
+        var filtered = input;
+        
+        if (_currentView == ViewMode.Done)
+        {
+            filtered = filtered.Where(t => t.IsDone);
+        }
+        else if (_currentView == ViewMode.Pending)
+        {
+            filtered = filtered.Where(t => !t.IsDone);
+        }
+
+        return _currentSort switch
+        {
+            SortMode.Newest => filtered.OrderByDescending(t => t.CreatedAt),
+            SortMode.Oldest => filtered.OrderBy(t => t.CreatedAt),
+            SortMode.ByDate => filtered.OrderBy(t => !t.DueDate.HasValue).ThenBy(t => t.DueDate),
+            SortMode.ByPriority => filtered.OrderBy(t => GetPriorityValue(t.Priority)),
+            _ => filtered.OrderByDescending(t => t.CreatedAt)
+        };
+    }
+
+    private int GetPriorityValue(string priority)
+    {
+        return (priority?.ToLower()) switch
+        {
+            "high" => 1,
+            "medium" => 2,
+            "low" => 3,
+            _ => 3
+        };
     }
 
     // --- Column Actions ---
@@ -220,6 +365,16 @@
         }
     }
 
+    private async Task HandleListTaskAddKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_listNewTaskTitle))
+        {
+            var firstColId = TaskService.Columns.OrderBy(c => c.Order).FirstOrDefault()?.Id ?? "";
+            await TaskService.AddTaskAsync(_listNewTaskTitle.Trim(), firstColId, null);
+            _listNewTaskTitle = "";
+        }
+    }
+
     private async Task ToggleTask(AppTask task)
     {
         await TaskService.ToggleTaskAsync(task);
@@ -233,19 +388,21 @@
     // --- Custom Drag and Drop ---
     private void HandleMouseDown(MouseEventArgs e, AppTask task)
     {
-        _potentialDragTask = task;
+        if (_currentView == ViewMode.Kanban)
+        {
+            _potentialDragTask = task;
+        }
     }
 
     private void HandleMouseMove(MouseEventArgs e)
     {
-        if (_potentialDragTask != null)
+        if (_potentialDragTask != null && _currentView == ViewMode.Kanban)
         {
             if (!_isDragging)
             {
                 _draggedTask = _potentialDragTask;
                 _isDragging = true;
             }
-            // Center the ghost roughly
             _mouseX = e.ClientX - 140; 
             _mouseY = e.ClientY - 20;
         }

@@ -1,55 +1,139 @@
-﻿@namespace Jamrah.Components.Tasks
+@namespace Jamrah.Components.Tasks
 @implements IDisposable
 @inject ITaskStateService TaskService
+@using Jamrah.Models
 
-<div class="tasks-page">
+<div class="tasks-page" dir="rtl" @onmousemove="HandleMouseMove" @onmouseup="HandleMouseUp" @onmouseleave="HandleMouseUp">
 
-    @* ─── Toolbar ─── *@
-    <div class="tasks-toolbar">
-        <span class="toolbar-title">My Tasks</span>
+    @if (_isDragging && _draggedTask != null)
+    {
+        <div class="kanban-task ghost-task" style="left: @(_mouseX)px; top: @(_mouseY)px;">
+            <div class="task-header">
+                <input type="checkbox" checked="@_draggedTask.IsDone" disabled />
+                <span class="task-title">@_draggedTask.Title</span>
+            </div>
+        </div>
+    }
+
+    <div class="board-header">
+        <span class="board-title">المهام</span>
+        <button class="add-col-btn" @onclick="AddNewColumn">+ إضافة عمود</button>
     </div>
 
-    @* ─── Add Task Form ─── *@
-    <div class="task-form">
-        <input type="text" class="task-input" placeholder="Add a task..."
-               value="@_newTitle"
-               @oninput="e => _newTitle = e.Value?.ToString() ?? string.Empty"
-               @onkeydown="OnInputKeyDown" />
-        <input type="date" class="task-date" value="@FormatDueDate(_newDueDate)"
-               @onchange="e => _newDueDate = ParseDueDate(e.Value?.ToString())" />
-        <button class="task-add-btn" @onclick="AddTask"
-                disabled="@(string.IsNullOrWhiteSpace(_newTitle))">
-            + Add Task
-        </button>
-    </div>
-
-    @* ─── Task List ─── *@
-    <div class="task-list">
-        @foreach (var task in TaskService.Tasks)
+    <div class="board-container">
+        @foreach (var col in TaskService.Columns)
         {
-            var captured = task;
-            <div class="task-item @(captured.IsDone ? "task-item--done" : "")">
-                <input type="checkbox" class="task-checkbox" checked="@captured.IsDone"
-                       @onchange="() => ToggleTask(captured)" />
-                <span class="task-title">@captured.Title</span>
-                @if (captured.DueDate.HasValue)
-                {
-                    <span class="task-due">@captured.DueDate.Value.ToString("MMM d, yyyy")</span>
-                }
-                <button class="task-delete-btn" title="Delete" @onclick="() => DeleteTask(captured.Id)">&#x2715;</button>
+            var capturedCol = col;
+            <div class="kanban-column" @onmouseenter="() => HandleColEnter(capturedCol.Id)">
+                
+                <div class="col-header">
+                    @if (_editingColId == capturedCol.Id)
+                    {
+                        <input class="col-edit-input" value="@_editColTitle"
+                               @oninput="e => _editColTitle = e.Value?.ToString() ?? string.Empty"
+                               @onkeydown="e => HandleColEditKeyDown(e, capturedCol)"
+                               @onblur="() => SaveColEdit(capturedCol)" autofocus />
+                    }
+                    else
+                    {
+                        <span class="col-title" @onclick="() => StartEditingCol(capturedCol)">@capturedCol.Title</span>
+                        <button class="col-delete-btn" @onclick="() => DeleteColumn(capturedCol.Id)">×</button>
+                    }
+                </div>
+
+                <div class="col-body">
+                    @foreach (var task in TaskService.Tasks.Where(t => t.ColumnId == capturedCol.Id))
+                    {
+                        var capturedTask = task;
+                        <div class="kanban-task @(capturedTask.IsDone ? "done" : "") @(_draggedTask == capturedTask ? "dragging-original" : "")"
+                             @onmousedown="e => HandleMouseDown(e, capturedTask)">
+                            <div class="task-header">
+                                <input type="checkbox" checked="@capturedTask.IsDone" @onchange="() => ToggleTask(capturedTask)" />
+                                <span class="task-title">@capturedTask.Title</span>
+                            </div>
+                            <button class="task-delete-btn" @onclick="() => DeleteTask(capturedTask.Id)">×</button>
+                        </div>
+                    }
+                </div>
+
+                <div class="col-footer">
+                    @if (_addingTaskToColId == capturedCol.Id)
+                    {
+                        <input class="task-add-input" placeholder="اسم المهمة... (ثم اضغط Enter)"
+                               value="@_newTaskTitle"
+                               @oninput="e => _newTaskTitle = e.Value?.ToString() ?? string.Empty"
+                               @onkeydown="e => HandleTaskAddKeyDown(e, capturedCol.Id)"
+                               @onblur="() => SaveNewTask(capturedCol.Id)" autofocus />
+                    }
+                    else
+                    {
+                        <button class="task-add-btn" @onclick="() => StartAddingTask(capturedCol.Id)">+ إضافة مهمة</button>
+                    }
+                </div>
             </div>
         }
-        @if (TaskService.Tasks.Count == 0)
-        {
-            <div class="task-empty">No tasks yet. Add your first task above.</div>
-        }
     </div>
-
 </div>
 
+<style>
+    :root { --black: #000000; --white: #FFFFFF; --gray: #EEEEEE; --dark-gray: #CCCCCC; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
+    .tasks-page { height: 100vh; display: flex; flex-direction: column; background-color: var(--white); color: var(--black); position: relative; }
+    .board-header { padding: 20px 40px; border-bottom: 1px solid var(--black); display: flex; justify-content: space-between; align-items: center; }
+    .board-title { font-size: 24px; font-weight: bold; text-transform: uppercase; }
+    .add-col-btn { border: 1px solid var(--black); background: var(--white); color: var(--black); padding: 8px 16px; cursor: pointer; font-size: 14px; }
+    .add-col-btn:hover { background: var(--black); color: var(--white); }
+    
+    .board-container { flex: 1; display: flex; gap: 20px; padding: 20px 40px; overflow-x: auto; align-items: flex-start; }
+    .board-container::-webkit-scrollbar { height: 8px; }
+    .board-container::-webkit-scrollbar-thumb { background: var(--black); }
+
+    .kanban-column { min-width: 300px; width: 300px; border: 1px solid var(--black); display: flex; flex-direction: column; max-height: 100%; background: var(--white); }
+    
+    .col-header { padding: 12px; border-bottom: 1px solid var(--black); display: flex; justify-content: space-between; align-items: center; background: var(--gray); }
+    .col-title { font-weight: bold; cursor: pointer; flex: 1; }
+    .col-title:hover { text-decoration: underline; }
+    .col-delete-btn { background: none; border: none; cursor: pointer; font-size: 18px; line-height: 1; color: var(--black); margin-right: 8px; padding: 0 4px; }
+    .col-delete-btn:hover { color: red; }
+    .col-edit-input { flex: 1; border: 1px solid var(--black); padding: 4px; font-family: inherit; font-size: 14px; outline: none; }
+    
+    .col-body { padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; min-height: 100px; }
+    .col-body::-webkit-scrollbar { width: 4px; }
+    .col-body::-webkit-scrollbar-thumb { background: var(--black); }
+
+    .kanban-task { border: 1px solid var(--black); padding: 12px; display: flex; justify-content: space-between; align-items: flex-start; cursor: grab; background: var(--white); transition: opacity 0.2s; user-select: none; -webkit-user-select: none; }
+    .kanban-task:active { cursor: grabbing; border-style: dashed; }
+    .kanban-task.done { opacity: 0.5; }
+    .kanban-task.done .task-title { text-decoration: line-through; }
+    .kanban-task.dragging-original { opacity: 0.3; }
+
+    .ghost-task { position: fixed; pointer-events: none; z-index: 9999; width: 280px; box-shadow: 5px 5px 15px rgba(0,0,0,0.2); transform: rotate(3deg); opacity: 0.95; }
+    
+    .task-header { display: flex; gap: 8px; align-items: flex-start; flex: 1; }
+    .task-title { word-break: break-word; font-size: 14px; margin-top: -2px; }
+    .task-delete-btn { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--dark-gray); margin-right: 8px; }
+    .task-delete-btn:hover { color: red; }
+    
+    .col-footer { padding: 12px; border-top: 1px solid var(--black); }
+    .task-add-btn { width: 100%; border: none; background: none; text-align: right; cursor: pointer; font-size: 14px; color: #555; }
+    .task-add-btn:hover { color: var(--black); text-decoration: underline; }
+    .task-add-input { width: 100%; border: 1px solid var(--black); padding: 6px; font-family: inherit; font-size: 14px; outline: none; }
+</style>
+
 @code {
-    private string _newTitle = string.Empty;
-    private DateTime? _newDueDate;
+    private string _editingColId = "";
+    private string _editColTitle = "";
+
+    private string _addingTaskToColId = "";
+    private string _newTaskTitle = "";
+
+    // --- Custom Drag & Drop State ---
+    private AppTask? _potentialDragTask;
+    private AppTask? _draggedTask;
+    private bool _isDragging;
+    private double _mouseX;
+    private double _mouseY;
+    private string _hoveredColId = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -62,12 +146,78 @@
         _ = InvokeAsync(StateHasChanged);
     }
 
-    private async Task AddTask()
+    public void Dispose()
     {
-        if (string.IsNullOrWhiteSpace(_newTitle)) return;
-        await TaskService.AddTaskAsync(_newTitle.Trim(), _newDueDate);
-        _newTitle = string.Empty;
-        _newDueDate = null;
+        TaskService.OnStateChanged -= HandleStateChanged;
+    }
+
+    // --- Column Actions ---
+    private async Task AddNewColumn()
+    {
+        await TaskService.AddColumnAsync("عمود جديد");
+    }
+
+    private void StartEditingCol(KanbanColumn col)
+    {
+        _editingColId = col.Id;
+        _editColTitle = col.Title;
+    }
+
+    private async Task SaveColEdit(KanbanColumn col)
+    {
+        if (string.IsNullOrWhiteSpace(_editColTitle))
+        {
+            _editColTitle = "بدون اسم";
+        }
+        await TaskService.RenameColumnAsync(col.Id, _editColTitle.Trim());
+        _editingColId = "";
+    }
+
+    private async Task HandleColEditKeyDown(KeyboardEventArgs e, KanbanColumn col)
+    {
+        if (e.Key == "Enter")
+        {
+            await SaveColEdit(col);
+        }
+        else if (e.Key == "Escape")
+        {
+            _editingColId = "";
+        }
+    }
+
+    private async Task DeleteColumn(string id)
+    {
+        await TaskService.DeleteColumnAsync(id);
+    }
+
+    // --- Task Actions ---
+    private void StartAddingTask(string colId)
+    {
+        _addingTaskToColId = colId;
+        _newTaskTitle = "";
+    }
+
+    private async Task SaveNewTask(string colId)
+    {
+        if (!string.IsNullOrWhiteSpace(_newTaskTitle))
+        {
+            await TaskService.AddTaskAsync(_newTaskTitle.Trim(), colId, null);
+        }
+        _addingTaskToColId = "";
+        _newTaskTitle = "";
+    }
+
+    private async Task HandleTaskAddKeyDown(KeyboardEventArgs e, string colId)
+    {
+        if (e.Key == "Enter")
+        {
+            await SaveNewTask(colId);
+        }
+        else if (e.Key == "Escape")
+        {
+            _addingTaskToColId = "";
+            _newTaskTitle = "";
+        }
     }
 
     private async Task ToggleTask(AppTask task)
@@ -80,22 +230,43 @@
         await TaskService.DeleteTaskAsync(id);
     }
 
-    private void OnInputKeyDown(KeyboardEventArgs e)
+    // --- Custom Drag and Drop ---
+    private void HandleMouseDown(MouseEventArgs e, AppTask task)
     {
-        if (e.Key == "Enter")
+        _potentialDragTask = task;
+    }
+
+    private void HandleMouseMove(MouseEventArgs e)
+    {
+        if (_potentialDragTask != null)
         {
-            _ = AddTask();
+            if (!_isDragging)
+            {
+                _draggedTask = _potentialDragTask;
+                _isDragging = true;
+            }
+            // Center the ghost roughly
+            _mouseX = e.ClientX - 140; 
+            _mouseY = e.ClientY - 20;
         }
     }
 
-    private static string FormatDueDate(DateTime? dt)
-        => dt.HasValue ? dt.Value.ToString("yyyy-MM-dd") : string.Empty;
-
-    private static DateTime? ParseDueDate(string? raw)
-        => DateTime.TryParse(raw, out var dt) ? dt : (DateTime?)null;
-
-    public void Dispose()
+    private void HandleColEnter(string colId)
     {
-        TaskService.OnStateChanged -= HandleStateChanged;
+        _hoveredColId = colId;
+    }
+
+    private async Task HandleMouseUp(MouseEventArgs e)
+    {
+        if (_isDragging && _draggedTask != null && !string.IsNullOrEmpty(_hoveredColId) && _draggedTask.ColumnId != _hoveredColId)
+        {
+            await TaskService.MoveTaskAsync(_draggedTask.Id, _hoveredColId);
+        }
+        
+        _potentialDragTask = null;
+        _draggedTask = null;
+        _isDragging = false;
+        _hoveredColId = "";
     }
 }
+

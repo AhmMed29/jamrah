@@ -21,5 +21,8 @@ namespace Jamrah.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        
+        [Indexed]
+        public string ColumnId { get; set; } = string.Empty;
     }
 }

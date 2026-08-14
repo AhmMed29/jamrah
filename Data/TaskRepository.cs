@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -38,6 +38,16 @@ namespace Jamrah.Data
 
                 _database = new SQLiteAsyncConnection(_dbPath);
                 await _database.CreateTableAsync<AppTask>().ConfigureAwait(false);
+                await _database.CreateTableAsync<KanbanColumn>().ConfigureAwait(false);
+
+                // Seed default columns if none exist
+                var colCount = await _database.Table<KanbanColumn>().CountAsync();
+                if (colCount == 0)
+                {
+                    await _database.InsertAsync(new KanbanColumn { Title = "To Do", Order = 0 });
+                    await _database.InsertAsync(new KanbanColumn { Title = "In Progress", Order = 1 });
+                    await _database.InsertAsync(new KanbanColumn { Title = "Done", Order = 2 });
+                }
 
                 _isInitialized = true;
             }
@@ -45,6 +55,31 @@ namespace Jamrah.Data
             {
                 _initLock.Release();
             }
+        }
+
+        public async Task<List<KanbanColumn>> GetColumnsAsync()
+        {
+            await InitAsync().ConfigureAwait(false);
+            return await _database!.Table<KanbanColumn>()
+                .OrderBy(c => c.Order)
+                .ToListAsync()
+                .ConfigureAwait(false);
+        }
+
+        public async Task SaveColumnAsync(KanbanColumn column)
+        {
+            await InitAsync().ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(column.Id))
+                column.Id = Guid.NewGuid().ToString();
+            
+            await _database!.InsertOrReplaceAsync(column).ConfigureAwait(false);
+        }
+
+        public async Task DeleteColumnAsync(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return;
+            await InitAsync().ConfigureAwait(false);
+            await _database!.DeleteAsync<KanbanColumn>(id).ConfigureAwait(false);
         }
 
         public async Task<List<AppTask>> GetTasksAsync()

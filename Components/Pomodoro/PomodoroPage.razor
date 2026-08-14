@@ -57,6 +57,7 @@
                 @if (_todayPrayers != null)
                 {
                     <tr class="@(_nextPrayerName == "الفجر"  ? "next-prayer" : "")"><td>الفجر</td><td>@To12H(_todayPrayers.Fajr)</td></tr>
+                    <tr class="@(_nextPrayerName == "الشروق" ? "next-prayer" : "")"><td>الشروق</td><td>@To12H(_todayPrayers.Sunrise)</td></tr>
                     <tr class="@(_nextPrayerName == "الظهر"  ? "next-prayer" : "")"><td>الظهر</td><td>@To12H(_todayPrayers.Dhuhr)</td></tr>
                     <tr class="@(_nextPrayerName == "العصر"  ? "next-prayer" : "")"><td>العصر</td><td>@To12H(_todayPrayers.Asr)</td></tr>
                     <tr class="@(_nextPrayerName == "المغرب" ? "next-prayer" : "")"><td>المغرب</td><td>@To12H(_todayPrayers.Maghrib)</td></tr>
@@ -69,8 +70,7 @@
                 </tbody>
             </table>
 
-            <button class="dur-btn" style="width:100%; margin-top:8px;"
-                    @onclick="() => { _latInput = PrayerService.Location.Latitude.ToString(); _lonInput = PrayerService.Location.Longitude.ToString(); _locationModalOpen = true; }">
+            <button class="dur-btn" style="width:100%; margin-top:8px;" @onclick="OpenLocationModal">
                 تغيير المنطقة
             </button>
 
@@ -197,9 +197,11 @@
         </div>
     }
 
+    
+</div>
     @if (_locationModalOpen)
     {
-        <div class="modal-overlay" style="display:flex;">
+        <div class="modal-overlay" style="display:flex; pointer-events:auto;">
             <div class="modal-group">
                 <div class="modal-box" style="width:300px;">
                     <div class="modal-header">
@@ -227,8 +229,6 @@
             </div>
         </div>
     }
-    
-</div>
 
 <style>
     :root { --black: #000000; --white: #FFFFFF; --gray: #EEEEEE; }
@@ -442,6 +442,7 @@
         var prayers = new[]
         {
             ("الفجر",    _todayPrayers.Fajr),
+            ("الشروق",   _todayPrayers.Sunrise),
             ("الظهر",    _todayPrayers.Dhuhr),
             ("العصر",    _todayPrayers.Asr),
             ("المغرب",   _todayPrayers.Maghrib),
@@ -469,13 +470,22 @@
         }
     }
 
+    private void OpenLocationModal()
+    {
+        _latInput = PrayerService.Location.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        _lonInput = PrayerService.Location.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        _locationModalOpen = true;
+    }
+    
     private static string FormatCountdown(TimeSpan t)
         => $"{(int)t.TotalHours:D2}:{t.Minutes:D2}:{t.Seconds:D2}";
 
     private async Task SaveLocation()
     {
-        if (double.TryParse(_latInput, out var lat) &&
-            double.TryParse(_lonInput, out var lon))
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+    
+        if (double.TryParse(_latInput, System.Globalization.NumberStyles.Any, culture, out var lat) &&
+            double.TryParse(_lonInput, System.Globalization.NumberStyles.Any, culture, out var lon))
         {
             await PrayerService.SetLocationAsync(lat, lon);
             _todayPrayers = await PrayerService.GetTodayAsync();

@@ -8,6 +8,10 @@ namespace Jamrah.Data
     {
         Task InitAsync();
         
+        Task<List<TaskFolder>> GetFoldersAsync();
+        Task SaveFolderAsync(TaskFolder folder);
+        Task DeleteFolderAsync(string id);
+        
         Task<List<KanbanColumn>> GetColumnsAsync();
         Task SaveColumnAsync(KanbanColumn column);
         Task DeleteColumnAsync(string id);

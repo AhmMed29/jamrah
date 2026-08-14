@@ -38,7 +38,15 @@ namespace Jamrah.Data
 
                 _database = new SQLiteAsyncConnection(_dbPath);
                 await _database.CreateTableAsync<AppTask>().ConfigureAwait(false);
+                await _database.CreateTableAsync<TaskFolder>().ConfigureAwait(false);
                 await _database.CreateTableAsync<KanbanColumn>().ConfigureAwait(false);
+
+                // Seed default folder
+                var folderCount = await _database.Table<TaskFolder>().CountAsync();
+                if (folderCount == 0)
+                {
+                    await _database.InsertAsync(new TaskFolder { Id = "default-general", Name = "عام", Color = "#888888" });
+                }
 
                 // Seed default columns if none exist
                 var colCount = await _database.Table<KanbanColumn>().CountAsync();
@@ -55,6 +63,31 @@ namespace Jamrah.Data
             {
                 _initLock.Release();
             }
+        }
+
+        public async Task<List<TaskFolder>> GetFoldersAsync()
+        {
+            await InitAsync().ConfigureAwait(false);
+            return await _database!.Table<TaskFolder>()
+                .OrderBy(f => f.CreatedAt)
+                .ToListAsync()
+                .ConfigureAwait(false);
+        }
+
+        public async Task SaveFolderAsync(TaskFolder folder)
+        {
+            await InitAsync().ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(folder.Id))
+                folder.Id = Guid.NewGuid().ToString();
+            
+            await _database!.InsertOrReplaceAsync(folder).ConfigureAwait(false);
+        }
+
+        public async Task DeleteFolderAsync(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return;
+            await InitAsync().ConfigureAwait(false);
+            await _database!.DeleteAsync<TaskFolder>(id).ConfigureAwait(false);
         }
 
         public async Task<List<KanbanColumn>> GetColumnsAsync()

@@ -9,11 +9,17 @@ namespace Jamrah.Services
 {
     public interface ITaskStateService
     {
+        List<TaskFolder> Folders { get; set; }
         List<KanbanColumn> Columns { get; set; }
         List<AppTask> Tasks { get; set; }
         event Action? OnStateChanged;
         Task InitAsync();
         Task RefreshDataAsync();
+
+        // Folder operations
+        Task AddFolderAsync(string name, string color);
+        Task RenameFolderAsync(string id, string newName);
+        Task DeleteFolderAsync(string id);
 
         // Column operations
         Task AddColumnAsync(string title);
@@ -21,7 +27,7 @@ namespace Jamrah.Services
         Task DeleteColumnAsync(string id);
 
         // Task operations
-        Task AddTaskAsync(string title, string columnId, DateTime? dueDate);
+        Task AddTaskAsync(AppTask task);
         Task ToggleTaskAsync(AppTask task);
         Task DeleteTaskAsync(string id);
         Task MoveTaskAsync(string taskId, string newColumnId);
@@ -36,6 +42,7 @@ namespace Jamrah.Services
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         }
 
+        public List<TaskFolder> Folders { get; set; } = new();
         public List<KanbanColumn> Columns { get; set; } = new();
         public List<AppTask> Tasks { get; set; } = new();
 
@@ -51,9 +58,41 @@ namespace Jamrah.Services
 
         public async Task RefreshDataAsync()
         {
+            Folders = await _repository.GetFoldersAsync();
             Columns = await _repository.GetColumnsAsync();
             Tasks = await _repository.GetTasksAsync();
             NotifyStateChanged();
+        }
+
+        public async Task AddFolderAsync(string name, string color)
+        {
+            var folder = new TaskFolder { Name = name, Color = color };
+            await _repository.SaveFolderAsync(folder);
+            await RefreshDataAsync();
+        }
+
+        public async Task RenameFolderAsync(string id, string newName)
+        {
+            var folder = Folders.FirstOrDefault(f => f.Id == id);
+            if (folder != null)
+            {
+                folder.Name = newName;
+                await _repository.SaveFolderAsync(folder);
+                await RefreshDataAsync();
+            }
+        }
+
+        public async Task DeleteFolderAsync(string id)
+        {
+            await _repository.DeleteFolderAsync(id);
+            // Re-assign tasks in this folder to the default "عام" folder? Let's just do it
+            var tasksInFolder = Tasks.Where(t => t.FolderId == id).ToList();
+            foreach(var t in tasksInFolder)
+            {
+                t.FolderId = "default-general";
+                await _repository.SaveTaskAsync(t);
+            }
+            await RefreshDataAsync();
         }
 
         public async Task AddColumnAsync(string title)
@@ -88,16 +127,9 @@ namespace Jamrah.Services
             await RefreshDataAsync();
         }
 
-        public async Task AddTaskAsync(string title, string columnId, DateTime? dueDate)
+        public async Task AddTaskAsync(AppTask task)
         {
-            var task = new AppTask
-            {
-                Id = Guid.NewGuid().ToString(),
-                Title = title,
-                ColumnId = columnId,
-                DueDate = dueDate,
-                IsDone = false
-            };
+            if (string.IsNullOrEmpty(task.Id)) task.Id = Guid.NewGuid().ToString();
             await _repository.SaveTaskAsync(task);
             await RefreshDataAsync();
         }

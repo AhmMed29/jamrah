@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/assets/Jamrah-Icon.svg" alt="Jamrah" width="128"/>
+  <img src="assets/Jamrah-Icon.svg" alt="Jamrah" width="128"/>
 </p>
 
 <h1 align="center">Jamrah جَــمْــرَه</h1>

@@ -1,21 +1,34 @@
+using SQLite;
+
 namespace Jamrah.Components.Pomodoro;
 
+[Table("PomodoroSession")]
 public sealed class Session
 {
-    public string Id { get; init; } = "";
-    public string Date { get; init; } = "";
-    public string Title { get; init; } = "";
-    public string Time { get; init; } = "";
-    public int Duration { get; init; }
-    public string Note { get; init; } = "";
-    public Tag? Tag { get; init; }
+    [PrimaryKey]
+    public string Id { get; set; } = "";
+    public string Date { get; set; } = "";
+    public string Time { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Note { get; set; } = "";
+    public int PlannedMinutes { get; set; }
+    public int ElapsedSeconds { get; set; }
+    public bool Completed { get; set; }
+    public int? TagId { get; set; }
+    public string TagName { get; set; } = "";
+    public string TagColor { get; set; } = "#000000";
+
+    [Ignore]
+    public Tag? Tag { get; set; }
 }
 
+[Table("PomodoroTag")]
 public sealed class Tag
 {
-    public int Id { get; init; }
-    public string Name { get; init; } = "";
-    public string Color { get; init; } = "#000000";
+    [PrimaryKey, AutoIncrement]
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public string Color { get; set; } = "#000000";
 }
 
 public sealed class SessionGroup

@@ -5,11 +5,10 @@
 
     <div class="sidebar">
         <button class="sidebar-btn active">P</button>
-        <button class="sidebar-btn">T</button>
     </div>
 
     <div class="left-panel">
-        <div class="timer-box" @onclick="OpenModal">
+        <div class="timer-box" @onclick="OnTimerBoxClick">
             <div class="timer-value">@FormatTime(_timer.Remaining)</div>
             <div class="timer-label">Work</div>
         </div>
@@ -17,16 +16,26 @@
         <div class="durations">
             @foreach (var m in Durations)
             {
-                <button class="dur-btn @(_activeMinutes == m ? "active" : null)" @onclick="() => DirectStart(m)">@m</button>
+                <button class="dur-btn @(_activeMinutes == m ? "active" : null)" @onclick="() => PromptOrStart(m)">@m</button>
             }
         </div>
 
         <div class="actions">
-            <button class="action-btn" title="Reset" @onclick="Reset">
+            <button class="action-btn" title="Reset" @onclick="ResetTimer">
                 <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
             </button>
-            <button class="action-btn" title="Start" @onclick="Toggle">
-                <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <button class="action-btn" title="@(_timer.IsRunning ? "Pause" : "Start")" @onclick="ToggleTimer">
+                @if (_timer.IsRunning)
+                {
+                    <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="4" height="16"></rect><rect x="15" y="4" width="4" height="16"></rect></svg>
+                }
+                else
+                {
+                    <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                }
+            </button>
+            <button class="action-btn" title="Complete" @onclick="CompleteCurrentSession">
+                <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
             </button>
         </div>
 
@@ -61,45 +70,117 @@
         </div>
         @foreach (var g in _toggles)
         {
-                <ToggleGroup @key="g.Id" Group="g" />
+            <ToggleGroup @key="g.Id" Group="g" OnSessionClick="OpenSessionDetails" />
         }
     </div>
 
 </div>
 
 <div class="modal-overlay" style="display: @(_modalOpen ? "flex" : "none");">
-    <div class="modal-group">
-        <div class="modal-box">
-            <div class="modal-header">
-                <span class="modal-title">جلسة جديدة @if (_selectedTag != null) { <span class="tag-badge" style="background:@_selectedTag.Color; color:@TagTextColor(_selectedTag);">@_selectedTag.Name</span> }</span>
-                <button class="close-btn" @onclick="CloseModal">X</button>
-            </div>
-            <div class="input-group"><label class="input-label">اسم الجلسة</label><input type="text" class="minimal-input" @bind="_sessionName" placeholder="untitled" /></div>
-            <div class="input-group"><label class="input-label">ملاحظات</label><textarea class="minimal-textarea" @bind="_sessionNote" placeholder="اكتب ملاحظاتك هنا..."></textarea></div>
-            <div class="input-group"><label class="input-label">المدة</label><input type="number" class="minimal-input" @bind="_sessionDuration" /></div>
-            <div class="modal-actions"><button class="modal-btn" @onclick="CloseModal">إلغاء</button><button class="modal-btn primary" @onclick="StartSessionFromModal">بدء</button></div>
-        </div>
-        <div class="modal-box tags-modal-box">
-            <div class="modal-header"><span class="modal-title">التاجات</span></div>
-            <div class="input-group"><input type="text" class="minimal-input" @bind="_tagSearch" placeholder="بحث..." /></div>
-            <div class="input-group">
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <input type="text" class="minimal-input" @bind="_newTagName" placeholder="إضافة تاج" style="flex:1;" />
-                    <input type="color" class="color-input" @bind="_newTagColor" />
-                    <button class="modal-btn primary" @onclick="AddTag" style="padding:8px;">+</button>
+
+    @if (_modalMode == ModalMode.Create)
+    {
+        <div class="modal-group">
+            <div class="modal-box tags-modal-box">
+                <div class="modal-header"><span class="modal-title">التاجات</span></div>
+                <div class="input-group"><input type="text" class="minimal-input" @bind="_tagSearch" placeholder="بحث..." /></div>
+                <div class="input-group">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" class="minimal-input" @bind="_newTagName" placeholder="إضافة تاج" style="flex:1;" />
+                        <input type="color" class="color-input" @bind="_newTagColor" />
+                        <button class="modal-btn primary" @onclick="AddTag" style="padding:8px;">+</button>
+                    </div>
+                </div>
+                <div class="tags-list">
+                    @foreach (var t in FilteredTags)
+                    {
+                        <div class="tag-item" style="background:@t.Color; color:@TagTextColor(t);" @onclick="() => SelectTagForEdit(t)">
+                            @t.Name
+                            <span class="tag-delete" @onclick="() => DeleteTag(t)" @onclick:stopPropagation="true">X</span>
+                        </div>
+                    }
                 </div>
             </div>
-            <div class="tags-list">
-                @foreach (var t in FilteredTags)
-                {
-                    <div class="tag-item" style="background:@t.Color; color:@TagTextColor(t);" @onclick="() => SelectTag(t)">
-                        @t.Name
-                        <span class="tag-delete" @onclick="() => DeleteTag(t)">X</span>
-                    </div>
-                }
+            <div class="modal-box">
+                <div class="modal-header">
+                    <span class="modal-title">جلسة جديدة @if (_selectedTag != null) { <span class="tag-badge" style="background:@_selectedTag.Color; color:@TagTextColor(_selectedTag);">@_selectedTag.Name</span> }</span>
+                    <button class="close-btn" @onclick="CloseModal">X</button>
+                </div>
+                <div class="input-group"><label class="input-label">اسم الجلسة</label><input type="text" class="minimal-input" @bind="_sessionName" placeholder="untitled" /></div>
+                <div class="input-group"><label class="input-label">ملاحظات</label><textarea class="minimal-textarea" @bind="_sessionNote" placeholder="اكتب ملاحظاتك هنا..."></textarea></div>
+                <div class="input-group"><label class="input-label">المدة</label><input type="number" class="minimal-input" @bind="_sessionDuration" /></div>
+                <div class="modal-actions"><button class="modal-btn" @onclick="CloseModal">إلغاء</button><button class="modal-btn primary" @onclick="StartSessionFromCreate">بدء</button></div>
             </div>
         </div>
-    </div>
+    }
+
+    @if (_modalMode == ModalMode.Details)
+    {
+        <div class="modal-group">
+            @if (_editing)
+            {
+                <div class="modal-box tags-modal-box">
+                    <div class="modal-header"><span class="modal-title">التاجات</span></div>
+                    <div class="input-group"><input type="text" class="minimal-input" @bind="_tagSearch" placeholder="بحث..." /></div>
+                    <div class="input-group">
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input type="text" class="minimal-input" @bind="_newTagName" placeholder="إضافة تاج" style="flex:1;" />
+                            <input type="color" class="color-input" @bind="_newTagColor" />
+                            <button class="modal-btn primary" @onclick="AddTag" style="padding:8px;">+</button>
+                        </div>
+                    </div>
+                    <div class="tags-list">
+                        @foreach (var t in FilteredTags)
+                        {
+                            <div class="tag-item" style="background:@t.Color; color:@TagTextColor(t);" @onclick="() => SelectTagForEdit(t)">
+                                @t.Name
+                                <span class="tag-delete" @onclick="() => DeleteTag(t)" @onclick:stopPropagation="true">X</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            <div class="modal-box">
+                <div class="modal-header">
+                    <span class="modal-title">تفاصيل الجلسة @if (CurrentDetailTag != null) { <span class="tag-badge" style="background:@CurrentDetailTag.Color; color:@TagTextColor(CurrentDetailTag);">@CurrentDetailTag.Name</span> }</span>
+                    <button class="close-btn" @onclick="CloseModal">X</button>
+                </div>
+                <div class="input-group"><label class="input-label">اسم الجلسة</label><input type="text" class="minimal-input" @bind="_editName" disabled="@(!_editing)" /></div>
+                <div class="input-group"><label class="input-label">ملاحظات</label><textarea class="minimal-textarea" @bind="_editNote" disabled="@(!_editing)"></textarea></div>
+                <div class="input-group">
+                    <label class="input-label">@(IsDetailCurrent ? "المدة" : "المدة المقضية")</label>
+                    <span class="detail-static">@(IsDetailCurrent ? CurrentElapsedText : FormatTime(TimeSpan.FromSeconds(_detailSession!.ElapsedSeconds))) @(IsDetailCurrent ? $"من {_detailSession.PlannedMinutes} دقيقة" : "")</span>
+                </div>
+                @if (!IsDetailCurrent && _editing)
+                {
+                    <div class="input-group"><label class="input-label">المدة (دقيقة)</label><input type="number" class="minimal-input" @bind="_editDurationMinutes" /></div>
+                }
+                <div class="modal-actions">
+                    <button class="modal-btn" @onclick="ToggleEdit">تعديل</button>
+                    <button class="modal-btn" @onclick="DeleteCurrentDetails">حذف</button>
+                    <button class="modal-btn primary" @onclick="SaveDetails">حفظ</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (_modalMode == ModalMode.Prompt)
+    {
+        <div class="modal-group">
+            <div class="modal-box">
+                <div class="modal-header">
+                    <span class="modal-title">جلسة شغالة</span>
+                    <button class="close-btn" @onclick="CloseModal">X</button>
+                </div>
+                <div class="input-group"><span class="detail-static">في جلسة شغالة حالياً — ماذا تريد أن تفعل بها؟</span></div>
+                <div class="modal-actions">
+                    <button class="modal-btn" @onclick="CancelCurrentAndStart">الغاء الجلسة الحالية (سيتم حذفها)</button>
+                    <button class="modal-btn primary" @onclick="SaveCurrentAndStart">حفظ الجلسة وبدأ جلسة جديدة مدتها: @_pendingMinutes دقيقة</button>
+                </div>
+            </div>
+        </div>
+    }
+
 </div>
 
 <style>
@@ -195,24 +276,38 @@
     .tag-delete { cursor: pointer; border-left: 1px solid var(--black); padding-left: 4px; margin-left: 4px; }
     .tag-delete:hover { color: red; }
     .color-input { width: 30px; height: 30px; border: 1px solid var(--black); cursor: pointer; padding: 0; background: none; }
+
+    .detail-static { border: 1px solid var(--black); padding: 8px; font-size: 14px; display: block; }
+    .minimal-input:disabled, .minimal-textarea:disabled { opacity: 0.6; cursor: default; }
 </style>
 
 @code {
+    private enum ModalMode { None, Create, Details, Prompt }
+
     private readonly PomodoroTimer _timer = new(TimeSpan.FromMinutes(25));
+    private PomodoroRepository _repo = null!;
     private int _activeMinutes = 25;
     private DateTime? _startedAt;
     private string _viewMode = "daily";
     private List<SessionGroup> _toggles = new();
     private readonly List<Session> _sessions = new();
-    private readonly List<Tag> _tags = new()
-    {
-        new() { Id = 1, Name = "برمجة", Color = "#000000" },
-        new() { Id = 2, Name = "تصميم", Color = "#3B82F6" },
-        new() { Id = 3, Name = "كتابة", Color = "#EF4444" },
-    };
-    private int _nextTagId = 4;
+    private readonly List<Tag> _tags = new();
+    private Session? _currentSession;
+    private int _tickCount;
+
+    private ModalMode _modalMode = ModalMode.None;
+    private bool _modalOpen => _modalMode != ModalMode.None;
+
+    private Session? _detailSession;
+    private bool _editing;
+    private string _editName = "";
+    private string _editNote = "";
+    private int _editDurationMinutes;
+    private Tag? _editTag;
+
+    private int _pendingMinutes;
+
     private Tag? _selectedTag;
-    private bool _modalOpen;
     private string _sessionName = "";
     private string _sessionNote = "";
     private int _sessionDuration = 25;
@@ -225,98 +320,331 @@
     {
         ("يومي", "daily"), ("اسبوعي", "weekly"), ("شهري", "monthly"), ("سنوي", "yearly"),
     };
+    private static readonly string[] ArabicDays = { "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت" };
 
     private string StartTimeText => _startedAt?.ToString("HH:mm:ss") ?? "00:00:00";
-    private string FinalTimeText => $"{_activeMinutes}:00";
+    private string FinalTimeText => _startedAt?.AddMinutes(_activeMinutes).ToString("HH:mm") ?? $"{_activeMinutes}:00";
     private IEnumerable<Tag> FilteredTags => _tags.Where(t => t.Name.Contains(_tagSearch, StringComparison.OrdinalIgnoreCase));
 
-    protected override void OnInitialized()
+    private bool IsDetailCurrent => _detailSession != null && _detailSession == _currentSession;
+    private Tag? CurrentDetailTag => _editing ? _editTag : _detailSession?.Tag;
+    private int CurrentElapsedSeconds()
+    {
+        var planned = _activeMinutes * 60;
+        var rem = (int)Math.Round(_timer.Remaining.TotalSeconds);
+        return Math.Clamp(planned - rem, 0, planned);
+    }
+    private string CurrentElapsedText => FormatTime(TimeSpan.FromSeconds(CurrentElapsedSeconds()));
+
+    protected override async Task OnInitializedAsync()
     {
         _timer.Tick += OnTimerEvent;
         _timer.Completed += OnTimerEvent;
+        _repo = new PomodoroRepository();
+        await LoadFromDbAsync();
         RebuildToggles();
     }
 
-    private void OnTimerEvent() => InvokeAsync(StateHasChanged);
+    private async Task LoadFromDbAsync()
+    {
+        _sessions.AddRange(await _repo.GetSessionsAsync());
+        _tags.AddRange(await _repo.GetTagsAsync());
+        if (_tags.Count == 0)
+        {
+            var defaults = new[]
+            {
+                new Tag { Name = "برمجة", Color = "#000000" },
+                new Tag { Name = "تصميم", Color = "#3B82F6" },
+                new Tag { Name = "كتابة", Color = "#EF4444" },
+            };
+            foreach (var t in defaults)
+            {
+                await _repo.SaveTagAsync(t);
+                _tags.Add(t);
+            }
+        }
+        foreach (var s in _sessions)
+            s.Tag = _tags.FirstOrDefault(t => t.Id == s.TagId);
+    }
+
+    private void OnTimerEvent()
+    {
+        _tickCount++;
+        InvokeAsync(StateHasChanged);
+        if (_timer.IsCompleted && _currentSession != null)
+        {
+            var s = _currentSession;
+            _currentSession = null;
+            _startedAt = null;
+            s.ElapsedSeconds = s.PlannedMinutes * 60;
+            s.Completed = true;
+            _ = _repo.SaveSessionAsync(s);
+        }
+        else if (_currentSession != null && _tickCount % 10 == 0)
+        {
+            _currentSession.ElapsedSeconds = CurrentElapsedSeconds();
+            _ = _repo.SaveSessionAsync(_currentSession);
+        }
+    }
 
     private static string FormatTime(TimeSpan t) => $"{(int)t.TotalMinutes:D2}:{t.Seconds:D2}";
 
-    private void Toggle()
+    private async Task ToggleTimer()
     {
-        if (_timer.IsRunning) _timer.Pause();
-        else _timer.Start();
+        if (_timer.IsRunning)
+        {
+            _timer.Pause();
+            if (_currentSession != null)
+            {
+                _currentSession.ElapsedSeconds = CurrentElapsedSeconds();
+                await _repo.SaveSessionAsync(_currentSession);
+            }
+        }
+        else
+        {
+            _timer.Start();
+            if (_currentSession == null)
+            {
+                _startedAt = DateTime.Now;
+                var s = NewSession("untitled", "", _activeMinutes, null);
+                _sessions.Insert(0, s);
+                _currentSession = s;
+                await _repo.SaveSessionAsync(s);
+                RebuildToggles();
+            }
+        }
     }
 
-    private void Reset()
+    private async Task ResetTimer()
     {
+        if (_currentSession != null)
+        {
+            _currentSession.ElapsedSeconds = CurrentElapsedSeconds();
+            await _repo.SaveSessionAsync(_currentSession);
+            _currentSession = null;
+        }
         _timer.Reset();
         _startedAt = null;
     }
 
-    private void DirectStart(int minutes)
+    private async Task CompleteCurrentSession()
     {
-        _activeMinutes = minutes;
-        _timer.SetDuration(TimeSpan.FromMinutes(minutes));
-        if (!_timer.IsRunning) _timer.Start();
-        _startedAt = DateTime.Now;
-        _sessions.Insert(0, NewSession("untitled", "", minutes));
+        if (_currentSession == null) return;
+        _currentSession.ElapsedSeconds = CurrentElapsedSeconds();
+        _currentSession.Completed = true;
+        await _repo.SaveSessionAsync(_currentSession);
+        _currentSession = null;
+        _timer.Reset();
+        _startedAt = null;
+        _modalMode = ModalMode.None;
         RebuildToggles();
     }
 
-    private void OpenModal()
+    private void PromptOrStart(int minutes)
+    {
+        if (_currentSession != null)
+        {
+            _pendingMinutes = minutes;
+            _modalMode = ModalMode.Prompt;
+        }
+        else
+        {
+            _activeMinutes = minutes;
+            _timer.SetDuration(TimeSpan.FromMinutes(minutes));
+        }
+    }
+
+    private async Task CancelCurrentAndStart()
+    {
+        if (_currentSession != null)
+        {
+            _sessions.Remove(_currentSession);
+            await _repo.DeleteSessionAsync(_currentSession.Id);
+            _currentSession = null;
+        }
+        _timer.Reset();
+        _startedAt = null;
+        _modalMode = ModalMode.None;
+        await DirectStartAsync(_pendingMinutes);
+    }
+
+    private async Task SaveCurrentAndStart()
+    {
+        if (_currentSession != null)
+        {
+            _currentSession.ElapsedSeconds = CurrentElapsedSeconds();
+            _currentSession.Completed = true;
+            await _repo.SaveSessionAsync(_currentSession);
+            _currentSession = null;
+        }
+        _timer.Reset();
+        _startedAt = null;
+        _modalMode = ModalMode.None;
+        await DirectStartAsync(_pendingMinutes);
+    }
+
+    private async Task DirectStartAsync(int minutes)
+    {
+        _activeMinutes = minutes;
+        _timer.SetDuration(TimeSpan.FromMinutes(minutes));
+        _timer.Start();
+        _startedAt = DateTime.Now;
+        var s = NewSession("untitled", "", minutes, null);
+        _sessions.Insert(0, s);
+        _currentSession = s;
+        await _repo.SaveSessionAsync(s);
+        RebuildToggles();
+    }
+
+    private void OnTimerBoxClick()
+    {
+        if (_currentSession != null) OpenSessionDetails(_currentSession);
+        else OpenCreateModal();
+    }
+
+    private void OpenCreateModal()
     {
         _sessionName = "";
         _sessionNote = "";
         _sessionDuration = 25;
-        _modalOpen = true;
+        _selectedTag = null;
+        _modalMode = ModalMode.Create;
+    }
+
+    private void OpenSessionDetails(Session s)
+    {
+        _detailSession = s;
+        _editing = false;
+        _editName = s.Title;
+        _editNote = s.Note;
+        _editDurationMinutes = s.ElapsedSeconds / 60;
+        _editTag = s.Tag;
+        _modalMode = ModalMode.Details;
     }
 
     private void CloseModal()
     {
-        _modalOpen = false;
+        _modalMode = ModalMode.None;
+        _detailSession = null;
+        _editing = false;
         _selectedTag = null;
     }
 
-    private void StartSessionFromModal()
+    private void ToggleEdit()
+    {
+        _editing = !_editing;
+        if (!_editing && _detailSession != null)
+        {
+            _editName = _detailSession.Title;
+            _editNote = _detailSession.Note;
+            _editDurationMinutes = _detailSession.ElapsedSeconds / 60;
+            _editTag = _detailSession.Tag;
+        }
+    }
+
+    private async Task DeleteCurrentDetails()
+    {
+        if (_detailSession == null) return;
+        _sessions.Remove(_detailSession);
+        await _repo.DeleteSessionAsync(_detailSession.Id);
+        if (_currentSession == _detailSession)
+        {
+            _currentSession = null;
+            _timer.Reset();
+            _startedAt = null;
+        }
+        _modalMode = ModalMode.None;
+        RebuildToggles();
+    }
+
+    private async Task SaveDetails()
+    {
+        if (_detailSession == null) return;
+        _detailSession.Title = string.IsNullOrWhiteSpace(_editName) ? "untitled" : _editName.Trim();
+        _detailSession.Note = _editNote;
+        if (_detailSession == _currentSession)
+        {
+            ApplyTag(_detailSession, _editTag);
+            await _repo.SaveSessionAsync(_detailSession);
+            _modalMode = ModalMode.None;
+            RebuildToggles(); 
+        }
+        else
+        {
+            if (_editing)
+            {
+                _detailSession.ElapsedSeconds = Math.Max(0, _editDurationMinutes) * 60;
+                ApplyTag(_detailSession, _editTag);
+            }
+            await _repo.SaveSessionAsync(_detailSession);
+            _modalMode = ModalMode.None;
+            RebuildToggles();
+        }
+    }
+
+    private async Task StartSessionFromCreate()
     {
         var dur = _sessionDuration > 0 ? _sessionDuration : 25;
         _activeMinutes = dur;
         _timer.SetDuration(TimeSpan.FromMinutes(dur));
-        if (!_timer.IsRunning) _timer.Start();
+        _timer.Start();
         _startedAt = DateTime.Now;
-        _sessions.Insert(0, NewSession(string.IsNullOrWhiteSpace(_sessionName) ? "untitled" : _sessionName, _sessionNote, dur));
+        var s = NewSession(string.IsNullOrWhiteSpace(_sessionName) ? "untitled" : _sessionName.Trim(), _sessionNote, dur, _selectedTag);
+        _sessions.Insert(0, s);
+        _currentSession = s;
+        await _repo.SaveSessionAsync(s);
         _selectedTag = null;
-        _modalOpen = false;
+        _modalMode = ModalMode.None;
         RebuildToggles();
     }
 
-    private Session NewSession(string title, string note, int minutes)
+    private Session NewSession(string title, string note, int minutes, Tag? tag)
     {
         var now = DateTime.Now;
-        return new Session
+        var s = new Session
         {
             Id = $"s-{now.Ticks}",
             Date = $"{now.Year}-{now.Month}-{now.Day}",
             Title = title,
             Time = now.ToString("HH:mm"),
-            Duration = minutes,
             Note = note,
-            Tag = _selectedTag,
+            PlannedMinutes = minutes,
+            ElapsedSeconds = 0,
+            Completed = false,
+            Tag = tag,
         };
+        ApplyTag(s, tag);
+        return s;
     }
 
-    private void SelectTag(Tag t) => _selectedTag = t;
+    private static void ApplyTag(Session s, Tag? tag)
+    {
+        s.Tag = tag;
+        s.TagId = tag?.Id;
+        s.TagName = tag?.Name ?? "";
+        s.TagColor = tag?.Color ?? "#000000";
+    }
 
-    private void DeleteTag(Tag t)
+    private void SelectTagForEdit(Tag t)
+    {
+        if (_modalMode == ModalMode.Create) _selectedTag = t;
+        else _editTag = t;
+    }
+
+    private async Task DeleteTag(Tag t)
     {
         _tags.Remove(t);
         if (_selectedTag == t) _selectedTag = null;
+        if (_editTag == t) _editTag = null;
+        await _repo.DeleteTagAsync(t);
     }
 
-    private void AddTag()
+    private async Task AddTag()
     {
         if (string.IsNullOrWhiteSpace(_newTagName)) return;
-        _tags.Add(new Tag { Id = _nextTagId++, Name = _newTagName.Trim(), Color = _newTagColor });
+        var t = new Tag { Name = _newTagName.Trim(), Color = _newTagColor };
+        await _repo.SaveTagAsync(t);
+        _tags.Add(t);
         _newTagName = "";
     }
 
@@ -330,10 +658,14 @@
 
     private void RebuildToggles()
     {
+        var openIds = new HashSet<string>();
+        CollectOpenIds(_toggles, openIds);
+        
         var ordered = _sessions
             .OrderByDescending(s => s.Date)
             .ThenByDescending(s => s.Time)
             .ToList();
+        var now = DateTime.Now;
 
         switch (_viewMode)
         {
@@ -341,30 +673,69 @@
                 _toggles = ordered.GroupBy(s => WeekNumber(ParseDate(s.Date)))
                     .OrderByDescending(g => g.Key)
                     .Select(g => GroupWithChildren($"W{g.Key}", $"الأسبوع {g.Key}", g.Count(),
-                        g.GroupBy(s => s.Date).Select(d => Group($"{g.Key}-{d.Key}", DateLabel(d.Key), d.ToList())).ToList()))
+                        g.GroupBy(s => s.Date).Select(d => Group($"{g.Key}-{d.Key}", FullDateLabel(d.Key), d.ToList())).ToList()))
                     .ToList();
                 break;
             case "monthly":
-                _toggles = ordered.GroupBy(s => s.Date[..7])
-                    .OrderByDescending(g => g.Key)
-                    .Select(g => GroupWithChildren(g.Key, MonthLabel(g.Key), g.Count(),
-                        g.GroupBy(s => s.Date).Select(d => Group($"{g.Key}-{d.Key}", DateLabel(d.Key), d.ToList())).ToList()))
-                    .ToList();
+                _toggles = BuildMonthsOfYear(now.Year, now.Month, ordered);
                 break;
             case "yearly":
-                _toggles = ordered.GroupBy(s => s.Date[..4])
-                    .OrderByDescending(g => g.Key)
-                    .Select(g => GroupWithChildren(g.Key, g.Key, g.Count(),
-                        g.GroupBy(s => s.Date[..7]).Select(m => GroupWithChildren($"{g.Key}-{m.Key}", MonthLabel(m.Key), m.Count(),
-                            m.GroupBy(s => s.Date).Select(d => Group($"{g.Key}-{d.Key}", DateLabel(d.Key), d.ToList())).ToList())).ToList()))
-                    .ToList();
+                _toggles = new List<SessionGroup>
+                {
+                    GroupWithChildren($"y-{now.Year}", $"{now.Year}",
+                        ordered.Count(s => s.Date.StartsWith($"{now.Year}-")),
+                        BuildMonthsOfYear(now.Year, now.Month, ordered)),
+                };
                 break;
             default:
                 _toggles = ordered.GroupBy(s => s.Date)
-                    .Select(g => Group($"tg-{g.Key}", DateLabel(g.Key), g.ToList()))
+                    .Select(g => Group($"tg-{g.Key}", FullDateLabel(g.Key), g.ToList()))
                     .ToList();
                 break;
         }
+        
+        RestoreOpenState(_toggles, openIds);
+    }
+    
+    private static void CollectOpenIds(List<SessionGroup> groups, HashSet<string> ids)
+    {
+        foreach (var g in groups)
+        {
+            if (g.Open) ids.Add(g.Id);
+            if (g.Children != null) CollectOpenIds(g.Children, ids);
+        }
+    }
+    private static void RestoreOpenState(List<SessionGroup> groups, HashSet<string> ids)
+    {
+        foreach (var g in groups)
+        {
+            if (ids.Contains(g.Id)) g.Open = true;
+            if (g.Children != null) RestoreOpenState(g.Children, ids);
+        }
+    }
+
+    private static List<SessionGroup> BuildMonthsOfYear(int year, int currentMonth, List<Session> ordered)
+    {
+        var byMonth = ordered
+            .Where(s => s.Date.StartsWith($"{year}-"))
+            .GroupBy(s => s.Date[..s.Date.LastIndexOf('-')])
+            .ToDictionary(g => g.Key, g => g.ToList());
+        var months = new List<SessionGroup>();
+        for (var m = 1; m <= currentMonth; m++)
+        {
+            var key = $"{year}-{m}";
+            var monthSessions = byMonth.TryGetValue(key, out var list) ? list : new List<Session>();
+            var dayLimit = m == currentMonth ? DateTime.Now.Day : DateTime.DaysInMonth(year, m);
+            var children = new List<SessionGroup>();
+            for (var d = 1; d <= dayLimit; d++)
+            {
+                var dateStr = $"{year}-{m}-{d}";
+                var daySessions = monthSessions.Where(s => s.Date == dateStr).ToList();
+                children.Add(Group($"d-{dateStr}", FullDateLabel(dateStr), daySessions));
+            }
+            months.Add(GroupWithChildren($"m-{key}", MonthLabel(key), monthSessions.Count, children));
+        }
+        return months;
     }
 
     private static SessionGroup Group(string id, string label, List<Session> sessions) =>
@@ -373,10 +744,10 @@
     private static SessionGroup GroupWithChildren(string id, string label, int count, List<SessionGroup> children) =>
         new() { Id = id, Label = label, Count = count, Children = children };
 
-    private static string DateLabel(string d)
+    private static string FullDateLabel(string d)
     {
-        var p = d.Split('-');
-        return $"{p[2]}/{p[1]}";
+        var date = ParseDate(d);
+        return $"{ArabicDays[(int)date.DayOfWeek]} {date.Day}/{date.Month}/{date.Year}";
     }
 
     private static string MonthLabel(string m)

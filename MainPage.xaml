@@ -1,17 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:cal="clr-namespace:Jamrah.Components.Calendar;assembly=Jamrah"
              x:Class="Jamrah.MainPage"
              Shell.NavBarIsVisible="False">
 
-    <Grid>
+    <Grid ColumnDefinitions="*, 64">
 
-        <!-- Main Content Area -->
-        
-        <!-- hello world page -->
-        <Grid x:Name="MainContent">
-            <!-- Default placeholder -->
+        <!-- ① المحتوى الرئيسي -->
+        <Grid x:Name="MainContent" Grid.Column="0">
             <Label x:Name="PlaceholderLabel"
                    Text="Hello World"
                    FontSize="40"
@@ -21,98 +17,94 @@
                    VerticalOptions="Center" />
         </Grid>
 
-        <!-- Sidebar -->
-       
-         <Grid x:Name="Sidebar"
-      WidthRequest="60"
-      HorizontalOptions="Start"
-      VerticalOptions="Fill"
-      Background="#FFFFFF"
-      TranslationX="-60"
-      ZIndex="10">
-    <Grid.GestureRecognizers>
-        <PointerGestureRecognizer PointerExited="OnSidebarPointerExited" />
-    </Grid.GestureRecognizers>
-    <Border StrokeThickness="1"
-            Stroke="#000000"
-            StrokeShape="Rectangle"
-            HorizontalOptions="End"
-            WidthRequest="1"
-            VerticalOptions="Fill" />
-    <VerticalStackLayout Padding="10,20,10,0" Spacing="20" VerticalOptions="Start">
-        <!-- My Tasks -->
-        <Border StrokeThickness="1" Stroke="#000000" StrokeShape="Rectangle"
-                WidthRequest="40" HeightRequest="40">
-            <Grid x:Name="MyTasksButton">
-                <Grid.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnMyTasksTapped" />
-                    <PointerGestureRecognizer PointerEntered="OnTasksBtnHoverEnter"
-                                              PointerExited="OnTasksBtnHoverExit" />
-                </Grid.GestureRecognizers>
-                <Label x:Name="TasksBtnLabel"
-                       Text="T"
-                       FontSize="16"
-                       FontAttributes="Bold"
-                       FontFamily="Courier New"
-                       TextColor="#000000"
-                       HorizontalOptions="Center"
-                       VerticalOptions="Center" />
-            </Grid>
-        </Border>
-        <!-- Pomodoro -->
-        <Border StrokeThickness="1" Stroke="#000000" StrokeShape="Rectangle"
-                WidthRequest="40" HeightRequest="40">
-            <Grid x:Name="PomodoroButton">
-                <Grid.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnPomodoroTapped" />
-                    <PointerGestureRecognizer PointerEntered="OnPomoBtnHoverEnter"
-                                              PointerExited="OnPomoBtnHoverExit" />
-                </Grid.GestureRecognizers>
-                <Label x:Name="PomoBtnLabel"
-                       Text="P"
-                       FontSize="16"
-                       FontAttributes="Bold"
-                       FontFamily="Courier New"
-                       TextColor="#000000"
-                       HorizontalOptions="Center"
-                       VerticalOptions="Center" />
-            </Grid>
-        </Border>
-        <!-- Calendar -->
-        <Border StrokeThickness="1" Stroke="#000000" StrokeShape="Rectangle"
-                WidthRequest="40" HeightRequest="40">
-            <Grid x:Name="CalendarButton">
-                <!-- <Grid.GestureRecognizers> -->
-                <!--     <TapGestureRecognizer Tapped="OnCalendarMonthTapped" /> -->
-                <!--     <PointerGestureRecognizer PointerEntered="OnCalBtnHoverEnter" -->
-                <!--                               PointerExited="OnCalBtnHoverExit" /> -->
-                <!-- </Grid.GestureRecognizers> -->
-                <Label x:Name="CalBtnLabel"
-                       Text="C"
-                       FontSize="16"
-                       FontAttributes="Bold"
-                       FontFamily="Courier New"
-                       TextColor="#000000"
-                       HorizontalOptions="Center"
-                       VerticalOptions="Center" />
-            </Grid>
-        </Border>
-    </VerticalStackLayout>
-</Grid>
-        
-        
-        <!-- Hover strip on screen edge -->
-        <BoxView x:Name="HoverStrip"
-                 WidthRequest="8"
-                 HorizontalOptions="Start"
-                 VerticalOptions="Fill"
-                 Background="#01000000"
-                 ZIndex="20">
-            <BoxView.GestureRecognizers>
-                <PointerGestureRecognizer PointerEntered="OnHoverStripPointerEntered" />
-            </BoxView.GestureRecognizers>
-        </BoxView>
-        
+        <!-- ② السايدبار الثابت على اليمين -->
+        <Grid Grid.Column="1"
+              Background="#FFFFFF"
+              ZIndex="10">
+
+            <!-- خط فاصل على اليسار -->
+            <BoxView HorizontalOptions="Start"
+                     WidthRequest="1"
+                     VerticalOptions="Fill"
+                     Background="#000000" />
+
+            <VerticalStackLayout Padding="0,40,0,0"
+                                 Spacing="20"
+                                 VerticalOptions="Start"
+                                 HorizontalOptions="Center">
+
+                <!-- Tasks -->
+                <Border x:Name="TasksBtnBorder"
+                        StrokeThickness="1"
+                        Stroke="#000000"
+                        StrokeShape="Rectangle"
+                        WidthRequest="40"
+                        HeightRequest="40"
+                        Background="#FFFFFF">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnMyTasksTapped" />
+                        <PointerGestureRecognizer PointerEntered="OnTasksBtnEnter"
+                                                  PointerExited="OnTasksBtnExit" />
+                    </Border.GestureRecognizers>
+                    <Path x:Name="TasksIcon"
+                          Data="M3,13 L5,13 L5,11 L3,11 L3,13 Z M3,17 L5,17 L5,15 L3,15 L3,17 Z M3,9 L5,9 L5,7 L3,7 L3,9 Z M7,13 L21,13 L21,11 L7,11 L7,13 Z M7,17 L21,17 L21,15 L7,15 L7,17 Z M7,7 L7,9 L21,9 L21,7 L7,7 Z"
+                          Fill="Black"
+                          HorizontalOptions="Center"
+                          VerticalOptions="Center"
+                          Aspect="Uniform"
+                          HeightRequest="20"
+                          WidthRequest="20" />
+                </Border>
+
+                <!-- Pomodoro -->
+                <Border x:Name="PomoBtnBorder"
+                        StrokeThickness="1"
+                        Stroke="#000000"
+                        StrokeShape="Rectangle"
+                        WidthRequest="40"
+                        HeightRequest="40"
+                        Background="#FFFFFF">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnPomodoroTapped" />
+                        <PointerGestureRecognizer PointerEntered="OnPomoBtnEnter"
+                                                  PointerExited="OnPomoBtnExit" />
+                    </Border.GestureRecognizers>
+                    <Path x:Name="PomoIcon"
+                          Data="M15,1 L9,1 L9,3 L15,3 L15,1 Z M11,14 L13,14 L13,8 L11,8 L11,14 Z M19.03,7.39 L20.45,5.97 C20.02,5.46 19.55,4.98 19.04,4.56 L17.62,5.98 C16.07,4.74 14.12,4 12,4 C7.03,4 3,8.03 3,13 C3,17.97 7.02,22 12,22 C16.98,22 21,17.97 21,13 C21,10.88 20.26,8.93 19.03,7.39 Z M12,20 C8.13,20 5,16.87 5,13 C5,9.13 8.13,6 12,6 C15.87,6 19,9.13 19,13 C19,16.87 15.87,20 12,20 Z"
+                          Fill="Black"
+                          HorizontalOptions="Center"
+                          VerticalOptions="Center"
+                          Aspect="Uniform"
+                          HeightRequest="20"
+                          WidthRequest="20" />
+                </Border>
+
+                <!-- Calendar -->
+                <Border x:Name="CalBtnBorder"
+                        StrokeThickness="1"
+                        Stroke="#000000"
+                        StrokeShape="Rectangle"
+                        WidthRequest="40"
+                        HeightRequest="40"
+                        Background="#FFFFFF">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnCalendarMonthTapped" />
+                        <PointerGestureRecognizer PointerEntered="OnCalBtnEnter"
+                                                  PointerExited="OnCalBtnExit" />
+                    </Border.GestureRecognizers>
+                    <Path x:Name="CalIcon"
+                          Data="M20,3 L19,3 L19,1 L17,1 L17,3 L7,3 L7,1 L5,1 L5,3 L4,3 C2.9,3 2,3.9 2,5 L2,21 C2,22.1 2.9,23 4,23 L20,23 C21.1,23 22,22.1 22,21 L22,5 C22,3.9 21.1,3 20,3 Z M20,21 L4,21 L4,8 L20,8 L20,21 Z"
+                          Fill="Black"
+                          HorizontalOptions="Center"
+                          VerticalOptions="Center"
+                          Aspect="Uniform"
+                          HeightRequest="20"
+                          WidthRequest="20" />
+                </Border>
+
+            </VerticalStackLayout>
+        </Grid>
+
     </Grid>
 
 </ContentPage>

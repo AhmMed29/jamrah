@@ -1,5 +1,6 @@
 @namespace Jamrah.Components.Pomodoro
 @implements IDisposable
+@inject Jamrah.Services.PrayerTimesService PrayerService
 
 <div class="app-container" dir="rtl">
 
@@ -45,19 +46,38 @@
         </div>
 
         <div class="prayer-section">
+
+            <div class="prayer-countdown">
+                <div class="prayer-countdown-label">@_nextPrayerName</div>
+                <div class="prayer-countdown-timer">@FormatCountdown(_timeToNextPrayer)</div>
+            </div>
+
             <div class="prayer-title">مواقيت الصلاة</div>
             <table class="prayer-table">
                 <thead>
-                    <tr><th>الصلاة</th><th>الأذان</th><th>الإقامة</th></tr>
+                <tr><th>الصلاة</th><th>الأذان</th></tr>
                 </thead>
                 <tbody>
-                    <tr><td>الفجر</td><td>04:15</td><td>04:25</td></tr>
-                    <tr><td>الظهر</td><td>12:05</td><td>12:15</td></tr>
-                    <tr><td>العصر</td><td>03:35</td><td>03:45</td></tr>
-                    <tr><td>المغرب</td><td>06:45</td><td>06:55</td></tr>
-                    <tr><td>العشاء</td><td>08:15</td><td>08:25</td></tr>
+                @if (_todayPrayers != null)
+                {
+                    <tr><td>الفجر</td><td>@To12H(_todayPrayers.Fajr)</td></tr>
+                    <tr><td>الظهر</td><td>@To12H(_todayPrayers.Dhuhr)</td></tr>
+                    <tr><td>العصر</td><td>@To12H(_todayPrayers.Asr)</td></tr>
+                    <tr><td>المغرب</td><td>@To12H(_todayPrayers.Maghrib)</td></tr>
+                    <tr><td>العشاء</td><td>@To12H(_todayPrayers.Isha)</td></tr>
+                }
+                else
+                {
+                    <tr><td colspan="2" style="text-align:center;">جاري التحميل...</td></tr>
+                }
                 </tbody>
             </table>
+
+            <button class="dur-btn" style="width:100%; margin-top:8px;"
+                    @onclick="() => { _latInput = PrayerService.Location.Latitude.ToString(); _lonInput = PrayerService.Location.Longitude.ToString(); _locationModalOpen = true; }">
+                تغيير المنطقة
+            </button>
+
         </div>
     </div>
 
@@ -181,6 +201,37 @@
         </div>
     }
 
+    @if (_locationModalOpen)
+    {
+        <div class="modal-overlay" style="display:flex;">
+            <div class="modal-group">
+                <div class="modal-box" style="width:300px;">
+                    <div class="modal-header">
+                        <span class="modal-title">تغيير المنطقة</span>
+                        <button class="close-btn" @onclick="() => _locationModalOpen = false">X</button>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">خط العرض (Latitude)</label>
+                        <input type="number" class="minimal-input" step="0.0001"
+                               @bind="_latInput" placeholder="30.0444" />
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">خط الطول (Longitude)</label>
+                        <input type="number" class="minimal-input" step="0.0001"
+                               @bind="_lonInput" placeholder="31.2357" />
+                    </div>
+                    <div style="font-size:11px; color:#555; margin-top:-8px;">
+                        ابحث عن إحداثياتك على Google Maps
+                    </div>
+                    <div class="modal-actions">
+                        <button class="modal-btn" @onclick="() => _locationModalOpen = false">إلغاء</button>
+                        <button class="modal-btn primary" @onclick="SaveLocation">حفظ</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    
 </div>
 
 <style>
@@ -190,6 +241,23 @@
 
     .app-container { display: flex; height: 100vh; }
 
+    .prayer-countdown {
+        text-align: center;
+        border: 1px solid var(--black);
+        padding: 12px;
+        margin-bottom: 16px;
+    }
+    .prayer-countdown-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+    }
+    .prayer-countdown-timer {
+        font-size: 32px;
+        letter-spacing: -1px;
+        font-weight: normal;
+    }
+    
     .sidebar { width: 60px; border-left: 1px solid var(--black); background: var(--white); display: flex; flex-direction: column; align-items: center; padding-top: 20px; gap: 20px; z-index: 10; }
     .sidebar-btn { width: 40px; height: 40px; border: 1px solid var(--black); background: none; cursor: pointer; font-weight: bold; font-size: 16px; font-family: inherit; display: flex; align-items: center; justify-content: center; }
     .sidebar-btn:hover { background: var(--black); color: var(--white); }
@@ -315,6 +383,15 @@
     private string _newTagName = "";
     private string _newTagColor = "#000000";
 
+    private PrayerTimeEntry? _todayPrayers;
+    private string _nextPrayerName = "";
+    private TimeSpan _timeToNextPrayer = TimeSpan.Zero;
+    private System.Threading.Timer? _prayerTimer;
+
+    private bool _locationModalOpen;
+    private string _latInput = "";
+    private string _lonInput = "";
+    
     private static readonly int[] Durations = { 25, 50, 5, 10 };
     private static readonly (string Label, string Value)[] ViewModes =
     {
@@ -336,13 +413,78 @@
     }
     private string CurrentElapsedText => FormatTime(TimeSpan.FromSeconds(CurrentElapsedSeconds()));
 
+    private static string To12H(string time24)
+    {
+        if (!TimeSpan.TryParse(time24, out var t)) return time24;
+        var suffix = t.Hours < 12 ? "ص" : "م";
+        var h = t.Hours % 12;
+        if (h == 0) h = 12;
+        return $"{h}:{t.Minutes:D2} {suffix}";
+    }
+    
     protected override async Task OnInitializedAsync()
     {
         _timer.Tick += OnTimerEvent;
         _timer.Completed += OnTimerEvent;
         _repo = new PomodoroRepository();
+        await PrayerService.InitAsync();
+        _todayPrayers = await PrayerService.GetTodayAsync();
+        UpdateNextPrayer();
+        _prayerTimer = new System.Threading.Timer(_ =>
+                InvokeAsync(() => { UpdateNextPrayer(); StateHasChanged(); }),
+            null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
         await LoadFromDbAsync();
         RebuildToggles();
+    }
+
+    private void UpdateNextPrayer()
+    {
+        if (_todayPrayers == null) return;
+        var now = DateTime.Now;
+
+        var prayers = new[]
+        {
+            ("الفجر",    _todayPrayers.Fajr),
+            ("الظهر",    _todayPrayers.Dhuhr),
+            ("العصر",    _todayPrayers.Asr),
+            ("المغرب",   _todayPrayers.Maghrib),
+            ("العشاء",   _todayPrayers.Isha),
+        };
+
+        foreach (var (name, timeStr) in prayers)
+        {
+            if (TimeSpan.TryParse(timeStr, out var t))
+            {
+                var prayerDt = now.Date.Add(t);
+                if (prayerDt > now)
+                {
+                    _nextPrayerName    = name;
+                    _timeToNextPrayer  = prayerDt - now;
+                    return;
+                }
+            }
+        }
+        // بعد العشاء → الفجر الجاي
+        if (TimeSpan.TryParse(_todayPrayers.Fajr, out var fajr))
+        {
+            _nextPrayerName   = "الفجر";
+            _timeToNextPrayer = now.Date.AddDays(1).Add(fajr) - now;
+        }
+    }
+
+    private static string FormatCountdown(TimeSpan t)
+        => $"{(int)t.TotalHours:D2}:{t.Minutes:D2}:{t.Seconds:D2}";
+
+    private async Task SaveLocation()
+    {
+        if (double.TryParse(_latInput, out var lat) &&
+            double.TryParse(_lonInput, out var lon))
+        {
+            await PrayerService.SetLocationAsync(lat, lon);
+            _todayPrayers = await PrayerService.GetTodayAsync();
+            UpdateNextPrayer();
+            _locationModalOpen = false;
+        }
     }
 
     private async Task LoadFromDbAsync()
@@ -772,5 +914,6 @@
         _timer.Tick -= OnTimerEvent;
         _timer.Completed -= OnTimerEvent;
         _timer.Dispose();
+        _prayerTimer?.Dispose();
     }
 }

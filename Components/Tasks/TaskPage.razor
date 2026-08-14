@@ -51,7 +51,7 @@
                         @foreach (var task in GetFilteredAndSortedTasks(TaskService.Tasks.Where(t => t.ColumnId == capturedCol.Id)))
                         {
                             var capturedTask = task;
-                            <div class="kanban-task @(capturedTask.IsDone ? "done" : "") @(_draggedTask == capturedTask ? "dragging-original" : "")"
+                            <div @key="capturedTask.Id" class="kanban-task @(capturedTask.IsDone ? "done" : "") @(_draggedTask == capturedTask ? "dragging-original" : "")"
                                  @onmousedown="e => HandleMouseDown(e, capturedTask)">
                                 <div class="task-header">
                                     <input type="checkbox" checked="@capturedTask.IsDone" @onchange="() => ToggleTask(capturedTask)" />
@@ -94,7 +94,7 @@
                 @foreach (var task in GetFilteredAndSortedTasks(TaskService.Tasks))
                 {
                     var capturedTask = task;
-                    <div class="kanban-task list-task @(capturedTask.IsDone ? "done" : "")">
+                    <div @key="capturedTask.Id" class="kanban-task list-task @(capturedTask.IsDone ? "done" : "")">
                         <div class="task-header">
                             <input type="checkbox" checked="@capturedTask.IsDone" @onchange="() => ToggleTask(capturedTask)" />
                             <span class="task-title">@capturedTask.Title</span>

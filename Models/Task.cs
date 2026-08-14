@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using SQLite;
 
 namespace Jamrah.Models
@@ -24,5 +24,18 @@ namespace Jamrah.Models
         
         [Indexed]
         public string ColumnId { get; set; } = string.Empty;
+
+        [Indexed]
+        public string FolderId { get; set; } = string.Empty;
+
+        public bool IsRecurring { get; set; } = false;
+        
+        public string RecurrenceDays { get; set; } = string.Empty;
+        
+        public DateTime? ScheduledDate { get; set; }
+        
+        public TimeSpan? ScheduledTime { get; set; }
+
+        public int EisenhowerQuadrant { get; set; } = 1;
     }
 }

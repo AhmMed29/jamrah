@@ -37,8 +37,9 @@
         </div>
 
         <div class="timer-info">
-            <div class="info-row"><span>من الساعة</span><span>@StartTimeText</span></div>
-            <div class="info-row"><span>نهائي</span><span>@FinalTimeText</span></div>
+            <div class="info-row"><span>وقت البداية</span><span>@StartTimeText</span></div>
+            <div class="info-row"><span>وقت النهاية</span><span>@FinalTimeText</span></div>
+            <div class="info-row"><span>المدة</span><span>@DurationText</span></div>
         </div>
 
         <div class="prayer-section">
@@ -278,7 +279,7 @@
     .action-btn svg { stroke: var(--black); fill: none; }
     .action-btn:hover svg { stroke: var(--white); }
 
-    .timer-info { width: 100%; display: flex; flex-direction: column; gap: 8px; font-size: 12px; border-top: 1px solid var(--black); padding-top: 16px; }
+    .timer-info { width: 100%; display: flex; flex-direction: column; gap: 8px; font-size: 16px; border-top: 1px solid var(--black); padding-top: 16px; font-weight: bold; }
     .info-row { display: flex; justify-content: space-between; padding: 4px 0; cursor: pointer; }
     .info-row:hover { background: var(--gray); }
 
@@ -396,8 +397,9 @@
     };
     private static readonly string[] ArabicDays = { "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت" };
 
-    private string StartTimeText => _startedAt?.ToString("HH:mm:ss") ?? "00:00:00";
-    private string FinalTimeText => _startedAt?.AddMinutes(_activeMinutes).ToString("HH:mm") ?? $"{_activeMinutes}:00";
+    private string StartTimeText => _startedAt?.ToString("hh:mm:ss tt", new System.Globalization.CultureInfo("ar-SA")) ?? "00:00:00";
+    private string FinalTimeText => _startedAt?.AddMinutes(_activeMinutes).ToString("hh:mm:ss tt", new System.Globalization.CultureInfo("ar-SA")) ?? "00:00:00";
+    private string DurationText => TimeSpan.FromMinutes(_activeMinutes).ToString(@"hh\:mm\:ss");
     private IEnumerable<Tag> FilteredTags => _tags.Where(t => t.Name.Contains(_tagSearch, StringComparison.OrdinalIgnoreCase));
 
     private bool IsDetailCurrent => _detailSession != null && _detailSession == _currentSession;

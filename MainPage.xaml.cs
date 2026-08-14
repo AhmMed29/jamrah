@@ -89,6 +89,7 @@ public partial class MainPage : ContentPage
         EnsureWebViews();
         _calendarWebView!.IsVisible = false;
         _tasksWebView!.IsVisible = true;
+        _pomodoroWebView!.IsVisible = false; 
     }
 
     private void EnsureWebViews()

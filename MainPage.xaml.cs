@@ -32,35 +32,69 @@ public partial class MainPage : ContentPage
     {
         if (!_sidebarOpen) return;
         _sidebarOpen = false;
-        await Sidebar.TranslateTo(-280, 0, 200, Easing.CubicIn);
+        await Sidebar.TranslateTo(-60, 0, 200, Easing.CubicIn);
     }
 
+    // ── Sidebar button hover effects ───────────────────────────────────────
+    private void OnTasksBtnHoverEnter(object sender, PointerEventArgs e)
+    {
+        MyTasksButton.Background = Color.FromArgb("#000000");
+        TasksBtnLabel.TextColor = Color.FromArgb("#FFFFFF");
+    }
+    private void OnTasksBtnHoverExit(object sender, PointerEventArgs e)
+    {
+        MyTasksButton.Background = Color.FromArgb("#FFFFFF");
+        TasksBtnLabel.TextColor = Color.FromArgb("#000000");
+    }
+
+    private void OnPomoBtnHoverEnter(object sender, PointerEventArgs e)
+    {
+        PomodoroButton.Background = Color.FromArgb("#000000");
+        PomoBtnLabel.TextColor = Color.FromArgb("#FFFFFF");
+    }
+    private void OnPomoBtnHoverExit(object sender, PointerEventArgs e)
+    {
+        PomodoroButton.Background = Color.FromArgb("#FFFFFF");
+        PomoBtnLabel.TextColor = Color.FromArgb("#000000");
+    }
+
+    private void OnCalBtnHoverEnter(object sender, PointerEventArgs e)
+    {
+        CalendarButton.Background = Color.FromArgb("#000000");
+        CalBtnLabel.TextColor = Color.FromArgb("#FFFFFF");
+    }
+    private void OnCalBtnHoverExit(object sender, PointerEventArgs e)
+    {
+        CalendarButton.Background = Color.FromArgb("#FFFFFF");
+        CalBtnLabel.TextColor = Color.FromArgb("#000000");
+    }
+    
     // ─── Calendar toggle ────────────────────────────────────────────────────
 
-    private void OnCalendarToggleTapped(object sender, TappedEventArgs e)
-    {
-        _calendarExpanded = !_calendarExpanded;
-        CalendarChevron.Text = _calendarExpanded ? "\uE70E" : "\uE70D";
-        CalendarSubItems.IsVisible = _calendarExpanded;
-    }
+    // private void OnCalendarToggleTapped(object sender, TappedEventArgs e)
+    // {
+    //     _calendarExpanded = !_calendarExpanded;
+    //     CalendarChevron.Text = _calendarExpanded ? "\uE70E" : "\uE70D";
+    //     CalendarSubItems.IsVisible = _calendarExpanded;
+    // }
 
     // ─── Calendar sub-view selection ────────────────────────────────────────
 
-    private void OpenCalendarWithView(ViewMode view)
-    {
-        _calendarState.SetView(view);
-        ShowCalendarPage();
-        HighlightCalendarSubItem(view);
-    }
+    // private void OpenCalendarWithView(ViewMode view)
+    // {
+    //     _calendarState.SetView(view);
+    //     ShowCalendarPage();
+    //     HighlightCalendarSubItem(view);
+    // }
 
-    private void OnCalendarMonthTapped(object sender, TappedEventArgs e)
-        => OpenCalendarWithView(ViewMode.Month);
-
-    private void OnCalendarWeekTapped(object sender, TappedEventArgs e)
-        => OpenCalendarWithView(ViewMode.Week);
-
-    private void OnCalendarDayTapped(object sender, TappedEventArgs e)
-        => OpenCalendarWithView(ViewMode.Day);
+    // private void OnCalendarMonthTapped(object sender, TappedEventArgs e)
+    //     => OpenCalendarWithView(ViewMode.Month);
+    //
+    // private void OnCalendarWeekTapped(object sender, TappedEventArgs e)
+    //     => OpenCalendarWithView(ViewMode.Week);
+    //
+    // private void OnCalendarDayTapped(object sender, TappedEventArgs e)
+    //     => OpenCalendarWithView(ViewMode.Day);
 
     // ─── Content area switching ──────────────────────────────────────────────
     private void OnPomodoroTapped(object sender, TappedEventArgs e) => ShowPomodoroPage();
@@ -160,13 +194,13 @@ public partial class MainPage : ContentPage
     
     // ─── Sidebar sub-item highlight ─────────────────────────────────────────
 
-    private void HighlightCalendarSubItem(ViewMode view)
-    {
-        Color normal   = Color.FromArgb("#F0F0F0");
-        Color selected = Color.FromArgb("#E0EAFF");
-
-        CalendarSubMonth.Background = view == ViewMode.Month ? selected : normal;
-        CalendarSubWeek.Background  = view == ViewMode.Week  ? selected : normal;
-        CalendarSubDay.Background   = view == ViewMode.Day   ? selected : normal;
-    }
+    // private void HighlightCalendarSubItem(ViewMode view)
+    // {
+    //     Color normal   = Color.FromArgb("#F0F0F0");
+    //     Color selected = Color.FromArgb("#E0EAFF");
+    //
+    //     CalendarSubMonth.Background = view == ViewMode.Month ? selected : normal;
+    //     CalendarSubWeek.Background  = view == ViewMode.Week  ? selected : normal;
+    //     CalendarSubDay.Background   = view == ViewMode.Day   ? selected : normal;
+    // }
 }

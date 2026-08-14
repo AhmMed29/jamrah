@@ -403,6 +403,15 @@
         else
         {
             _timer.Start();
+            if (_currentSession == null)
+            {
+                _startedAt = DateTime.Now;
+                var s = NewSession("untitled", "", _activeMinutes, null);
+                _sessions.Insert(0, s);
+                _currentSession = s;
+                await _repo.SaveSessionAsync(s);
+                RebuildToggles();
+            }
         }
     }
 
@@ -440,7 +449,8 @@
         }
         else
         {
-            _ = DirectStartAsync(minutes);
+            _activeMinutes = minutes;
+            _timer.SetDuration(TimeSpan.FromMinutes(minutes));
         }
     }
 
@@ -555,7 +565,9 @@
         if (_detailSession == _currentSession)
         {
             ApplyTag(_detailSession, _editTag);
-            await CompleteCurrentSession();
+            await _repo.SaveSessionAsync(_detailSession);
+            _modalMode = ModalMode.None;
+            RebuildToggles(); 
         }
         else
         {
@@ -646,6 +658,9 @@
 
     private void RebuildToggles()
     {
+        var openIds = new HashSet<string>();
+        CollectOpenIds(_toggles, openIds);
+        
         var ordered = _sessions
             .OrderByDescending(s => s.Date)
             .ThenByDescending(s => s.Time)
@@ -677,6 +692,25 @@
                     .Select(g => Group($"tg-{g.Key}", FullDateLabel(g.Key), g.ToList()))
                     .ToList();
                 break;
+        }
+        
+        RestoreOpenState(_toggles, openIds);
+    }
+    
+    private static void CollectOpenIds(List<SessionGroup> groups, HashSet<string> ids)
+    {
+        foreach (var g in groups)
+        {
+            if (g.Open) ids.Add(g.Id);
+            if (g.Children != null) CollectOpenIds(g.Children, ids);
+        }
+    }
+    private static void RestoreOpenState(List<SessionGroup> groups, HashSet<string> ids)
+    {
+        foreach (var g in groups)
+        {
+            if (ids.Contains(g.Id)) g.Open = true;
+            if (g.Children != null) RestoreOpenState(g.Children, ids);
         }
     }
 

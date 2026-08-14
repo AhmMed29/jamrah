@@ -76,6 +76,7 @@ namespace Jamrah.Services
                     {
                         DateKey   = $"{y}-{m}-{d}",
                         Fajr      = CleanTime(timings.GetProperty("Fajr").GetString()),
+                        Sunrise   = CleanTime(timings.GetProperty("Sunrise").GetString()),
                         Dhuhr     = CleanTime(timings.GetProperty("Dhuhr").GetString()),
                         Asr       = CleanTime(timings.GetProperty("Asr").GetString()),
                         Maghrib   = CleanTime(timings.GetProperty("Maghrib").GetString()),

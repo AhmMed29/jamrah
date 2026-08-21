@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+*{ font-family:'Tajawal',sans-serif !important; }
 /* ==========================================================================
    TUI Calendar Port for Jamrah Blazor MAUI Application
    File: Jamrah/wwwroot/css/tui-calendar.css
@@ -8,21 +10,21 @@
    1. COMMON THEME CSS VARIABLES
    -------------------------------------------------------------------------- */
 :root {
-  --tui-calendar-bg: #ffffff;
-  --tui-calendar-border: #e5e5e5;
-  --tui-calendar-text: #333333;
-  --tui-calendar-sub-text: #666666;
-  --tui-calendar-today-bg: #135de6;
+  --tui-calendar-bg: var(--card, #FFFFFF);
+  --tui-calendar-border: var(--border, #E7E5E4);
+  --tui-calendar-text: var(--text, #1C1917);
+  --tui-calendar-sub-text: var(--muted, #78716C);
+  --tui-calendar-today-bg: var(--text, #1C1917);
   --tui-calendar-today-text: #ffffff;
-  --tui-calendar-primary: #135de6;
-  --tui-calendar-now-indicator: #515ce6;
-  --tui-calendar-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --tui-calendar-holiday-color: #ff4040;
-  --tui-calendar-saturday-color: #335eea;
-  --tui-calendar-grid-line: #e5e5e5;
-  --tui-calendar-popup-bg: #ffffff;
-  --tui-calendar-popup-border: #d5d5d5;
-  --tui-calendar-popup-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.15);
+  --tui-calendar-primary: var(--blue, #2563EB);
+  --tui-calendar-now-indicator: var(--accent, #FF6B35);
+  --tui-calendar-font-family: 'Tajawal', sans-serif;
+  --tui-calendar-holiday-color: var(--red, #DC2626);
+  --tui-calendar-saturday-color: var(--blue, #2563EB);
+  --tui-calendar-grid-line: var(--border, #E7E5E4);
+  --tui-calendar-popup-bg: var(--card, #FFFFFF);
+  --tui-calendar-popup-border: var(--border, #E7E5E4);
+  --tui-calendar-popup-shadow: 0 8px 24px rgba(28,25,23,.08);
 }
 
 /* --------------------------------------------------------------------------
@@ -718,14 +720,24 @@
    Calendar Page Toolbar & Layout Additions
    ========================================================================== */
 
-/* ── Calendar Page Wrapper ── */
+/* ── Calendar Page Wrapper ── Unified Light */
 .calendar-page {
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background-color: var(--tui-calendar-bg);
-  font-family: var(--tui-calendar-font-family);
+  background: var(--bg, #FAFAF9);
+  font-family: 'Tajawal', sans-serif;
+  gap: 0;
+  padding: 0;
+}
+/* Card wrapper like reference .cal */
+.calendar-page {
+  margin: 16px;
+  border: 1px solid var(--border, #E7E5E4);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--card, #FFFFFF);
 }
 
 /* ── Toolbar ── */
@@ -762,19 +774,16 @@
   justify-content: center;
   height: 32px;
   padding: 0 12px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  border-radius: 4px;
-  border: 1px solid var(--tui-calendar-popup-border);
-  background-color: #ffffff;
-  color: var(--tui-calendar-text);
+  border-radius: 10px;
+  border: 1px solid var(--border, #E7E5E4);
+  background: var(--card, #FFFFFF);
+  color: var(--text, #1C1917);
   cursor: pointer;
   white-space: nowrap;
-  transition: background-color 0.15s ease;
 }
-
-.toolbar-btn:hover {
-  background-color: rgba(19, 93, 230, 0.06);
+.toolbar-btn:hover{ background:var(--card2, #F5F5F4); }
 }
 
 .toolbar-btn--today {
@@ -793,53 +802,22 @@
 }
 
 .toolbar-btn--new-event {
-  background-color: var(--tui-calendar-primary);
+  background: var(--text, #1C1917);
   color: #ffffff;
-  border: none;
+  border: 1px solid var(--text, #1C1917);
   font-weight: 600;
 }
+.toolbar-btn--new-event:hover{ opacity:.9; }
 
-.toolbar-btn--new-event:hover {
-  background-color: #0d4fcf;
+/* ── View Switcher ── Unified */
+.view-switcher{ display:flex; border:1px solid var(--border, #E7E5E4); border-radius:8px; overflow:hidden; }
+.view-btn{
+  display:inline-flex; align-items:center; justify-content:center; height:30px; padding:0 14px; font-size:12px; font-weight:500;
+  background:var(--card, #FFFFFF); color:var(--muted, #78716C); border:none; border-left:1px solid var(--border, #E7E5E4); cursor:pointer;
 }
-
-/* ── View Switcher ── */
-.view-switcher {
-  display: flex;
-  border: 1px solid var(--tui-calendar-popup-border);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.view-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 30px;
-  padding: 0 14px;
-  font-size: 13px;
-  font-weight: 500;
-  background-color: #ffffff;
-  color: var(--tui-calendar-text);
-  border: none;
-  border-right: 1px solid var(--tui-calendar-popup-border);
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.view-btn:last-child {
-  border-right: none;
-}
-
-.view-btn:hover {
-  background-color: rgba(19, 93, 230, 0.06);
-}
-
-.view-btn.active {
-  background-color: var(--tui-calendar-primary);
-  color: #ffffff;
-  font-weight: 600;
-}
+.view-btn:last-child{ border-left:none; }
+.view-btn:hover:not(.active){ background:var(--card2, #F5F5F4); }
+.view-btn.active{ background:var(--text, #1C1917); color:#fff; font-weight:600; }
 
 /* ── View Area ── */
 .calendar-view-area {

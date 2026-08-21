@@ -48,6 +48,18 @@ namespace Jamrah.Services
             Remaining = duration;
         }
 
+        public void AdjustDuration(TimeSpan delta)
+        {
+            if (delta == TimeSpan.Zero) return;
+            var newDuration = _duration + delta;
+            if (newDuration < TimeSpan.FromMinutes(1)) return;
+            var newRemaining = Remaining + delta;
+            if (newRemaining < TimeSpan.Zero) newRemaining = TimeSpan.Zero;
+            if (newRemaining > newDuration) newRemaining = newDuration;
+            _duration = newDuration;
+            Remaining = newRemaining;
+        }
+
         public void TickOnce()
         {
             if (Remaining.TotalSeconds > 1)

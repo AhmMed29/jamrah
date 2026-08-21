@@ -17,6 +17,7 @@ public sealed class Session
     public int? TagId { get; set; }
     public string TagName { get; set; } = "";
     public string TagColor { get; set; } = "#000000";
+    public string SoundFile { get; set; } = "";
 
     [Ignore]
     public Tag? Tag { get; set; }

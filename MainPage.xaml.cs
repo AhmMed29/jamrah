@@ -108,7 +108,7 @@ public partial class MainPage : ContentPage
 
     // ─── Disable Zoom ───────────────────────────────────────────────────────
 
-    private async void DisableZoom(BlazorWebView webView)
+    private void DisableZoom(BlazorWebView webView)
     {
         webView.HandlerChanged += async (_, _) =>
         {

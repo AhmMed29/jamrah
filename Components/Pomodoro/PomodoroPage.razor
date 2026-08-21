@@ -195,7 +195,7 @@
                 <div class="input-group"><label class="input-label">ملاحظات</label><textarea class="minimal-textarea" @bind="_editNote" disabled="@(!_editing)"></textarea></div>
                 <div class="input-group">
                     <label class="input-label">@(IsDetailCurrent ? "المدة" : "المدة المقضية")</label>
-                    <span class="detail-static">@(IsDetailCurrent ? CurrentElapsedText : FormatTime(TimeSpan.FromSeconds(_detailSession!.ElapsedSeconds))) @(IsDetailCurrent ? $"من {_detailSession.PlannedMinutes} دقيقة" : "")</span>
+                    <span class="detail-static">@(IsDetailCurrent ? CurrentElapsedText : FormatTime(TimeSpan.FromSeconds(_detailSession!.ElapsedSeconds))) @(IsDetailCurrent ? $"من {_detailSession!.PlannedMinutes} دقيقة" : "")</span>
                 </div>
                 @if (!IsDetailCurrent && _editing)
                 {

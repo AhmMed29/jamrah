@@ -9,6 +9,7 @@
     <div class="task-right-sidebar @( _isRightSidebarCollapsed ? "collapsed" : "")">
         <div class="right-header"><span>لوحة جانبية</span><button class="toggle-btn" style="width:24px; height:24px; padding:0;" @onclick="ToggleRightSidebar">‹</button></div>
         <div style="padding:12px; font-size:11px; color:var(--muted);">مساحة جانبية قابلة للطي — استخدم زر ☰ لإظهار/إخفاء</div>
+    </div>
 
     <div class="main-content">
         @if (_isDragging && _draggedTask != null && (_currentView == ViewMode.Kanban || _currentView == ViewMode.Eisenhower))
@@ -217,7 +218,7 @@
                 </div>
             </div>
         }
-    </div></div>
+    </div>
 </div>
 
 @if (_isAddTaskModalOpen)
@@ -361,10 +362,6 @@
     private string _activeFolderId = ""; // folders removed, show all
     private bool _isRightSidebarCollapsed = false;
     private void ToggleRightSidebar() => _isRightSidebarCollapsed = !_isRightSidebarCollapsed;
-    
-    private bool _isAddingFolder = false;
-    private string _newFolderName = "";
-    private string _newFolderColor = "#3B82F6";
 
     private bool _isAddTaskModalOpen = false;
     private string _targetColId = "";
@@ -409,28 +406,6 @@
     public void Dispose()
     {
         TaskService.OnStateChanged -= HandleStateChanged;
-    }
-
-    // --- Folders ---
-    private void SetActiveFolder(string id)
-    {
-        _activeFolderId = id;
-    }
-
-    private async Task SaveNewFolder()
-    {
-        if (!string.IsNullOrWhiteSpace(_newFolderName))
-        {
-            await TaskService.AddFolderAsync(_newFolderName.Trim(), _newFolderColor);
-            _isAddingFolder = false;
-            _newFolderName = "";
-        }
-    }
-
-    private async Task DeleteFolder(string id)
-    {
-        await TaskService.DeleteFolderAsync(id);
-        if (_activeFolderId == id) _activeFolderId = "default-general";
     }
 
     // --- View and Sort Toggles ---
@@ -664,9 +639,7 @@
             else if (_currentView == ViewMode.Eisenhower && _hoveredQuad > 0 && _draggedTask.EisenhowerQuadrant != _hoveredQuad)
             {
                 _draggedTask.EisenhowerQuadrant = _hoveredQuad;
-                await TaskService.ToggleTaskAsync(_draggedTask); // SaveTask essentially, toggletask is wrong, let's update it in the code actually wait.
-                // ToggleTask toggles IsDone. I'll just change the property and call _repository directly. Wait, the AddTaskAsync can be used to update it since it uses SaveTaskAsync!
-                await TaskService.AddTaskAsync(_draggedTask); 
+                await TaskService.AddTaskAsync(_draggedTask);
             }
         }
         

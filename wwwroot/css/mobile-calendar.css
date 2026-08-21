@@ -1,0 +1,97 @@
+/* mobile-calendar.css — Calendar Page Mobile Overrides */
+@media (max-width: 768px) {
+  .calendar-page {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  /* Toolbar stacked */
+  .calendar-toolbar {
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 12px !important;
+    align-items: stretch !important;
+    border-bottom: 1px solid #E7E5E4;
+    background: #FAFAF9;
+  }
+  .toolbar-left, .toolbar-right {
+    width: 100% !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .toolbar-left { order: 1; }
+  .toolbar-right { order: 2; }
+  .toolbar-title {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    flex: 1 !important;
+  }
+  .toolbar-btn--today { min-height: 44px !important; }
+  .toolbar-btn--nav { min-width: 44px !important; min-height: 44px !important; }
+  .view-switcher {
+    flex: 1 !important;
+    display: flex !important;
+    gap: 4px !important;
+  }
+  .view-switcher .view-btn {
+    flex: 1 !important;
+    min-height: 44px !important;
+    padding: 10px 8px !important;
+    font-size: 12px !important;
+  }
+  .toolbar-btn--new-event {
+    min-height: 44px !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Calendar view area */
+  .calendar-view-area {
+    flex: 1 !important;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Month view compact */
+  .month-view table { font-size: 11px !important; }
+  .month-view td { height: 52px !important; padding: 4px !important; }
+  .month-day-number { font-size: 13px !important; }
+
+  /* Week/Day time grid scroll */
+  .week-view, .day-view, .time-grid {
+    overflow-x: hidden !important;
+  }
+
+  /* FAB for New Event on mobile */
+  .fab-new-event {
+    position: fixed !important;
+    bottom: 88px !important;
+    left: 16px !important;
+    right: auto !important;
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 50% !important;
+    background: #1C1917 !important;
+    color: #fff !important;
+    border: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 24px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.18) !important;
+    z-index: 40 !important;
+  }
+
+  /* Hide desktop FAB if exists, show mobile */
+  @media (min-width: 769px) {
+    .fab-new-event { display: none !important; }
+  }
+}
+
+@media (max-width: 380px) {
+  .calendar-toolbar { padding: 10px !important; }
+  .toolbar-title { font-size: 14px !important; }
+}

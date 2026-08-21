@@ -1,0 +1,31 @@
+/* mobile.css — Global mobile overrides for Jamrah (Phone) */
+@media (max-width: 768px) {
+  * { -webkit-tap-highlight-color: transparent; }
+  html, body { overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
+  body { background:#FAFAF9; }
+
+  /* BottomSheet modals */
+  .modal-overlay { align-items: flex-end !important; justify-content: center !important; padding: 0 !important; }
+  .modal-group { width: 100% !important; flex-direction: column !important; max-height: 88dvh; gap:0 !important; }
+  .modal-box, .tags-modal-box { width:100% !important; border-radius:16px 16px 0 0 !important; max-height:88dvh; overflow-y:auto; box-shadow:0 -8px 32px rgba(0,0,0,.12) !important; }
+  .modal-box { border-bottom: none !important; }
+  .tags-modal-box { border-radius: 16px 16px 0 0 !important; order: 2; }
+  .modal-group .modal-box + .tags-modal-box { margin-top: -1px; }
+
+  /* BottomSheet for calendar popups */
+  .floating-layer { align-items: flex-end !important; }
+  .popup-container, .see-more-container { width:100% !important; max-width:100% !important; border-radius:16px 16px 0 0 !important; max-height:85dvh; overflow-y:auto; }
+  .popup-overlay { backdrop-filter: blur(6px) !important; }
+
+  /* Tap targets minimum 44px */
+  button, .btn, .dur-btn, .view-btn, .toggle-btn, .add-col-btn { min-height:44px; }
+
+  /* Safe area */
+  .mobile-bottom-bar { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* Extra small: 360px */
+@media (max-width: 380px) {
+  .modal-box { padding:12px !important; }
+  .popup-container { padding:12px !important; }
+}

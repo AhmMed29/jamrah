@@ -35,6 +35,9 @@
         </div>
     </div>
 
+    @* Mobile FAB *@
+    <button class="fab-new-event" @onclick="() => StateService.OpenCreateEvent()" title="New Event">+</button>
+
     @* ─── Calendar View Area ─── *@
     <div class="calendar-view-area">
         @if (StateService.CurrentView == ViewMode.Month)

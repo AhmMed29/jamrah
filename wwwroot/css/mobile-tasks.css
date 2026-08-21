@@ -1,0 +1,126 @@
+/* mobile-tasks.css — Tasks Page Mobile Overrides */
+@media (max-width: 768px) {
+  .tasks-page {
+    flex-direction: column !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  /* Hide fixed sidebar, show as drawer */
+  .folders-sidebar {
+    position: fixed !important;
+    inset: 0 20% 0 0 !important;
+    width: auto !important;
+    max-width: 320px !important;
+    z-index: 60 !important;
+    transform: translateX(-100%);
+    transition: transform .25s ease !important;
+    box-shadow: 4px 0 24px rgba(0,0,0,.12);
+    border-left: none !important;
+    border-right: 1px solid #E7E5E4 !important;
+    background: #FFFFFF !important;
+    overflow-y: auto !important;
+  }
+  .folders-sidebar.open {
+    transform: translateX(0) !important;
+  }
+  /* Drawer overlay */
+  .folders-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.32);
+    z-index: 59;
+    display: none;
+  }
+  .folders-overlay.open { display: block; }
+
+  /* Main content full width */
+  .main-content {
+    flex: 1 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Board header stacked */
+  .board-header {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 12px !important;
+  }
+  .board-title { flex: 1 1 100% !important; font-size: 16px !important; }
+  .header-toggles { flex: 1 1 auto !important; gap: 8px !important; }
+  .toggle-btn { flex: 1 !important; min-height: 44px !important; }
+  .add-col-btn { flex: 1 1 100% !important; min-height: 44px !important; }
+
+  /* Kanban horizontal snap */
+  .board-container {
+    gap: 12px !important;
+    padding: 12px !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding: 12px;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+  .kanban-column {
+    min-width: 85vw !important;
+    width: 85vw !important;
+    max-width: 320px !important;
+    scroll-snap-align: start !important;
+    max-height: calc(100dvh - 160px) !important;
+  }
+  .col-body {
+    max-height: none !important;
+  }
+
+  /* Eisenhower: single column */
+  .eisenhower-container {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto !important;
+    gap: 12px !important;
+    overflow-y: auto !important;
+  }
+  .matrix-quadrant { min-height: 140px !important; }
+
+  /* Split view: single column */
+  .split-view-container {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* List container */
+  .list-container { padding: 12px !important; }
+
+  /* Kanban task touch */
+  .kanban-task {
+    padding: 14px !important;
+    min-height: 56px;
+  }
+  .task-delete-btn { opacity: 1 !important; } /* always visible on touch */
+
+  /* Modal tweaks */
+  .modal-box { margin: 0 !important; }
+
+  /* Ghost drag larger */
+  .ghost-task { width: 85vw !important; max-width: 320px !important; }
+
+  /* Drawer toggle button */
+  .mobile-drawer-toggle {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid #E7E5E4;
+    background: #fff;
+    border-radius: 10px;
+    font-size: 18px;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-drawer-toggle, .folders-overlay { display: none !important; }
+}
+
+/* Hide drawer toggle on desktop */
+.mobile-drawer-toggle { display: none; }

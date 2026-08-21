@@ -3,7 +3,7 @@
 @inject Jamrah.Services.ITaskStateService TaskService
 @using Jamrah.Models
 
-<div class="tasks-page" dir="rtl" @onmousemove="HandleMouseMove" @onmouseup="HandleMouseUp" @onmouseleave="HandleMouseUp">
+<div class="tasks-page" dir="rtl" @onmousemove="HandleMouseMove" @onmouseup="HandleMouseUp" @onmouseleave="HandleMouseUp" @ontouchmove="HandleTouchMove" @ontouchend="HandleTouchUp" @ontouchcancel="HandleTouchUp">
 
     <div class="main-content">
         @if (_isDragging && _draggedTask != null && (_currentView == ViewMode.Kanban || _currentView == ViewMode.Eisenhower))
@@ -17,6 +17,7 @@
         }
 
         <div class="board-header">
+            <button class="mobile-drawer-toggle" @onclick="ToggleMobileDrawer" title="المجلدات">☰</button>
             <span class="board-title">المهام</span>
             <div class="header-toggles">
                 <button class="toggle-btn" @onclick="ToggleSortMode">@GetSortModeLabel()</button>
@@ -52,7 +53,7 @@
                             {
                                 var capturedTask = task;
                                 <div @key="capturedTask.Id" class="kanban-task @(capturedTask.IsDone ? "done" : "") @(_draggedTask == capturedTask ? "dragging-original" : "")"
-                                     @onmousedown="e => HandleMouseDown(e, capturedTask)">
+                                     @onmousedown="e => HandleMouseDown(e, capturedTask)" @ontouchstart="e => HandleTouchStart(e, capturedTask)">
                                     <div class="task-header">
                                         <input type="checkbox" checked="@capturedTask.IsDone" @onchange="() => ToggleTask(capturedTask)" />
                                         <span class="task-title">@capturedTask.Title</span>
@@ -212,8 +213,10 @@
         }
     </div>
 
+    <!-- Drawer overlay for mobile -->
+    <div class="folders-overlay @(_mobileDrawerOpen ? "open" : "")" @onclick="CloseMobileDrawer"></div>
     <!-- Folders Sidebar -->
-    <div class="folders-sidebar">
+    <div class="folders-sidebar @(_mobileDrawerOpen ? "open" : "")">
         <div class="sidebar-header">المجلدات</div>
         <div class="folder-list">
             <div class="folder-item @(_activeFolderId == "" ? "active" : "")" @onclick='() => SetActiveFolder("")'>
@@ -421,6 +424,7 @@
     private string _editColTitle = "";
 
     private string _activeFolderId = "default-general";
+    private bool _mobileDrawerOpen = false;
     
     private bool _isAddingFolder = false;
     private string _newFolderName = "";
@@ -472,9 +476,12 @@
     }
 
     // --- Folders ---
+    private void ToggleMobileDrawer() => _mobileDrawerOpen = !_mobileDrawerOpen;
+    private void CloseMobileDrawer() => _mobileDrawerOpen = false;
     private void SetActiveFolder(string id)
     {
         _activeFolderId = id;
+        _mobileDrawerOpen = false;
     }
 
     private async Task SaveNewFolder()
@@ -724,8 +731,7 @@
             else if (_currentView == ViewMode.Eisenhower && _hoveredQuad > 0 && _draggedTask.EisenhowerQuadrant != _hoveredQuad)
             {
                 _draggedTask.EisenhowerQuadrant = _hoveredQuad;
-                await TaskService.ToggleTaskAsync(_draggedTask); // SaveTask essentially, toggletask is wrong, let's update it in the code actually wait.
-                // ToggleTask toggles IsDone. I'll just change the property and call _repository directly. Wait, the AddTaskAsync can be used to update it since it uses SaveTaskAsync!
+                await TaskService.ToggleTaskAsync(_draggedTask);
                 await TaskService.AddTaskAsync(_draggedTask); 
             }
         }
@@ -735,5 +741,45 @@
         _isDragging = false;
         _hoveredColId = "";
         _hoveredQuad = 0;
+    }
+
+    // --- Touch Support for Mobile ---
+    private void HandleTouchStart(TouchEventArgs e, AppTask task)
+    {
+        if (_currentView == ViewMode.Kanban || _currentView == ViewMode.Eisenhower)
+        {
+            _potentialDragTask = task;
+            if (e.Touches.Length > 0)
+            {
+                _mouseX = e.Touches[0].ClientX - 140;
+                _mouseY = e.Touches[0].ClientY - 20;
+            }
+        }
+    }
+    private void HandleTouchMove(TouchEventArgs e)
+    {
+        if (_potentialDragTask != null && (_currentView == ViewMode.Kanban || _currentView == ViewMode.Eisenhower))
+        {
+            if (!_isDragging) { _draggedTask = _potentialDragTask; _isDragging = true; }
+            if (e.Touches.Length > 0)
+            {
+                _mouseX = e.Touches[0].ClientX - 140;
+                _mouseY = e.Touches[0].ClientY - 20;
+            }
+        }
+    }
+    private async Task HandleTouchUp(TouchEventArgs e)
+    {
+        if (_isDragging && _draggedTask != null)
+        {
+            if (_currentView == ViewMode.Kanban && !string.IsNullOrEmpty(_hoveredColId) && _draggedTask.ColumnId != _hoveredColId)
+                await TaskService.MoveTaskAsync(_draggedTask.Id, _hoveredColId);
+            else if (_currentView == ViewMode.Eisenhower && _hoveredQuad > 0 && _draggedTask.EisenhowerQuadrant != _hoveredQuad)
+            {
+                _draggedTask.EisenhowerQuadrant = _hoveredQuad;
+                await TaskService.AddTaskAsync(_draggedTask);
+            }
+        }
+        _potentialDragTask = null; _draggedTask = null; _isDragging = false; _hoveredColId = ""; _hoveredQuad = 0;
     }
 }

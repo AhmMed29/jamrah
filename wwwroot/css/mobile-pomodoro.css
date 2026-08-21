@@ -1,0 +1,92 @@
+/* mobile-pomodoro.css — Pomodoro Page Mobile Overrides */
+@media (max-width: 768px) {
+  /* Stack layout */
+  .app-container {
+    flex-direction: column !important;
+    padding: 12px !important;
+    gap: 12px !important;
+    overflow-y: auto !important;
+    height: 100% !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .left-panel {
+    width: 100% !important;
+    flex-shrink: 1 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .right-panel {
+    flex: none !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* Timer box: smaller + always show adjust buttons */
+  .timer-box {
+    padding: 14px 12px !important;
+    gap: 8px !important;
+  }
+  .timer-value, .timer-val {
+    font-size: 36px !important;
+  }
+  .timer-adjust, .timer-adjust--left, .timer-adjust--right {
+    opacity: 1 !important;
+    position: static !important;
+    transform: none !important;
+  }
+  .timer-box {
+    flex-wrap: wrap;
+  }
+  .timer-center { order: 2; }
+  .timer-adjust--left { order: 1; }
+  .timer-adjust--right { order: 3; }
+  .adj-btn { width: 44px !important; height: 44px !important; }
+  .adj-btn--large { width: 44px !important; height: 44px !important; }
+  .adj-btn--small { width: 36px !important; height: 36px !important; }
+
+  /* Durations wrap */
+  .durations {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .dur-btn {
+    min-height: 44px;
+    flex: 1 1 calc(25% - 8px) !important;
+    min-width: 60px;
+  }
+
+  /* Actions larger */
+  .action-btn, .act {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  /* Prayer section compact */
+  .prayer-countdown-timer { font-size: 20px !important; }
+  .prayer-table { font-size: 12px !important; }
+  .prayer-table td, .prayer-table th { padding: 8px 4px !important; }
+
+  /* View modes full width */
+  .view-modes, .view-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .view-btn { min-height: 44px; white-space: nowrap; }
+
+  /* Toggle groups */
+  .toggle-group { margin: 0 !important; }
+  .session-item--new {
+    grid-template-columns: 1fr 80px 90px !important;
+    gap: 6px !important;
+    padding: 10px !important;
+  }
+
+  /* Bottom sheet modals already in mobile.css */
+}
+
+@media (max-width: 380px) {
+  .timer-value, .timer-val { font-size: 32px !important; }
+  .dur-btn { font-size: 11px !important; padding: 0 8px !important; }
+}

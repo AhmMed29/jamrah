@@ -5,7 +5,7 @@
 
 <div class="toastui-calendar-layout month-view">
     <!-- 1. Weekday Header Row -->
-    <div class="toastui-calendar-weekday-header month day-names month">
+    <div class="toastui-calendar-weekday-header month day-names month" style="direction:ltr;">
         <div class="day-name-container">
             @foreach (var day in GetWeekdayHeaders())
             {
@@ -17,7 +17,7 @@
     </div>
 
     <!-- 2. Month Grid Matrix (5 or 6 Weeks) -->
-    <div class="toastui-calendar-month-grid month-daygrid">
+    <div class="toastui-calendar-month-grid month-daygrid" style="direction:ltr;">
         @if (_monthMatrix != null)
         {
             @for (int w = 0; w < _monthMatrix.TotalWeeks; w++)

@@ -68,17 +68,13 @@
     <div class="cal-main">
         <div class="cal-header">
             <div style="display:flex; align-items:center; gap:8px;">
+                <button class="btn icon-btn" @onclick="ToggleSidebar" title="طي">☰</button>
                 <b style="font-size:13px;">@GetToolbarTitle()</b>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
-                <button class="btn icon-btn" @onclick="ToggleSidebar" title="طي">☰</button>
                 <button class="btn" @onclick="() => StateService.Today()">اليوم</button>
                 <button class="btn nav-btn" @onclick="() => StateService.Previous()">‹</button>
                 <button class="btn nav-btn" @onclick="() => StateService.Next()">›</button>
-                <div class="seg">
-                    <button class="@(!_isEditMode?"active":"")" @onclick="() => _isEditMode=false">عرض</button>
-                    <button class="@(_isEditMode?"active":"")" @onclick="() => _isEditMode=true">تعديل</button>
-                </div>
                 <div class="seg">
                     <button class="@(StateService.CurrentView==ViewMode.Month&&!_showAgenda?"active":"")" @onclick="() => { _showAgenda=false; StateService.SetView(ViewMode.Month); }">Month</button>
                     <button class="@(StateService.CurrentView==ViewMode.Week&&!_showAgenda?"active":"")" @onclick="() => { _showAgenda=false; StateService.SetView(ViewMode.Week); }">Week</button>
@@ -174,7 +170,6 @@
 
 @code {
     private bool _isSidebarCollapsed = false;
-    private bool _isEditMode = false;
     private bool _showAgenda = false;
     private DateTime _miniDate = DateTime.Today;
     private DayOfWeek _weekStart = DayOfWeek.Saturday;

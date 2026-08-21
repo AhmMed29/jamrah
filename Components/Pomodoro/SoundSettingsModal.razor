@@ -1,0 +1,135 @@
+@namespace Jamrah.Components.Pomodoro
+@using Microsoft.JSInterop
+@inject Jamrah.Services.PomodoroSoundService SoundService
+@inject IJSRuntime JS
+
+<div class="sound-modal-overlay">
+    <div class="sound-modal" dir="rtl">
+        <div class="sound-modal-header">
+            <span class="sound-modal-title">🔊 إعدادات الصوت</span>
+            <button class="sound-close-btn" @onclick="Close">✕</button>
+        </div>
+
+        <div class="sound-modal-body">
+
+            <div class="sound-group-label">الإعدادات العامة</div>
+            <div class="sound-row">
+                <span>تشغيل المؤثرات الصوتية</span>
+                <button class="sound-toggle @(S.MasterEnabled ? "on" : "")" @onclick="() => S.MasterEnabled = !S.MasterEnabled">@(S.MasterEnabled ? "ON" : "OFF")</button>
+            </div>
+            <div class="sound-row">
+                <span>مستوى الصوت</span>
+                <input type="range" min="0" max="100" step="1" value="@S.MasterVolume" @oninput="OnVolumeChanged" />
+                <b class="sound-vol">@($"{S.MasterVolume}%")</b>
+            </div>
+
+            <div class="sound-group-label">أحداث المؤقت</div>
+
+            @foreach (var ev in Events)
+            {
+                <div class="sound-event-row">
+                    <div class="sound-event-head">
+                        <span>@ev.Title</span>
+                        <button class="sound-toggle @(ev.Setting.Enabled ? "on" : "")" @onclick="() => ev.Setting.Enabled = !ev.Setting.Enabled">@(ev.Setting.Enabled ? "ON" : "OFF")</button>
+                    </div>
+                    <div class="sound-event-body">
+                        <select class="minimal-input" value="@ev.Setting.SoundFile" @onchange="e => ev.Setting.SoundFile = e.Value?.ToString() ?? string.Empty">
+                            @foreach (var s in Sounds) { <option value="@s.File">@s.Label</option> }
+                        </select>
+                        <button class="preview-btn" @onclick="() => Preview(ev.Setting.SoundFile)">▶</button>
+                    </div>
+                </div>
+            }
+
+            <div class="sound-group-label">التنبيهات</div>
+            <div class="sound-row">
+                <span>التشغيل عند تصغير البرنامج</span>
+                <button class="sound-toggle @(S.PlayWhenMinimized ? "on" : "")" @onclick="() => S.PlayWhenMinimized = !S.PlayWhenMinimized">@(S.PlayWhenMinimized ? "ON" : "OFF")</button>
+            </div>
+
+        </div>
+
+        <div class="sound-modal-footer">
+            <button class="modal-btn" @onclick="Reset">إعادة ضبط</button>
+            <button class="modal-btn primary" @onclick="SaveAndClose">حفظ</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .sound-modal-overlay{ position:fixed; inset:0; background:rgba(28,25,23,.30); z-index:120; display:flex; align-items:center; justify-content:center; }
+    .sound-modal{ width:400px; max-height:82vh; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:0 20px 40px rgba(0,0,0,.08); display:flex; flex-direction:column; overflow:hidden; }
+    .sound-modal-header{ padding:12px 14px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); }
+    .sound-modal-title{ font-weight:700; font-size:13px; color:var(--text); }
+    .sound-close-btn{ width:26px; height:26px; border-radius:50%; border:1px solid var(--border); background:var(--card); cursor:pointer; font-size:11px; color:var(--text); }
+    .sound-close-btn:hover{ background:var(--text); color:#fff; }
+    .sound-modal-body{ padding:10px 14px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
+    .sound-modal-body::-webkit-scrollbar{ width:4px; } .sound-modal-body::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:4px; }
+    .sound-group-label{ font-size:11px; color:var(--muted); font-weight:700; letter-spacing:.5px; margin-top:4px; }
+    .sound-row{ display:flex; align-items:center; gap:8px; justify-content:space-between; font-size:12px; color:var(--text); }
+    .sound-row input[type=range]{ flex:1; accent-color:var(--text); height:20px; }
+    .sound-vol{ font-size:11px; color:var(--muted); min-width:36px; text-align:left; }
+    .sound-event-row{ border:1px solid var(--border); border-radius:10px; padding:8px; display:flex; flex-direction:column; gap:6px; background:var(--bg); }
+    .sound-event-head{ display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text); font-weight:500; }
+    .sound-event-body{ display:flex; gap:6px; }
+    .sound-event-body select{ flex:1; height:32px; }
+    .preview-btn{ width:34px; height:32px; border-radius:10px; border:1px solid var(--border); background:var(--card); cursor:pointer; color:var(--text); font-size:11px; }
+    .preview-btn:hover{ background:var(--text); color:#fff; border-color:var(--text); }
+    .sound-toggle{ min-width:44px; height:24px; border-radius:12px; border:1px solid var(--border2); background:var(--card2); cursor:pointer; font-size:10px; font-weight:700; color:var(--muted); padding:0 8px; }
+    .sound-toggle.on{ background:var(--text); color:#fff; border-color:var(--text); }
+    .sound-modal-footer{ padding:10px 14px; border-top:1px solid var(--border); display:flex; gap:6px; justify-content:flex-end; }
+    .sound-modal-footer .modal-btn{ height:32px; padding:0 14px; border-radius:10px; border:1px solid var(--border); background:var(--card); cursor:pointer; font-size:12px; color:var(--text); }
+    .sound-modal-footer .modal-btn.primary{ background:var(--text); color:#fff; border-color:var(--text); }
+    .sound-modal-footer .modal-btn:hover{ opacity:.9; }
+</style>
+
+@code {
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private record SoundEventRow(string Title, Jamrah.Services.EventSoundSetting Setting);
+
+    private List<SoundEventRow> Events => new()
+    {
+        new("▶ بدء الجلسة", S.SessionStart),
+        new("⏱ تبقى 10 ثوانٍ", S.TimerWarning),
+        new("✓ اكتمال الجلسة", S.SessionComplete),
+        new("☕ بداية الاستراحة", S.BreakStart),
+        new("✓ انتهاء الاستراحة", S.BreakComplete),
+    };
+
+    private Jamrah.Services.PomodoroSoundSettings S => SoundService.Settings;
+
+    private List<(string File, string Label)> _sounds = new();
+    private IEnumerable<(string File, string Label)> Sounds => _sounds;
+
+    // Scanned fresh on EVERY open of the modal (component re-created by parent)
+    protected override void OnInitialized()
+    {
+        _sounds = SoundService.GetAvailableSounds();
+    }
+
+    private void OnVolumeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var v)) S.MasterVolume = v;
+    }
+
+    private async Task Preview(string file)
+    {
+        await SoundService.PreviewAsync(JS, file);
+    }
+
+    private void Reset()
+    {
+        SoundService.ResetToDefaults();
+        StateHasChanged();
+    }
+
+    private void SaveAndClose()
+    {
+        SoundService.Save();
+        Close();
+    }
+
+    private void Close() => OnClose.InvokeAsync();
+}
+

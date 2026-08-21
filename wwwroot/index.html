@@ -12,10 +12,10 @@
     <link rel="stylesheet" href="css/tui-calendar.css" />
     <link rel="stylesheet" href="css/tasks.css" />
     <script>
-        window.playPomoSound = function(src) {
+        window.playPomoSound = function(src, volume) {
             try {
                 var a = new Audio(src);
-                a.volume = 0.8;
+                a.volume = (typeof volume === 'number') ? volume : 0.8;
                 a.play().catch(function(e){ console.log("audio play failed", e); });
             } catch(e){ console.log(e); }
         }

@@ -18,6 +18,7 @@ namespace Jamrah
                 });
 
             builder.Services.AddSingleton<PrayerTimesService>();
+            builder.Services.AddSingleton<PomodoroSoundService>();
             
             // Register Data Access Layer
             builder.Services.AddSingleton<ICalendarRepository, CalendarRepository>();

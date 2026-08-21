@@ -2,6 +2,7 @@
 @namespace Jamrah.Components.Pomodoro
 @implements IDisposable
 @inject Jamrah.Services.PrayerTimesService PrayerService
+@inject Jamrah.Services.PomodoroSoundService Sound
 @inject IJSRuntime JS
 
 <div class="app-container" dir="rtl" style="flex-direction:row-reverse;">
@@ -67,20 +68,12 @@
             <div class="info-row"><span>المدة</span><span>@DurationText</span></div>
         </div>
 
-        <div class="sound-section">
-            <div class="sound-option">
-                <label class="sound-radio"><input type="radio" name="soundMode" checked="@_useGlobalSound" @onchange="() => SetSoundMode(true)" /> صوت عام</label>
-                <select class="minimal-input" value="@_globalSoundFile" @onchange="SetGlobalSound" disabled="@(!_useGlobalSound)">
-                    @foreach(var s in AvailableSounds){<option value="@s.File">@s.Label</option>}
-                </select>
-            </div>
-            <div class="sound-option">
-                <label class="sound-radio"><input type="radio" name="soundMode" checked="@(!_useGlobalSound)" @onchange="() => SetSoundMode(false)" /> صوت لكل جلسة</label>
-                <select class="minimal-input" value="@_perSessionSoundFile" @onchange="SetPerSessionSound" disabled="@(_useGlobalSound)">
-                    @foreach(var s in AvailableSounds){<option value="@s.File">@s.Label</option>}
-                </select>
-            </div>
-        </div>
+        <button class="dur-btn" style="width:100%; margin-top:2px;" @onclick="() => _soundModalOpen = true">🔊 اعدادات الصوت</button>
+
+        @if (_soundModalOpen)
+        {
+            <SoundSettingsModal OnClose="() => _soundModalOpen = false" />
+        }
 
         <div class="prayer-section">
 
@@ -151,10 +144,6 @@
                 <div class="input-group"><label class="input-label">اسم الجلسة</label><input type="text" class="minimal-input" @bind="_sessionName" placeholder="untitled" /></div>
                 <div class="input-group"><label class="input-label">ملاحظات</label><textarea class="minimal-textarea" @bind="_sessionNote" placeholder="اكتب ملاحظاتك هنا..."></textarea></div>
                 <div class="input-group"><label class="input-label">المدة</label><input type="number" class="minimal-input" @bind="_sessionDuration" /></div>
-                @if (!_useGlobalSound)
-                {
-                    <div class="input-group"><label class="input-label">صوت الجلسة</label><select class="minimal-input" @bind="_perSessionSoundFile">@foreach(var s in AvailableSounds){<option value="@s.File">@s.Label</option>}</select></div>
-                }
                 <div class="modal-actions"><button class="modal-btn" @onclick="CloseModal">إلغاء</button><button class="modal-btn primary" @onclick="StartSessionFromCreate">بدء</button></div>
             </div>
         </div>
@@ -200,14 +189,6 @@
                 @if (!IsDetailCurrent && _editing)
                 {
                     <div class="input-group"><label class="input-label">المدة (دقيقة)</label><input type="number" class="minimal-input" @bind="_editDurationMinutes" /></div>
-                }
-                @if (_editing && !_useGlobalSound)
-                {
-                    <div class="input-group"><label class="input-label">صوت الجلسة</label><select class="minimal-input" @bind="_editSoundFile">@foreach(var s in AvailableSounds){<option value="@s.File">@s.Label</option>}</select></div>
-                }
-                @if (!_editing && _detailSession != null && !_useGlobalSound && !string.IsNullOrEmpty(_detailSession.SoundFile) && _detailSession.SoundFile != "none")
-                {
-                    <div class="input-group"><label class="input-label">الصوت</label><span class="detail-static">@(AvailableSounds.FirstOrDefault(x=>x.File==_detailSession.SoundFile).Label ?? _detailSession.SoundFile)</span></div>
                 }
                 <div class="modal-actions">
                     <button class="modal-btn" @onclick="ToggleEdit">تعديل</button>
@@ -388,21 +369,7 @@
     private bool _locationModalOpen;
     private string _latInput = "";
     private string _lonInput = "";
-    private bool _useGlobalSound = true;
-    private string _globalSoundFile = "pomo-end.mp3";
-    private string _perSessionSoundFile = "pomo-end.mp3";
-    private string _editSoundFile = "pomo-end.mp3";
-    private static readonly (string File, string Label)[] AvailableSounds = new[]
-    {
-        ("none", "بدون صوت"),
-        ("pomo-start.mp3", "بداية (1)"),
-        ("start-pomo.wav", "بداية (2)"),
-        ("checkbox-check.mp3", "تأكيد"),
-        ("tab-swipping.mp3", "سحب"),
-        ("pomo-end.mp3", "نهاية (1)"),
-        ("pomo-end.wav", "نهاية (2)"),
-        ("before-pomo-end.wav", "وقالوا الحمدلله"),
-    };
+    private bool _soundModalOpen;
     
     private static readonly int[] Durations = { 25, 50, 5, 10 };
     private static readonly (string Label, string Value)[] ViewModes =
@@ -460,41 +427,6 @@
         }
     }
 
-    private void SetSoundMode(bool useGlobal)
-    {
-        _useGlobalSound = useGlobal;
-        Preferences.Set("pomo_useGlobalSound", _useGlobalSound);
-        if (_useGlobalSound) _editSoundFile = _globalSoundFile; else _editSoundFile = _perSessionSoundFile;
-    }
-
-    private void SetGlobalSound(ChangeEventArgs e)
-    {
-        var file = e.Value?.ToString() ?? _globalSoundFile;
-        _globalSoundFile = file;
-        Preferences.Set("pomo_globalSound", file);
-        if (_useGlobalSound) _editSoundFile = file;
-    }
-
-    private void SetPerSessionSound(ChangeEventArgs e)
-    {
-        var file = e.Value?.ToString() ?? _perSessionSoundFile;
-        _perSessionSoundFile = file;
-        Preferences.Set("pomo_perSessionSound", file);
-        if (!_useGlobalSound) _editSoundFile = file;
-    }
-
-    private async Task PlaySoundForSession(Session s)
-    {
-        try
-        {
-            string file = _useGlobalSound ? _globalSoundFile : (!string.IsNullOrEmpty(s.SoundFile) ? s.SoundFile : _perSessionSoundFile);
-            if (string.IsNullOrEmpty(file) || file == "none") return;
-            var src = $"sounds/{file}";
-            await JS.InvokeVoidAsync("playPomoSound", src);
-        }
-        catch { }
-    }
-
     private static string To12H(string time24)
     {
         if (!TimeSpan.TryParse(time24, out var t)) return time24;
@@ -509,10 +441,6 @@
         _timer.Tick += OnTimerEvent;
         _timer.Completed += OnTimerEvent;
         _repo = new PomodoroRepository();
-        _useGlobalSound = Preferences.Get("pomo_useGlobalSound", true);
-        _globalSoundFile = Preferences.Get("pomo_globalSound", "pomo-end.mp3");
-        _perSessionSoundFile = Preferences.Get("pomo_perSessionSound", "pomo-end.mp3");
-        _editSoundFile = _useGlobalSound ? _globalSoundFile : _perSessionSoundFile;
         await PrayerService.InitAsync();
         _todayPrayers = await PrayerService.GetTodayAsync();
         UpdateNextPrayer();
@@ -617,7 +545,11 @@
             s.ElapsedSeconds = s.PlannedMinutes * 60;
             s.Completed = true;
             _ = _repo.SaveSessionAsync(s);
-            _ = PlaySoundForSession(s);
+            _ = Sound.FireEventAsync(JS, PomodoroSoundEvent.SessionComplete);
+        }
+        else if (_currentSession != null && Math.Abs(_timer.Remaining.TotalSeconds - 10) < 0.5)
+        {
+            _ = Sound.FireEventAsync(JS, PomodoroSoundEvent.TimerWarning);
         }
         else if (_currentSession != null && _tickCount % 10 == 0)
         {
@@ -642,6 +574,7 @@
         else
         {
             _timer.Start();
+            await Sound.FireEventAsync(JS, PomodoroSoundEvent.SessionStart);
             if (_currentSession == null)
             {
                 _startedAt = DateTime.Now;
@@ -673,7 +606,7 @@
         s.ElapsedSeconds = CurrentElapsedSeconds();
         s.Completed = true;
         await _repo.SaveSessionAsync(s);
-        await PlaySoundForSession(s);
+        await Sound.FireEventAsync(JS, PomodoroSoundEvent.SessionComplete);
         _currentSession = null;
         _timer.Reset();
         _startedAt = null;
@@ -735,6 +668,7 @@
         _currentSession = s;
         await _repo.SaveSessionAsync(s);
         RebuildToggles();
+        await Sound.FireEventAsync(JS, PomodoroSoundEvent.SessionStart);
     }
 
     private void OnTimerBoxClick()
@@ -760,7 +694,6 @@
         _editNote = s.Note;
         _editDurationMinutes = s.ElapsedSeconds / 60;
         _editTag = s.Tag;
-        _editSoundFile = string.IsNullOrEmpty(s.SoundFile) ? (_useGlobalSound ? _globalSoundFile : _perSessionSoundFile) : s.SoundFile;
         _modalMode = ModalMode.Details;
     }
 
@@ -781,7 +714,6 @@
             _editNote = _detailSession.Note;
             _editDurationMinutes = _detailSession.ElapsedSeconds / 60;
             _editTag = _detailSession.Tag;
-            _editSoundFile = _detailSession.SoundFile;
         }
     }
 
@@ -808,8 +740,6 @@
         if (_detailSession == _currentSession)
         {
             ApplyTag(_detailSession, _editTag);
-            if (_editing && !_useGlobalSound) _detailSession.SoundFile = _editSoundFile;
-            else if (_editing && _useGlobalSound) _detailSession.SoundFile = _globalSoundFile;
             await _repo.SaveSessionAsync(_detailSession);
             _modalMode = ModalMode.None;
             RebuildToggles(); 
@@ -820,7 +750,6 @@
             {
                 _detailSession.ElapsedSeconds = Math.Max(0, _editDurationMinutes) * 60;
                 ApplyTag(_detailSession, _editTag);
-                if (!_useGlobalSound) _detailSession.SoundFile = _editSoundFile; else _detailSession.SoundFile = _globalSoundFile;
             }
             await _repo.SaveSessionAsync(_detailSession);
             _modalMode = ModalMode.None;
@@ -842,6 +771,7 @@
         _selectedTag = null;
         _modalMode = ModalMode.None;
         RebuildToggles();
+        await Sound.FireEventAsync(JS, PomodoroSoundEvent.SessionStart);
     }
 
     private Session NewSession(string title, string note, int minutes, Tag? tag)
@@ -858,7 +788,6 @@
             ElapsedSeconds = 0,
             Completed = false,
             Tag = tag,
-            SoundFile = _useGlobalSound ? _globalSoundFile : _perSessionSoundFile,
         };
         ApplyTag(s, tag);
         return s;

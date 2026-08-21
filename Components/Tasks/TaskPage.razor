@@ -1,9 +1,14 @@
-@namespace Jamrah.Components.Tasks
+﻿@namespace Jamrah.Components.Tasks
 @implements IDisposable
 @inject Jamrah.Services.ITaskStateService TaskService
 @using Jamrah.Models
 
 <div class="tasks-page" dir="rtl" @onmousemove="HandleMouseMove" @onmouseup="HandleMouseUp" @onmouseleave="HandleMouseUp">
+
+    <!-- Right Collapsible Sidebar -->
+    <div class="task-right-sidebar @( _isRightSidebarCollapsed ? "collapsed" : "")">
+        <div class="right-header"><span>لوحة جانبية</span><button class="toggle-btn" style="width:24px; height:24px; padding:0;" @onclick="ToggleRightSidebar">‹</button></div>
+        <div style="padding:12px; font-size:11px; color:var(--muted);">مساحة جانبية قابلة للطي — استخدم زر ☰ لإظهار/إخفاء</div>
 
     <div class="main-content">
         @if (_isDragging && _draggedTask != null && (_currentView == ViewMode.Kanban || _currentView == ViewMode.Eisenhower))
@@ -18,11 +23,13 @@
 
         <div class="board-header">
             <span class="board-title">المهام</span>
+            <div style="flex:1"></div>
             <div class="header-toggles">
                 <button class="toggle-btn" @onclick="ToggleSortMode">@GetSortModeLabel()</button>
                 <button class="toggle-btn" @onclick="ToggleViewMode">عرض: @GetViewModeLabel()</button>
             </div>
             <button class="add-col-btn" @onclick="AddNewColumn" style="visibility: @(_currentView == ViewMode.Kanban ? "visible" : "hidden")">+ إضافة عمود</button>
+            <button class="toggle-btn" @onclick="ToggleRightSidebar" title="طي السايدبار" style="width:32px; padding:0;">☰</button>
         </div>
 
         @if (_currentView == ViewMode.Kanban)
@@ -210,44 +217,7 @@
                 </div>
             </div>
         }
-    </div>
-
-    <!-- Folders Sidebar -->
-    <div class="folders-sidebar">
-        <div class="sidebar-header">المجلدات</div>
-        <div class="folder-list">
-            <div class="folder-item @(_activeFolderId == "" ? "active" : "")" @onclick='() => SetActiveFolder("")'>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                <span class="folder-name">الكل</span>
-            </div>
-            @foreach (var folder in TaskService.Folders)
-            {
-                <div class="folder-item @(_activeFolderId == folder.Id ? "active" : "")" @onclick="() => SetActiveFolder(folder.Id)">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="@folder.Color" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                    <span class="folder-name">@folder.Name</span>
-                    @if (folder.Id != "default-general")
-                    {
-                        <span class="folder-del" @onclick="() => DeleteFolder(folder.Id)" @onclick:stopPropagation="true">×</span>
-                    }
-                </div>
-            }
-        </div>
-        <div class="add-folder-section">
-            @if (_isAddingFolder)
-            {
-                <input class="folder-input" @bind="_newFolderName" placeholder="الاسم" />
-                <input type="color" class="folder-color" @bind="_newFolderColor" />
-                <div class="folder-actions">
-                    <button class="btn primary" @onclick="SaveNewFolder">حفظ</button>
-                    <button class="btn" @onclick="() => _isAddingFolder = false">إلغاء</button>
-                </div>
-            }
-            else
-            {
-                <button class="add-folder-btn" @onclick="() => _isAddingFolder = true">+ إضافة مجلد</button>
-            }
-        </div>
-    </div>
+    </div></div>
 </div>
 
 @if (_isAddTaskModalOpen)
@@ -324,129 +294,58 @@
 }
 
 <style>
-    :root { --black: #000000; --white: #FFFFFF; --gray: #EEEEEE; --dark-gray: #CCCCCC; }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
-    .tasks-page { height: 100vh; display: flex; flex-direction: row; background-color: var(--white); color: var(--black); position: relative; overflow: hidden; }
-    
-    .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-
-    .board-header { padding: 20px 40px; border-bottom: 1px solid var(--black); display: flex; justify-content: space-between; align-items: center; }
-    .board-title { font-size: 24px; font-weight: bold; text-transform: uppercase; }
-    .add-col-btn { border: 1px solid var(--black); background: var(--white); color: var(--black); padding: 8px 16px; cursor: pointer; font-size: 14px; min-width: 120px; }
-    .add-col-btn:hover { background: var(--black); color: var(--white); }
-    
-    .header-toggles { display: flex; gap: 12px; }
-    .toggle-btn { border: 1px solid var(--black); background: var(--white); color: var(--black); padding: 8px 16px; cursor: pointer; font-size: 14px; min-width: 170px; text-align: center; }
-    .toggle-btn:hover { background: var(--black); color: var(--white); }
-
-    .board-container { flex: 1; display: flex; gap: 20px; padding: 20px 40px; overflow-x: auto; align-items: flex-start; }
-    .board-container::-webkit-scrollbar { height: 8px; }
-    .board-container::-webkit-scrollbar-thumb { background: var(--black); }
-
-    .kanban-column { min-width: 300px; width: 300px; border: 1px solid var(--black); display: flex; flex-direction: column; max-height: 100%; background: var(--white); }
-    
-    .col-header { padding: 12px; border-bottom: 1px solid var(--black); display: flex; justify-content: space-between; align-items: center; background: var(--gray); }
-    .col-title { font-weight: bold; cursor: pointer; flex: 1; }
-    .col-title:hover { text-decoration: underline; }
-    .col-delete-btn { background: none; border: none; cursor: pointer; font-size: 18px; line-height: 1; color: var(--black); margin-right: 8px; padding: 0 4px; }
-    .col-delete-btn:hover { color: red; }
-    .col-edit-input { flex: 1; border: 1px solid var(--black); padding: 4px; font-family: inherit; font-size: 14px; outline: none; }
-    
-    .col-body { padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; min-height: 100px; }
-    .col-body::-webkit-scrollbar { width: 4px; }
-    .col-body::-webkit-scrollbar-thumb { background: var(--black); }
-
-    .kanban-task { border: 1px solid var(--black); padding: 12px; display: flex; justify-content: space-between; align-items: flex-start; cursor: grab; background: var(--white); transition: opacity 0.2s; user-select: none; -webkit-user-select: none; }
-    .kanban-task:active { cursor: grabbing; border-style: dashed; }
-    .kanban-task.done { opacity: 0.5; }
-    .kanban-task.done .task-title { text-decoration: line-through; }
-    .kanban-task.dragging-original { opacity: 0.3; }
-
-    .ghost-task { position: fixed; pointer-events: none; z-index: 9999; width: 280px; box-shadow: 5px 5px 15px rgba(0,0,0,0.2); transform: rotate(3deg); opacity: 0.95; }
-    
-    .task-header { display: flex; gap: 8px; align-items: flex-start; flex: 1; }
-    .task-title { word-break: break-word; font-size: 14px; margin-top: -2px; }
-    .task-delete-btn { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--dark-gray); margin-right: 8px; }
-    .task-delete-btn:hover { color: red; }
-    
-    .col-footer { padding: 12px; border-top: 1px solid var(--black); }
-    .task-add-btn { width: 100%; border: none; background: none; text-align: right; cursor: pointer; font-size: 14px; color: #555; }
-    .task-add-btn:hover { color: var(--black); text-decoration: underline; }
-
-    /* List View Styles */
-    .list-container { flex: 1; padding: 20px 40px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
-    .list-add-section { width: 100%; margin-bottom: 20px; }
-    .list-add-btn-full { width: 100%; border: 1px dashed var(--black); padding: 12px; font-family: inherit; font-size: 14px; background: var(--white); cursor: pointer; text-align: right; color: #555; }
-    .list-add-btn-full:hover { background: var(--gray); color: var(--black); }
-    .list-items { width: 100%; display: flex; flex-direction: column; gap: 12px; }
-    .list-task { cursor: default; align-items: center; }
-    .list-task:active { cursor: default; border-style: solid; }
-    .task-meta { display: flex; gap: 16px; align-items: center; }
-    .task-date, .task-time { font-size: 12px; color: var(--dark-gray); }
-    .task-badge { font-size: 10px; padding: 2px 6px; border: 1px solid var(--black); background: var(--gray); }
-    .empty-list { text-align: center; color: var(--dark-gray); padding: 20px; font-size: 14px; }
-
-    /* Eisenhower View */
-    .eisenhower-container { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 20px; padding: 20px 40px; overflow-y: auto; }
-    .matrix-quadrant { border: 2px solid var(--black); display: flex; flex-direction: column; background: var(--white); }
-    .q1 { border-color: #EF4444; } .q2 { border-color: #3B82F6; } .q3 { border-color: #F59E0B; } .q4 { border-color: #6B7280; }
-    .quad-header { padding: 12px; font-weight: bold; border-bottom: 2px solid var(--black); background: var(--gray); text-align: center; }
-    .quad-body { padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; min-height: 100px; }
-
-    /* Split View */
-    .split-view-container { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; padding: 20px 40px; overflow-y: auto; }
-    .split-side { display: flex; flex-direction: column; gap: 12px; }
-    .split-header { font-weight: bold; font-size: 18px; border-bottom: 1px solid var(--black); padding-bottom: 8px; text-transform: uppercase; }
-
-    /* Folders Sidebar */
-    .folders-sidebar { width: 70px; border-left: 1px solid var(--black); display: flex; flex-direction: column; background: var(--gray); transition: width 0.3s ease; overflow: hidden; white-space: nowrap; }
-    .folders-sidebar:hover { width: 250px; }
-    .sidebar-header { padding: 20px; font-weight: bold; border-bottom: 1px solid var(--black); font-size: 18px; opacity: 0; transition: opacity 0.3s; }
-    .folders-sidebar:hover .sidebar-header { opacity: 1; }
-    .folder-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-    .folder-item { padding: 16px; display: flex; align-items: center; gap: 16px; cursor: pointer; border-bottom: 1px solid var(--dark-gray); }
-    .folder-item:hover { background: var(--dark-gray); }
-    .folder-item.active { background: var(--black); color: var(--white); }
-    .folder-name { opacity: 0; transition: opacity 0.3s; flex: 1; font-size: 14px; }
-    .folders-sidebar:hover .folder-name { opacity: 1; }
-    .folder-del { color: #888; padding: 0 8px; font-size: 18px; cursor: pointer; display: none; }
-    .folders-sidebar:hover .folder-del { display: block; }
-    .folder-del:hover { color: red; }
-    
-    .add-folder-section { padding: 16px; border-top: 1px solid var(--black); display: flex; flex-direction: column; gap: 8px; opacity: 0; transition: opacity 0.3s; }
-    .folders-sidebar:hover .add-folder-section { opacity: 1; }
-    .add-folder-btn { border: 1px dashed var(--black); background: none; padding: 8px; cursor: pointer; width: 100%; font-family: inherit; }
-    .add-folder-btn:hover { background: var(--black); color: var(--white); }
-    .folder-input { border: 1px solid var(--black); padding: 6px; width: 100%; outline: none; font-family: inherit; }
-    .folder-color { width: 100%; height: 30px; border: 1px solid var(--black); cursor: pointer; padding: 0; }
-    .folder-actions { display: flex; gap: 8px; }
-    .btn { flex: 1; border: 1px solid var(--black); background: var(--white); cursor: pointer; padding: 6px; font-family: inherit; font-size: 12px; }
-    .btn:hover { background: var(--black); color: var(--white); }
-    .btn.primary { background: var(--black); color: var(--white); }
-    .btn.primary:hover { background: var(--white); color: var(--black); }
-
-    /* Modals */
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,255,255,0.8); z-index: 100; justify-content: center; align-items: center; }
-    .modal-box { border: 2px solid var(--black); background: var(--white); padding: 32px; display: flex; flex-direction: column; gap: 16px; box-shadow: 10px 10px 0px rgba(0,0,0,0.1); }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--black); padding-bottom: 12px; }
-    .modal-title { font-weight: bold; font-size: 18px; }
-    .close-btn { background: none; border: 1px solid var(--black); cursor: pointer; padding: 4px 8px; }
-    .close-btn:hover { background: var(--black); color: var(--white); }
-    
-    .input-group { display: flex; flex-direction: column; gap: 6px; }
-    .input-group label { font-size: 12px; font-weight: bold; text-transform: uppercase; }
-    .minimal-input { border: 1px solid var(--black); padding: 10px; font-family: inherit; outline: none; background: var(--white); }
-    .minimal-input:focus { background: var(--gray); }
-    
-    .days-row { display: flex; gap: 6px; }
-    .day-btn { flex: 1; border: 1px solid var(--black); background: var(--white); padding: 6px; cursor: pointer; font-family: inherit; }
-    .day-btn.active { background: var(--black); color: var(--white); }
-
-    .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
-    .modal-btn { border: 1px solid var(--black); background: var(--white); padding: 10px 20px; cursor: pointer; font-family: inherit; }
-    .modal-btn:hover { background: var(--gray); }
-    .modal-btn.primary { background: var(--black); color: var(--white); }
-    .modal-btn.primary:hover { opacity: 0.8; }
+    *{ font-family:'Tajawal',sans-serif !important; }
+    :root { --bg:#FAFAF9; --card:#FFFFFF; --card2:#F5F5F4; --border:#E7E5E4; --border2:#D6D3D1; --text:#1C1917; --muted:#78716C; --accent:#FF6B35; --green:#16A34A; --blue:#2563EB; --red:#DC2626; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .tasks-page { height: 100vh; display: flex; flex-direction: row; background:var(--bg); color:var(--text); position:relative; overflow:hidden; gap:0; }
+    .main-content { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+    .board-header { padding:10px 16px; display:flex; gap:8px; align-items:center; border-bottom:1px solid var(--border); background:var(--card); }
+    .board-title { font-size:14px; font-weight:700; color:var(--text); flex:1; }
+    .header-toggles { display:flex; gap:6px; }
+    .toggle-btn { height:32px; padding:0 12px; border-radius:10px; border:1px solid var(--border); background:var(--card); color:var(--text); cursor:pointer; font-size:12px; }
+    .toggle-btn:hover{ background:var(--card2); }
+    .add-col-btn { height:32px; padding:0 12px; border-radius:10px; border:1px solid var(--border); background:var(--text); color:#fff; cursor:pointer; font-size:12px; font-weight:500; }
+    .add-col-btn:hover{ opacity:.9; }
+    .board-container { flex:1; display:flex; gap:12px; padding:12px; overflow-x:auto; align-items:flex-start; background:var(--bg); }
+    .board-container::-webkit-scrollbar{ height:8px; } .board-container::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:4px; }
+    .kanban-column { min-width:272px; width:272px; background:var(--card2); border:1px solid var(--border); border-radius:14px; display:flex; flex-direction:column; max-height:100%; flex-shrink:0; }
+    .col-header { padding:10px 12px; display:flex; align-items:center; gap:6px; }
+    .col-title { font-weight:700; cursor:pointer; flex:1; font-size:12px; color:var(--text); }
+    .col-delete-btn { background:none; border:none; cursor:pointer; font-size:14px; color:var(--muted); width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+    .col-delete-btn:hover{ background:var(--red); color:#fff; }
+    .col-edit-input { flex:1; border:1px solid var(--border); background:var(--card); padding:6px 8px; border-radius:8px; outline:none; font-size:12px; }
+    .col-body { margin:0 8px; padding:8px; background:var(--card); border:1px solid var(--border); border-radius:12px; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; min-height:80px; }
+    .col-body::-webkit-scrollbar{ width:4px; } .col-body::-webkit-scrollbar-thumb{ background:var(--border2); }
+    .col-body.drag-over{ border-color:var(--accent); background:#FFF7ED; }
+    .kanban-task { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:6px; cursor:grab; box-shadow:0 1px 2px rgba(0,0,0,.04); transition:all .15s; user-select:none; }
+    .kanban-task:active{ cursor:grabbing; transform:rotate(1deg); } .kanban-task.done{ opacity:.6; } .kanban-task.done .task-title{ text-decoration:line-through; color:var(--muted); } .kanban-task.dragging-original{ opacity:.3; }
+    .ghost-task{ position:fixed; pointer-events:none; z-index:9999; width:272px; box-shadow:0 8px 24px rgba(0,0,0,.12); transform:rotate(2deg); opacity:.95; }
+    .task-header{ display:flex; gap:8px; align-items:flex-start; flex:1; } .task-title{ word-break:break-word; font-size:12px; font-weight:500; line-height:1.4; }
+    .task-delete-btn{ background:none; border:none; cursor:pointer; font-size:14px; color:var(--muted); width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; opacity:0; }
+    .kanban-task:hover .task-delete-btn{ opacity:1; } .task-delete-btn:hover{ background:var(--red); color:#fff; }
+    .col-footer{ padding:8px; } .task-add-btn{ width:100%; height:30px; border:1px dashed var(--border2); border-radius:10px; background:var(--card); color:var(--muted); cursor:pointer; font-size:11px; }
+    .task-add-btn:hover{ border-color:var(--text); color:var(--text); }
+    .list-container{ flex:1; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; background:var(--bg); }
+    .list-add-btn-full{ width:100%; border:1px dashed var(--border2); padding:10px; border-radius:10px; background:var(--card); cursor:pointer; text-align:center; color:var(--muted); font-size:12px; }
+    .eisenhower-container{ flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:12px; padding:12px; overflow-y:auto; background:var(--bg); }
+    .matrix-quadrant{ border:1px solid var(--border); border-radius:14px; display:flex; flex-direction:column; background:var(--card); overflow:hidden; }
+    .quad-header{ padding:10px; font-weight:700; border-bottom:1px solid var(--border); text-align:center; font-size:11px; }
+    .quad-body{ padding:8px; display:flex; flex-direction:column; gap:6px; overflow-y:auto; flex:1; min-height:80px; background:var(--bg); }
+    .split-view-container{ flex:1; display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:12px; overflow-y:auto; background:var(--bg); }
+    .split-side{ display:flex; flex-direction:column; gap:8px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px; }
+    .task-right-sidebar{ width:260px; background:var(--card); border-left:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; transition:width .25s ease, border-width .25s ease; overflow:hidden; }
+    .task-right-sidebar.collapsed{ width:0; border-left-width:0; }
+    .right-header{ padding:12px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); font-size:12px; font-weight:700; }
+    .modal-overlay{ position:fixed; inset:0; background:rgba(28,25,23,.22); backdrop-filter:blur(4px); z-index:99; display:flex; align-items:center; justify-content:center; }
+    .modal-box{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; width:420px; display:flex; flex-direction:column; gap:10px; box-shadow:0 20px 40px rgba(0,0,0,.06); }
+    .modal-header{ display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; }
+    .modal-title{ font-weight:700; font-size:13px; color:var(--text); }
+    .close-btn{ width:28px; height:28px; border-radius:50%; border:1px solid var(--border); background:var(--card); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+    .input-group label{ font-size:11px; color:var(--muted); font-weight:700; }
+    .minimal-input{ background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:8px 10px; outline:none; font-size:12px; }
+    .modal-actions{ display:flex; gap:6px; justify-content:flex-end; margin-top:4px; }
+    .modal-btn{ height:32px; padding:0 12px; border-radius:10px; border:1px solid var(--border); background:var(--card); cursor:pointer; font-size:12px; }
+    .modal-btn.primary{ background:var(--text); color:#fff; border-color:var(--text); }
 </style>
 
 @code {
@@ -459,7 +358,9 @@
     private string _editingColId = "";
     private string _editColTitle = "";
 
-    private string _activeFolderId = "default-general";
+    private string _activeFolderId = ""; // folders removed, show all
+    private bool _isRightSidebarCollapsed = false;
+    private void ToggleRightSidebar() => _isRightSidebarCollapsed = !_isRightSidebarCollapsed;
     
     private bool _isAddingFolder = false;
     private string _newFolderName = "";

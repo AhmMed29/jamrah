@@ -1,314 +1,204 @@
-﻿@namespace Jamrah.Components.Calendar
+@namespace Jamrah.Components.Calendar
 @implements IDisposable
 @inject ICalendarStateService StateService
 
-<div class="calendar-page">
+<style>
+.cal-wrapper{ display:flex; height:100vh; background:var(--bg,#FAFAF9); font-family:'Tajawal',sans-serif; }
+.cal-sidebar{ width:260px; background:var(--card,#FFFFFF); border-left:1px solid var(--border,#E7E5E4); display:flex; flex-direction:column; flex-shrink:0; transition:width .25s ease, border-width .25s ease; overflow:hidden; }
+.cal-sidebar.collapsed{ width:0; border-left-width:0; }
+.cal-main{ flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+.cal-header{ height:52px; background:var(--card,#FFFFFF); border-bottom:1px solid var(--border,#E7E5E4); display:flex; align-items:center; justify-content:space-between; padding:0 14px; gap:12px; flex-shrink:0; }
+.cal-card{ flex:1; background:var(--card,#FFFFFF); border:1px solid var(--border,#E7E5E4); border-radius:16px; margin:12px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 1px 2px rgba(28,25,23,.04); }
+.mini{ padding:12px; border-bottom:1px solid var(--border,#E7E5E4); }
+.mini-head{ display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:12px; margin-bottom:8px; }
+.mini-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; text-align:center; font-size:11px; }
+.mini-grid b{ color:var(--muted,#78716C); font-weight:400; font-size:10px; padding:4px 0; }
+.mini-day{ height:28px; display:flex; align-items:center; justify-content:center; border-radius:8px; cursor:pointer; position:relative; transition:.12s; }
+.mini-day:hover{ background:var(--card2,#F5F5F4); } .mini-day.today{ background:var(--text,#1C1917); color:#fff; } .mini-day.selected{ outline:1px solid var(--text,#1C1917); outline-offset:-1px; } .mini-day.other{ color:var(--muted,#78716C); opacity:.45; }
+.cal-list{ padding:10px 12px; display:flex; flex-direction:column; gap:4px; border-bottom:1px solid var(--border,#E7E5E4); }
+.cal-item{ display:flex; gap:8px; align-items:center; padding:7px 8px; border-radius:8px; font-size:12px; cursor:pointer; }
+.cal-item:hover{ background:var(--card2,#F5F5F4); } .dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+</style>
 
-    @* ─── Toolbar ─── *@
-    <div class="calendar-toolbar">
-
-        @* Left: Today + Prev/Next *@
-        <div class="toolbar-left">
-            <button class="toolbar-btn toolbar-btn--today" @onclick="() => StateService.Today()">Today</button>
-            <button class="toolbar-btn toolbar-btn--nav" @onclick="() => StateService.Previous()" title="Previous">
-                <span class="nav-arrow">&#x276E;</span>
-            </button>
-            <button class="toolbar-btn toolbar-btn--nav" @onclick="() => StateService.Next()" title="Next">
-                <span class="nav-arrow">&#x276F;</span>
-            </button>
-            <span class="toolbar-title">@GetToolbarTitle()</span>
+<div class="cal-wrapper" dir="rtl">
+    <div class="cal-sidebar @(_isSidebarCollapsed ? "collapsed" : "")">
+        <div style="padding:12px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border);">
+            <b style="font-size:12px;">التقويم</b><button class="btn" style="width:28px; height:28px; padding:0; border-radius:8px;" @onclick="ToggleSidebar">‹</button>
         </div>
-
-        @* Right: View Mode Switcher *@
-        <div class="toolbar-right">
-            <div class="view-switcher">
-                <button class="view-btn @(StateService.CurrentView == ViewMode.Month ? "active" : "")"
-                        @onclick="() => StateService.SetView(ViewMode.Month)">Month</button>
-                <button class="view-btn @(StateService.CurrentView == ViewMode.Week  ? "active" : "")"
-                        @onclick="() => StateService.SetView(ViewMode.Week)">Week</button>
-                <button class="view-btn @(StateService.CurrentView == ViewMode.Day   ? "active" : "")"
-                        @onclick="() => StateService.SetView(ViewMode.Day)">Day</button>
-            </div>
-            <button class="toolbar-btn toolbar-btn--new-event" @onclick="() => StateService.OpenCreateEvent()">
-                + New Event
-            </button>
-        </div>
-    </div>
-
-    @* ─── Calendar View Area ─── *@
-    <div class="calendar-view-area">
-        @if (StateService.CurrentView == ViewMode.Month)
-        {
-            <MonthView SelectedDate="StateService.SelectedDate"
-                       Events="StateService.CurrentEvents"
-                       Calendars="StateService.Calendars" />
-        }
-        else if (StateService.CurrentView == ViewMode.Week)
-        {
-            <WeekView SelectedDate="StateService.SelectedDate"
-                      Events="StateService.CurrentEvents"
-                      Calendars="StateService.Calendars" />
-        }
-        else
-        {
-            <DayView SelectedDate="StateService.SelectedDate"
-                     Events="StateService.CurrentEvents"
-                     Calendars="StateService.Calendars" />
-        }
-    </div>
-
-    @* ─── Event Form Popup (Create / Edit) ─── *@
-    @if (StateService.IsEventFormOpen && StateService.SelectedEvent != null)
-    {
-        <div class="popup-overlay" @onclick="() => StateService.CloseModals()"></div>
-        <div class="floating-layer">
-            <div class="popup-container form-container" @onclick:stopPropagation="true">
-                <button class="popup-button popup-close" @onclick="() => StateService.CloseModals()" title="Close">&#x2715;</button>
-                <h3 class="popup-form-title">@(string.IsNullOrEmpty(StateService.SelectedEvent.Title) ? "New Event" : "Edit Event")</h3>
-
-                <div class="popup-section">
-                    <div class="popup-section-item">
-                        <span class="icon ic-title"></span>
-                        <input type="text" placeholder="Event title"
-                               value="@StateService.SelectedEvent.Title"
-                               @oninput="e => StateService.SelectedEvent.Title = e.Value?.ToString() ?? string.Empty" />
-                    </div>
-                </div>
-
-                <div class="popup-section popup-section--inline">
-                    <label class="allday-label">
-                        <input type="checkbox"
-                               checked="@StateService.SelectedEvent.IsAllday"
-                               @onchange="e => StateService.SelectedEvent.IsAllday = (bool)(e.Value ?? false)" />
-                        All day
-                    </label>
-                </div>
-
-                <div class="popup-section">
-                    <div class="popup-section-item">
-                        <span class="icon ic-date"></span>
-                        <input type="@(StateService.SelectedEvent.IsAllday ? "date" : "datetime-local")"
-                               value="@FormatDateForInput(StateService.SelectedEvent.Start, StateService.SelectedEvent.IsAllday)"
-                               @onchange="e => UpdateStartDate(e.Value?.ToString())" />
-                    </div>
-                </div>
-
-                <div class="popup-section">
-                    <div class="popup-section-item">
-                        <span class="icon ic-date"></span>
-                        <input type="@(StateService.SelectedEvent.IsAllday ? "date" : "datetime-local")"
-                               value="@FormatDateForInput(StateService.SelectedEvent.End, StateService.SelectedEvent.IsAllday)"
-                               @onchange="e => UpdateEndDate(e.Value?.ToString())" />
-                    </div>
-                </div>
-
-                <div class="popup-section">
-                    <div class="popup-section-item">
-                        <span class="icon ic-location"></span>
-                        <input type="text" placeholder="Location"
-                               value="@StateService.SelectedEvent.Location"
-                               @oninput="e => StateService.SelectedEvent.Location = e.Value?.ToString() ?? string.Empty" />
-                    </div>
-                </div>
-
-                <div class="popup-section">
-                    <div class="popup-section-item">
-                        <span class="popup-cal-dot" style="background-color: @GetSelectedCalendarColor();"></span>
-                        <select class="cal-select"
-                                value="@StateService.SelectedEvent.CalendarId"
-                                @onchange="e => StateService.SelectedEvent.CalendarId = e.Value?.ToString() ?? string.Empty">
-                            @foreach (var cal in StateService.Calendars)
-                            {
-                                <option value="@cal.Id">@cal.Name</option>
-                            }
-                        </select>
-                    </div>
-                </div>
-
-                <div class="popup-buttons-row">
-                    <button class="popup-button" @onclick="() => StateService.CloseModals()">Cancel</button>
-                    <button class="popup-button popup-confirm" @onclick="SaveEvent">Save</button>
-                </div>
-            </div>
-        </div>
-    }
-
-    @* ─── Event Detail Popup ─── *@
-    @if (StateService.IsEventDetailOpen && StateService.SelectedEvent != null)
-    {
-        <div class="popup-overlay" @onclick="() => StateService.CloseModals()"></div>
-        <div class="floating-layer">
-            <div class="popup-container detail-container" @onclick:stopPropagation="true">
-                <button class="popup-button popup-close" @onclick="() => StateService.CloseModals()" title="Close">&#x2715;</button>
-                <div class="detail-color-bar" style="background-color: @GetEventDetailColor();"></div>
-                <div class="event-title">@StateService.SelectedEvent.Title</div>
-                <div class="content">
-                    <span class="icon ic-date"></span>
-                    @StateService.SelectedEvent.Start.ToString("ddd, MMM d")
-                    @if (!StateService.SelectedEvent.IsAllday)
-                    {
-                        <span>&nbsp;@StateService.SelectedEvent.Start.ToString("HH:mm") – @StateService.SelectedEvent.End.ToString("HH:mm")</span>
-                    }
-                    else
-                    {
-                        <span>&nbsp;All day</span>
-                    }
-                </div>
-                @if (!string.IsNullOrWhiteSpace(StateService.SelectedEvent.Location))
+        <div class="mini">
+            <div class="mini-head"><span>@_miniDate.ToString("MMMM yyyy", new System.Globalization.CultureInfo("ar-EG"))</span><span style="display:flex; gap:4px;"><button class="btn" style="width:24px; height:24px; padding:0; border-radius:8px;" @onclick="() => MiniNav(-1)">‹</button><button class="btn" style="width:24px; height:24px; padding:0; border-radius:8px;" @onclick="() => MiniNav(1)">›</button></span></div>
+            <div class="mini-grid">
+                @foreach(var h in GetMiniHeaders())
+                { <b>@h</b> }
+                @foreach(var d in GetMiniDays())
                 {
-                    <div class="content">
-                        <span class="icon ic-location"></span>
-                        @StateService.SelectedEvent.Location
+                    var isOther = d.Month != _miniDate.Month;
+                    var isToday = d.Date == DateTime.Today;
+                    var isSelected = d.Date == StateService.SelectedDate.Date;
+                    <div class="mini-day @(isOther?"other":"") @(isToday?"today":"") @(isSelected?"selected":"")" @onclick="() => SelectMiniDate(d)">@d.Day</div>
+                }
+            </div>
+        </div>
+        <div class="cal-list">
+            @foreach(var cal in StateService.Calendars)
+            {
+                <label class="cal-item"><input type="checkbox" checked="@cal.IsChecked" @onchange="() => ToggleCal(cal.Id)" /><span class="dot" style="background:@cal.BackgroundColor"></span> @cal.Name</label>
+            }
+        </div>
+        <div style="padding:12px; flex:1; overflow-y:auto;"><b style="font-size:11px; color:var(--muted);">القادم</b><div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">
+            @foreach(var e in GetUpcoming())
+            {
+                <div style="padding:8px; border:1px solid var(--border); border-radius:10px; background:var(--bg); font-size:11px;"><b>@e.Title</b><div style="color:var(--muted);">@e.Start.ToString("dd/MM") @(e.IsAllday?"• طوال اليوم":e.Start.ToString("HH:mm"))</div></div>
+            }
+            @if (!GetUpcoming().Any()) { <div style="color:var(--muted); font-size:11px; text-align:center; padding:12px;">لا أحداث</div> }
+        </div></div>
+        <div style="padding:10px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; gap:6px; flex-wrap:wrap;"><span class="btn active" style="height:26px; font-size:11px;">عطلة</span><span class="btn active" style="height:26px; font-size:11px;">طوال اليوم</span></div>
+            <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--muted);">بداية <select @onchange="e => SetWeekStart(e.Value?.ToString())" style="flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:6px; font-size:11px;"><option value="6" selected="@(_weekStart==DayOfWeek.Saturday)">السبت</option><option value="0" selected="@(_weekStart==DayOfWeek.Sunday)">الأحد</option><option value="1" selected="@(_weekStart==DayOfWeek.Monday)">الإثنين</option></select></div>
+        </div>
+    </div>
+    <div class="cal-main">
+        <div class="cal-header">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <b style="font-size:13px;">@GetToolbarTitle()</b>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button class="btn" @onclick="ToggleSidebar" title="طي">☰</button>
+                <button class="btn" @onclick="() => StateService.Today()">اليوم</button>
+                <button class="btn" style="width:32px; padding:0;" @onclick="() => StateService.Previous()">‹</button><button class="btn" style="width:32px; padding:0;" @onclick="() => StateService.Next()">›</button>
+                <div class="mode-switch" style="display:flex; border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+                    <button class="@(_isEditMode?"":"active")" style="padding:6px 12px; border:none; background:var(--card); cursor:pointer; font-size:11px; border-left:1px solid var(--border); color:var(--muted);" @onclick="() => _isEditMode=false">عرض</button>
+                    <button class="@(_isEditMode?"active":"")" style="padding:6px 12px; border:none; background:var(--card); cursor:pointer; font-size:11px; color:var(--muted);" @onclick="() => _isEditMode=true">تعديل</button>
+                </div>
+                <div class="view-switch" style="display:flex; background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:2px; gap:2px;">
+                    <button class="@(StateService.CurrentView==ViewMode.Month&&!_showAgenda?"active":"")" style="padding:6px 12px; border-radius:8px; border:1px solid transparent; background:transparent; cursor:pointer; font-size:12px; color:var(--muted);" @onclick="() => { _showAgenda=false; StateService.SetView(ViewMode.Month); }">Month</button>
+                    <button class="@(StateService.CurrentView==ViewMode.Week&&!_showAgenda?"active":"")" style="padding:6px 12px; border-radius:8px; border:1px solid transparent; background:transparent; cursor:pointer; font-size:12px; color:var(--muted);" @onclick="() => { _showAgenda=false; StateService.SetView(ViewMode.Week); }">Week</button>
+                    <button class="@(StateService.CurrentView==ViewMode.Day&&!_showAgenda?"active":"")" style="padding:6px 12px; border-radius:8px; border:1px solid transparent; background:transparent; cursor:pointer; font-size:12px; color:var(--muted);" @onclick="() => { _showAgenda=false; StateService.SetView(ViewMode.Day); }">Day</button>
+                    <button class="@(_showAgenda?"active":"")" style="padding:6px 12px; border-radius:8px; border:1px solid transparent; background:transparent; cursor:pointer; font-size:12px; color:var(--muted);" @onclick="ToggleAgenda">Agenda</button>
+                </div>
+                <button class="btn primary" @onclick="() => StateService.OpenCreateEvent()">+ حدث</button>
+            </div>
+        </div>
+        <div style="flex:1; display:flex; overflow:hidden; padding:0;">
+            <div class="cal-card" style="flex:1; background:var(--card); border:1px solid var(--border); border-radius:16px; margin:12px; display:flex; flex-direction:column; overflow:hidden;">
+                @if (_showAgenda)
+                {
+                    <div style="flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:10px; background:var(--bg);">
+                        @foreach(var g in GetAgendaGroups())
+                        {
+                            <div style="background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+                                <div style="padding:9px 12px; background:var(--card2); font-weight:700; font-size:12px; display:flex; justify-content:space-between; border-bottom:1px solid var(--border);"><span>@g.Key</span><span style="color:var(--muted); font-weight:400;">@g.Count() أحداث</span></div>
+                                @foreach(var e in g)
+                                {
+                                    <div style="padding:10px 12px; display:flex; gap:10px; align-items:center; border-top:1px solid var(--border); cursor:pointer; font-size:12px;" @onclick="() => StateService.OpenEventDetail(e)"><span class="dot" style="background:@(StateService.Calendars.FirstOrDefault(c=>c.Id==e.CalendarId)?.BackgroundColor??"#2563EB")"></span><span style="flex:1;">@e.Title</span><span style="color:var(--muted); font-size:11px;">@(e.IsAllday?"طوال اليوم":e.Start.ToString("HH:mm"))</span></div>
+                                }
+                            </div>
+                        }
+                        @if (!GetAgendaGroups().Any()) { <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--muted); padding:24px; text-align:center; background:var(--card); border:1px solid var(--border); border-radius:16px; margin:12px;"><b style="color:var(--text);">لا أحداث قادمة</b><span style="font-size:11px;">Agenda فاضي — أضف حدث جديد</span></div> }
                     </div>
                 }
-                <div class="section-button">
-                    <button class="edit-button" @onclick="EditCurrentEvent">
-                        <span class="icon ic-edit"></span> Edit
-                    </button>
-                    <button class="delete-button" @onclick="DeleteCurrentEvent">
-                        <span class="icon ic-delete"></span> Delete
-                    </button>
-                </div>
+                else
+                {
+                    <div style="flex:1; overflow:auto;">
+                        @if (StateService.CurrentView == ViewMode.Month)
+                        {
+                            <MonthView SelectedDate="StateService.SelectedDate" Events="StateService.CurrentEvents" Calendars="StateService.Calendars" />
+                        }
+                        else if (StateService.CurrentView == ViewMode.Week)
+                        {
+                            <WeekView SelectedDate="StateService.SelectedDate" Events="StateService.CurrentEvents" Calendars="StateService.Calendars" />
+                        }
+                        else
+                        {
+                            <DayView SelectedDate="StateService.SelectedDate" Events="StateService.CurrentEvents" Calendars="StateService.Calendars" />
+                        }
+                    </div>
+                }
             </div>
         </div>
-    }
-
-    @* ─── See More Popup ─── *@
-    @if (StateService.IsSeeMoreOpen && StateService.SeeMoreDate.HasValue)
-    {
-        <div class="popup-overlay" @onclick="() => StateService.CloseModals()"></div>
-        <div class="floating-layer">
-            <div class="see-more-container" @onclick:stopPropagation="true">
-                <button class="popup-button popup-close" @onclick="() => StateService.CloseModals()" title="Close">&#x2715;</button>
-                <div class="see-more-header">
-                    <span class="more-title-date">@StateService.SeeMoreDate.Value.Day</span>
-                    <span class="more-title-day">@StateService.SeeMoreDate.Value.ToString("ddd").ToUpper()</span>
-                </div>
-                <div class="month-more-list">
-                    @foreach (var evt in GetSeeMoreEvents())
-                    {
-                        var capturedEvt = evt;
-                        <div class="weekday-event" style="@GetEventStyle(capturedEvt); margin: 3px 0;"
-                             @onclick="() => { StateService.IsSeeMoreOpen = false; StateService.OpenEventDetail(capturedEvt); }">
-                            <span class="weekday-event-title">@capturedEvt.Title</span>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    }
-
+    </div>
 </div>
 
+@* ─── Event Form Popup (Create / Edit) ─── *@
+@if (StateService.IsEventFormOpen && StateService.SelectedEvent != null)
+{
+    <div class="popup-overlay" @onclick="() => StateService.CloseModals()"></div>
+    <div class="floating-layer">
+        <div class="popup-container form-container" @onclick:stopPropagation="true">
+            <button class="popup-button popup-close" @onclick="() => StateService.CloseModals()" title="Close">&#x2715;</button>
+            <h3 class="popup-form-title">@(string.IsNullOrEmpty(StateService.SelectedEvent.Title) ? "New Event" : "Edit Event")</h3>
+            <div class="popup-section"><div class="popup-section-item"><span class="icon ic-title"></span><input type="text" placeholder="Event title" value="@StateService.SelectedEvent.Title" @oninput="e => StateService.SelectedEvent.Title = e.Value?.ToString() ?? string.Empty" /></div></div>
+            <div class="popup-section popup-section--inline"><label class="allday-label"><input type="checkbox" checked="@StateService.SelectedEvent.IsAllday" @onchange="e => StateService.SelectedEvent.IsAllday = (bool)(e.Value ?? false)" /> All day</label></div>
+            <div class="popup-section"><div class="popup-section-item"><span class="icon ic-date"></span><input type="@(StateService.SelectedEvent.IsAllday ? "date" : "datetime-local")" value="@FormatDateForInput(StateService.SelectedEvent.Start, StateService.SelectedEvent.IsAllday)" @onchange="e => UpdateStartDate(e.Value?.ToString())" /></div></div>
+            <div class="popup-section"><div class="popup-section-item"><span class="icon ic-date"></span><input type="@(StateService.SelectedEvent.IsAllday ? "date" : "datetime-local")" value="@FormatDateForInput(StateService.SelectedEvent.End, StateService.SelectedEvent.IsAllday)" @onchange="e => UpdateEndDate(e.Value?.ToString())" /></div></div>
+            <div class="popup-section"><div class="popup-section-item"><span class="icon ic-location"></span><input type="text" placeholder="Location" value="@StateService.SelectedEvent.Location" @oninput="e => StateService.SelectedEvent.Location = e.Value?.ToString() ?? string.Empty" /></div></div>
+            <div class="popup-section"><div class="popup-section-item"><span class="popup-cal-dot" style="background-color: @GetSelectedCalendarColor();"></span><select class="cal-select" value="@StateService.SelectedEvent.CalendarId" @onchange="e => StateService.SelectedEvent.CalendarId = e.Value?.ToString() ?? string.Empty">@foreach (var cal in StateService.Calendars){<option value="@cal.Id">@cal.Name</option>}</select></div></div>
+            <div class="popup-buttons-row"><button class="popup-button" @onclick="() => StateService.CloseModals()">Cancel</button><button class="popup-button popup-confirm" @onclick="SaveEvent">Save</button></div>
+        </div>
+    </div>
+}
+@* ─── Event Detail Popup ─── *@
+@if (StateService.IsEventDetailOpen && StateService.SelectedEvent != null)
+{
+    <div class="popup-overlay" @onclick="() => StateService.CloseModals()"></div>
+    <div class="floating-layer">
+        <div class="popup-container detail-container" @onclick:stopPropagation="true">
+            <button class="popup-button popup-close" @onclick="() => StateService.CloseModals()" title="Close">&#x2715;</button>
+            <div class="detail-color-bar" style="background-color: @GetEventDetailColor();"></div>
+            <div class="event-title">@StateService.SelectedEvent.Title</div>
+            <div class="content"><span class="icon ic-date"></span> @StateService.SelectedEvent.Start.ToString("ddd, MMM d") @if (!StateService.SelectedEvent.IsAllday){<span>&nbsp;@StateService.SelectedEvent.Start.ToString("HH:mm") – @StateService.SelectedEvent.End.ToString("HH:mm")</span>}else{<span>&nbsp;All day</span>}</div>
+            @if (!string.IsNullOrWhiteSpace(StateService.SelectedEvent.Location)){<div class="content"><span class="icon ic-location"></span> @StateService.SelectedEvent.Location</div>}
+            <div class="section-button"><button class="edit-button" @onclick="EditCurrentEvent"><span class="icon ic-edit"></span> Edit</button><button class="delete-button" @onclick="DeleteCurrentEvent"><span class="icon ic-delete"></span> Delete</button></div>
+        </div>
+    </div>
+}
+@* ─── See More Popup ─── *@
+@if (StateService.IsSeeMoreOpen && StateService.SeeMoreDate.HasValue)
+{
+    <div class="popup-overlay" @onclick="() => StateService.CloseModals()"></div>
+    <div class="floating-layer">
+        <div class="see-more-container" @onclick:stopPropagation="true">
+            <button class="popup-button popup-close" @onclick="() => StateService.CloseModals()" title="Close">&#x2715;</button>
+            <div class="see-more-header"><span class="more-title-date">@StateService.SeeMoreDate.Value.Day</span><span class="more-title-day">@StateService.SeeMoreDate.Value.ToString("ddd").ToUpper()</span></div>
+            <div class="month-more-list">@foreach (var evt in GetSeeMoreEvents()){var capturedEvt = evt;<div class="weekday-event" style="@GetEventStyle(capturedEvt); margin: 3px 0;" @onclick="() => { StateService.IsSeeMoreOpen = false; StateService.OpenEventDetail(capturedEvt); }"><span class="weekday-event-title">@capturedEvt.Title</span></div>}</div>
+        </div>
+    </div>
+}
+
 @code {
+    private bool _isSidebarCollapsed = false;
+    private bool _isEditMode = false;
+    private bool _showAgenda = false;
+    private DateTime _miniDate = DateTime.Today;
+    private DayOfWeek _weekStart = DayOfWeek.Saturday;
     protected override async Task OnInitializedAsync()
     {
         StateService.OnStateChanged += HandleStateChanged;
         await StateService.InitAsync();
+        _miniDate = StateService.SelectedDate;
     }
-
-    private void HandleStateChanged()
-    {
-        _ = InvokeAsync(StateHasChanged);
-    }
-
-    private string GetToolbarTitle()
-    {
-        var d = StateService.SelectedDate;
-        return StateService.CurrentView switch
-        {
-            ViewMode.Month => d.ToString("MMMM yyyy"),
-            ViewMode.Week  => GetWeekRangeTitle(d),
-            ViewMode.Day   => d.ToString("MMMM d, yyyy"),
-            _              => d.ToString("MMMM yyyy")
-        };
-    }
-
-    private string GetWeekRangeTitle(DateTime date)
-    {
-        int dayOffset = ((int)date.DayOfWeek) % 7;
-        var start = date.Date.AddDays(-dayOffset);
-        var end   = start.AddDays(6);
-        if (start.Month == end.Month)
-            return $"{start:MMMM d} \u2013 {end:d, yyyy}";
-        if (start.Year == end.Year)
-            return $"{start:MMM d} \u2013 {end:MMM d, yyyy}";
-        return $"{start:MMM d, yyyy} \u2013 {end:MMM d, yyyy}";
-    }
-
-    private string FormatDateForInput(DateTime dt, bool allDay)
-        => allDay ? dt.ToString("yyyy-MM-dd") : dt.ToString("yyyy-MM-ddTHH:mm");
-
-    private void UpdateStartDate(string? raw)
-    {
-        if (StateService.SelectedEvent == null) return;
-        if (DateTime.TryParse(raw, out var dt))
-        {
-            StateService.SelectedEvent.Start = dt;
-            if (StateService.SelectedEvent.End < dt)
-                StateService.SelectedEvent.End = dt.AddHours(1);
-        }
-    }
-
-    private void UpdateEndDate(string? raw)
-    {
-        if (StateService.SelectedEvent == null) return;
-        if (DateTime.TryParse(raw, out var dt))
-            StateService.SelectedEvent.End = dt;
-    }
-
-    private string GetSelectedCalendarColor()
-    {
-        var cal = StateService.Calendars.FirstOrDefault(c => c.Id == StateService.SelectedEvent?.CalendarId);
-        return cal?.BackgroundColor ?? "#2196F3";
-    }
-
-    private async Task SaveEvent()
-    {
-        if (StateService.SelectedEvent != null)
-            await StateService.SaveEventAsync(StateService.SelectedEvent);
-    }
-
-    private string GetEventDetailColor()
-    {
-        var evt = StateService.SelectedEvent;
-        if (!string.IsNullOrEmpty(evt?.BackgroundColor)) return evt.BackgroundColor;
-        var cal = StateService.Calendars.FirstOrDefault(c => c.Id == evt?.CalendarId);
-        return cal?.BackgroundColor ?? "#2196F3";
-    }
-
-    private void EditCurrentEvent()
-    {
-        if (StateService.SelectedEvent != null)
-            StateService.OpenEditEvent(StateService.SelectedEvent);
-    }
-
-    private async Task DeleteCurrentEvent()
-    {
-        if (StateService.SelectedEvent != null)
-            await StateService.DeleteEventAsync(StateService.SelectedEvent.Id);
-    }
-
-    private List<CalendarEvent> GetSeeMoreEvents()
-    {
-        if (!StateService.SeeMoreDate.HasValue) return new();
-        var day = StateService.SeeMoreDate.Value.Date;
-        return StateService.CurrentEvents
-            .Where(e => e.IsVisible && !(e.End < day || e.Start > day.AddDays(1).AddTicks(-1)))
-            .ToList();
-    }
-
-    private string GetEventStyle(CalendarEvent evt)
-    {
-        var cal = StateService.Calendars.FirstOrDefault(c => c.Id == evt.CalendarId);
-        string bg     = !string.IsNullOrEmpty(evt.BackgroundColor) ? evt.BackgroundColor : (cal?.BackgroundColor ?? "#2196F3");
-        string fg     = !string.IsNullOrEmpty(evt.Color)           ? evt.Color           : (cal?.Color           ?? "#FFFFFF");
-        string border = !string.IsNullOrEmpty(evt.BorderColor)     ? evt.BorderColor     : (cal?.BorderColor     ?? "#0D47A1");
-        return $"background-color:{bg}; color:{fg}; border-left-color:{border};";
-    }
-
-    public void Dispose()
-    {
-        StateService.OnStateChanged -= HandleStateChanged;
-    }
+    private void HandleStateChanged(){ _ = InvokeAsync(StateHasChanged); }
+    private void ToggleSidebar(){ _isSidebarCollapsed = !_isSidebarCollapsed; }
+    private void ToggleAgenda(){ _showAgenda = !_showAgenda; if (_showAgenda) StateService.SetView(ViewMode.Month); }
+    private void MiniNav(int delta){ _miniDate = _miniDate.AddMonths(delta); }
+    private void SelectMiniDate(DateTime d){ StateService.SelectDate(d); _miniDate = d; }
+    private void SetWeekStart(string? v){ if (int.TryParse(v, out var iv)) _weekStart = (DayOfWeek)iv; }
+    private async Task ToggleCal(string id){ await StateService.ToggleCalendarCategoryAsync(id); }
+    private List<string> GetMiniHeaders(){ var ws=(int)_weekStart; var arr=new List<string>(); for(int i=0;i<7;i++){ var d=(DayOfWeek)((ws+i)%7); arr.Add(d==DayOfWeek.Saturday?"ح":d==DayOfWeek.Sunday?"ن":d==DayOfWeek.Monday?"ث":d==DayOfWeek.Tuesday?"ر":d==DayOfWeek.Wednesday?"خ":d==DayOfWeek.Thursday?"ج":"س"); } return arr; }
+    private List<DateTime> GetMiniDays(){ var y=_miniDate.Year; var m=_miniDate.Month; var first=new DateTime(y,m,1); int off=((int)first.DayOfWeek-(int)_weekStart+7)%7; var start=first.AddDays(-off); var list=new List<DateTime>(); for(int i=0;i<42;i++) list.Add(start.AddDays(i)); return list; }
+    private List<CalendarEvent> GetUpcoming(){ return StateService.CurrentEvents.Where(e=> e.IsVisible && e.Start >= DateTime.Today).OrderBy(e=>e.Start).Take(4).ToList(); }
+    private IEnumerable<IGrouping<string, CalendarEvent>> GetAgendaGroups(){ var groups= StateService.CurrentEvents.Where(e=>e.IsVisible).OrderBy(e=>e.Start).GroupBy(e=>e.Start.ToString("dddd d MMMM yyyy", new System.Globalization.CultureInfo("ar-EG"))); return groups; }
+    private string GetToolbarTitle(){ var d=StateService.SelectedDate; return StateService.CurrentView switch{ ViewMode.Month=>d.ToString("MMMM yyyy", new System.Globalization.CultureInfo("ar-EG")), ViewMode.Week=>GetWeekRangeTitle(d), ViewMode.Day=>d.ToString("MMMM d, yyyy", new System.Globalization.CultureInfo("ar-EG")), _=>d.ToString("MMMM yyyy")}; }
+    private string GetWeekRangeTitle(DateTime date){ int dayOffset=((int)date.DayOfWeek)%7; var start=date.Date.AddDays(-dayOffset); var end=start.AddDays(6); if(start.Month==end.Month) return $"{start:MMMM d} \u2013 {end:d, yyyy}"; if(start.Year==end.Year) return $"{start:MMM d} \u2013 {end:MMM d, yyyy}"; return $"{start:MMM d, yyyy} \u2013 {end:MMM d, yyyy}"; }
+    private string FormatDateForInput(DateTime dt, bool allDay)=> allDay?dt.ToString("yyyy-MM-dd"):dt.ToString("yyyy-MM-ddTHH:mm");
+    private void UpdateStartDate(string? raw){ if(StateService.SelectedEvent==null) return; if(DateTime.TryParse(raw, out var dt)){ StateService.SelectedEvent.Start=dt; if(StateService.SelectedEvent.End<dt) StateService.SelectedEvent.End=dt.AddHours(1); }}
+    private void UpdateEndDate(string? raw){ if(StateService.SelectedEvent==null) return; if(DateTime.TryParse(raw, out var dt)) StateService.SelectedEvent.End=dt; }
+    private string GetSelectedCalendarColor(){ var cal=StateService.Calendars.FirstOrDefault(c=>c.Id==StateService.SelectedEvent?.CalendarId); return cal?.BackgroundColor??"#2196F3"; }
+    private async Task SaveEvent(){ if(StateService.SelectedEvent!=null) await StateService.SaveEventAsync(StateService.SelectedEvent); }
+    private string GetEventDetailColor(){ var evt=StateService.SelectedEvent; if(!string.IsNullOrEmpty(evt?.BackgroundColor)) return evt.BackgroundColor; var cal=StateService.Calendars.FirstOrDefault(c=>c.Id==evt?.CalendarId); return cal?.BackgroundColor??"#2196F3"; }
+    private void EditCurrentEvent(){ if(StateService.SelectedEvent!=null) StateService.OpenEditEvent(StateService.SelectedEvent); }
+    private async Task DeleteCurrentEvent(){ if(StateService.SelectedEvent!=null) await StateService.DeleteEventAsync(StateService.SelectedEvent.Id); }
+    private List<CalendarEvent> GetSeeMoreEvents(){ if(!StateService.SeeMoreDate.HasValue) return new(); var day=StateService.SeeMoreDate.Value.Date; return StateService.CurrentEvents.Where(e=>e.IsVisible && !(e.End<day || e.Start>day.AddDays(1).AddTicks(-1))).ToList(); }
+    private string GetEventStyle(CalendarEvent evt){ var cal=StateService.Calendars.FirstOrDefault(c=>c.Id==evt.CalendarId); string bg=!string.IsNullOrEmpty(evt.BackgroundColor)?evt.BackgroundColor:(cal?.BackgroundColor??"#2196F3"); string fg=!string.IsNullOrEmpty(evt.Color)?evt.Color:(cal?.Color??"#FFFFFF"); string border=!string.IsNullOrEmpty(evt.BorderColor)?evt.BorderColor:(cal?.BorderColor??"#0D47A1"); return $"background-color:{bg}; color:{fg}; border-left-color:{border};"; }
+    public void Dispose(){ StateService.OnStateChanged-=HandleStateChanged; }
 }

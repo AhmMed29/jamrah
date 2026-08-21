@@ -9,3 +9,16 @@ obj/
 *.userosscache
 *.DotSettings.user
 *.sln.docstates
+
+# IDE / Editor
+.vscode/
+
+# Local database files
+*.db
+*.db-shm
+*.db-wal
+
+# Build artifacts and archives
+*.zip
+*.tar.gz
+*.rar

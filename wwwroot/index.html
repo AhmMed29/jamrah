@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -17,6 +17,9 @@
                 var a = new Audio(src);
                 a.volume = (typeof volume === 'number') ? volume : 0.8;
                 a.play().catch(function(e){ console.log("audio play failed", e); });
+                setTimeout(function() {
+                    a.pause();
+                }, 2000);
             } catch(e){ console.log(e); }
         }
     </script>

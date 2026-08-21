@@ -61,6 +61,11 @@ namespace Jamrah.Services
             try { Preferences.Set(PrefKey, JsonSerializer.Serialize(Settings)); } catch { }
         }
 
+        public void Reload()
+        {
+            Settings = Load();
+        }
+
         public void ResetToDefaults()
         {
             Settings = Defaults();

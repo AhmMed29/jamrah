@@ -64,17 +64,28 @@ namespace Jamrah.Services
 
             bool changed = false;
             var today = DateTime.Now.Date;
+            var todayDayIndex = (int)today.DayOfWeek; // 0=Sunday ... 6=Saturday
+
             foreach (var t in Tasks)
             {
-                if (t.IsRecurring && t.IsDone && t.UpdatedAt.ToLocalTime().Date < today)
-                {
-                    t.IsDone = false;
-                    t.UpdatedAt = DateTime.Now;
-                    await _repository.SaveTaskAsync(t);
-                    changed = true;
-                }
+                if (!t.IsRecurring || !t.IsDone) continue;
+
+                // Only reset if the task was last updated before today
+                if (t.UpdatedAt.ToLocalTime().Date >= today) continue;
+
+                // If RecurrenceDays is specified, only reset on the scheduled days
+                var scheduledDays = t.RecurrenceDays?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
+                bool isScheduledToday = scheduledDays.Length == 0
+                    || scheduledDays.Contains(todayDayIndex.ToString());
+
+                if (!isScheduledToday) continue;
+
+                t.IsDone = false;
+                await _repository.SaveTaskAsync(t);
+                changed = true;
             }
-            if(changed)
+
+            if (changed)
             {
                 Tasks = await _repository.GetTasksAsync();
             }

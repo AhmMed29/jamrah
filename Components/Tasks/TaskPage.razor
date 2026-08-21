@@ -264,7 +264,7 @@
                 <div class="input-group">
                     <label>أيام التكرار</label>
                     <div class="days-row">
-                        <button class="day-btn" style="width: auto; padding: 0 10px; margin-left: 4px;" @onclick="SetDailyRecurrence">كل يوم</button>
+                        <button class="day-btn @((_newTask.RecurrenceDays != null && _newTask.RecurrenceDays.Split(',', StringSplitOptions.RemoveEmptyEntries).Length >= 7) ? "active" : "")" @onclick="SetDailyRecurrence">كل يوم</button>
                         @foreach(var day in new[] { (0,"ح"),(1,"ن"),(2,"ث"),(3,"ر"),(4,"خ"),(5,"ج"),(6,"س") })
                         {
                             var isChecked = _newTask.RecurrenceDays != null && _newTask.RecurrenceDays.Contains(day.Item1.ToString());
@@ -348,6 +348,11 @@
     .modal-actions{ display:flex; gap:6px; justify-content:flex-end; margin-top:4px; }
     .modal-btn{ height:32px; padding:0 12px; border-radius:10px; border:1px solid var(--border); background:var(--card); cursor:pointer; font-size:12px; }
     .modal-btn.primary{ background:var(--text); color:#fff; border-color:var(--text); }
+    .input-group{ display:flex; flex-direction:column; gap:6px; }
+    .days-row{ display:flex; gap:6px; flex-wrap:wrap; }
+    .day-btn{ height:32px; min-width:36px; padding:0 10px; border-radius:10px; border:1px solid var(--border); background:var(--card); cursor:pointer; font-size:12px; font-weight:700; color:var(--muted); display:inline-flex; align-items:center; justify-content:center; transition:background .15s, color .15s, border-color .15s; }
+    .day-btn:hover{ background:var(--card2); color:var(--text); }
+    .day-btn.active{ background:var(--text); color:#fff; border-color:var(--text); }
 </style>
 
 @code {

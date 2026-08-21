@@ -1,4 +1,4 @@
-﻿@namespace Jamrah.Components.Tasks
+@namespace Jamrah.Components.Tasks
 @implements IDisposable
 @inject Jamrah.Services.ITaskStateService TaskService
 @using Jamrah.Models
@@ -264,6 +264,7 @@
                 <div class="input-group">
                     <label>أيام التكرار</label>
                     <div class="days-row">
+                        <button class="day-btn" style="width: auto; padding: 0 10px; margin-left: 4px;" @onclick="SetDailyRecurrence">كل يوم</button>
                         @foreach(var day in new[] { (0,"ح"),(1,"ن"),(2,"ث"),(3,"ر"),(4,"خ"),(5,"ج"),(6,"س") })
                         {
                             var isChecked = _newTask.RecurrenceDays != null && _newTask.RecurrenceDays.Contains(day.Item1.ToString());
@@ -566,6 +567,11 @@
     private void CloseAddTaskModal()
     {
         _isAddTaskModalOpen = false;
+    }
+
+    private void SetDailyRecurrence()
+    {
+        _newTask.RecurrenceDays = "0,1,2,3,4,5,6";
     }
 
     private void ToggleRecurrenceDay(string day)

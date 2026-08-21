@@ -61,6 +61,24 @@ namespace Jamrah.Services
             Folders = await _repository.GetFoldersAsync();
             Columns = await _repository.GetColumnsAsync();
             Tasks = await _repository.GetTasksAsync();
+
+            bool changed = false;
+            var today = DateTime.Now.Date;
+            foreach (var t in Tasks)
+            {
+                if (t.IsRecurring && t.IsDone && t.UpdatedAt.ToLocalTime().Date < today)
+                {
+                    t.IsDone = false;
+                    t.UpdatedAt = DateTime.Now;
+                    await _repository.SaveTaskAsync(t);
+                    changed = true;
+                }
+            }
+            if(changed)
+            {
+                Tasks = await _repository.GetTasksAsync();
+            }
+
             NotifyStateChanged();
         }
 
@@ -130,6 +148,7 @@ namespace Jamrah.Services
         public async Task AddTaskAsync(AppTask task)
         {
             if (string.IsNullOrEmpty(task.Id)) task.Id = Guid.NewGuid().ToString();
+            task.UpdatedAt = DateTime.Now;
             await _repository.SaveTaskAsync(task);
             await RefreshDataAsync();
         }
@@ -137,6 +156,7 @@ namespace Jamrah.Services
         public async Task ToggleTaskAsync(AppTask task)
         {
             task.IsDone = !task.IsDone;
+            task.UpdatedAt = DateTime.Now;
             await _repository.SaveTaskAsync(task);
             await RefreshDataAsync();
         }

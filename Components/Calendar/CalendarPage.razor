@@ -18,6 +18,14 @@
 .cal-list{ padding:10px 12px; display:flex; flex-direction:column; gap:4px; border-bottom:1px solid var(--border,#E7E5E4); }
 .cal-item{ display:flex; gap:8px; align-items:center; padding:7px 8px; border-radius:8px; font-size:12px; cursor:pointer; }
 .cal-item:hover{ background:var(--card2,#F5F5F4); } .dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.cal-header .btn{ height:32px; padding:0 12px; border-radius:10px; border:1px solid var(--border); background:var(--card); color:var(--muted); cursor:pointer; font-size:12px; }
+.cal-header .btn:hover{ background:var(--card2); color:var(--text); }
+.cal-header .btn.icon-btn,.cal-header .btn.nav-btn{ width:32px; padding:0; }
+.cal-header .btn.primary{ background:var(--text); color:#fff; border-color:var(--text); }
+.seg{ display:flex; background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:2px; gap:2px; }
+.seg button{ padding:6px 12px; border:none; border-radius:8px; background:transparent; cursor:pointer; font-size:12px; color:var(--muted); }
+.seg button:hover{ color:var(--text); }
+.seg button.active{ background:var(--text); color:#fff; }
 </style>
 
 <div class="cal-wrapper" dir="rtl">
@@ -63,18 +71,19 @@
                 <b style="font-size:13px;">@GetToolbarTitle()</b>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
-                <button class="btn" @onclick="ToggleSidebar" title="طي">☰</button>
+                <button class="btn icon-btn" @onclick="ToggleSidebar" title="طي">☰</button>
                 <button class="btn" @onclick="() => StateService.Today()">اليوم</button>
-                <button class="btn" style="width:32px; padding:0;" @onclick="() => StateService.Previous()">‹</button><button class="btn" style="width:32px; padding:0;" @onclick="() => StateService.Next()">›</button>
-                <div class="mode-switch" style="display:flex; border:1px solid var(--border); border-radius:10px; overflow:hidden;">
-                    <button class="@(_isEditMode?"":"active")" style="padding:6px 12px; border:none; background:var(--card); cursor:pointer; font-size:11px; border-left:1px solid var(--border); color:var(--muted);" @onclick="() => _isEditMode=false">عرض</button>
-                    <button class="@(_isEditMode?"active":"")" style="padding:6px 12px; border:none; background:var(--card); cursor:pointer; font-size:11px; color:var(--muted);" @onclick="() => _isEditMode=true">تعديل</button>
+                <button class="btn nav-btn" @onclick="() => StateService.Previous()">‹</button>
+                <button class="btn nav-btn" @onclick="() => StateService.Next()">›</button>
+                <div class="seg">
+                    <button class="@(!_isEditMode?"active":"")" @onclick="() => _isEditMode=false">عرض</button>
+                    <button class="@(_isEditMode?"active":"")" @onclick="() => _isEditMode=true">تعديل</button>
                 </div>
-                <div class="view-switch" style="display:flex; background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:2px; gap:2px;">
-                    <button class="@(StateService.CurrentView==ViewMode.Month&&!_showAgenda?"active":"")" style="padding:6px 12px; border-radius:8px; border:1px solid transparent; background:transparent; cursor:pointer; font-size:12px; color:var(--muted);" @onclick="() => { _showAgenda=false; StateService.SetView(ViewMode.Month); }">Month</button>
-                    <button class="@(StateService.CurrentView==ViewMode.Week&&!_showAgenda?"active":"")" style="padding:6px 12px; border-radius:8px; border:1px solid transparent; background:transparent; cursor:pointer; font-size:12px; color:var(--muted);" @onclick="() => { _showAgenda=false; StateService.SetView(ViewMode.Week); }">Week</button>
-                    <button class="@(StateService.CurrentView==ViewMode.Day&&!_showAgenda?"active":"")" style="padding:6px 12px; border-radius:8px; border:1px solid transparent; background:transparent; cursor:pointer; font-size:12px; color:var(--muted);" @onclick="() => { _showAgenda=false; StateService.SetView(ViewMode.Day); }">Day</button>
-                    <button class="@(_showAgenda?"active":"")" style="padding:6px 12px; border-radius:8px; border:1px solid transparent; background:transparent; cursor:pointer; font-size:12px; color:var(--muted);" @onclick="ToggleAgenda">Agenda</button>
+                <div class="seg">
+                    <button class="@(StateService.CurrentView==ViewMode.Month&&!_showAgenda?"active":"")" @onclick="() => { _showAgenda=false; StateService.SetView(ViewMode.Month); }">Month</button>
+                    <button class="@(StateService.CurrentView==ViewMode.Week&&!_showAgenda?"active":"")" @onclick="() => { _showAgenda=false; StateService.SetView(ViewMode.Week); }">Week</button>
+                    <button class="@(StateService.CurrentView==ViewMode.Day&&!_showAgenda?"active":"")" @onclick="() => { _showAgenda=false; StateService.SetView(ViewMode.Day); }">Day</button>
+                    <button class="@(_showAgenda?"active":"")" @onclick="ToggleAgenda">Agenda</button>
                 </div>
                 <button class="btn primary" @onclick="() => StateService.OpenCreateEvent()">+ حدث</button>
             </div>
@@ -131,7 +140,6 @@
             <div class="popup-section popup-section--inline"><label class="allday-label"><input type="checkbox" checked="@StateService.SelectedEvent.IsAllday" @onchange="e => StateService.SelectedEvent.IsAllday = (bool)(e.Value ?? false)" /> All day</label></div>
             <div class="popup-section"><div class="popup-section-item"><span class="icon ic-date"></span><input type="@(StateService.SelectedEvent.IsAllday ? "date" : "datetime-local")" value="@FormatDateForInput(StateService.SelectedEvent.Start, StateService.SelectedEvent.IsAllday)" @onchange="e => UpdateStartDate(e.Value?.ToString())" /></div></div>
             <div class="popup-section"><div class="popup-section-item"><span class="icon ic-date"></span><input type="@(StateService.SelectedEvent.IsAllday ? "date" : "datetime-local")" value="@FormatDateForInput(StateService.SelectedEvent.End, StateService.SelectedEvent.IsAllday)" @onchange="e => UpdateEndDate(e.Value?.ToString())" /></div></div>
-            <div class="popup-section"><div class="popup-section-item"><span class="icon ic-location"></span><input type="text" placeholder="Location" value="@StateService.SelectedEvent.Location" @oninput="e => StateService.SelectedEvent.Location = e.Value?.ToString() ?? string.Empty" /></div></div>
             <div class="popup-section"><div class="popup-section-item"><span class="popup-cal-dot" style="background-color: @GetSelectedCalendarColor();"></span><select class="cal-select" value="@StateService.SelectedEvent.CalendarId" @onchange="e => StateService.SelectedEvent.CalendarId = e.Value?.ToString() ?? string.Empty">@foreach (var cal in StateService.Calendars){<option value="@cal.Id">@cal.Name</option>}</select></div></div>
             <div class="popup-buttons-row"><button class="popup-button" @onclick="() => StateService.CloseModals()">Cancel</button><button class="popup-button popup-confirm" @onclick="SaveEvent">Save</button></div>
         </div>
@@ -147,7 +155,6 @@
             <div class="detail-color-bar" style="background-color: @GetEventDetailColor();"></div>
             <div class="event-title">@StateService.SelectedEvent.Title</div>
             <div class="content"><span class="icon ic-date"></span> @StateService.SelectedEvent.Start.ToString("ddd, MMM d") @if (!StateService.SelectedEvent.IsAllday){<span>&nbsp;@StateService.SelectedEvent.Start.ToString("HH:mm") – @StateService.SelectedEvent.End.ToString("HH:mm")</span>}else{<span>&nbsp;All day</span>}</div>
-            @if (!string.IsNullOrWhiteSpace(StateService.SelectedEvent.Location)){<div class="content"><span class="icon ic-location"></span> @StateService.SelectedEvent.Location</div>}
             <div class="section-button"><button class="edit-button" @onclick="EditCurrentEvent"><span class="icon ic-edit"></span> Edit</button><button class="delete-button" @onclick="DeleteCurrentEvent"><span class="icon ic-delete"></span> Delete</button></div>
         </div>
     </div>

@@ -3,7 +3,7 @@
 @inject Jamrah.Services.ITaskStateService TaskService
 @using Jamrah.Models
 
-<div class="tasks-page" dir="rtl" @onmousemove="HandleMouseMove" @onmouseup="HandleMouseUp" @onmouseleave="HandleMouseUp">
+<div class="tasks-page" dir="rtl" @onmousemove="HandleMouseMove" @onmouseup="HandleMouseUp" @onmouseleave="HandleMouseUp" @onclick="CloseContextMenu">
 
     <!-- Right Collapsible Sidebar -->
     <div class="task-right-sidebar @( _isRightSidebarCollapsed ? "collapsed" : "")">
@@ -152,66 +152,171 @@
         }
         else if (_currentView == ViewMode.All)
         {
-            <div class="split-view-container">
-                <div class="split-side todo-side">
-                    <div class="split-header">المهام العادية (TO-DO)</div>
-                    <div class="list-add-section">
-                        <button class="list-add-btn-full" @onclick="() => OpenAddTaskModal(null)">إضافة مهمة جديدة...</button>
-                    </div>
-                    <div class="list-items">
-                        @foreach (var capturedTask in GetFilteredAndSortedTasks(TaskService.Tasks).Where(t => !t.IsRecurring && t.ScheduledDate == null))
-                        {
-                            <div @key="capturedTask.Id" class="kanban-task list-task @(capturedTask.IsDone ? "done" : "")">
-                                <div class="task-header">
-                                    <input type="checkbox" checked="@capturedTask.IsDone" @onchange="() => ToggleTask(capturedTask)" />
-                                    <span class="task-title">@capturedTask.Title</span>
-                                </div>
-                                <div class="task-meta">
-                                    <button class="task-delete-btn" @onclick="() => DeleteTask(capturedTask.Id)">×</button>
-                                </div>
-                            </div>
-                        }
-                    </div>
+            var morningTasks = GetMorningTasksForDate(_selectedDate);
+            var todoTasks    = GetTodoTasksForDate(_selectedDate);
+            var eveningTasks = GetEveningTasksForDate(_selectedDate);
+            bool isPastDay   = _selectedDate.Date < DateTime.Today;
+
+            <div class="list-container">
+
+                <!-- Day Navigation Bar -->
+                <div class="day-nav-bar">
+                    <button class="day-nav-btn" @onclick="() => _selectedDate = _selectedDate.AddDays(-1)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                    <span class="day-nav-label @(_selectedDate.Date == DateTime.Today ? "today-label" : "")">@GetDayLabel()</span>
+                    <button class="day-nav-btn" @onclick="() => _selectedDate = _selectedDate.AddDays(1)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
                 </div>
-                <div class="split-side scheduled-side">
-                    <div class="split-header">المهام المجدولة والمتكررة</div>
-                    <div class="list-items">
-                        @foreach (var capturedTask in GetFilteredAndSortedTasks(TaskService.Tasks).Where(t => t.IsRecurring || t.ScheduledDate != null))
-                        {
-                            <div @key="capturedTask.Id" class="kanban-task list-task @(capturedTask.IsDone ? "done" : "")">
-                                <div class="task-header">
-                                    <input type="checkbox" checked="@capturedTask.IsDone" @onchange="() => ToggleTask(capturedTask)" />
-                                    <span class="task-title">@capturedTask.Title</span>
-                                </div>
-                                <div class="task-meta">
-                                    @if(capturedTask.IsRecurring) { <span class="task-badge recurring-badge">متكررة</span> }
-                                    @if(capturedTask.ScheduledDate.HasValue) { <span class="task-date">@capturedTask.ScheduledDate.Value.ToString("yyyy-MM-dd")</span> }
-                                    @if(capturedTask.ScheduledTime.HasValue) { <span class="task-time">@capturedTask.ScheduledTime.Value.ToString(@"hh\:mm")</span> }
-                                    <button class="task-delete-btn" @onclick="() => DeleteTask(capturedTask.Id)">×</button>
-                                </div>
-                            </div>
-                        }
-                    </div>
+
+                <div class="list-add-section">
+                    <button class="list-add-btn-full" @onclick="() => OpenAddTaskModal(null)">+ إضافة مهمة جديدة...</button>
                 </div>
+
+                <!-- Morning Section -->
+                <div class="section-header @(_morningCollapsed ? "" : "open")" @onclick="() => _morningCollapsed = !_morningCollapsed">
+                    <span class="section-arrow">@(_morningCollapsed ? "›" : "⌄")</span>
+                    <span>مهام الصباح</span>
+                    <span class="section-count">@morningTasks.Count</span>
+                </div>
+                @if (!_morningCollapsed)
+                {
+                    @foreach (var capturedTask in morningTasks)
+                    {
+                        <div @key="capturedTask.Id" class="kanban-task list-task @(capturedTask.IsDone ? "done" : "")">
+                            <input type="checkbox" checked="@capturedTask.IsDone" @onchange="() => ToggleTask(capturedTask)" />
+                            <span class="task-title">@capturedTask.Title</span>
+                            @if (capturedTask.ScheduledTime.HasValue)
+                            {
+                                <span class="task-time-badge">@capturedTask.ScheduledTime.Value.ToString(@"hh\:mm")</span>
+                            }
+                            @if (capturedTask.IsRecurring) { <span class="task-recur-badge">متكررة</span> }
+                            @if (!string.IsNullOrWhiteSpace(capturedTask.Notes)) { <span class="task-note-icon" title="@capturedTask.Notes">📝</span> }
+                            @if (isPastDay)
+                            {
+                                <button class="carry-btn" title="تقديم لليوم" @onclick:stopPropagation="true" @onclick="() => CarryForwardTask(capturedTask)">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                                </button>
+                            }
+                            <div class="task-menu-wrap" @onclick:stopPropagation="true">
+                                <button class="task-menu-btn" @onclick="() => ToggleContextMenu(capturedTask.Id)">•••</button>
+                                @if (_openContextMenuTaskId == capturedTask.Id)
+                                {
+                                    <div class="task-context-menu">
+                                        <button @onclick="() => OpenEditModal(capturedTask)">تعديل</button>
+                                        <button class="danger" @onclick="() => DeleteTask(capturedTask.Id)">حذف</button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    @if (morningTasks.Count == 0) { <div class="list-empty-hint">لا توجد مهام صباحية</div> }
+                }
+
+                <!-- TODO Section -->
+                <div class="section-header @(_todoCollapsed ? "" : "open")" @onclick="() => _todoCollapsed = !_todoCollapsed">
+                    <span class="section-arrow">@(_todoCollapsed ? "›" : "⌄")</span>
+                    <span>مطلوب إنجازها</span>
+                    <span class="section-count">@todoTasks.Count</span>
+                </div>
+                @if (!_todoCollapsed)
+                {
+                    @foreach (var capturedTask in todoTasks)
+                    {
+                        <div @key="capturedTask.Id" class="kanban-task list-task @(capturedTask.IsDone ? "done" : "")">
+                            <input type="checkbox" checked="@capturedTask.IsDone" @onchange="() => ToggleTask(capturedTask)" />
+                            <span class="task-title">@capturedTask.Title</span>
+                            @if (capturedTask.IsRecurring) { <span class="task-recur-badge">متكررة</span> }
+                            @if (!string.IsNullOrWhiteSpace(capturedTask.Notes)) { <span class="task-note-icon" title="@capturedTask.Notes">📝</span> }
+                            @if (isPastDay)
+                            {
+                                <button class="carry-btn" title="تقديم لليوم" @onclick:stopPropagation="true" @onclick="() => CarryForwardTask(capturedTask)">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                                </button>
+                            }
+                            <div class="task-menu-wrap" @onclick:stopPropagation="true">
+                                <button class="task-menu-btn" @onclick="() => ToggleContextMenu(capturedTask.Id)">•••</button>
+                                @if (_openContextMenuTaskId == capturedTask.Id)
+                                {
+                                    <div class="task-context-menu">
+                                        <button @onclick="() => OpenEditModal(capturedTask)">تعديل</button>
+                                        <button class="danger" @onclick="() => DeleteTask(capturedTask.Id)">حذف</button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    @if (todoTasks.Count == 0) { <div class="list-empty-hint">لا توجد مهام</div> }
+                }
+
+                <!-- Evening Section -->
+                <div class="section-header @(_eveningCollapsed ? "" : "open")" @onclick="() => _eveningCollapsed = !_eveningCollapsed">
+                    <span class="section-arrow">@(_eveningCollapsed ? "›" : "⌄")</span>
+                    <span>مهام المساء</span>
+                    <span class="section-count">@eveningTasks.Count</span>
+                </div>
+                @if (!_eveningCollapsed)
+                {
+                    @foreach (var capturedTask in eveningTasks)
+                    {
+                        <div @key="capturedTask.Id" class="kanban-task list-task @(capturedTask.IsDone ? "done" : "")">
+                            <input type="checkbox" checked="@capturedTask.IsDone" @onchange="() => ToggleTask(capturedTask)" />
+                            <span class="task-title">@capturedTask.Title</span>
+                            @if (capturedTask.ScheduledTime.HasValue)
+                            {
+                                <span class="task-time-badge">@capturedTask.ScheduledTime.Value.ToString(@"hh\:mm")</span>
+                            }
+                            @if (capturedTask.ScheduledDate.HasValue)
+                            {
+                                <span class="task-date-badge">@capturedTask.ScheduledDate.Value.ToString("MM/dd")</span>
+                            }
+                            @if (capturedTask.IsRecurring) { <span class="task-recur-badge">متكررة</span> }
+                            @if (!string.IsNullOrWhiteSpace(capturedTask.Notes)) { <span class="task-note-icon" title="@capturedTask.Notes">📝</span> }
+                            @if (isPastDay)
+                            {
+                                <button class="carry-btn" title="تقديم لليوم" @onclick:stopPropagation="true" @onclick="() => CarryForwardTask(capturedTask)">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                                </button>
+                            }
+                            <div class="task-menu-wrap" @onclick:stopPropagation="true">
+                                <button class="task-menu-btn" @onclick="() => ToggleContextMenu(capturedTask.Id)">•••</button>
+                                @if (_openContextMenuTaskId == capturedTask.Id)
+                                {
+                                    <div class="task-context-menu">
+                                        <button @onclick="() => OpenEditModal(capturedTask)">تعديل</button>
+                                        <button class="danger" @onclick="() => DeleteTask(capturedTask.Id)">حذف</button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    @if (eveningTasks.Count == 0) { <div class="list-empty-hint">لا توجد مهام مسائية</div> }
+                }
+
             </div>
         }
         else // Done, Pending
         {
             <div class="list-container">
                 <div class="list-add-section">
-                    <button class="list-add-btn-full" @onclick="() => OpenAddTaskModal(null)">إضافة مهمة جديدة...</button>
+                    <button class="list-add-btn-full" @onclick="() => OpenAddTaskModal(null)">+ إضافة مهمة جديدة...</button>
                 </div>
                 <div class="list-items">
                     @foreach (var capturedTask in GetFilteredAndSortedTasks(TaskService.Tasks))
                     {
                         <div @key="capturedTask.Id" class="kanban-task list-task @(capturedTask.IsDone ? "done" : "")">
-                            <div class="task-header">
-                                <input type="checkbox" checked="@capturedTask.IsDone" @onchange="() => ToggleTask(capturedTask)" />
-                                <span class="task-title">@capturedTask.Title</span>
-                            </div>
-                            <div class="task-meta">
-                                @if(capturedTask.DueDate.HasValue) { <span class="task-date">@capturedTask.DueDate.Value.ToString("yyyy-MM-dd")</span> }
-                                <button class="task-delete-btn" @onclick="() => DeleteTask(capturedTask.Id)">×</button>
+                            <input type="checkbox" checked="@capturedTask.IsDone" @onchange="() => ToggleTask(capturedTask)" />
+                            <span class="task-title">@capturedTask.Title</span>
+                            <div class="task-menu-wrap" @onclick:stopPropagation="true">
+                                <button class="task-menu-btn" @onclick="() => ToggleContextMenu(capturedTask.Id)">•••</button>
+                                @if (_openContextMenuTaskId == capturedTask.Id)
+                                {
+                                    <div class="task-context-menu">
+                                        <button @onclick="() => OpenEditModal(capturedTask)">تعديل</button>
+                                        <button class="danger" @onclick="() => DeleteTask(capturedTask.Id)">حذف</button>
+                                    </div>
+                                }
                             </div>
                         </div>
                     }
@@ -275,21 +380,103 @@
             }
             else
             {
-                <div class="input-group" style="flex-direction:row; gap:12px;">
-                    <div style="flex:1;">
-                        <label>التاريخ (اختياري)</label>
-                        <input type="date" class="minimal-input" @bind="_newTask.ScheduledDate" />
-                    </div>
-                    <div style="flex:1;">
-                        <label>الوقت (اختياري)</label>
-                        <input type="time" class="minimal-input" value="@ScheduledTimeString" @onchange="OnTimeChanged" />
-                    </div>
+                <div class="input-group">
+                    <label>التاريخ (اختياري)</label>
+                    <input type="date" class="minimal-input" @bind="_newTask.ScheduledDate" />
                 </div>
             }
 
-            <div class="modal-actions" style="margin-top:20px;">
+            <div class="input-group">
+                <label>الوقت (اختياري)</label>
+                <input type="time" class="minimal-input" value="@ScheduledTimeString" @onchange="OnTimeChanged" />
+            </div>
+
+            <div class="input-group">
+                <label>ملاحظات (اختياري)</label>
+                <textarea class="minimal-input" rows="2" style="resize:vertical;" @bind="_newTask.Notes" placeholder="أي ملاحظات..."></textarea>
+            </div>
+
+            <div class="modal-actions" style="margin-top:12px;">
                 <button class="modal-btn" @onclick="CloseAddTaskModal">إلغاء</button>
                 <button class="modal-btn primary" @onclick="SaveExpandedTask">إضافة المهمة</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_isEditModalOpen)
+{
+    <div class="modal-overlay" style="display:flex; pointer-events:auto;">
+        <div class="modal-box" style="width: 450px;">
+            <div class="modal-header">
+                <span class="modal-title">تعديل المهمة</span>
+                <button class="close-btn" @onclick="CloseEditModal">✕</button>
+            </div>
+
+            <div class="input-group">
+                <label>اسم المهمة</label>
+                <input class="minimal-input" @bind="_editingTask.Title" placeholder="اكتب اسم المهمة..." autofocus />
+            </div>
+
+            <div class="input-group">
+                <label>الأولوية</label>
+                <select class="minimal-input" @bind="_editingTask.Priority">
+                    <option value="high">عالية</option>
+                    <option value="medium">متوسطة</option>
+                    <option value="low">منخفضة</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label>مصفوفة أيزنهاور</label>
+                <select class="minimal-input" @bind="_editingTask.EisenhowerQuadrant">
+                    <option value="1">ضروري ومهم</option>
+                    <option value="2">مهم وغير ضروري</option>
+                    <option value="3">ضروري وغير مهم</option>
+                    <option value="4">غير ضروري وغير مهم</option>
+                </select>
+            </div>
+
+            <div class="input-group" style="flex-direction:row; gap:12px; align-items:center;">
+                <input type="checkbox" @bind="_editingTask.IsRecurring" style="width: 18px; height: 18px;" />
+                <label style="margin:0; font-size:14px;">مهمة متكررة؟</label>
+            </div>
+
+            @if (_editingTask.IsRecurring)
+            {
+                <div class="input-group">
+                    <label>أيام التكرار</label>
+                    <div class="days-row">
+                        <button class="day-btn @((_editingTask.RecurrenceDays != null && _editingTask.RecurrenceDays.Split(',', StringSplitOptions.RemoveEmptyEntries).Length >= 7) ? "active" : "")" @onclick="SetDailyRecurrenceEdit">كل يوم</button>
+                        @foreach(var day in new[] { (0,"ح"),(1,"ن"),(2,"ث"),(3,"ر"),(4,"خ"),(5,"ج"),(6,"س") })
+                        {
+                            var isCheckedE = _editingTask.RecurrenceDays != null && _editingTask.RecurrenceDays.Contains(day.Item1.ToString());
+                            <button class="day-btn @(isCheckedE ? "active" : "")" @onclick="() => ToggleRecurrenceDayEdit(day.Item1.ToString())">@day.Item2</button>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="input-group">
+                    <label>التاريخ (اختياري)</label>
+                    <input type="date" class="minimal-input" @bind="_editingTask.ScheduledDate" />
+                </div>
+            }
+
+            <div class="input-group">
+                <label>الوقت (اختياري)</label>
+                <input type="time" class="minimal-input" value="@EditScheduledTimeString" @onchange="OnEditTimeChanged" />
+            </div>
+
+            <div class="input-group">
+                <label>ملاحظات (اختياري)</label>
+                <textarea class="minimal-input" rows="2" style="resize:vertical;" @bind="_editingTask.Notes" placeholder="أي ملاحظات..."></textarea>
+            </div>
+
+            <div class="modal-actions" style="margin-top:12px;">
+                <button class="modal-btn" @onclick="CloseEditModal">إلغاء</button>
+                <button class="modal-btn primary" @onclick="SaveEditTask">حفظ التعديل</button>
             </div>
         </div>
     </div>
@@ -353,6 +540,46 @@
     .day-btn{ height:32px; min-width:36px; padding:0 10px; border-radius:10px; border:1px solid var(--border); background:var(--card); cursor:pointer; font-size:12px; font-weight:700; color:var(--muted); display:inline-flex; align-items:center; justify-content:center; transition:background .15s, color .15s, border-color .15s; }
     .day-btn:hover{ background:var(--card2); color:var(--text); }
     .day-btn.active{ background:var(--text); color:#fff; border-color:var(--text); }
+    .list-task{ flex-direction:row !important; align-items:center; gap:10px; cursor:default; }
+    .list-task .task-title{ flex:1; }
+    .list-task .task-delete-btn{ opacity:0; margin-right:auto; }
+    .list-task:hover .task-delete-btn{ opacity:1; }
+    .list-section-header{ display:flex; align-items:center; gap:6px; font-size:11px; font-weight:700; color:var(--muted); padding:4px 2px; letter-spacing:.4px; }
+    .list-section-header.pinned-header{ color:var(--accent); }
+    .list-separator{ height:1px; background:var(--border); margin:6px 0 10px; }
+    .list-empty-hint{ font-size:11px; color:var(--border2); padding:6px 2px; }
+    .pinned-task{ border-color:var(--border2); background:var(--card2) !important; }
+    .task-time-badge{ font-size:10px; font-weight:700; color:var(--muted); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:2px 6px; white-space:nowrap; }
+    .task-date-badge{ font-size:10px; color:var(--muted); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:2px 6px; white-space:nowrap; }
+    .task-recur-badge{ font-size:10px; color:var(--accent); background:rgba(255,107,53,.08); border:1px solid rgba(255,107,53,.2); border-radius:6px; padding:2px 6px; white-space:nowrap; }
+    .list-add-section{ margin-bottom:4px; }
+    .task-note-icon{ font-size:12px; cursor:default; }
+    /* Day Navigation */
+    .day-nav-bar{ display:flex; align-items:center; justify-content:center; gap:12px; padding:8px 0 4px; }
+    .day-nav-btn{ width:32px; height:32px; border-radius:50%; border:1px solid var(--border); background:var(--card); cursor:pointer; color:var(--text); display:flex; align-items:center; justify-content:center; }
+    .day-nav-btn:hover{ background:var(--card2); }
+    .day-nav-label{ font-size:13px; font-weight:700; color:var(--text); min-width:140px; text-align:center; }
+    .day-nav-label.today-label{ color:var(--accent); }
+    /* Section Headers */
+    .section-header{ display:flex; align-items:center; gap:8px; padding:10px 4px 8px; cursor:pointer; border-radius:8px; user-select:none; }
+    .section-header:hover{ background:var(--card2); padding-right:8px; }
+    .section-header span:nth-child(2){ font-size:12px; font-weight:700; color:var(--text); flex:1; }
+    .section-arrow{ font-size:14px; color:var(--muted); width:14px; text-align:center; }
+    .section-count{ font-size:11px; color:var(--muted); background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:1px 8px; }
+    /* Context Menu */
+    .task-menu-wrap{ position:relative; }
+    .task-menu-btn{ background:none; border:none; cursor:pointer; font-size:13px; color:var(--muted); width:26px; height:26px; border-radius:6px; display:flex; align-items:center; justify-content:center; letter-spacing:1px; opacity:0; transition:opacity .15s; }
+    .list-task:hover .task-menu-btn{ opacity:1; }
+    .task-menu-btn:hover{ background:var(--card2); color:var(--text); }
+    .task-context-menu{ position:absolute; left:0; top:30px; background:var(--card); border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.1); min-width:100px; z-index:200; display:flex; flex-direction:column; overflow:hidden; }
+    .task-context-menu button{ padding:9px 14px; text-align:right; font-size:12px; background:none; border:none; cursor:pointer; color:var(--text); }
+    .task-context-menu button:hover{ background:var(--card2); }
+    .task-context-menu button.danger{ color:var(--red); }
+    .task-context-menu button.danger:hover{ background:rgba(220,38,38,.08); }
+    /* Carry Forward */
+    .carry-btn{ width:26px; height:26px; border-radius:6px; border:1px solid var(--border); background:var(--card); cursor:pointer; color:var(--muted); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; }
+    .list-task:hover .carry-btn{ opacity:1; }
+    .carry-btn:hover{ background:var(--accent); color:#fff; border-color:var(--accent); }
 </style>
 
 @code {
@@ -381,6 +608,127 @@
             _newTask.ScheduledTime = ts;
         else
             _newTask.ScheduledTime = null;
+    }
+
+    // --- Day Navigation ---
+    private DateTime _selectedDate = DateTime.Today;
+    private bool _morningCollapsed = false;
+    private bool _todoCollapsed = false;
+    private bool _eveningCollapsed = false;
+
+    // --- Context Menu ---
+    private string _openContextMenuTaskId = "";
+    private void ToggleContextMenu(string taskId)
+    {
+        _openContextMenuTaskId = _openContextMenuTaskId == taskId ? "" : taskId;
+    }
+    private void CloseContextMenu() => _openContextMenuTaskId = "";
+
+    // --- Edit Modal ---
+    private bool _isEditModalOpen = false;
+    private AppTask _editingTask = new();
+    private string EditScheduledTimeString => _editingTask.ScheduledTime?.ToString(@"hh\:mm") ?? "";
+
+    private void OnEditTimeChanged(ChangeEventArgs e)
+    {
+        if (TimeSpan.TryParse(e.Value?.ToString(), out var ts))
+            _editingTask.ScheduledTime = ts;
+        else
+            _editingTask.ScheduledTime = null;
+    }
+
+    private void SetDailyRecurrenceEdit() => _editingTask.RecurrenceDays = "0,1,2,3,4,5,6";
+
+    private void ToggleRecurrenceDayEdit(string day)
+    {
+        var days = _editingTask.RecurrenceDays?.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList() ?? new();
+        if (days.Contains(day)) days.Remove(day);
+        else days.Add(day);
+        _editingTask.RecurrenceDays = string.Join(",", days);
+    }
+
+    private void OpenEditModal(AppTask task)
+    {
+        _openContextMenuTaskId = "";
+        _editingTask = new AppTask
+        {
+            Id = task.Id, Title = task.Title, Notes = task.Notes,
+            Priority = task.Priority, EisenhowerQuadrant = task.EisenhowerQuadrant,
+            IsRecurring = task.IsRecurring, RecurrenceDays = task.RecurrenceDays,
+            ScheduledDate = task.ScheduledDate, ScheduledTime = task.ScheduledTime,
+            IsDone = task.IsDone, ColumnId = task.ColumnId, FolderId = task.FolderId,
+            CreatedAt = task.CreatedAt, UpdatedAt = task.UpdatedAt
+        };
+        _isEditModalOpen = true;
+    }
+
+    private void CloseEditModal() => _isEditModalOpen = false;
+
+    private async Task SaveEditTask()
+    {
+        if (!string.IsNullOrWhiteSpace(_editingTask.Title))
+            await TaskService.UpdateTaskAsync(_editingTask);
+        _isEditModalOpen = false;
+    }
+
+    // --- Task Filtering for Day View ---
+    private bool IsRecurringOnDate(AppTask t, DateTime date)
+    {
+        if (!t.IsRecurring) return false;
+        var days = t.RecurrenceDays?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
+        return days.Length == 0 || days.Contains(((int)date.DayOfWeek).ToString());
+    }
+
+    private List<AppTask> GetMorningTasksForDate(DateTime date)
+    {
+        var noon = TimeSpan.FromHours(12);
+        return TaskService.Tasks.Where(t =>
+        {
+            if (!t.ScheduledTime.HasValue || t.ScheduledTime.Value >= noon) return false;
+            if (t.IsRecurring) return IsRecurringOnDate(t, date);
+            return t.ScheduledDate.HasValue && t.ScheduledDate.Value.Date == date.Date;
+        }).OrderBy(t => t.ScheduledTime).ToList();
+    }
+
+    private List<AppTask> GetTodoTasksForDate(DateTime date)
+    {
+        return TaskService.Tasks.Where(t =>
+        {
+            if (!t.IsRecurring && !t.ScheduledDate.HasValue && !t.ScheduledTime.HasValue) return true;
+            if (t.IsRecurring && !t.ScheduledTime.HasValue) return IsRecurringOnDate(t, date);
+            return false;
+        }).ToList();
+    }
+
+    private List<AppTask> GetEveningTasksForDate(DateTime date)
+    {
+        var noon = TimeSpan.FromHours(12);
+        return TaskService.Tasks.Where(t =>
+        {
+            if (t.IsRecurring)
+            {
+                if (!t.ScheduledTime.HasValue) return false;
+                return t.ScheduledTime.Value >= noon && IsRecurringOnDate(t, date);
+            }
+            if (!t.ScheduledDate.HasValue) return false;
+            if (t.ScheduledDate.Value.Date != date.Date) return false;
+            return !t.ScheduledTime.HasValue || t.ScheduledTime.Value >= noon;
+        }).OrderBy(t => t.ScheduledTime ?? TimeSpan.MaxValue).ToList();
+    }
+
+    private string GetDayLabel()
+    {
+        if (_selectedDate.Date == DateTime.Today) return "اليوم";
+        if (_selectedDate.Date == DateTime.Today.AddDays(-1)) return "الأمس";
+        if (_selectedDate.Date == DateTime.Today.AddDays(1)) return "الغد";
+        string[] arabicDays = { "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت" };
+        return arabicDays[(int)_selectedDate.DayOfWeek] + "، " + _selectedDate.ToString("dd/MM");
+    }
+
+    private async Task CarryForwardTask(AppTask task)
+    {
+        await TaskService.CarryForwardTaskAsync(task);
+        _selectedDate = DateTime.Today;
     }
 
     // --- Custom Drag & Drop State ---

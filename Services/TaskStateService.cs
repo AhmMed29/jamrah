@@ -28,9 +28,11 @@ namespace Jamrah.Services
 
         // Task operations
         Task AddTaskAsync(AppTask task);
+        Task UpdateTaskAsync(AppTask task);
         Task ToggleTaskAsync(AppTask task);
         Task DeleteTaskAsync(string id);
         Task MoveTaskAsync(string taskId, string newColumnId);
+        Task CarryForwardTaskAsync(AppTask task);
     }
 
     public class TaskStateService : ITaskStateService
@@ -187,6 +189,20 @@ namespace Jamrah.Services
                 await _repository.SaveTaskAsync(task);
                 await RefreshDataAsync();
             }
+        }
+
+        public async Task UpdateTaskAsync(AppTask task)
+        {
+            if (string.IsNullOrEmpty(task.Id)) return;
+            await _repository.SaveTaskAsync(task);
+            await RefreshDataAsync();
+        }
+
+        public async Task CarryForwardTaskAsync(AppTask task)
+        {
+            task.ScheduledDate = DateTime.Today;
+            await _repository.SaveTaskAsync(task);
+            await RefreshDataAsync();
         }
     }
 }

@@ -37,5 +37,7 @@ namespace Jamrah.Models
         public TimeSpan? ScheduledTime { get; set; }
 
         public int EisenhowerQuadrant { get; set; } = 1;
+
+        public string Notes { get; set; } = string.Empty;
     }
 }

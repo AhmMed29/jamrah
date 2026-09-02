@@ -1,4 +1,4 @@
-﻿using Jamrah.Services;
+using Jamrah.Services;
 using Microsoft.AspNetCore.Components.WebView.Maui;
 using Microsoft.UI.Xaml.Controls;
 using PointerEventArgs = Microsoft.Maui.Controls.PointerEventArgs;
@@ -72,7 +72,7 @@ public partial class MainPage : ContentPage
                 ComponentType = typeof(Components.Calendar.CalendarPage)
             });
             MainContent.Children.Add(_calendarWebView);
-            DisableZoom(_calendarWebView);
+            EnableZoomWithPersistence(_calendarWebView);
         }
 
         if (_tasksWebView == null)
@@ -87,7 +87,7 @@ public partial class MainPage : ContentPage
                 ComponentType = typeof(Components.Tasks.TaskPage)
             });
             MainContent.Children.Add(_tasksWebView);
-            DisableZoom(_tasksWebView);
+            EnableZoomWithPersistence(_tasksWebView);
         }
 
         if (_pomodoroWebView == null)
@@ -102,13 +102,13 @@ public partial class MainPage : ContentPage
                 ComponentType = typeof(Components.Pomodoro.PomodoroPage)
             });
             MainContent.Children.Add(_pomodoroWebView);
-            DisableZoom(_pomodoroWebView);
+            EnableZoomWithPersistence(_pomodoroWebView);
         }
     }
 
     // ─── Disable Zoom ───────────────────────────────────────────────────────
 
-    private void DisableZoom(BlazorWebView webView)
+    private void EnableZoomWithPersistence(BlazorWebView webView)
     {
         webView.HandlerChanged += async (_, _) =>
         {
@@ -117,8 +117,9 @@ public partial class MainPage : ContentPage
                 await platformView.EnsureCoreWebView2Async();
                 if (platformView.CoreWebView2 != null)
                 {
-                    platformView.CoreWebView2.Settings.IsZoomControlEnabled = false;
-                    platformView.CoreWebView2.Settings.IsPinchZoomEnabled   = false;
+                    // Enable zoom (WebView2 automatically persists zoom per origin in its profile)
+                    platformView.CoreWebView2.Settings.IsZoomControlEnabled = true;
+                    platformView.CoreWebView2.Settings.IsPinchZoomEnabled   = true;
                 }
             }
         };

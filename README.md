@@ -43,13 +43,15 @@ the whole UI is RTL Arabic-first with a minimal warm stone design.
 - three buttons : Tasks / Pomodoro / Calendar.
 - active button gets a dark highlight, hover effect on the rest.
 - each page lives inside its own lazy-created BlazorWebView -- switching is instant because the webviews stay alive, we just toggle visibility.
-- zoom is disabled inside the webviews so the ui stays pixel perfect.
+- zoom control is enabled and your zoom level is saved and restored automatically per session.
 
 ## Tasks
 
 Very Very Simple Task Management System ! (that grew up)
 
-five view modes, you cycle between them with one button :
+right sidebar is collapsed by default to maximize your focus area. you can toggle it via the top header button which dynamically changes icon (☰ / ‹) based on state.
+
+five view modes, you cycle between them with one button (default view is **All**) :
 
 1. **Kanban Board**
     - add / rename / delete columns (rename is inline edit : Enter saves, Esc cancels).
@@ -59,13 +61,14 @@ five view modes, you cycle between them with one button :
     - drag any task between quadrants, the quadrant number is saved on drop.
 3. **All** الكل
     - split view : normal TO-DO list on one side, scheduled & recurring tasks on the other side.
+    - tasks without a scheduled date (for execution only) are strictly tied to their creation date and will only show on that specific day, keeping your daily view organized.
     - recurring/scheduled tasks show badges (متكررة / date / time).
 4. **Done** المكتملة -- completed tasks only.
 5. **Pending** قيد التنفيذ -- not completed only.
 
 sorting modes (one button cycles): newest first / oldest first / by scheduled date / by priority.
 
-new task modal :
+adding new tasks is blazing fast via an inline expandable row. click the dashed button, type, configure properties directly in the list, and press Enter to save instantly.
 - Task Title
 - Priority : high / medium / low
 - Eisenhower Quadrant
@@ -105,6 +108,7 @@ You Can now Track Your Sessions Per Day/Weeks/Months/Years ! --> this will be us
 - clickable Session Box :
     - running session -> details window with live elapsed time.
     - finished session -> details with edit (name/note/duration/tag) and delete.
+    - quick delete action : hover over any session to reveal a trash icon. deleting an overtime session (> 5 min past planned time) will trigger a safe confirmation popup.
 
 ##### Sounds
 

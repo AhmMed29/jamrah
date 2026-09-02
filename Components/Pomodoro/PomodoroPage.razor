@@ -14,10 +14,10 @@
                 <button class="view-btn @(_viewMode == v.Value ? "active" : null)" @onclick="() => SetView(v.Value)">@v.Label</button>
             }
         </div>
-        @foreach (var g in _toggles)
-        {
-            <ToggleGroup @key="g.Id" Group="g" OnSessionClick="OpenSessionDetails" TimeLabelProvider="GetSessionTimeLabel" />
-        }
+            @foreach (var g in _toggles)
+            {
+                <ToggleGroup @key="g.Id" Group="g" OnSessionClick="OpenSessionDetails" TimeLabelProvider="GetSessionTimeLabel" OnSessionDelete="QuickDeleteSession" />
+            }
     </div>
 
     <div class="left-panel">
@@ -248,6 +248,20 @@
             </div>
         </div>
     }
+}
+
+@if (_showDeleteConfirm)
+{
+    <div class="confirm-delete-overlay" @onclick="CancelQuickDelete">
+        <div class="confirm-delete-popup" dir="rtl" @onclick:stopPropagation="true">
+            <span class="confirm-delete-msg">الوقت الفعلي تجاوز المخطط — هل تحذف الجلسة؟</span>
+            <div class="confirm-delete-actions">
+                <button class="confirm-btn-del" @onclick="() => DoQuickDelete(_confirmDeleteSessionId)">مسح</button>
+                <button class="confirm-btn-cancel" @onclick="CancelQuickDelete">إلغاء</button>
+            </div>
+        </div>
+    </div>
+}
 
 <style>
     *{ font-family:'Tajawal',sans-serif !important; }
@@ -325,6 +339,15 @@
     .tag-item{ border:1px solid var(--border); padding:4px 8px; border-radius:20px; cursor:pointer; display:flex; align-items:center; gap:4px; font-size:11px; background:var(--card); }
     .color-input{ width:30px; height:30px; border:1px solid var(--border); border-radius:50%; cursor:pointer; padding:2px; background:var(--card); }
     .detail-static{ background:var(--bg); border:1px solid var(--border); padding:8px; font-size:12px; display:block; border-radius:10px; }
+    /* Confirm Delete */
+    .confirm-delete-overlay{ position:fixed; inset:0; z-index:150; }
+    .confirm-delete-popup{ position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 18px; display:flex; flex-direction:column; gap:10px; box-shadow:0 8px 32px rgba(0,0,0,.12); min-width:260px; z-index:151; }
+    .confirm-delete-msg{ font-size:12px; color:var(--text); line-height:1.5; }
+    .confirm-delete-actions{ display:flex; gap:8px; justify-content:flex-end; }
+    .confirm-btn-del{ height:30px; padding:0 14px; border-radius:8px; border:none; background:#DC2626; color:#fff; cursor:pointer; font-size:12px; font-weight:600; }
+    .confirm-btn-del:hover{ opacity:.85; }
+    .confirm-btn-cancel{ height:30px; padding:0 14px; border-radius:8px; border:1px solid var(--border); background:var(--card); color:var(--text); cursor:pointer; font-size:12px; }
+    .confirm-btn-cancel:hover{ background:var(--card2); }
 </style>
 
 @code {
@@ -547,10 +570,6 @@
             _ = _repo.SaveSessionAsync(s);
             _ = Sound.FireEventAsync(JS, PomodoroSoundEvent.SessionComplete);
         }
-        else if (_currentSession != null && Math.Abs(_timer.Remaining.TotalSeconds - 10) < 0.5)
-        {
-            _ = Sound.FireEventAsync(JS, PomodoroSoundEvent.TimerWarning);
-        }
         else if (_currentSession != null && _tickCount % 10 == 0)
         {
             _currentSession.ElapsedSeconds = CurrentElapsedSeconds();
@@ -730,6 +749,53 @@
         }
         _modalMode = ModalMode.None;
         RebuildToggles();
+    }
+
+    // --- Quick Delete with Overtime Confirm ---
+    private string _confirmDeleteSessionId = "";
+    private bool _showDeleteConfirm = false;
+
+    private async Task QuickDeleteSession(string sessionId)
+    {
+        var session = _sessions.FirstOrDefault(s => s.Id == sessionId);
+        if (session == null) return;
+
+        // لو الجلسة شغّالة حالياً أو وقتها > المدة المخططة بأكثر من 5 دقائق → اطلب تأكيد
+        bool isOvertime = session == _currentSession
+            ? (CurrentElapsedSeconds() > session.PlannedMinutes * 60 + 300)
+            : (session.ElapsedSeconds > session.PlannedMinutes * 60 + 300);
+
+        if (isOvertime)
+        {
+            _confirmDeleteSessionId = sessionId;
+            _showDeleteConfirm = true;
+            return;
+        }
+
+        await DoQuickDelete(sessionId);
+    }
+
+    private async Task DoQuickDelete(string sessionId)
+    {
+        var session = _sessions.FirstOrDefault(s => s.Id == sessionId);
+        if (session == null) return;
+        _sessions.Remove(session);
+        await _repo.DeleteSessionAsync(sessionId);
+        if (_currentSession?.Id == sessionId)
+        {
+            _currentSession = null;
+            _timer.Reset();
+            _startedAt = null;
+        }
+        _showDeleteConfirm = false;
+        _confirmDeleteSessionId = "";
+        RebuildToggles();
+    }
+
+    private void CancelQuickDelete()
+    {
+        _showDeleteConfirm = false;
+        _confirmDeleteSessionId = "";
     }
 
     private async Task SaveDetails()

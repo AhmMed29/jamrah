@@ -7,7 +7,7 @@
 
     <!-- Right Collapsible Sidebar -->
     <div class="task-right-sidebar @( _isRightSidebarCollapsed ? "collapsed" : "")">
-        <div class="right-header"><span>لوحة جانبية</span><button class="toggle-btn" style="width:24px; height:24px; padding:0;" @onclick="ToggleRightSidebar">‹</button></div>
+        <div class="right-header"><span>لوحة جانبية</span></div>
         <div style="padding:12px; font-size:11px; color:var(--muted);">مساحة جانبية قابلة للطي — استخدم زر ☰ لإظهار/إخفاء</div>
     </div>
 
@@ -23,7 +23,9 @@
         }
 
         <div class="board-header">
-            <button class="toggle-btn" @onclick="ToggleRightSidebar" title="طي السايدبار" style="width:32px; padding:0;">☰</button>
+            <button class="toggle-btn sidebar-toggle-btn" @onclick="ToggleRightSidebar"
+                    title="@(_isRightSidebarCollapsed ? "فتح السايدبار" : "طي السايدبار")"
+                    style="width:32px; padding:0;">@(_isRightSidebarCollapsed ? "☰" : "‹")</button>
             <span class="board-title">المهام</span>
             <div style="flex:1"></div>
             <div class="header-toggles">
@@ -171,7 +173,74 @@
                 </div>
 
                 <div class="list-add-section">
-                    <button class="list-add-btn-full" @onclick="() => OpenAddTaskModal(null)">+ إضافة مهمة جديدة...</button>
+                    @if (!_isInlineAddOpen)
+                    {
+                        <button class="list-add-btn-full" @onclick="OpenInlineAdd">+ إضافة مهمة جديدة...</button>
+                    }
+                    else
+                    {
+                        <div class="inline-add-form">
+                            <input class="minimal-input inline-title-input"
+                                   value="@_newTask.Title"
+                                   @oninput="e => _newTask.Title = e.Value?.ToString() ?? string.Empty"
+                                   @onkeydown="HandleInlineKeyDown"
+                                   placeholder="اسم المهمة..."
+                                   @ref="_inlineTitleRef" />
+                            <div class="inline-row">
+                                <div class="inline-field">
+                                    <label class="inline-label">الأولوية</label>
+                                    <select class="minimal-input" @bind="_newTask.Priority">
+                                        <option value="high">عالية</option>
+                                        <option value="medium">متوسطة</option>
+                                        <option value="low">منخفضة</option>
+                                    </select>
+                                </div>
+                                <div class="inline-field">
+                                    <label class="inline-label">أيزنهاور</label>
+                                    <select class="minimal-input" @bind="_newTask.EisenhowerQuadrant">
+                                        <option value="1">ضروري ومهم</option>
+                                        <option value="2">مهم وغير ضروري</option>
+                                        <option value="3">ضروري وغير مهم</option>
+                                        <option value="4">غير ضروري وغير مهم</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="inline-row" style="align-items:center; gap:8px;">
+                                <input type="checkbox" @bind="_newTask.IsRecurring" style="width:16px; height:16px;" />
+                                <span style="font-size:12px; color:var(--muted);">متكررة؟</span>
+                            </div>
+                            @if (_newTask.IsRecurring)
+                            {
+                                <div class="days-row">
+                                    <button class="day-btn @((_newTask.RecurrenceDays != null && _newTask.RecurrenceDays.Split(',', StringSplitOptions.RemoveEmptyEntries).Length >= 7) ? "active" : "")" @onclick="SetDailyRecurrence">كل يوم</button>
+                                    @foreach(var day in new[] { (0,"ح"),(1,"ن"),(2,"ث"),(3,"ر"),(4,"خ"),(5,"ج"),(6,"س") })
+                                    {
+                                        var isChecked2 = _newTask.RecurrenceDays != null && _newTask.RecurrenceDays.Contains(day.Item1.ToString());
+                                        <button class="day-btn @(isChecked2 ? "active" : "")" @onclick="() => ToggleRecurrenceDay(day.Item1.ToString())">@day.Item2</button>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="inline-row">
+                                    <div class="inline-field">
+                                        <label class="inline-label">التاريخ (اختياري)</label>
+                                        <input type="date" class="minimal-input" @bind="_newTask.ScheduledDate" />
+                                    </div>
+                                    <div class="inline-field">
+                                        <label class="inline-label">الوقت (اختياري)</label>
+                                        <input type="time" class="minimal-input" value="@ScheduledTimeString" @onchange="OnTimeChanged" />
+                                    </div>
+                                </div>
+                            }
+                            <textarea class="minimal-input" rows="2" style="resize:vertical;"
+                                      @bind="_newTask.Notes" placeholder="ملاحظات (اختياري)..."></textarea>
+                            <div class="inline-actions">
+                                <button class="modal-btn" @onclick="CloseInlineAdd">إلغاء</button>
+                                <button class="modal-btn primary" @onclick="SaveInlineTask">إضافة ↵</button>
+                            </div>
+                        </div>
+                    }
                 </div>
 
                 <!-- Morning Section -->
@@ -576,6 +645,14 @@
     .task-context-menu button:hover{ background:var(--card2); }
     .task-context-menu button.danger{ color:var(--red); }
     .task-context-menu button.danger:hover{ background:rgba(220,38,38,.08); }
+    /* Inline Add Form */
+    .inline-add-form { border:1px dashed var(--border2); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px; background:var(--card); animation:expandIn .15s ease; }
+    @@keyframes expandIn { from { opacity:0; transform:scaleY(.95); transform-origin:top; } to { opacity:1; transform:scaleY(1); } }
+    .inline-title-input { font-size:13px; font-weight:500; }
+    .inline-row { display:flex; gap:10px; }
+    .inline-field { display:flex; flex-direction:column; gap:4px; flex:1; }
+    .inline-label { font-size:11px; color:var(--muted); font-weight:700; }
+    .inline-actions { display:flex; gap:6px; justify-content:flex-end; padding-top:4px; border-top:1px solid var(--border); }
     /* Carry Forward */
     .carry-btn{ width:26px; height:26px; border-radius:6px; border:1px solid var(--border); background:var(--card); cursor:pointer; color:var(--muted); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; }
     .list-task:hover .carry-btn{ opacity:1; }
@@ -586,14 +663,14 @@
     private enum ViewMode { Kanban, Eisenhower, All, Done, Pending }
     private enum SortMode { Newest, Oldest, ByDate, ByPriority }
 
-    private ViewMode _currentView = ViewMode.Kanban;
+    private ViewMode _currentView = ViewMode.All;
     private SortMode _currentSort = SortMode.Newest;
 
     private string _editingColId = "";
     private string _editColTitle = "";
 
     private string _activeFolderId = ""; // folders removed, show all
-    private bool _isRightSidebarCollapsed = false;
+    private bool _isRightSidebarCollapsed = true;
     private void ToggleRightSidebar() => _isRightSidebarCollapsed = !_isRightSidebarCollapsed;
 
     private bool _isAddTaskModalOpen = false;
@@ -615,6 +692,45 @@
     private bool _morningCollapsed = false;
     private bool _todoCollapsed = false;
     private bool _eveningCollapsed = false;
+
+    // --- Inline Add ---
+    private bool _isInlineAddOpen = false;
+    private ElementReference _inlineTitleRef;
+
+    private void OpenInlineAdd()
+    {
+        _targetColId = TaskService.Columns.OrderBy(c => c.Order).FirstOrDefault()?.Id ?? "";
+        _newTask = new AppTask
+        {
+            ColumnId = _targetColId,
+            FolderId = string.IsNullOrEmpty(_activeFolderId) ? "default-general" : _activeFolderId,
+            Priority = "low",
+            EisenhowerQuadrant = 1,
+            IsRecurring = false,
+            RecurrenceDays = ""
+        };
+        _isInlineAddOpen = true;
+    }
+
+    private void CloseInlineAdd()
+    {
+        _isInlineAddOpen = false;
+    }
+
+    private async Task SaveInlineTask()
+    {
+        if (!string.IsNullOrWhiteSpace(_newTask.Title))
+            await TaskService.AddTaskAsync(_newTask);
+        _isInlineAddOpen = false;
+    }
+
+    private async Task HandleInlineKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+            await SaveInlineTask();
+        else if (e.Key == "Escape")
+            CloseInlineAdd();
+    }
 
     // --- Context Menu ---
     private string _openContextMenuTaskId = "";
@@ -694,8 +810,11 @@
     {
         return TaskService.Tasks.Where(t =>
         {
-            if (!t.IsRecurring && !t.ScheduledDate.HasValue && !t.ScheduledTime.HasValue) return true;
+            // مهمة متكررة بدون وقت محدد → تظهر في أيام التكرار
             if (t.IsRecurring && !t.ScheduledTime.HasValue) return IsRecurringOnDate(t, date);
+            // مهمة عادية بدون تاريخ مجدول → تظهر فقط في يوم إنشائها
+            if (!t.IsRecurring && !t.ScheduledDate.HasValue && !t.ScheduledTime.HasValue)
+                return t.CreatedAt.ToLocalTime().Date == date.Date;
             return false;
         }).ToList();
     }

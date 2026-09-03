@@ -1,0 +1,80 @@
+@namespace Jamrah.Components.Pomodoro
+
+<div class="toggle-group">
+    <div class="toggle-header" @onclick="() => { Group.Open = !Group.Open; }">
+        <div><span class="toggle-icon">@(Group.Open ? "-" : "+")</span><span>@Group.Label</span></div>
+        <span>@Group.Count جلسة</span>
+    </div>
+    @if (Group.Open)
+    {
+        if (Group.Children != null)
+        {
+            @foreach (var child in Group.Children)
+            {
+                <ToggleGroup @key="child.Id" Group="child" OnSessionClick="OnSessionClick" TimeLabelProvider="TimeLabelProvider" OnSessionDelete="OnSessionDelete" />
+            }
+        }
+        else if (Group.Sessions != null)
+        {
+            @foreach (var s in Group.Sessions)
+            {
+                var capturedS = s;
+                <div class="session-item session-item--new session-deletable" @onclick="() => OnSessionClick.InvokeAsync(capturedS)">
+                    <span class="session-title">@capturedS.Title</span>
+                    @if (capturedS.Tag != null)
+                    {
+                        <span class="tag-badge" style="background:@capturedS.Tag.Color; color:@TagTextColor(capturedS.Tag);">@capturedS.Tag.Name</span>
+                    }
+                    else
+                    {
+                        <span class="tag-placeholder"></span>
+                    }
+                    <span class="session-time">@(TimeLabelProvider?.Invoke(capturedS) ?? $"{TimeSpan.FromSeconds(capturedS.ElapsedSeconds):mm\\:ss}/{TimeSpan.FromMinutes(capturedS.PlannedMinutes):mm\\:ss}")</span>
+                    <button class="session-delete-btn"
+                            title="حذف الجلسة"
+                            @onclick:stopPropagation="true"
+                            @onclick="() => OnSessionDelete.InvokeAsync(capturedS.Id)">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6l-1 14H6L5 6"></path>
+                            <path d="M10 11v6"></path>
+                            <path d="M14 11v6"></path>
+                            <path d="M9 6V4h6v2"></path>
+                        </svg>
+                    </button>
+                </div>
+            }
+        }
+    }
+</div>
+
+<style>
+    .session-deletable { position: relative; }
+    .session-delete-btn {
+        opacity: 0;
+        border: none;
+        background: none;
+        cursor: pointer;
+        color: var(--muted);
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity .15s, background .15s, color .15s;
+        flex-shrink: 0;
+    }
+    .session-deletable:hover .session-delete-btn { opacity: 1; }
+    .session-delete-btn:hover { background: rgba(220,38,38,.1); color: #DC2626; }
+    .session-item--new { grid-template-columns: 1fr 90px 110px 28px; }
+</style>
+
+@code {
+    [Parameter] public SessionGroup Group { get; set; } = null!;
+    [Parameter] public EventCallback<Session> OnSessionClick { get; set; }
+    [Parameter] public EventCallback<string> OnSessionDelete { get; set; }
+    [Parameter] public Func<Session, string>? TimeLabelProvider { get; set; }
+
+    private static string TagTextColor(Tag t) => t.Color == "#000000" ? "white" : "black";
+}

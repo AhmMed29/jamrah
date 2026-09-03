@@ -1,5 +1,6 @@
-using Jamrah.Data;
-using Jamrah.Services;
+using Jamrah.Core.Interfaces;
+using Jamrah.Infrastructure.Repositories;
+using Jamrah.Application.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Jamrah
@@ -18,6 +19,7 @@ namespace Jamrah
                 });
 
             builder.Services.AddSingleton<PrayerTimesService>();
+            builder.Services.AddSingleton<PomodoroSoundService>();
             
             // Register Data Access Layer
             builder.Services.AddSingleton<ICalendarRepository, CalendarRepository>();

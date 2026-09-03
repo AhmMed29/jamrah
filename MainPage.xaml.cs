@@ -1,6 +1,7 @@
-﻿using Jamrah.Services;
+using Jamrah.Core.Interfaces;
 using Microsoft.AspNetCore.Components.WebView.Maui;
 using Microsoft.UI.Xaml.Controls;
+using PointerEventArgs = Microsoft.Maui.Controls.PointerEventArgs;
 
 namespace Jamrah;
 
@@ -68,10 +69,10 @@ public partial class MainPage : ContentPage
             _calendarWebView.RootComponents.Add(new Microsoft.AspNetCore.Components.WebView.Maui.RootComponent
             {
                 Selector      = "#app",
-                ComponentType = typeof(Components.Calendar.CalendarPage)
+                ComponentType = typeof(Presentation.Calendar.CalendarPage)
             });
             MainContent.Children.Add(_calendarWebView);
-            DisableZoom(_calendarWebView);
+            EnableZoomWithPersistence(_calendarWebView);
         }
 
         if (_tasksWebView == null)
@@ -83,10 +84,10 @@ public partial class MainPage : ContentPage
             _tasksWebView.RootComponents.Add(new RootComponent
             {
                 Selector      = "#app",
-                ComponentType = typeof(Components.Tasks.TaskPage)
+                ComponentType = typeof(Presentation.Tasks.TaskPage)
             });
             MainContent.Children.Add(_tasksWebView);
-            DisableZoom(_tasksWebView);
+            EnableZoomWithPersistence(_tasksWebView);
         }
 
         if (_pomodoroWebView == null)
@@ -98,16 +99,16 @@ public partial class MainPage : ContentPage
             _pomodoroWebView.RootComponents.Add(new RootComponent
             {
                 Selector      = "#app",
-                ComponentType = typeof(Components.Pomodoro.PomodoroPage)
+                ComponentType = typeof(Presentation.Pomodoro.PomodoroPage)
             });
             MainContent.Children.Add(_pomodoroWebView);
-            DisableZoom(_pomodoroWebView);
+            EnableZoomWithPersistence(_pomodoroWebView);
         }
     }
 
     // ─── Disable Zoom ───────────────────────────────────────────────────────
 
-    private async void DisableZoom(BlazorWebView webView)
+    private void EnableZoomWithPersistence(BlazorWebView webView)
     {
         webView.HandlerChanged += async (_, _) =>
         {
@@ -116,8 +117,9 @@ public partial class MainPage : ContentPage
                 await platformView.EnsureCoreWebView2Async();
                 if (platformView.CoreWebView2 != null)
                 {
-                    platformView.CoreWebView2.Settings.IsZoomControlEnabled = false;
-                    platformView.CoreWebView2.Settings.IsPinchZoomEnabled   = false;
+                    // Enable zoom (WebView2 automatically persists zoom per origin in its profile)
+                    platformView.CoreWebView2.Settings.IsZoomControlEnabled = true;
+                    platformView.CoreWebView2.Settings.IsPinchZoomEnabled   = true;
                 }
             }
         };
@@ -129,27 +131,33 @@ public partial class MainPage : ContentPage
     {
         _activePage = page;
 
-        // Reset all
+        // Reset all - Unified Light
         TasksBtnBorder.Background = Color.FromArgb("#FFFFFF");
         PomoBtnBorder.Background  = Color.FromArgb("#FFFFFF");
         CalBtnBorder.Background   = Color.FromArgb("#FFFFFF");
-        TasksIcon.Fill = new SolidColorBrush(Color.FromArgb("#000000"));
-        PomoIcon.Fill  = new SolidColorBrush(Color.FromArgb("#000000"));
-        CalIcon.Fill   = new SolidColorBrush(Color.FromArgb("#000000"));
+        TasksBtnBorder.Stroke = Color.FromArgb("#E7E5E4");
+        PomoBtnBorder.Stroke  = Color.FromArgb("#E7E5E4");
+        CalBtnBorder.Stroke   = Color.FromArgb("#E7E5E4");
+        TasksIcon.Fill = new SolidColorBrush(Color.FromArgb("#78716C"));
+        PomoIcon.Fill  = new SolidColorBrush(Color.FromArgb("#78716C"));
+        CalIcon.Fill   = new SolidColorBrush(Color.FromArgb("#78716C"));
 
         // Highlight active
         switch (page)
         {
             case ActivePage.Tasks:
-                TasksBtnBorder.Background = Color.FromArgb("#000000");
+                TasksBtnBorder.Background = Color.FromArgb("#1C1917");
+                TasksBtnBorder.Stroke = Color.FromArgb("#1C1917");
                 TasksIcon.Fill = new SolidColorBrush(Color.FromArgb("#FFFFFF"));
                 break;
             case ActivePage.Pomodoro:
-                PomoBtnBorder.Background = Color.FromArgb("#000000");
+                PomoBtnBorder.Background = Color.FromArgb("#1C1917");
+                PomoBtnBorder.Stroke = Color.FromArgb("#1C1917");
                 PomoIcon.Fill = new SolidColorBrush(Color.FromArgb("#FFFFFF"));
                 break;
             case ActivePage.Calendar:
-                CalBtnBorder.Background = Color.FromArgb("#000000");
+                CalBtnBorder.Background = Color.FromArgb("#1C1917");
+                CalBtnBorder.Stroke = Color.FromArgb("#1C1917");
                 CalIcon.Fill = new SolidColorBrush(Color.FromArgb("#FFFFFF"));
                 break;
         }
@@ -158,17 +166,17 @@ public partial class MainPage : ContentPage
     // ─── Hover effects ───────────────────────────────────────────────────────
 
     private void OnTasksBtnEnter(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Tasks)     TasksBtnBorder.Background = Color.FromArgb("#EEEEEE"); }
+    { if (_activePage != ActivePage.Tasks)     TasksBtnBorder.Background = Color.FromArgb("#F5F5F4"); }
     private void OnTasksBtnExit(object sender, PointerEventArgs e)
     { if (_activePage != ActivePage.Tasks)     TasksBtnBorder.Background = Color.FromArgb("#FFFFFF"); }
 
     private void OnPomoBtnEnter(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Pomodoro)  PomoBtnBorder.Background  = Color.FromArgb("#EEEEEE"); }
+    { if (_activePage != ActivePage.Pomodoro)  PomoBtnBorder.Background  = Color.FromArgb("#F5F5F4"); }
     private void OnPomoBtnExit(object sender, PointerEventArgs e)
     { if (_activePage != ActivePage.Pomodoro)  PomoBtnBorder.Background  = Color.FromArgb("#FFFFFF"); }
 
     private void OnCalBtnEnter(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Calendar)  CalBtnBorder.Background   = Color.FromArgb("#EEEEEE"); }
+    { if (_activePage != ActivePage.Calendar)  CalBtnBorder.Background   = Color.FromArgb("#F5F5F4"); }
     private void OnCalBtnExit(object sender, PointerEventArgs e)
     { if (_activePage != ActivePage.Calendar)  CalBtnBorder.Background   = Color.FromArgb("#FFFFFF"); }
 }

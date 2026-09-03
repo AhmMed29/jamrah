@@ -4,8 +4,28 @@ obj/
 .idea/
 .codegraph/
 .worktrees/
+.opencode/
 *.user
 *.suo
 *.userosscache
 *.DotSettings.user
 *.sln.docstates
+
+# Design mocks / private
+tasks-page.html
+Pomo Minimal Design.html
+*.html.mock
+*.local.html
+
+# AI / docs private
+docs/
+
+# Duplicate assets (keep wwwroot/sounds as source, assets/App Sounds is duplicate)
+assets/App Sounds/
+
+# Safety nets
+**/.vs/
+**/.idea/
+**/*.vsidx
+**/*.db-shm
+**/*.db-wal

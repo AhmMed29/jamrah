@@ -1,6 +1,8 @@
 @namespace Jamrah.Presentation.Calendar
 @implements IDisposable
+@using Microsoft.JSInterop
 @inject ICalendarStateService StateService
+@inject IJSRuntime JS
 
 <style>
 .cal-wrapper{ display:flex; height:100vh; background:var(--bg,#FAFAF9); font-family:'Tajawal',sans-serif; }
@@ -175,9 +177,14 @@
     private DayOfWeek _weekStart = DayOfWeek.Saturday;
     protected override async Task OnInitializedAsync()
     {
-        StateService.OnStateChanged += HandleStateChanged;
-        await StateService.InitAsync();
-        _miniDate = StateService.SelectedDate;
+        try{
+            StateService.OnStateChanged += HandleStateChanged;
+            await StateService.InitAsync();
+            _miniDate = StateService.SelectedDate;
+        }catch(Exception ex){
+            Console.Error.WriteLine($"Calendar INIT FAIL: {ex}");
+            await JS.InvokeVoidAsync("eval", $"document.getElementById('blazor-error-msg').textContent='{ex.Message.Replace("'","\\'")}';document.getElementById('blazor-error-ui').style.display='block'");
+        }
     }
     private void HandleStateChanged(){ _ = InvokeAsync(StateHasChanged); }
     private void ToggleSidebar(){ _isSidebarCollapsed = !_isSidebarCollapsed; }

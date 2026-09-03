@@ -1,4 +1,4 @@
-@namespace Jamrah.Presentation.Pomodoro
+﻿@namespace Jamrah.Presentation.Pomodoro
 @using Microsoft.JSInterop
 @inject Jamrah.Application.Services.PomodoroSoundService SoundService
 @inject IJSRuntime JS
@@ -61,33 +61,6 @@
     </div>
 </div>
 
-<style>
-    .sound-modal-overlay{ position:fixed; inset:0; background:rgba(28,25,23,.30); z-index:120; display:flex; align-items:center; justify-content:center; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
-    .sound-modal{ width:680px; max-height:75vh; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:0 20px 40px rgba(0,0,0,.08); display:flex; flex-direction:column; overflow:hidden; }
-    .sound-modal-header{ padding:10px 14px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); }
-    .sound-modal-title{ font-weight:700; font-size:13px; color:var(--text); }
-    .sound-close-btn{ width:26px; height:26px; border-radius:50%; border:1px solid var(--border); background:var(--card); cursor:pointer; font-size:11px; color:var(--text); }
-    .sound-close-btn:hover{ background:var(--text); color:#fff; }
-    .sound-modal-body{ padding:12px 16px; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
-    .sound-modal-body::-webkit-scrollbar{ width:4px; } .sound-modal-body::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:4px; }
-    .sound-col{ display:flex; flex-direction:column; gap:6px; }
-    .sound-group-label{ font-size:11px; color:var(--muted); font-weight:700; letter-spacing:.5px; margin-top:2px; }
-    .sound-row{ display:flex; align-items:center; gap:8px; justify-content:space-between; font-size:12px; color:var(--text); }
-    .sound-row input[type=range]{ flex:1; accent-color:var(--text); height:16px; }
-    .sound-vol{ font-size:11px; color:var(--muted); min-width:36px; text-align:left; }
-    .sound-event-row{ border:1px solid var(--border); border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:6px; background:var(--bg); }
-    .sound-event-head{ display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--text); font-weight:500; }
-    .sound-event-body{ display:flex; gap:6px; }
-    .sound-event-body select{ flex:1; height:28px; background:var(--card); border:1px solid var(--border); border-radius:6px; outline:none; font-size:11px; padding:0 6px; }
-    .preview-btn{ height:28px; padding:0 10px; border-radius:6px; border:1px solid var(--border); background:var(--card); cursor:pointer; color:var(--text); font-size:10px; }
-    .preview-btn:hover{ background:var(--text); color:#fff; border-color:var(--text); }
-    .sound-toggle{ min-width:40px; height:20px; border-radius:10px; border:1px solid var(--border2); background:var(--card2); cursor:pointer; font-size:9px; font-weight:700; color:var(--muted); padding:0 6px; }
-    .sound-toggle.on{ background:var(--text); color:#fff; border-color:var(--text); }
-    .sound-modal-footer{ padding:12px 16px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; align-items:center; }
-    .sound-modal-footer .modal-btn{ height:34px; padding:0 16px; border-radius:10px; border:1px solid var(--border); background:var(--card); cursor:pointer; font-size:12px; color:var(--text); }
-    .sound-modal-footer .modal-btn.primary{ background:var(--text); color:#fff; border-color:var(--text); }
-    .sound-modal-footer .modal-btn:hover{ opacity:.9; }
-</style>
 
 @code {
     [Parameter] public EventCallback OnClose { get; set; }

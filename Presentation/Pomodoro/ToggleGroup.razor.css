@@ -1,0 +1,19 @@
+﻿    .session-deletable { position: relative; }
+    .session-delete-btn {
+        opacity: 0;
+        border: none;
+        background: none;
+        cursor: pointer;
+        color: var(--muted);
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity .15s, background .15s, color .15s;
+        flex-shrink: 0;
+    }
+    .session-deletable:hover .session-delete-btn { opacity: 1; }
+    .session-delete-btn:hover { background: rgba(220,38,38,.1); color: #DC2626; }
+    .session-item--new { grid-template-columns: 1fr 90px 110px 28px; }

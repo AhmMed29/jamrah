@@ -1,4 +1,4 @@
-@using Microsoft.JSInterop
+﻿@using Microsoft.JSInterop
 @namespace Jamrah.Presentation.Pomodoro
 @implements IDisposable
 @inject Jamrah.Application.Services.PrayerTimesService PrayerService
@@ -263,92 +263,6 @@
     </div>
 }
 
-<style>
-    *{ font-family:'Tajawal',sans-serif !important; }
-    :root { --bg:#FAFAF9; --card:#FFFFFF; --card2:#F5F5F4; --border:#E7E5E4; --border2:#D6D3D1; --text:#1C1917; --muted:#78716C; --accent:#FF6B35; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background:var(--bg); color:var(--text); height:100vh; overflow:hidden; font-size:13px; }
-
-    .app-container { display:flex; height:100vh; gap:16px; padding:16px; background:var(--bg); }
-
-    .left-panel { width:360px; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; overflow-y:auto; flex-shrink:0; }
-    .left-panel::-webkit-scrollbar { width:4px; } .left-panel::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:4px; }
-
-    .timer-box { background:var(--card2); border:1px solid var(--border); border-radius:14px; padding:16px; text-align:center; cursor:pointer; position:relative; display:flex; align-items:center; justify-content:center; gap:12px; }
-    .timer-box:hover{ border-color:var(--border2); }
-    .timer-center{ flex:1; display:flex; flex-direction:column; align-items:center; }
-    .timer-val, .timer-value{ font-size:44px; font-weight:700; letter-spacing:-1px; line-height:1; color:var(--text); }
-    .timer-lbl, .timer-label{ font-size:11px; color:var(--muted); margin-top:4px; }
-    .timer-adjust{ position:absolute; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:4px; opacity:0; transition:.15s; }
-    .timer-box.has-session:hover .timer-adjust{ opacity:1; } .timer-adjust.left, .timer-adjust--left{ left:10px; } .timer-adjust.right, .timer-adjust--right{ right:10px; }
-    .adj-btn{ width:32px; height:32px; border-radius:50%; border:1px solid var(--border); background:var(--card); cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; color:var(--text); }
-    .adj-btn--large{ width:36px; height:36px; font-size:12px; font-weight:700; } .adj-btn--small{ width:28px; height:28px; font-size:10px; }
-    .adj-btn:hover{ background:var(--text); color:#fff; border-color:var(--text); }
-
-    .durations{ display:flex; gap:6px; } .dur-btn{ flex:1; height:30px; border-radius:20px; border:1px solid var(--border); background:var(--card); cursor:pointer; font-size:12px; color:var(--text); }
-    .dur-btn.active{ background:var(--text); color:#fff; border-color:var(--text); } .dur-btn:hover:not(.active){ background:var(--card2); }
-
-    .actions{ display:flex; gap:8px; justify-content:center; }
-    .action-btn, .act{ width:38px; height:38px; border-radius:50%; border:1px solid var(--border); background:var(--card); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text); }
-    .action-btn.primary, .act.primary{ background:var(--text); color:#fff; border-color:var(--text); } .action-btn:hover, .act:hover{ background:var(--text); color:#fff; border-color:var(--text); }
-    .action-btn svg{ stroke:var(--text); fill:none; } .action-btn:hover svg{ stroke:#fff; }
-
-    .timer-info{ border-top:1px solid var(--border); padding-top:10px; display:flex; flex-direction:column; gap:6px; font-size:12px; }
-    .info-row{ display:flex; justify-content:space-between; padding:4px 0; } .info-row span{ color:var(--muted); } .info-row span:last-child{ color:var(--text); font-weight:700; }
-
-    .prayer-section{ border-top:1px solid var(--border); padding-top:12px; margin-top:4px; display:flex; flex-direction:column; gap:8px; }
-    .prayer-countdown{ border:1px solid var(--border); border-radius:12px; padding:10px; text-align:center; background:var(--bg); }
-    .prayer-countdown-label{ font-size:11px; color:var(--muted); } .prayer-countdown-timer{ font-size:22px; font-weight:700; color:var(--text); }
-    .prayer-title{ font-size:11px; color:var(--muted); font-weight:700; letter-spacing:.5px; }
-    .prayer-table{ width:100%; border-collapse:collapse; font-size:11px; } .prayer-table td,.prayer-table th{ border:1px solid var(--border); padding:6px; text-align:center; }
-    .prayer-table th{ background:var(--card); font-weight:700; } .prayer-table .next-prayer td{ background:var(--text); color:#fff; } .prayer-table tr:hover td:not(.next-prayer td){ background:var(--card2); }
-
-    .right-panel{ flex:1; background:var(--card); border:1px solid var(--border); border-radius:16px; display:flex; flex-direction:column; overflow:hidden; }
-    .right-panel::-webkit-scrollbar{ width:4px; } .right-panel::-webkit-scrollbar-thumb{ background:var(--border2); }
-    .view-modes, .view-tabs{ display:flex; border-bottom:1px solid var(--border); } .view-btn{ flex:1; padding:10px; border:none; background:transparent; border-left:1px solid var(--border); cursor:pointer; color:var(--muted); font-size:12px; }
-    .view-btn.active{ background:var(--text); color:#fff; } .view-btn:last-child{ border-left:none; } .view-btn:hover:not(.active){ background:var(--card2); }
-
-    .toggle-group{ border-bottom:none; }
-    .toggle-header{ padding:8px 10px; display:flex; justify-content:space-between; cursor:pointer; font-weight:700; font-size:12px; background:var(--card); border:1px solid var(--border); border-radius:10px; margin:6px 10px 0; }
-    .toggle-header:hover{ background:var(--card2); } .toggle-icon{ font-size:12px; margin-left:6px; }
-    .session-item{ padding:8px 10px; display:grid; gap:8px; align-items:center; border-top:1px solid var(--border); background:var(--card); font-size:12px; cursor:pointer; }
-    .session-item:hover{ background:var(--card2); }
-    .session-item--new{ display:grid; grid-template-columns:1fr 90px 110px; gap:8px; align-items:center; direction:rtl; border:1px solid var(--border); border-radius:10px; margin:0 10px; background:var(--card); }
-    .session-item--new:hover{ background:var(--card2); }
-    .session-time{ font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; text-align:left; direction:ltr; white-space:nowrap; justify-self:start; background:var(--bg); border:1px solid var(--border); padding:2px 6px; border-radius:20px; }
-    .session-title{ text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; direction:rtl; font-weight:500; }
-    .tag-placeholder{ justify-self:center; width:1px; }
-    .time-stamp{ color:var(--muted); font-size:11px; }
-    .tag-badge{ padding:2px 7px; border-radius:20px; font-size:10px; border:1px solid var(--border); justify-self:center; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-
-    .modal-overlay{ position:fixed; inset:0; background:rgba(28,25,23,.22); backdrop-filter:blur(4px); z-index:99; display:none; justify-content:center; align-items:center; }
-    .modal-group{ display:flex; gap:0; }
-    .modal-box{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; width:420px; display:flex; flex-direction:column; gap:10px; box-shadow:0 20px 40px rgba(0,0,0,.06); }
-    .tags-modal-box{ width:260px; }
-    .modal-header{ display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; }
-    .modal-title{ font-weight:700; display:flex; align-items:center; gap:8px; font-size:13px; }
-    .close-btn{ width:28px; height:28px; border-radius:50%; border:1px solid var(--border); background:var(--card); display:flex; align-items:center; justify-content:center; cursor:pointer; }
-    .close-btn:hover{ background:var(--text); color:#fff; border-color:var(--text); }
-    .input-group{ display:flex; flex-direction:column; gap:5px; } .input-label{ font-size:11px; color:var(--muted); font-weight:700; }
-    .minimal-input,.minimal-textarea{ background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:8px 10px; outline:none; font-size:12px; width:100%; }
-    .minimal-input:focus,.minimal-textarea:focus{ background:var(--card); border-color:var(--text); }
-    .modal-actions{ display:flex; gap:6px; justify-content:flex-end; margin-top:4px; }
-    .modal-btn{ height:32px; padding:0 12px; border-radius:10px; border:1px solid var(--border); background:var(--card); cursor:pointer; font-size:12px; font-weight:500; }
-    .modal-btn.primary{ background:var(--text); color:#fff; border-color:var(--text); } .modal-btn:hover{ background:var(--card2); } .modal-btn.primary:hover{ opacity:.9; }
-    .tags-list{ display:flex; flex-wrap:wrap; gap:6px; max-height:180px; overflow-y:auto; border:1px solid var(--border); padding:8px; border-radius:10px; background:var(--bg); }
-    .tag-item{ border:1px solid var(--border); padding:4px 8px; border-radius:20px; cursor:pointer; display:flex; align-items:center; gap:4px; font-size:11px; background:var(--card); }
-    .color-input{ width:30px; height:30px; border:1px solid var(--border); border-radius:50%; cursor:pointer; padding:2px; background:var(--card); }
-    .detail-static{ background:var(--bg); border:1px solid var(--border); padding:8px; font-size:12px; display:block; border-radius:10px; }
-    /* Confirm Delete */
-    .confirm-delete-overlay{ position:fixed; inset:0; z-index:150; }
-    .confirm-delete-popup{ position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 18px; display:flex; flex-direction:column; gap:10px; box-shadow:0 8px 32px rgba(0,0,0,.12); min-width:260px; z-index:151; }
-    .confirm-delete-msg{ font-size:12px; color:var(--text); line-height:1.5; }
-    .confirm-delete-actions{ display:flex; gap:8px; justify-content:flex-end; }
-    .confirm-btn-del{ height:30px; padding:0 14px; border-radius:8px; border:none; background:#DC2626; color:#fff; cursor:pointer; font-size:12px; font-weight:600; }
-    .confirm-btn-del:hover{ opacity:.85; }
-    .confirm-btn-cancel{ height:30px; padding:0 14px; border-radius:8px; border:1px solid var(--border); background:var(--card); color:var(--text); cursor:pointer; font-size:12px; }
-    .confirm-btn-cancel:hover{ background:var(--card2); }
-</style>
 
 @code {
     private enum ModalMode { None, Create, Details, Prompt }

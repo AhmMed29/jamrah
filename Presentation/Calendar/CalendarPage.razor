@@ -1,4 +1,4 @@
-@namespace Jamrah.Components.Calendar
+@namespace Jamrah.Presentation.Calendar
 @implements IDisposable
 @inject ICalendarStateService StateService
 
@@ -204,3 +204,4 @@
     private string GetEventStyle(CalendarEvent evt){ var cal=StateService.Calendars.FirstOrDefault(c=>c.Id==evt.CalendarId); string bg=!string.IsNullOrEmpty(evt.BackgroundColor)?evt.BackgroundColor:(cal?.BackgroundColor??"#2196F3"); string fg=!string.IsNullOrEmpty(evt.Color)?evt.Color:(cal?.Color??"#FFFFFF"); string border=!string.IsNullOrEmpty(evt.BorderColor)?evt.BorderColor:(cal?.BorderColor??"#0D47A1"); return $"background-color:{bg}; color:{fg}; border-left-color:{border};"; }
     public void Dispose(){ StateService.OnStateChanged-=HandleStateChanged; }
 }
+

@@ -1,6 +1,6 @@
-@namespace Jamrah.Components.Pomodoro
+@namespace Jamrah.Presentation.Pomodoro
 @using Microsoft.JSInterop
-@inject Jamrah.Services.PomodoroSoundService SoundService
+@inject Jamrah.Application.Services.PomodoroSoundService SoundService
 @inject IJSRuntime JS
 
 <div class="sound-modal-overlay" @onclick="HandleOverlayClick">
@@ -92,7 +92,7 @@
 @code {
     [Parameter] public EventCallback OnClose { get; set; }
 
-    private record SoundEventRow(string Title, Jamrah.Services.EventSoundSetting Setting);
+    private record SoundEventRow(string Title, Jamrah.Application.Services.EventSoundSetting Setting);
 
     private List<SoundEventRow> Events => new()
     {
@@ -102,7 +102,7 @@
         new("انتهاء الاستراحة", S.BreakComplete),
     };
 
-    private Jamrah.Services.PomodoroSoundSettings S => SoundService.Settings;
+    private Jamrah.Application.Services.PomodoroSoundSettings S => SoundService.Settings;
 
     private List<(string File, string Label)> _sounds = new();
     private IEnumerable<(string File, string Label)> Sounds => _sounds;
@@ -147,3 +147,4 @@
 
     private void Close() => OnClose.InvokeAsync();
 }
+

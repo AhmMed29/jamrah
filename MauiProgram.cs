@@ -34,11 +34,15 @@ namespace Jamrah
 
             // Register MAUI Blazor Services
             builder.Services.AddMauiBlazorWebView();
+            builder.Services.AddTransient<AppShell>();
+            builder.Services.AddTransient<MainPage>();
 
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();
             builder.Logging.AddDebug();
 #endif
+
+            SQLitePCL.Batteries_V2.Init();
 
             return builder.Build();
         }

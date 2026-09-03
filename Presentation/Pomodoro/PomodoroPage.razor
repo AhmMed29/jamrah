@@ -1,8 +1,8 @@
 @using Microsoft.JSInterop
-@namespace Jamrah.Components.Pomodoro
+@namespace Jamrah.Presentation.Pomodoro
 @implements IDisposable
-@inject Jamrah.Services.PrayerTimesService PrayerService
-@inject Jamrah.Services.PomodoroSoundService Sound
+@inject Jamrah.Application.Services.PrayerTimesService PrayerService
+@inject Jamrah.Application.Services.PomodoroSoundService Sound
 @inject IJSRuntime JS
 
 <div class="app-container" dir="rtl" style="flex-direction:row-reverse;">
@@ -1017,3 +1017,4 @@
         _prayerTimer?.Dispose();
     }
 }
+

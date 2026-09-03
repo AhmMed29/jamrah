@@ -2,8 +2,7 @@
 @implements IDisposable
 @using Microsoft.JSInterop
 @inject ICalendarStateService StateService
-.seg button.active{ background:var(--text); color:#fff; }
-</style>
+@inject IJSRuntime JS
 
 <div class="cal-wrapper" dir="rtl">
     <div class="cal-sidebar @(_isSidebarCollapsed ? "collapsed" : "")">

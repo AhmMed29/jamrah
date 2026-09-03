@@ -20,6 +20,9 @@ Pomo Minimal Design.html
 # AI / docs private
 docs/
 
+# Duplicate assets (keep wwwroot/sounds as source, assets/App Sounds is duplicate)
+assets/App Sounds/
+
 # Safety nets
 **/.vs/
 **/.idea/

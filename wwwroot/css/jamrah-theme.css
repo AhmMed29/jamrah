@@ -11,16 +11,12 @@
 }
 html,body{ background:var(--bg); color:var(--text); }
 
-/* App zoom: content renders N times larger; page roots compensated to fill viewport.
-   Change --app-zoom (e.g. 1.5, 2, 3) to tune. */
-html{ --app-zoom:2; zoom:var(--app-zoom); }
-.app-container,.tasks-page,.cal-wrapper{ height:calc(100vh / var(--app-zoom)) !important; }
-
-/* Fix popup centering: viewport units inside zoomed html get multiplied by zoom,
-   making .floating-layer 2x the screen -> popup lands off-screen bottom-right */
+/* App zoom removed for Android WebView - use native scaling */
+html{ --app-zoom:1; }
+.app-container,.tasks-page,.cal-wrapper{ height:100vh !important; }
 .floating-layer,.popup-overlay{
-  width:calc(100vw / var(--app-zoom)) !important;
-  height:calc(100vh / var(--app-zoom)) !important;
+  width:100vw !important;
+  height:100vh !important;
 }
 /* Remove blur behind event popup */
 .popup-overlay{

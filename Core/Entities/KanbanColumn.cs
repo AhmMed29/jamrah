@@ -1,7 +1,7 @@
-﻿using SQLite;
+using SQLite;
 using System;
 
-namespace Jamrah.Models
+namespace Jamrah.Core.Entities
 {
     [Table("KanbanColumns")]
     public class KanbanColumn

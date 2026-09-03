@@ -1,6 +1,6 @@
 using SQLite;
 
-namespace Jamrah.Models
+namespace Jamrah.Core.Entities
 {
     /// <summary>
     /// Represents a calendar category/group entity, fully compatible with tui.calendar CalendarInfo

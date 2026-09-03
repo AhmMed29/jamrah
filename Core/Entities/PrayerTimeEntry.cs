@@ -1,6 +1,6 @@
-﻿using SQLite;
+using SQLite;
 
-namespace Jamrah.Models
+namespace Jamrah.Core.Entities
 {
     [Table("PrayerTimes")]
     public class PrayerTimeEntry

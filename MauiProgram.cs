@@ -1,5 +1,6 @@
-using Jamrah.Data;
-using Jamrah.Services;
+using Jamrah.Core.Interfaces;
+using Jamrah.Infrastructure.Repositories;
+using Jamrah.Application.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Jamrah

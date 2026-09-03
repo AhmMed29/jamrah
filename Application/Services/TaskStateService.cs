@@ -2,39 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Jamrah.Data;
-using Jamrah.Models;
+using Jamrah.Core.Entities;
+using Jamrah.Core.Interfaces;
 
-namespace Jamrah.Services
+namespace Jamrah.Application.Services
 {
-    public interface ITaskStateService
-    {
-        List<TaskFolder> Folders { get; set; }
-        List<KanbanColumn> Columns { get; set; }
-        List<AppTask> Tasks { get; set; }
-        event Action? OnStateChanged;
-        Task InitAsync();
-        Task RefreshDataAsync();
-
-        // Folder operations
-        Task AddFolderAsync(string name, string color);
-        Task RenameFolderAsync(string id, string newName);
-        Task DeleteFolderAsync(string id);
-
-        // Column operations
-        Task AddColumnAsync(string title);
-        Task RenameColumnAsync(string id, string newTitle);
-        Task DeleteColumnAsync(string id);
-
-        // Task operations
-        Task AddTaskAsync(AppTask task);
-        Task UpdateTaskAsync(AppTask task);
-        Task ToggleTaskAsync(AppTask task);
-        Task DeleteTaskAsync(string id);
-        Task MoveTaskAsync(string taskId, string newColumnId);
-        Task CarryForwardTaskAsync(AppTask task);
-    }
-
     public class TaskStateService : ITaskStateService
     {
         private readonly ITaskRepository _repository;
@@ -116,7 +88,7 @@ namespace Jamrah.Services
         public async Task DeleteFolderAsync(string id)
         {
             await _repository.DeleteFolderAsync(id);
-            // Re-assign tasks in this folder to the default "عام" folder? Let's just do it
+            // Re-assign tasks in this folder to the default "عام" folder
             var tasksInFolder = Tasks.Where(t => t.FolderId == id).ToList();
             foreach(var t in tasksInFolder)
             {

@@ -4,10 +4,10 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SQLite;
-using Jamrah.Components.Pomodoro;
+using Jamrah.Core.Entities;
 using Microsoft.Maui.Storage;
 
-namespace Jamrah.Data
+namespace Jamrah.Infrastructure.Repositories
 {
     public sealed class PomodoroRepository
     {

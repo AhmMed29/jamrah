@@ -1,7 +1,7 @@
 using System;
 using SQLite;
 
-namespace Jamrah.Models
+namespace Jamrah.Core.Entities
 {
     [Table("TaskItems")]
     public class AppTask

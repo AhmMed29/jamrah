@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using SQLite;
 
-namespace Jamrah.Models
+namespace Jamrah.Core.Entities
 {
     /// <summary>
     /// Represents a calendar event entity, fully compatible with tui.calendar EventObject

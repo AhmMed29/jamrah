@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Jamrah.Models;
+using Jamrah.Core.Entities;
 
-namespace Jamrah.Data
+namespace Jamrah.Core.Interfaces
 {
     public interface ITaskRepository
     {

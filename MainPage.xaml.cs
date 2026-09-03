@@ -1,4 +1,4 @@
-using Jamrah.Services;
+using Jamrah.Core.Interfaces;
 using Microsoft.AspNetCore.Components.WebView.Maui;
 using Microsoft.UI.Xaml.Controls;
 using PointerEventArgs = Microsoft.Maui.Controls.PointerEventArgs;
@@ -69,7 +69,7 @@ public partial class MainPage : ContentPage
             _calendarWebView.RootComponents.Add(new Microsoft.AspNetCore.Components.WebView.Maui.RootComponent
             {
                 Selector      = "#app",
-                ComponentType = typeof(Components.Calendar.CalendarPage)
+                ComponentType = typeof(Presentation.Calendar.CalendarPage)
             });
             MainContent.Children.Add(_calendarWebView);
             EnableZoomWithPersistence(_calendarWebView);
@@ -84,7 +84,7 @@ public partial class MainPage : ContentPage
             _tasksWebView.RootComponents.Add(new RootComponent
             {
                 Selector      = "#app",
-                ComponentType = typeof(Components.Tasks.TaskPage)
+                ComponentType = typeof(Presentation.Tasks.TaskPage)
             });
             MainContent.Children.Add(_tasksWebView);
             EnableZoomWithPersistence(_tasksWebView);
@@ -99,7 +99,7 @@ public partial class MainPage : ContentPage
             _pomodoroWebView.RootComponents.Add(new RootComponent
             {
                 Selector      = "#app",
-                ComponentType = typeof(Components.Pomodoro.PomodoroPage)
+                ComponentType = typeof(Presentation.Pomodoro.PomodoroPage)
             });
             MainContent.Children.Add(_pomodoroWebView);
             EnableZoomWithPersistence(_pomodoroWebView);

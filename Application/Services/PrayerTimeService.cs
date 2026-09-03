@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Jamrah.Models;
+using Jamrah.Core.Entities;
 using SQLite;
 
-namespace Jamrah.Services
+namespace Jamrah.Application.Services
 {
     public class PrayerLocation
     {

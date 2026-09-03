@@ -4,10 +4,11 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SQLite;
-using Jamrah.Models;
+using Jamrah.Core.Entities;
+using Jamrah.Core.Interfaces;
 using Microsoft.Maui.Storage;
 
-namespace Jamrah.Data
+namespace Jamrah.Infrastructure.Repositories
 {
     public class TaskRepository : ITaskRepository
     {

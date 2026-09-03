@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Jamrah.Models;
+using Jamrah.Core.Entities;
 
-namespace Jamrah.Models
+namespace Jamrah.Application.Services
 {
     public class TimeSlotUIModel
     {
@@ -91,10 +91,7 @@ namespace Jamrah.Models
 
         public int TotalWeeks => Weeks.Count;
     }
-}
 
-namespace Jamrah.Services
-{
     public class CalendarLayoutEngine
     {
         private const double MIN_HEIGHT_PERCENT = 1.0; // Min event block height (approx 15 mins)

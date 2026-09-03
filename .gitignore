@@ -4,8 +4,25 @@ obj/
 .idea/
 .codegraph/
 .worktrees/
+.opencode/
 *.user
 *.suo
 *.userosscache
 *.DotSettings.user
 *.sln.docstates
+
+# Design mocks / private
+tasks-page.html
+Pomo Minimal Design.html
+*.html.mock
+*.local.html
+
+# AI / docs private
+docs/
+
+# Safety nets
+**/.vs/
+**/.idea/
+**/*.vsidx
+**/*.db-shm
+**/*.db-wal

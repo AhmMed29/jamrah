@@ -1,6 +1,6 @@
 using System;
 
-namespace Jamrah.Services
+namespace Jamrah.Application.Services
 {
     public sealed class PomodoroTimer : IDisposable
     {

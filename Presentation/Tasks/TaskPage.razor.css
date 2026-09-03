@@ -1,87 +1,4 @@
-@namespace Jamrah.Presentation.Tasks
-@* تصميم فقط - Topbar view-switcher فقط، السايدبار بدون Board/Matrix *@
-
-<div class="app" dir="rtl">
-    <aside class="sidebar">
-        <div class="brand"><div class="brand-mark">J</div><div class="brand-name">Jamrah</div></div>
-        
-        <!-- Sidebar -->
-        <button class="sidebar-toggle" onclick="document.querySelector('.sidebar').classList.toggle('collapsed'); document.querySelector('.main').classList.toggle('sidebar-collapsed')" title="فتح/إغلاق">‹</button>
-        
-        <div class="nav-section">
-            <div class="nav-label">MY TASKS</div>
-            <button class="nav-item active"><span class="nav-icon">○</span><span>اليوم</span><span class="nav-count">3</span></button>
-            <button class="nav-item"><span class="nav-icon">→</span><span>القادمة</span><span class="nav-count">0</span></button>
-            <button class="nav-item"><span class="nav-icon">□</span><span>بدون تاريخ</span><span class="nav-count">1</span></button>
-        </div>
-        <div class="nav-section">
-            <div class="nav-label">HISTORY</div>
-            <button class="nav-item"><span class="nav-icon">✓</span><span>تم الإنجاز</span><span class="nav-count">1</span></button>
-            <button class="nav-item"><span class="nav-icon">▱</span><span>الأرشيف</span><span class="nav-count">0</span></button>
-        </div>
-        <div class="storage-chart">
-            <div class="storage-top"><span>نشاط اليوم</span><span style="font-size:10px;color:var(--muted)">هوفر لعرض المهمة</span></div>
-            <div class="curve-wrap">
-                <svg viewBox="0 0 240 60" class="activity-curve" preserveAspectRatio="none">
-                    <path d="M0,54 C40,54 70,14 100,12 C118,11 118,46 122,47 C126,48 132,14 140,13 C175,11 205,54 240,52"
-                          fill="none" stroke="var(--text)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="100" cy="12" r="3" fill="var(--text)"><title>مراجعة LINQ - 10:00 ص</title></circle>
-                    <circle cx="140" cy="13" r="3" fill="var(--text)"><title>حل تمارين C# - 2:00 م</title></circle>
-                    <circle cx="122" cy="47" r="2.2" fill="var(--muted)"><title>فجوة - لا مهام</title></circle>
-                    <line class="now-line" x1="0" y1="0" x2="0" y2="60" stroke="#DC2626" stroke-width="1.2"/>
-                </svg>
-            </div>
-        </div>
-    </aside>
-
-    <main class="main">
-        <header class="topbar">
-            <div class="topbar-title">
-                <h1>اليوم</h1>
-                <div class="view-switcher">
-                    <button class="view-btn active" data-layout="list">قائمة</button>
-                    <button class="view-btn" data-layout="board">Board</button>
-                    <button class="view-btn" data-layout="matrix">Matrix</button>
-                </div>
-            </div>
-            <div class="topbar-actions">
-                <button class="icon-btn" title="اليوم">◷</button>
-                <button class="primary-btn"><span>+</span><span>مهمة جديدة</span></button>
-            </div>
-        </header>
-
-        <section class="content">
-            <div class="day-header">
-                <div class="day-info">
-                    <div class="day-nav"><button class="day-nav-btn">→</button><button class="day-nav-btn">←</button></div>
-                    <div class="date-block"><div class="date-title">اليوم</div><div class="date-subtitle">الخميس، 4 سبتمبر</div></div>
-                    <button class="today-btn">اليوم</button>
-                </div>
-                <div class="day-progress"><div class="progress-info"><span>إنجاز اليوم</span><strong>1 / 3</strong></div><div class="progress-bar"><div class="progress-fill" style="width:33%"></div></div></div>
-            </div>
-            <div class="quick-add"><div class="quick-add-plus">+</div><input type="text" placeholder="أضف مهمة بسرعة..." /><div class="quick-add-hint">Enter للإضافة</div></div>
-            <div id="viewContainer">
-                <section class="task-section">
-                    <div class="section-header"><div class="section-title"><span class="section-dot"></span><span>المهام</span><span class="section-count">2</span></div><div class="section-actions"><button class="section-action">إنهاء الكل</button></div></div>
-                    <div class="task-list">
-                        <div class="task-row"><button class="task-check"></button><span class="priority-dot priority-high"></span><div class="task-main"><div class="task-title">مراجعة LINQ</div><div class="task-meta"><span class="task-meta-item">◷ 10:00</span><span class="task-meta-item">▤ ملاحظات</span></div></div><button class="task-more">⋮</button></div>
-                        <div class="task-row completed"><button class="task-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l4 4L19 6"/></svg></button><span class="priority-dot priority-medium"></span><div class="task-main"><div class="task-title">حل تمارين C#</div><div class="task-meta"><span class="task-meta-item">▣ 5 سبتمبر</span></div></div><button class="task-more">⋮</button></div>
-                        <div class="task-row"><button class="task-check"></button><span class="priority-dot priority-low"></span><div class="task-main"><div class="task-title">بناء API للـ Student Management</div><div class="task-meta"><span class="task-meta-item">↻ يومي</span></div></div><button class="task-more">⋮</button></div>
-                    </div>
-                </section>
-                @* Board/Matrix مخفيين حالياً - هيظهروا بزرار الـ Topbar في الربط *@
-            </div>
-        </section>
-    </main>
-
-    <aside class="details"><div class="details-header"><div class="details-header-title">تفاصيل المهمة</div><button class="icon-btn">×</button></div><div class="details-body"><div class="details-title">مراجعة LINQ</div></div><div class="details-footer"><button class="archive-btn">▱</button><button class="delete-btn">×</button><button class="save-btn">حفظ التغييرات</button></div></aside>
-</div>
-
-<div class="modal-overlay"><div class="modal"><div class="modal-header"><div class="modal-title">إضافة مهمة جديدة</div><button class="icon-btn">×</button></div><div class="modal-body"><div class="field"><label class="field-label">اسم المهمة</label><input class="field-input" placeholder="مثلاً: مراجعة LINQ" /></div></div><div class="modal-footer"><button class="secondary-btn">إلغاء</button><button class="primary-btn">إضافة المهمة</button></div></div></div>
-<div class="context-menu"><button class="context-item">✓ تغيير حالة الإنجاز</button><button class="context-item">✎ تعديل</button><button class="context-item">▱ أرشفة</button><button class="context-item danger">× حذف</button></div>
-
-    <style>
-        /* =========================================================
+﻿        /* =========================================================
            ROOT
         ========================================================= */
 
@@ -1488,7 +1405,7 @@
            RESPONSIVE
         ========================================================= */
 
-        @@media (max-width: 1000px) {
+        @media (max-width: 1000px) {
             :root {
                 --sidebar-width: 220px;
             }
@@ -1502,7 +1419,7 @@
             }
         }
 
-        @@media (max-width: 760px) {
+        @media (max-width: 760px) {
             .sidebar {
                 width: 62px;
                 padding: 15px 8px;
@@ -1572,7 +1489,7 @@
             }
         }
 
-        @@media (max-width: 500px) {
+        @media (max-width: 500px) {
             .view-btn {
                 padding: 7px 8px;
                 font-size: 10px;
@@ -1636,14 +1553,3 @@
         .text-muted {
             color: var(--muted);
         }
-    </style>
-
-    <script>
-        (function(){
-            var now = new Date();
-            var x = (now.getHours() + now.getMinutes()/60) * 10; // 10px لكل ساعة
-            document.querySelectorAll('.now-line').forEach(function(l){
-                l.setAttribute('x1', x); l.setAttribute('x2', x);
-            });
-        })();
-    </script>

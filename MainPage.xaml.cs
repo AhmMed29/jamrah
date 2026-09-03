@@ -1,6 +1,8 @@
 using Jamrah.Core.Interfaces;
 using Microsoft.AspNetCore.Components.WebView.Maui;
+#if WINDOWS
 using Microsoft.UI.Xaml.Controls;
+#endif
 using PointerEventArgs = Microsoft.Maui.Controls.PointerEventArgs;
 
 namespace Jamrah;
@@ -106,10 +108,11 @@ public partial class MainPage : ContentPage
         }
     }
 
-    // ─── Disable Zoom ───────────────────────────────────────────────────────
+    // ─── Disable Zoom (Windows only) ────────────────────────────────────────────
 
     private void EnableZoomWithPersistence(BlazorWebView webView)
     {
+#if WINDOWS
         webView.HandlerChanged += async (_, _) =>
         {
             if (webView.Handler?.PlatformView is WebView2 platformView)
@@ -117,12 +120,12 @@ public partial class MainPage : ContentPage
                 await platformView.EnsureCoreWebView2Async();
                 if (platformView.CoreWebView2 != null)
                 {
-                    // Enable zoom (WebView2 automatically persists zoom per origin in its profile)
                     platformView.CoreWebView2.Settings.IsZoomControlEnabled = true;
                     platformView.CoreWebView2.Settings.IsPinchZoomEnabled   = true;
                 }
             }
         };
+#endif
     }
 
     // ─── Active page highlight ───────────────────────────────────────────────

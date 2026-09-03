@@ -461,17 +461,22 @@
     
     protected override async Task OnInitializedAsync()
     {
-        _timer.Tick += OnTimerEvent;
-        _timer.Completed += OnTimerEvent;
-        _repo = new PomodoroRepository();
-        await PrayerService.InitAsync();
-        _todayPrayers = await PrayerService.GetTodayAsync();
-        UpdateNextPrayer();
-        _prayerTimer = new System.Threading.Timer(_ =>
-                InvokeAsync(() => { UpdateNextPrayer(); StateHasChanged(); }),
-            null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
-        await LoadFromDbAsync();
-        RebuildToggles();
+        try{
+            _timer.Tick += OnTimerEvent;
+            _timer.Completed += OnTimerEvent;
+            _repo = new PomodoroRepository();
+            await PrayerService.InitAsync();
+            _todayPrayers = await PrayerService.GetTodayAsync();
+            UpdateNextPrayer();
+            _prayerTimer = new System.Threading.Timer(_ =>
+                    InvokeAsync(() => { UpdateNextPrayer(); StateHasChanged(); }),
+                null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+            await LoadFromDbAsync();
+            RebuildToggles();
+        }catch(Exception ex){
+            Console.Error.WriteLine($"Pomodoro INIT FAIL: {ex}");
+            await JS.InvokeVoidAsync("eval", $"document.getElementById('blazor-error-msg').textContent='{ex.Message.Replace("'","\\'")}';document.getElementById('blazor-error-ui').style.display='block'");
+        }
     }
 
     private void UpdateNextPrayer()

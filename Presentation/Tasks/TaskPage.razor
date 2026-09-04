@@ -24,15 +24,6 @@
                 </svg>
                 @if(_todayCount>0){<span class="nav-square-count">@_todayCount</span>}
             </button>
-            <button class="nav-square @(_view=="upcoming" ? "active" : "")" @onclick='() => SetView("upcoming")' title="القادمة">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-                    <path d="M16 2v4M8 2v4M3 10h18"></path>
-                    <path d="M12 15l3 -3 3 3"></path>
-                    <path d="M12 12v6"></path>
-                </svg>
-                @if(_upcomingCount>0){<span class="nav-square-count">@_upcomingCount</span>}
-            </button>
             <button class="nav-square @(_view=="no-date" ? "active" : "")" @onclick='() => SetView("no-date")' title="بدون تاريخ">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <rect x="3" y="4" width="18" height="16" rx="2"></rect>
@@ -55,6 +46,15 @@
                     <path d="M9.5 13h5"></path>
                 </svg>
                 @if(_archivedCount>0){<span class="nav-square-count">@_archivedCount</span>}
+            </button>
+            <button class="nav-square @(_view=="upcoming" ? "active" : "")" @onclick='() => SetView("upcoming")' title="القادمة">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                    <path d="M16 2v4M8 2v4M3 10h18"></path>
+                    <path d="M12 15l3 -3 3 3"></path>
+                    <path d="M12 12v6"></path>
+                </svg>
+                @if(_upcomingCount>0){<span class="nav-square-count">@_upcomingCount</span>}
             </button>
         </div>
 
@@ -275,10 +275,9 @@
 }
 
 @if(_contextTaskId!=null){
-<div class="context-menu open" style="left:@(_contextX)px; top:@(_contextY)px;">
-    <button class="context-item" @onclick="ContextComplete">✓ تغيير حالة الإنجاز</button>
+<div class="context-backdrop" @onclick="CloseContext" style="position:fixed; inset:0; z-index:199;"></div>
+<div class="context-menu open" style="left:@(_contextX)px; top:@(_contextY)px; z-index:200;">
     <button class="context-item" @onclick="ContextEdit">✎ تعديل</button>
-    <button class="context-item" @onclick="ContextArchive">▱ أرشفة</button>
     <button class="context-item danger" @onclick="ContextDelete">× حذف</button>
 </div>
 }
@@ -1360,11 +1359,50 @@
             cursor: pointer;
 
             transition: .15s ease;
+            position: relative;
         }
 
         .board-card:hover {
             box-shadow: 0 1px 2px rgba(0,0,0,.04);
         }
+
+        .board-delete{
+            position:absolute;
+            right:8px;
+            bottom:34px;
+            width:26px;
+            height:26px;
+            display:grid;
+            place-items:center;
+            border-radius:7px;
+            background:var(--surface);
+            border:1px solid var(--border);
+            color:var(--muted);
+            opacity:0;
+            transition:.15s ease;
+            z-index:2;
+        }
+        .board-card:hover .board-delete{ opacity:1; }
+        .board-delete:hover{ background:var(--red-soft); color:var(--red); border-color:var(--red-soft); }
+        .board-delete svg{ width:14px; height:14px; display:block; }
+
+        .board-more{
+            position:absolute;
+            right:8px;
+            top:8px;
+            width:26px;
+            height:26px;
+            display:grid;
+            place-items:center;
+            border-radius:7px;
+            background:transparent;
+            color:var(--muted);
+            opacity:0;
+            transition:.15s ease;
+            z-index:2;
+        }
+        .board-card:hover .board-more{ opacity:1; }
+        .board-more:hover{ background:var(--surface-soft); color:var(--text); }
 
         .board-card-title {
             font-size: 12px;
@@ -2054,10 +2092,12 @@
         _todayCount = active.Count(t => t.DueDate?.Date == today && !t.IsDone);
         // For badge today we count pending today only (like HTML)
         var todayTasks = active.Where(t => t.DueDate?.Date == today || t.ScheduledDate?.Date == today).ToList();
-        // upcoming: dueDate > today and not done
+        // upcoming: مجدولة فقط (بدون تكرار) — لا تظهر المتكررة
         _upcomingCount = active.Count(t => {
             var d = t.DueDate ?? t.ScheduledDate;
-            return d.HasValue && d.Value.Date > today && !t.IsDone;
+            return d.HasValue && d.Value.Date > today && !t.IsDone
+                   && (t.RecurrenceDays=="none" || string.IsNullOrWhiteSpace(t.RecurrenceDays))
+                   && !t.IsRecurring;
         });
         _noDateCount = active.Count(t => (t.DueDate==null && t.ScheduledDate==null) && !t.IsDone);
         _completedCount = active.Count(t => t.IsDone);
@@ -2202,6 +2242,7 @@
     private async Task ToggleTask(AppTask task){ await TaskState.ToggleTaskAsync(task); UpdateCounts(); }
     private async Task ArchiveSelected(){ if(_selectedTask==null) return; await TaskState.ArchiveTaskAsync(_selectedTask.Id); CloseDetails(); UpdateCounts(); }
     private async Task DeleteSelected(){ if(_selectedTask==null) return; await TaskState.DeleteTaskAsync(_selectedTask.Id); CloseDetails(); UpdateCounts(); }
+    private async Task DeleteBoardTask(string id){ await TaskState.DeleteTaskAsync(id); if(_selectedTask?.Id==id) CloseDetails(); UpdateCounts(); }
     private async Task CompleteAllVisible(){
         var tasks=TasksForDate(_currentDate).Where(t=>!t.IsDone).ToList();
         foreach(var t in tasks) await TaskState.ToggleTaskAsync(t);
@@ -2276,7 +2317,7 @@
     private RenderFragment UpcomingView => @<text>
         @{
             var today=DateTime.Today;
-            var tasks=ActiveTasks().Where(t=>{ var d=t.DueDate??t.ScheduledDate; return d.HasValue && d.Value.Date>today && !t.IsDone;}).OrderBy(t=>t.DueDate??t.ScheduledDate).ToList();
+            var tasks=ActiveTasks().Where(t=>{ var d=t.DueDate??t.ScheduledDate; return d.HasValue && d.Value.Date>today && !t.IsDone && (t.RecurrenceDays=="none" || string.IsNullOrWhiteSpace(t.RecurrenceDays)) && !t.IsRecurring;}).OrderBy(t=>t.DueDate??t.ScheduledDate).ToList();
             var groups=tasks.GroupBy(t=>(t.DueDate??t.ScheduledDate)!.Value.Date).OrderBy(g=>g.Key).ToList();
         }
         @if(!tasks.Any()){
@@ -2344,19 +2385,19 @@
             <div class="board-column">
                 <div class="board-column-header"><div class="board-column-title">قيد التنفيذ</div><div class="board-column-count">@todo.Count</div></div>
                 <div class="board-list">
-                    @if(todo.Any()){ @foreach(var task in todo){ <div class="board-card" @onclick="()=>OpenDetails(task.Id)"><div class="board-card-title">@task.Title</div><div class="board-card-footer"><span>@(task.DueDate!=null?FormatShortDate(task.DueDate):"بدون تاريخ")</span><span>@PriorityLabel(task.Priority)</span></div></div> } } else { <div style="padding:30px 10px;text-align:center;color:var(--muted);font-size:10px;">فاضي</div> }
+                    @if(todo.Any()){ @foreach(var task in todo){ <div class="board-card" @onclick="()=>OpenDetails(task.Id)"><button class="board-delete" @onclick="async ()=> await DeleteBoardTask(task.Id)" @onclick:stopPropagation="true" title="حذف"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/><path d="M10 11v6M14 11v6"/></svg></button><button class="board-more" @onclick="(e)=> ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button><div class="board-card-title">@task.Title</div><div class="board-card-footer"><span>@(task.DueDate!=null?FormatShortDate(task.DueDate):"بدون تاريخ")</span><span>@PriorityLabel(task.Priority)</span></div></div> } } else { <div style="padding:30px 10px;text-align:center;color:var(--muted);font-size:10px;">فاضي</div> }
                 </div>
             </div>
             <div class="board-column">
                 <div class="board-column-header"><div class="board-column-title">بدون تاريخ</div><div class="board-column-count">@noDate.Count</div></div>
                 <div class="board-list">
-                    @if(noDate.Any()){ @foreach(var task in noDate){ <div class="board-card" @onclick="()=>OpenDetails(task.Id)"><div class="board-card-title">@task.Title</div><div class="board-card-footer"><span>بدون تاريخ</span><span>@PriorityLabel(task.Priority)</span></div></div> } } else { <div style="padding:30px 10px;text-align:center;color:var(--muted);font-size:10px;">فاضي</div> }
+                    @if(noDate.Any()){ @foreach(var task in noDate){ <div class="board-card" @onclick="()=>OpenDetails(task.Id)"><button class="board-delete" @onclick="async ()=> await DeleteBoardTask(task.Id)" @onclick:stopPropagation="true" title="حذف"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/><path d="M10 11v6M14 11v6"/></svg></button><button class="board-more" @onclick="(e)=> ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button><div class="board-card-title">@task.Title</div><div class="board-card-footer"><span>بدون تاريخ</span><span>@PriorityLabel(task.Priority)</span></div></div> } } else { <div style="padding:30px 10px;text-align:center;color:var(--muted);font-size:10px;">فاضي</div> }
                 </div>
             </div>
             <div class="board-column">
                 <div class="board-column-header"><div class="board-column-title">تم الإنجاز</div><div class="board-column-count">@done.Count</div></div>
                 <div class="board-list">
-                    @if(done.Any()){ @foreach(var task in done){ <div class="board-card" @onclick="()=>OpenDetails(task.Id)"><div class="board-card-title">@task.Title</div><div class="board-card-footer"><span>@(task.DueDate!=null?FormatShortDate(task.DueDate):"بدون تاريخ")</span><span>@PriorityLabel(task.Priority)</span></div></div> } } else { <div style="padding:30px 10px;text-align:center;color:var(--muted);font-size:10px;">فاضي</div> }
+                    @if(done.Any()){ @foreach(var task in done){ <div class="board-card" @onclick="()=>OpenDetails(task.Id)"><button class="board-delete" @onclick="async ()=> await DeleteBoardTask(task.Id)" @onclick:stopPropagation="true" title="حذف"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/><path d="M10 11v6M14 11v6"/></svg></button><button class="board-more" @onclick="(e)=> ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button><div class="board-card-title">@task.Title</div><div class="board-card-footer"><span>@(task.DueDate!=null?FormatShortDate(task.DueDate):"بدون تاريخ")</span><span>@PriorityLabel(task.Priority)</span></div></div> } } else { <div style="padding:30px 10px;text-align:center;color:var(--muted);font-size:10px;">فاضي</div> }
                 </div>
             </div>
         </div>

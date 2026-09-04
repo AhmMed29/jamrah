@@ -196,7 +196,7 @@ namespace Jamrah.Infrastructure.Repositories
         {
             await InitAsync().ConfigureAwait(false);
             var today = DateTime.Today;
-            return await _database!.Table<AppTask>().Where(t => t.ArchivedAt == null && !t.IsDone && t.DueDate != null && t.DueDate > today).OrderBy(t => t.DueDate).ToListAsync().ConfigureAwait(false);
+            return await _database!.Table<AppTask>().Where(t => t.ArchivedAt == null && !t.IsDone && t.DueDate != null && t.DueDate > today && (t.RecurrenceDays == "none" || t.RecurrenceDays == null || t.RecurrenceDays == "") && !t.IsRecurring).OrderBy(t => t.DueDate).ToListAsync().ConfigureAwait(false);
         }
 
         public async Task<List<AppTask>> GetNoDateTasksAsync()

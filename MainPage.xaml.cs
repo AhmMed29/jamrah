@@ -125,14 +125,21 @@ public partial class MainPage : ContentPage
                     try { platformView.CoreWebView2.Settings.IsZoomControlEnabled = false; } catch {}
                     try { platformView.CoreWebView2.Settings.IsPinchZoomEnabled = false; } catch {}
 
-                    double savedZoom = 1.0;
-                    try { savedZoom = await _settingsRepository.GetZoomAsync(pageKey); } catch {}
-                    try
+                    // استرجاع وحفظ الزوم مع ضمان التطبيق بعد تحميل الصفحة
+                    async Task ApplyZoomAsync()
                     {
-                        var js = $"if(window.jamrahZoom) window.jamrahZoom.init('{pageKey}', {savedZoom.ToString(System.Globalization.CultureInfo.InvariantCulture)}); else document.documentElement.style.zoom='{savedZoom.ToString(System.Globalization.CultureInfo.InvariantCulture)}';";
-                        await platformView.CoreWebView2.ExecuteScriptAsync(js);
+                        try
+                        {
+                            var z = await _settingsRepository.GetZoomAsync(pageKey);
+                            var js = $"if(window.jamrahZoom) window.jamrahZoom.init('{pageKey}', {z.ToString(System.Globalization.CultureInfo.InvariantCulture)}); else document.documentElement.style.zoom='{z.ToString(System.Globalization.CultureInfo.InvariantCulture)}';";
+                            await platformView.CoreWebView2.ExecuteScriptAsync(js);
+                        }
+                        catch { }
                     }
-                    catch { }
+
+                    await ApplyZoomAsync();
+                    // إعادة التطبيق بعد كل NavigationCompleted لضمان عمل زوم صفحة المهام
+                    platformView.CoreWebView2.NavigationCompleted += async (s, e) => await ApplyZoomAsync();
 
                     platformView.CoreWebView2.WebMessageReceived += async (s, e) =>
                     {

@@ -273,8 +273,8 @@
 
     .app-container { display:flex; height:100vh; gap:16px; padding:16px; background:var(--bg); }
 
-    .left-panel { width:360px; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; overflow-y:auto; flex-shrink:0; }
-    .left-panel::-webkit-scrollbar { width:4px; } .left-panel::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:4px; }
+    .left-panel { width:360px; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; overflow-y:auto; flex-shrink:0; scrollbar-width:none; -ms-overflow-style:none; min-height:0; }
+    .left-panel::-webkit-scrollbar { display:none; width:0; height:0; } .left-panel::-webkit-scrollbar-thumb{ background:transparent; }
 
     .timer-box { background:var(--card2); border:1px solid var(--border); border-radius:14px; padding:16px; text-align:center; cursor:pointer; position:relative; display:flex; align-items:center; justify-content:center; gap:12px; }
     .timer-box:hover{ border-color:var(--border2); }
@@ -305,8 +305,8 @@
     .prayer-table{ width:100%; border-collapse:collapse; font-size:11px; } .prayer-table td,.prayer-table th{ border:1px solid var(--border); padding:6px; text-align:center; }
     .prayer-table th{ background:var(--card); font-weight:700; } .prayer-table .next-prayer td{ background:var(--text); color:#fff; } .prayer-table tr:hover td:not(.next-prayer td){ background:var(--card2); }
 
-    .right-panel{ flex:1; background:var(--card); border:1px solid var(--border); border-radius:16px; display:flex; flex-direction:column; overflow:hidden; }
-    .right-panel::-webkit-scrollbar{ width:4px; } .right-panel::-webkit-scrollbar-thumb{ background:var(--border2); }
+    .right-panel{ flex:1; background:var(--card); border:1px solid var(--border); border-radius:16px; display:flex; flex-direction:column; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; min-height:0; }
+    .right-panel::-webkit-scrollbar{ display:none; width:0; height:0; } .right-panel::-webkit-scrollbar-thumb{ background:transparent; }
     .view-modes, .view-tabs{ display:flex; border-bottom:1px solid var(--border); } .view-btn{ flex:1; padding:10px; border:none; background:transparent; border-left:1px solid var(--border); cursor:pointer; color:var(--muted); font-size:12px; }
     .view-btn.active{ background:var(--text); color:#fff; } .view-btn:last-child{ border-left:none; } .view-btn:hover:not(.active){ background:var(--card2); }
 

@@ -24,14 +24,6 @@
                 </svg>
                 @if(_todayCount>0){<span class="nav-square-count">@_todayCount</span>}
             </button>
-            <button class="nav-square @(_view=="no-date" ? "active" : "")" @onclick='() => SetView("no-date")' title="بدون تاريخ">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-                    <path d="M16 2v4M8 2v4M3 10h18"></path>
-                    <path d="M9 16h6"></path>
-                </svg>
-                @if(_noDateCount>0){<span class="nav-square-count">@_noDateCount</span>}
-            </button>
             <button class="nav-square @(_view=="completed" ? "active" : "")" @onclick='() => SetView("completed")' title="تم الإنجاز">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <circle cx="12" cy="12" r="9"></circle>
@@ -122,8 +114,6 @@
                     @DayListView
                 } else if(_view=="upcoming"){
                     @UpcomingView
-                } else if(_view=="no-date"){
-                    @NoDateView
                 } else if(_view=="completed"){
                     @CompletedView
                 } else if(_view=="archived"){
@@ -445,10 +435,10 @@
             transform: rotate(180deg);
         }
 
-        /* --- 5 squares — replaces brand + old vertical nav --- */
+        /* --- 4 squares — بعد حذف بدون تاريخ --- */
         .nav-squares {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 6px;
             margin-bottom: 14px;
         }
@@ -1386,27 +1376,7 @@
 
         .board-delete{
             position:absolute;
-            right:8px;
-            bottom:34px;
-            width:26px;
-            height:26px;
-            display:grid;
-            place-items:center;
-            border-radius:7px;
-            background:var(--surface);
-            border:1px solid var(--border);
-            color:var(--muted);
-            opacity:0;
-            transition:.15s ease;
-            z-index:2;
-        }
-        .board-card:hover .board-delete{ opacity:1; }
-        .board-delete:hover{ background:var(--red-soft); color:var(--red); border-color:var(--red-soft); }
-        .board-delete svg{ width:14px; height:14px; display:block; }
-
-        .board-more{
-            position:absolute;
-            right:8px;
+            left:8px;
             top:8px;
             width:26px;
             height:26px;
@@ -1414,6 +1384,27 @@
             place-items:center;
             border-radius:7px;
             background:transparent;
+            border:0;
+            color:var(--muted);
+            opacity:0;
+            transition:.15s ease;
+            z-index:2;
+        }
+        .board-card:hover .board-delete{ opacity:1; }
+        .board-delete:hover{ background:var(--red-soft); color:var(--red); }
+        .board-delete svg{ width:14px; height:14px; display:block; }
+
+        .board-more{
+            position:absolute;
+            left:36px;
+            top:8px;
+            width:26px;
+            height:26px;
+            display:grid;
+            place-items:center;
+            border-radius:7px;
+            background:transparent;
+            border:0;
             color:var(--muted);
             opacity:0;
             transition:.15s ease;
@@ -2057,7 +2048,6 @@
     private string PageTitle => _view switch {
         "today" => "اليوم",
         "upcoming" => "القادمة",
-        "no-date" => "بدون تاريخ",
         "completed" => "تم الإنجاز",
         "archived" => "الأرشيف",
         "board" => "Board",
@@ -2303,11 +2293,14 @@
         UpdateCounts();
     }
 
-    // Context menu
+    // Context menu — تظهر مباشرة تحت الضغطة
     private void ShowContext(Microsoft.AspNetCore.Components.Web.MouseEventArgs e, string id){
         _contextTaskId=id;
         _contextX=e.ClientX;
-        _contextY=e.ClientY;
+        _contextY=e.ClientY + 8;
+        // clamp بسيط لمنع خروجها أسفل الشاشة (بدون JS window)
+        if(_contextY + 90 > 700) _contextY = e.ClientY - 90;
+        if(_contextX + 160 > 1200) _contextX = e.ClientX - 160;
     }
     private void CloseContext()=> _contextTaskId=null;
     private async Task ContextComplete(){ if(_contextTaskId==null) return; var id=_contextTaskId; CloseContext(); await TaskState.ToggleTaskByIdAsync(id); UpdateCounts(); }
@@ -2383,20 +2376,6 @@
                     <div class="task-list">@foreach(var task in g){ @TaskRow(task) }</div>
                 </section>
             }
-        }
-    </text>;
-
-    private RenderFragment NoDateView => @<text>
-        @{
-            var tasks=ActiveTasks().Where(t=>t.DueDate==null && t.ScheduledDate==null).OrderBy(t=>PriorityOrder(t.Priority)).ThenBy(t=>t.CreatedAt).ToList();
-        }
-        @if(!tasks.Any()){
-            <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">كل مهامك لها تاريخ</div><div class="empty-text">ممتاز. مفيش مهام معلقة بدون موعد.</div></div></div>
-        } else {
-            <section class="task-section">
-                <div class="section-header"><div class="section-title"><span class="section-dot"></span>بدون تاريخ<span class="section-count">@tasks.Count</span></div></div>
-                <div class="task-list">@foreach(var task in tasks){ @TaskRow(task) }</div>
-            </section>
         }
     </text>;
 

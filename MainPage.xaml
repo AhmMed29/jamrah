@@ -91,6 +91,32 @@
                           WidthRequest="20" />
                 </Border>
 
+                <!-- Separator -->
+                <BoxView HeightRequest="1" WidthRequest="28" Background="#E7E5E4" Margin="0,8,0,0" HorizontalOptions="Center" />
+
+                <!-- Planning -->
+                <Border x:Name="PlanningBtnBorder"
+                        StrokeThickness="1"
+                        Stroke="#E7E5E4"
+                        StrokeShape="RoundRectangle 12"
+                        WidthRequest="42"
+                        HeightRequest="42"
+                        Background="#FFFFFF">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnPlanningTapped" />
+                        <PointerGestureRecognizer PointerEntered="OnPlanningBtnEnter"
+                                                  PointerExited="OnPlanningBtnExit" />
+                    </Border.GestureRecognizers>
+                    <Path x:Name="PlanningIcon"
+                          Data="M14,2 H6 C4.9,2 4,2.9 4,4 V20 C4,21.1 4.9,22 6,22 H18 C19.1,22 20,21.1 20,20 V8 L14,2 Z M14,2 V8 H20 M8,13 H16 M8,17 H16 M8,9 H10"
+                          Fill="#78716C"
+                          HorizontalOptions="Center"
+                          VerticalOptions="Center"
+                          Aspect="Uniform"
+                          HeightRequest="20"
+                          WidthRequest="20" />
+                </Border>
+
             </VerticalStackLayout>
         </Grid>
 

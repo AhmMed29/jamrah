@@ -25,6 +25,7 @@ namespace Jamrah
             builder.Services.AddSingleton<ICalendarRepository, CalendarRepository>();
             builder.Services.AddSingleton<ITaskRepository, TaskRepository>();
             builder.Services.AddSingleton<ISettingsRepository, SettingsRepository>();
+            builder.Services.AddSingleton<IPlanningRepository, PlanningRepository>();
             
             // Register Calendar State & Layout Engine Services
             builder.Services.AddSingleton<CalendarStateService>();

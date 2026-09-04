@@ -147,6 +147,70 @@ namespace Jamrah.Infrastructure.Repositories
             }
 
             await _database!.InsertOrReplaceAsync(task).ConfigureAwait(false);
+
+            // توليد شهر كامل للمهام المتكررة (Phase 2 شهري)
+            if (task.Id == task.TemplateId && !string.IsNullOrWhiteSpace(task.RecurrenceDays) && task.RecurrenceDays != "none" && task.DueDate.HasValue)
+            {
+                var start = task.DueDate.Value.Date;
+                var end = new DateTime(start.Year, start.Month, DateTime.DaysInMonth(start.Year, start.Month));
+                // daily: كل يوم بعد البداية لآخر الشهر
+                if (task.RecurrenceDays == "daily")
+                {
+                    for (var d = start.AddDays(1); d <= end; d = d.AddDays(1))
+                    {
+                        var exists = await _database!.Table<AppTask>().Where(t => t.TemplateId == task.TemplateId && t.DueDate == d).CountAsync().ConfigureAwait(false) > 0;
+                        if (exists) continue;
+                        var inst = new AppTask
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Title = task.Title,
+                            Priority = task.Priority,
+                            IsDone = false,
+                            DueDate = d,
+                            ScheduledDate = d,
+                            ScheduledTime = task.ScheduledTime,
+                            RecurrenceDays = task.RecurrenceDays,
+                            IsRecurring = task.IsRecurring,
+                            EisenhowerQuadrant = task.EisenhowerQuadrant,
+                            Notes = task.Notes,
+                            ColumnId = task.ColumnId,
+                            FolderId = task.FolderId,
+                            TemplateId = task.TemplateId,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        await _database!.InsertAsync(inst).ConfigureAwait(false);
+                    }
+                }
+                else if (task.RecurrenceDays == "weekly")
+                {
+                    for (var d = start.AddDays(7); d <= end; d = d.AddDays(7))
+                    {
+                        var exists = await _database!.Table<AppTask>().Where(t => t.TemplateId == task.TemplateId && t.DueDate == d).CountAsync().ConfigureAwait(false) > 0;
+                        if (exists) continue;
+                        var inst = new AppTask
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Title = task.Title,
+                            Priority = task.Priority,
+                            IsDone = false,
+                            DueDate = d,
+                            ScheduledDate = d,
+                            ScheduledTime = task.ScheduledTime,
+                            RecurrenceDays = task.RecurrenceDays,
+                            IsRecurring = task.IsRecurring,
+                            EisenhowerQuadrant = task.EisenhowerQuadrant,
+                            Notes = task.Notes,
+                            ColumnId = task.ColumnId,
+                            FolderId = task.FolderId,
+                            TemplateId = task.TemplateId,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        await _database!.InsertAsync(inst).ConfigureAwait(false);
+                    }
+                }
+            }
         }
 
         public async Task DeleteTaskAsync(string id)
@@ -217,35 +281,6 @@ namespace Jamrah.Infrastructure.Repositories
             task.IsDone = !task.IsDone;
             task.CompletedAt = task.IsDone ? DateTime.UtcNow : null;
             task.UpdatedAt = DateTime.UtcNow;
-
-            // Recurring: create next occurrence when completed
-            if (task.IsDone && !string.IsNullOrWhiteSpace(task.RecurrenceDays) && task.RecurrenceDays != "none" && task.DueDate.HasValue)
-            {
-                var nextDate = task.DueDate.Value;
-                if (task.RecurrenceDays == "daily") nextDate = nextDate.AddDays(1);
-                else if (task.RecurrenceDays == "weekly") nextDate = nextDate.AddDays(7);
-                else if (task.RecurrenceDays == "monthly") nextDate = nextDate.AddMonths(1);
-                var nextTask = new AppTask
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    Title = task.Title,
-                    Priority = task.Priority,
-                    IsDone = false,
-                    DueDate = nextDate,
-                    ScheduledDate = nextDate,
-                    ScheduledTime = task.ScheduledTime,
-                    RecurrenceDays = task.RecurrenceDays,
-                    IsRecurring = task.IsRecurring,
-                    EisenhowerQuadrant = task.EisenhowerQuadrant,
-                    Notes = task.Notes,
-                    ColumnId = task.ColumnId,
-                    FolderId = task.FolderId,
-                    TemplateId = task.TemplateId ?? task.Id,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
-                await _database.InsertAsync(nextTask).ConfigureAwait(false);
-            }
 
             await _database.UpdateAsync(task).ConfigureAwait(false);
         }

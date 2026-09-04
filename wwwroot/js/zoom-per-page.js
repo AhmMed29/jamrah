@@ -6,11 +6,21 @@ window.jamrahZoom = (function(){
         document.documentElement.style.zoom = currentZoom;
         try { if(window.chrome && window.chrome.webview) window.chrome.webview.postMessage(JSON.stringify({type:'zoom', page: currentPage, zoom: currentZoom})); } catch(e){}
     }
+    let _inited = false;
     return {
         init: function(pageKey, zoom){
             currentPage = pageKey;
             currentZoom = zoom || 1;
-            document.documentElement.style.zoom = currentZoom;
+            function doApply(){
+                try { document.documentElement.style.zoom = currentZoom; } catch(e){}
+            }
+            if(document.readyState === 'loading'){
+                document.addEventListener('DOMContentLoaded', doApply, {once:true});
+            } else {
+                doApply();
+            }
+            if(_inited) return;
+            _inited = true;
             // Ctrl +/-/0
             document.addEventListener('keydown', function(e){
                 if(e.ctrlKey && (e.key === '+' || e.key === '=' || e.key === '-' || e.key === '_' || e.key === '0')){

@@ -1,0 +1,43 @@
+name: Build
+on:
+  push:
+    branches: [main, master, chore/clean-repo-code-only]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '9.0.x' }
+      - name: Install MAUI
+        run: dotnet workload install maui
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - name: Publish APK
+        run: dotnet publish Jamrah.csproj -f net9.0-android -c Release
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: jamrah-apk
+          path: bin/Release/**/publish/*.apk
+
+  build-exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '9.0.x' }
+      - name: Install MAUI
+        run: dotnet workload install maui
+      - name: Publish EXE
+        run: dotnet publish Jamrah.csproj -f net9.0-windows10.0.19041.0 -c Release -p:WindowsPackageType=None
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: jamrah-exe
+          path: bin/Release/**/publish/*.exe

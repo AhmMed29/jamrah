@@ -73,13 +73,33 @@ namespace Jamrah.Application.Services
                 changed = false;
             }
 
+            // --- إزالة التكرارات (Hotfix للـ 3 مهام) ---
+            var dupGroups = Tasks
+                .Where(t => !string.IsNullOrWhiteSpace(t.TemplateId) && t.DueDate.HasValue && t.ArchivedAt==null)
+                .GroupBy(t => new { t.TemplateId, Date = t.DueDate!.Value.Date })
+                .Where(g => g.Count() > 1)
+                .ToList();
+            foreach (var g in dupGroups)
+            {
+                var keep = g.OrderBy(t => t.CreatedAt).First();
+                foreach (var dup in g.Where(t => t.Id != keep.Id).ToList())
+                {
+                    await _repository.DeleteTaskAsync(dup.Id);
+                    changed = true;
+                }
+            }
+            if (changed)
+            {
+                Tasks = await _repository.GetTasksAsync();
+                changed = false;
+            }
+
             // --- Legacy recurring reset (numeric days like "0,1,2") - keep as is ---
             foreach (var t in Tasks)
             {
                 if (!t.IsRecurring || !t.IsDone) continue;
                 if (t.UpdatedAt.ToLocalTime().Date >= today) continue;
                 var scheduledDays = t.RecurrenceDays?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
-                // Skip new string formats daily/weekly/monthly
                 if (scheduledDays.Length==1 && (scheduledDays[0]=="daily"||scheduledDays[0]=="weekly"||scheduledDays[0]=="monthly")) continue;
                 bool isScheduledToday = scheduledDays.Length == 0 || scheduledDays.Contains(todayDayIndex.ToString());
                 if (!isScheduledToday) continue;
@@ -88,91 +108,99 @@ namespace Jamrah.Application.Services
                 changed = true;
             }
 
-            // --- الطبيعي: توليد نسخة يومية تلقائياً حتى لو لم تُنجز أمس ---
-            var dailyTemplates = Tasks
-                .Where(t => t.ArchivedAt==null && t.RecurrenceDays=="daily" && !string.IsNullOrWhiteSpace(t.TemplateId) && t.Id==t.TemplateId)
-                .ToList();
+            // --- Phase 2 شهري: توليد لكل يوم في الشهر الحالي ---
+            var now = today;
+            var monthStart = new DateTime(now.Year, now.Month, 1);
+            var monthEnd = new DateTime(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month));
 
+            // daily: كل يوم من أول الشهر لآخره
+            var dailyTemplates = Tasks.Where(t => t.ArchivedAt==null && t.RecurrenceDays=="daily" && !string.IsNullOrWhiteSpace(t.TemplateId) && t.Id==t.TemplateId).ToList();
             foreach (var tpl in dailyTemplates)
             {
-                bool hasToday = Tasks.Any(x => x.ArchivedAt==null && x.TemplateId==tpl.TemplateId && (x.DueDate?.Date==today || x.ScheduledDate?.Date==today));
-                if (hasToday) continue;
-
-                // أنشئ instance اليوم من القالب
-                var inst = new AppTask {
-                    Id = Guid.NewGuid().ToString(),
-                    Title = tpl.Title,
-                    Priority = tpl.Priority,
-                    IsDone = false,
-                    DueDate = today,
-                    ScheduledDate = today,
-                    ScheduledTime = tpl.ScheduledTime,
-                    RecurrenceDays = "daily",
-                    IsRecurring = true,
-                    EisenhowerQuadrant = tpl.EisenhowerQuadrant,
-                    Notes = tpl.Notes,
-                    ColumnId = tpl.ColumnId,
-                    FolderId = tpl.FolderId,
-                    TemplateId = tpl.TemplateId,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    ArchivedAt = null,
-                    CompletedAt = null
-                };
-                await _repository.SaveTaskAsync(inst);
-                changed = true;
+                var tplStart = tpl.DueDate?.Date ?? tpl.CreatedAt.Date;
+                // لا نولد قبل تاريخ إنشاء القالب
+                var start = tplStart > monthStart ? tplStart : monthStart;
+                for (var d = start; d <= monthEnd; d = d.AddDays(1))
+                {
+                    bool has = Tasks.Any(x => x.ArchivedAt==null && x.TemplateId==tpl.TemplateId && x.DueDate?.Date==d);
+                    if (has) continue;
+                    var inst = new AppTask {
+                        Id = Guid.NewGuid().ToString(),
+                        Title = tpl.Title,
+                        Priority = tpl.Priority,
+                        IsDone = false,
+                        DueDate = d,
+                        ScheduledDate = d,
+                        ScheduledTime = tpl.ScheduledTime,
+                        RecurrenceDays = "daily",
+                        IsRecurring = true,
+                        EisenhowerQuadrant = tpl.EisenhowerQuadrant,
+                        Notes = tpl.Notes,
+                        ColumnId = tpl.ColumnId,
+                        FolderId = tpl.FolderId,
+                        TemplateId = tpl.TemplateId,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        ArchivedAt = null,
+                        CompletedAt = null
+                    };
+                    await _repository.SaveTaskAsync(inst);
+                    changed = true;
+                }
             }
 
-            // --- weekly/monthly auto-generate (اختياري لكن يتبع نفس المبدأ) ---
+            // weekly: كل أسبوع نفس يوم القالب
             var weeklyTemplates = Tasks.Where(t => t.ArchivedAt==null && t.RecurrenceDays=="weekly" && !string.IsNullOrWhiteSpace(t.TemplateId) && t.Id==t.TemplateId).ToList();
             foreach(var tpl in weeklyTemplates)
             {
-                // أنشئ فقط إذا اليوم هو نفس يوم الأسبوع للقالب و لا يوجد instance اليوم
                 var tplDate = tpl.DueDate?.Date ?? tpl.CreatedAt.Date;
-                bool isSameWeekDay = tplDate.DayOfWeek == today.DayOfWeek;
-                if(!isSameWeekDay) continue;
-                bool hasToday = Tasks.Any(x => x.ArchivedAt==null && x.TemplateId==tpl.TemplateId && (x.DueDate?.Date==today || x.ScheduledDate?.Date==today));
-                if(hasToday) continue;
-                // تأكد أن اليوم بعد تاريخ القالب
-                if(today <= tplDate) continue;
-                var inst = new AppTask {
-                    Id = Guid.NewGuid().ToString(),
-                    Title = tpl.Title,
-                    Priority = tpl.Priority,
-                    IsDone = false,
-                    DueDate = today,
-                    ScheduledDate = today,
-                    ScheduledTime = tpl.ScheduledTime,
-                    RecurrenceDays = "weekly",
-                    IsRecurring = true,
-                    EisenhowerQuadrant = tpl.EisenhowerQuadrant,
-                    Notes = tpl.Notes,
-                    ColumnId = tpl.ColumnId,
-                    FolderId = tpl.FolderId,
-                    TemplateId = tpl.TemplateId,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
-                await _repository.SaveTaskAsync(inst);
-                changed = true;
+                for (var d = monthStart; d <= monthEnd; d = d.AddDays(1))
+                {
+                    if (d.DayOfWeek != tplDate.DayOfWeek) continue;
+                    if (d < tplDate) continue;
+                    bool has = Tasks.Any(x => x.ArchivedAt==null && x.TemplateId==tpl.TemplateId && x.DueDate?.Date==d);
+                    if (has) continue;
+                    var inst = new AppTask {
+                        Id = Guid.NewGuid().ToString(),
+                        Title = tpl.Title,
+                        Priority = tpl.Priority,
+                        IsDone = false,
+                        DueDate = d,
+                        ScheduledDate = d,
+                        ScheduledTime = tpl.ScheduledTime,
+                        RecurrenceDays = "weekly",
+                        IsRecurring = true,
+                        EisenhowerQuadrant = tpl.EisenhowerQuadrant,
+                        Notes = tpl.Notes,
+                        ColumnId = tpl.ColumnId,
+                        FolderId = tpl.FolderId,
+                        TemplateId = tpl.TemplateId,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    await _repository.SaveTaskAsync(inst);
+                    changed = true;
+                }
             }
 
+            // monthly: نفس يوم الشهر
             var monthlyTemplates = Tasks.Where(t => t.ArchivedAt==null && t.RecurrenceDays=="monthly" && !string.IsNullOrWhiteSpace(t.TemplateId) && t.Id==t.TemplateId).ToList();
             foreach(var tpl in monthlyTemplates)
             {
                 var tplDate = tpl.DueDate?.Date ?? tpl.CreatedAt.Date;
-                bool isSameDay = tplDate.Day == today.Day;
-                if(!isSameDay) continue;
-                bool hasToday = Tasks.Any(x => x.ArchivedAt==null && x.TemplateId==tpl.TemplateId && (x.DueDate?.Date==today || x.ScheduledDate?.Date==today));
-                if(hasToday) continue;
-                if(today <= tplDate) continue;
+                if (tplDate.Month == now.Month && tplDate.Year == now.Year) continue; // القالب نفسه يمثل هذا الشهر
+                var targetDay = Math.Min(tplDate.Day, DateTime.DaysInMonth(now.Year, now.Month));
+                var d = new DateTime(now.Year, now.Month, targetDay);
+                if (d < tplDate) continue;
+                bool has = Tasks.Any(x => x.ArchivedAt==null && x.TemplateId==tpl.TemplateId && x.DueDate?.Date==d);
+                if (has) continue;
                 var inst = new AppTask {
                     Id = Guid.NewGuid().ToString(),
                     Title = tpl.Title,
                     Priority = tpl.Priority,
                     IsDone = false,
-                    DueDate = today,
-                    ScheduledDate = today,
+                    DueDate = d,
+                    ScheduledDate = d,
                     ScheduledTime = tpl.ScheduledTime,
                     RecurrenceDays = "monthly",
                     IsRecurring = true,
@@ -273,34 +301,6 @@ namespace Jamrah.Application.Services
             task.CompletedAt = task.IsDone ? DateTime.UtcNow : null;
             task.UpdatedAt = DateTime.Now;
             await _repository.SaveTaskAsync(task);
-            // Recurring logic handled in repository ToggleTaskAsync, but keep Save path for direct toggle
-            if (task.IsDone && !string.IsNullOrWhiteSpace(task.RecurrenceDays) && task.RecurrenceDays != "none" && task.DueDate.HasValue)
-            {
-                var nextDate = task.DueDate.Value;
-                if (task.RecurrenceDays == "daily") nextDate = nextDate.AddDays(1);
-                else if (task.RecurrenceDays == "weekly") nextDate = nextDate.AddDays(7);
-                else if (task.RecurrenceDays == "monthly") nextDate = nextDate.AddMonths(1);
-                var nextTask = new AppTask
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    Title = task.Title,
-                    Priority = task.Priority,
-                    IsDone = false,
-                    DueDate = nextDate,
-                    ScheduledDate = nextDate,
-                    ScheduledTime = task.ScheduledTime,
-                    RecurrenceDays = task.RecurrenceDays,
-                    IsRecurring = task.IsRecurring,
-                    EisenhowerQuadrant = task.EisenhowerQuadrant,
-                    Notes = task.Notes,
-                    ColumnId = task.ColumnId,
-                    FolderId = task.FolderId,
-                    TemplateId = task.TemplateId ?? task.Id,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
-                await _repository.SaveTaskAsync(nextTask);
-            }
             await RefreshDataAsync();
         }
 

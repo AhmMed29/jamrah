@@ -189,7 +189,10 @@ namespace Jamrah.Infrastructure.Repositories
         public async Task<List<AppTask>> GetCompletedTasksAsync()
         {
             await InitAsync().ConfigureAwait(false);
-            return await _database!.Table<AppTask>().Where(t => t.IsDone && t.ArchivedAt == null).OrderByDescending(t => t.CompletedAt).ToListAsync().ConfigureAwait(false);
+            var today = DateTime.Today;
+            var all = await _database!.Table<AppTask>().Where(t => t.IsDone && t.ArchivedAt == null).ToListAsync().ConfigureAwait(false);
+            return all.Where(t => (t.DueDate?.Date == today) || (t.ScheduledDate?.Date == today) || (t.DueDate == null && t.ScheduledDate == null && t.CompletedAt?.Date == today))
+                      .OrderByDescending(t => t.CompletedAt ?? t.UpdatedAt).ToList();
         }
 
         public async Task<List<AppTask>> GetUpcomingTasksAsync()

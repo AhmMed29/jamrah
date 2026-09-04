@@ -573,6 +573,24 @@
             margin-bottom: 20px;
         }
 
+        .archive-toggles{
+            display:flex;
+            gap:6px;
+            margin-bottom:14px;
+        }
+        .archive-toggle{
+            background:transparent;
+            color:var(--muted);
+            font-size:11px;
+            font-weight:700;
+            padding:6px 10px;
+            border:0;
+            border-radius:8px;
+            transition:.15s ease;
+        }
+        .archive-toggle:hover{ background:var(--surface-soft); color:var(--text); }
+        .archive-toggle.active{ background:var(--text); color:#fff; }
+
         .nav-label {
             font-size: 11px;
             color: var(--muted);
@@ -2034,6 +2052,7 @@
 
     private int _todayCount, _upcomingCount, _noDateCount, _completedCount, _archivedCount;
     private int _dayTotal, _dayCompleted, _dayPercent;
+    private bool _archDay = true, _archWeek = false, _archMonth = false, _archYear = false;
 
     private string PageTitle => _view switch {
         "today" => "اليوم",
@@ -2100,13 +2119,48 @@
                    && !t.IsRecurring;
         });
         _noDateCount = active.Count(t => (t.DueDate==null && t.ScheduledDate==null) && !t.IsDone);
-        _completedCount = active.Count(t => t.IsDone);
+        _completedCount = active.Count(t => t.IsDone && ((t.DueDate?.Date==_currentDate.Date) || (t.ScheduledDate?.Date==_currentDate.Date) || (t.DueDate==null && t.ScheduledDate==null && t.CompletedAt?.Date==_currentDate.Date)));
         _archivedCount = tasks.Count(t => t.ArchivedAt!=null);
 
         var dayTasks = active.Where(t => (t.DueDate?.Date==_currentDate.Date) || (t.ScheduledDate?.Date==_currentDate.Date)).ToList();
         _dayTotal = dayTasks.Count;
         _dayCompleted = dayTasks.Count(t=>t.IsDone);
         _dayPercent = _dayTotal==0?0:(int)Math.Round((double)_dayCompleted/_dayTotal*100);
+    }
+
+    private void ToggleArch(string which){
+        bool wasDay=_archDay, wasWeek=_archWeek, wasMonth=_archMonth, wasYear=_archYear;
+        _archDay=_archWeek=_archMonth=_archYear=false;
+        if(which=="day" && !wasDay) _archDay=true;
+        else if(which=="week" && !wasWeek) _archWeek=true;
+        else if(which=="month" && !wasMonth) _archMonth=true;
+        else if(which=="year" && !wasYear) _archYear=true;
+        // لو كلهم false → يعرض الكل
+    }
+    private IEnumerable<AppTask> GetFilteredArchived(){
+        var all = TaskState.Tasks.Where(t=>t.ArchivedAt!=null).OrderByDescending(t=>t.ArchivedAt).ToList();
+        if(!_archDay && !_archWeek && !_archMonth && !_archYear) return all;
+        var today = DateTime.Today;
+        if(_archDay){
+            return all.Where(t=> (t.ArchivedAt?.Date==today) || (t.DueDate?.Date==today));
+        }
+        if(_archWeek){
+            // ISO week
+            var cal = System.Globalization.CultureInfo.InvariantCulture.Calendar;
+            int WeekOf(DateTime d) => cal.GetWeekOfYear(d, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+            int w = WeekOf(today);
+            return all.Where(t=>{
+                var d = t.ArchivedAt?.Date ?? t.DueDate?.Date ?? today;
+                return d.Year==today.Year && WeekOf(d)==w;
+            });
+        }
+        if(_archMonth){
+            return all.Where(t=> (t.ArchivedAt?.Year==today.Year && t.ArchivedAt?.Month==today.Month) || (t.DueDate?.Year==today.Year && t.DueDate?.Month==today.Month));
+        }
+        if(_archYear){
+            return all.Where(t=> (t.ArchivedAt?.Year==today.Year) || (t.DueDate?.Year==today.Year));
+        }
+        return all;
     }
 
     private void ToggleSidebar(){ TaskState.ToggleSidebar(); }
@@ -2348,7 +2402,8 @@
 
     private RenderFragment CompletedView => @<text>
         @{
-            var tasks=ActiveTasks().Where(t=>t.IsDone).OrderByDescending(t=>t.CompletedAt ?? t.UpdatedAt).ToList();
+            var today = _currentDate.Date;
+            var tasks=ActiveTasks().Where(t=>t.IsDone && ((t.DueDate?.Date==today) || (t.ScheduledDate?.Date==today) || (t.DueDate==null && t.ScheduledDate==null && t.CompletedAt?.Date==today))).OrderByDescending(t=>t.CompletedAt ?? t.UpdatedAt).ToList();
         }
         @if(!tasks.Any()){
             <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">لسه مفيش إنجازات</div><div class="empty-text">المهام اللي هتخلصها هتظهر هنا كـ History.</div></div></div>
@@ -2362,14 +2417,39 @@
 
     private RenderFragment ArchivedView => @<text>
         @{
-            var tasks=TaskState.Tasks.Where(t=>t.ArchivedAt!=null).OrderByDescending(t=>t.ArchivedAt).ToList();
+            var filtered = GetFilteredArchived().ToList();
+            var allCount = TaskState.Tasks.Count(t=>t.ArchivedAt!=null);
         }
-        @if(!tasks.Any()){
+        <div class="archive-toggles">
+            <button class="archive-toggle @(_archDay?"active":"")" @onclick='()=>ToggleArch("day")'>يوم</button>
+            <button class="archive-toggle @(_archWeek?"active":"")" @onclick='()=>ToggleArch("week")'>أسبوع</button>
+            <button class="archive-toggle @(_archMonth?"active":"")" @onclick='()=>ToggleArch("month")'>شهر</button>
+            <button class="archive-toggle @(_archYear?"active":"")" @onclick='()=>ToggleArch("year")'>سنة</button>
+        </div>
+        @if(!filtered.Any()){
             <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">الأرشيف فاضي</div><div class="empty-text">المهام اللي مش عايزها في الـ workspace الرئيسي تقدر تأرشفها هنا.</div></div></div>
         } else {
             <section class="task-section">
-                <div class="section-header"><div class="section-title"><span class="section-dot" style="background:var(--muted)"></span>الأرشيف<span class="section-count">@tasks.Count</span></div><button class="section-action" @onclick="async ()=>{ foreach(var t in tasks) await TaskState.RestoreTaskAsync(t.Id); UpdateCounts(); }">استرجاع الكل</button></div>
-                <div class="task-list">@foreach(var task in tasks){ @TaskRow(task) }</div>
+                <div class="section-header"><div class="section-title"><span class="section-dot" style="background:var(--muted)"></span>الأرشيف<span class="section-count">@filtered.Count</span></div><button class="section-action" @onclick="async ()=>{ foreach(var t in filtered) await TaskState.RestoreTaskAsync(t.Id); UpdateCounts(); }">استرجاع الكل</button></div>
+                <div class="task-list">
+                    @foreach(var task in filtered){
+                        <div class="task-row @(task.IsDone?"completed":"")" @onclick="()=>OpenDetails(task.Id)" @oncontextmenu="(e)=>ShowContext(e, task.Id)" @oncontextmenu:preventDefault="true" style="@(!task.IsDone ? "color:var(--red)" : "")">
+                            <button class="task-check" style="@(!task.IsDone ? "border-color:var(--red); color:var(--red)" : "")" @onclick="async (e)=>{ await ToggleTask(task); }" @onclick:stopPropagation="true">
+                                @if(task.IsDone){<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>}
+                            </button>
+                            <span class="priority-dot" style="background:@(task.IsDone ? "var(--border2)" : "var(--red)")"></span>
+                            <div class="task-main">
+                                <div class="task-title" style="@(task.IsDone ? "text-decoration:line-through" : "color:var(--red)")">@task.Title</div>
+                                <div class="task-meta">
+                                    @if(task.ScheduledTime!=null){<span class="task-meta-item">◷ @task.ScheduledTime?.ToString(@"hh\:mm")</span>}
+                                    @if(task.DueDate!=null){<span class="task-meta-item">▣ @FormatShortDate(task.DueDate)</span>}
+                                    @if(task.ArchivedAt!=null){<span class="task-meta-item">▱ @FormatShortDate(task.ArchivedAt)</span>}
+                                </div>
+                            </div>
+                            <button class="task-more" @onclick="(e)=>ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button>
+                        </div>
+                    }
+                </div>
             </section>
         }
     </text>;

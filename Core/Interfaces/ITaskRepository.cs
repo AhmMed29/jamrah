@@ -19,5 +19,12 @@ namespace Jamrah.Core.Interfaces
         Task<List<AppTask>> GetTasksAsync();
         Task SaveTaskAsync(AppTask task);
         Task DeleteTaskAsync(string id);
+        Task ArchiveTaskAsync(string id);
+        Task RestoreTaskAsync(string id);
+        Task<List<AppTask>> GetArchivedTasksAsync();
+        Task<List<AppTask>> GetCompletedTasksAsync();
+        Task<List<AppTask>> GetUpcomingTasksAsync();
+        Task<List<AppTask>> GetNoDateTasksAsync();
+        Task ToggleTaskAsync(string id);
     }
 }

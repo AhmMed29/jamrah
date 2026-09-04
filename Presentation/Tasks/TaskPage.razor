@@ -1,82 +1,2397 @@
-﻿@namespace Jamrah.Presentation.Tasks
-@* تصميم فقط - Topbar view-switcher فقط، السايدبار بدون Board/Matrix *@
+@namespace Jamrah.Presentation.Tasks
+@using Jamrah.Core.Entities
+@using Jamrah.Application.Services
+@inject TaskStateService TaskState
+@inject NavigationManager Nav
+@implements IDisposable
 
 <div class="app" dir="rtl">
-    <aside class="sidebar">
-        <div class="brand"><div class="brand-mark">J</div><div class="brand-name">Jamrah</div></div>
-        
-        <!-- Sidebar -->
-        <button class="sidebar-toggle" onclick="document.querySelector('.sidebar').classList.toggle('collapsed'); document.querySelector('.main').classList.toggle('sidebar-collapsed')" title="فتح/إغلاق">‹</button>
-        
-        <div class="nav-section">
-            <div class="nav-label">MY TASKS</div>
-            <button class="nav-item active"><span class="nav-icon">○</span><span>اليوم</span><span class="nav-count">3</span></button>
-            <button class="nav-item"><span class="nav-icon">→</span><span>القادمة</span><span class="nav-count">0</span></button>
-            <button class="nav-item"><span class="nav-icon">□</span><span>بدون تاريخ</span><span class="nav-count">1</span></button>
-        </div>
-        <div class="nav-section">
-            <div class="nav-label">HISTORY</div>
-            <button class="nav-item"><span class="nav-icon">✓</span><span>تم الإنجاز</span><span class="nav-count">1</span></button>
-            <button class="nav-item"><span class="nav-icon">▱</span><span>الأرشيف</span><span class="nav-count">0</span></button>
-        </div>
-        <div class="storage-chart">
-            <div class="storage-top"><span>نشاط اليوم</span><span style="font-size:10px;color:var(--muted)">هوفر لعرض المهمة</span></div>
-            <div class="curve-wrap">
-                <svg viewBox="0 0 240 60" class="activity-curve" preserveAspectRatio="none">
-                    <path d="M0,54 C40,54 70,14 100,12 C118,11 118,46 122,47 C126,48 132,14 140,13 C175,11 205,54 240,52"
-                          fill="none" stroke="var(--text)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="100" cy="12" r="3" fill="var(--text)"><title>مراجعة LINQ - 10:00 ص</title></circle>
-                    <circle cx="140" cy="13" r="3" fill="var(--text)"><title>حل تمارين C# - 2:00 م</title></circle>
-                    <circle cx="122" cy="47" r="2.2" fill="var(--muted)"><title>فجوة - لا مهام</title></circle>
-                    <line class="now-line" x1="0" y1="0" x2="0" y2="60" stroke="#DC2626" stroke-width="1.2"/>
+    <aside class="sidebar @( _sidebarCollapsed ? "collapsed" : "" )" id="sidebar">
+        <div class="sidebar-top">
+            <button class="sidebar-toggle" @onclick="ToggleSidebar" title="طي / توسيع" aria-label="طي السايدبار">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M15 18L9 12L15 6"></path>
                 </svg>
-            </div>
+            </button>
+        </div>
+
+        <div class="nav-squares">
+            <button class="nav-square @(_view=="today" ? "active" : "")" @onclick='() => SetView("today")' title="اليوم">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                    <path d="M16 2v4M8 2v4M3 10h18"></path>
+                    <circle cx="12" cy="15" r="2.1"></circle>
+                </svg>
+                @if(_todayCount>0){<span class="nav-square-count">@_todayCount</span>}
+            </button>
+            <button class="nav-square @(_view=="upcoming" ? "active" : "")" @onclick='() => SetView("upcoming")' title="القادمة">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                    <path d="M16 2v4M8 2v4M3 10h18"></path>
+                    <path d="M12 15l3 -3 3 3"></path>
+                    <path d="M12 12v6"></path>
+                </svg>
+                @if(_upcomingCount>0){<span class="nav-square-count">@_upcomingCount</span>}
+            </button>
+            <button class="nav-square @(_view=="no-date" ? "active" : "")" @onclick='() => SetView("no-date")' title="بدون تاريخ">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                    <path d="M16 2v4M8 2v4M3 10h18"></path>
+                    <path d="M9 16h6"></path>
+                </svg>
+                @if(_noDateCount>0){<span class="nav-square-count">@_noDateCount</span>}
+            </button>
+            <button class="nav-square @(_view=="completed" ? "active" : "")" @onclick='() => SetView("completed")' title="تم الإنجاز">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M8.5 12l2.3 2.3L15.5 9.5"></path>
+                </svg>
+                @if(_completedCount>0){<span class="nav-square-count">@_completedCount</span>}
+            </button>
+            <button class="nav-square @(_view=="archived" ? "active" : "")" @onclick='() => SetView("archived")' title="الأرشيف">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="5" rx="1.2"></rect>
+                    <path d="M5 9h14v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9z"></path>
+                    <path d="M9.5 13h5"></path>
+                </svg>
+                @if(_archivedCount>0){<span class="nav-square-count">@_archivedCount</span>}
+            </button>
+        </div>
+
+        <div class="today-card">
+            <div class="today-card-label">اليوم</div>
+            <div class="today-card-date">@_currentDateStr</div>
+            <div class="today-card-time">@_currentTimeStr</div>
+            <div class="today-card-sub">@_currentSubStr</div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">VIEWS</div>
+            <button class="nav-item @(_view=="board" ? "active" : "")" @onclick='() => SetView("board")'>
+                <span class="nav-icon">▦</span><span>Board</span>
+            </button>
+            <button class="nav-item @(_view=="matrix" ? "active" : "")" @onclick='() => SetView("matrix")'>
+                <span class="nav-icon">⊞</span><span>Eisenhower</span>
+            </button>
         </div>
     </aside>
 
-    <main class="main">
+    <main class="main @(_sidebarCollapsed ? "sidebar-collapsed" : "") @(_selectedTask!=null ? "details-open" : "")" id="main">
         <header class="topbar">
             <div class="topbar-title">
-                <h1>اليوم</h1>
-                <div class="view-switcher">
-                    <button class="view-btn active" data-layout="list">قائمة</button>
-                    <button class="view-btn" data-layout="board">Board</button>
-                    <button class="view-btn" data-layout="matrix">Matrix</button>
-                </div>
+                <h1>@PageTitle</h1>
             </div>
             <div class="topbar-actions">
-                <button class="icon-btn" title="اليوم">◷</button>
-                <button class="primary-btn"><span>+</span><span>مهمة جديدة</span></button>
+                <button class="icon-btn" @onclick="GoToday" title="اليوم">◷</button>
+                <button class="primary-btn" @onclick="OpenCreateModal"><span>+</span><span>مهمة جديدة</span></button>
             </div>
         </header>
 
         <section class="content">
-            <div class="day-header">
-                <div class="day-info">
-                    <div class="day-nav"><button class="day-nav-btn">→</button><button class="day-nav-btn">←</button></div>
-                    <div class="date-block"><div class="date-title">اليوم</div><div class="date-subtitle">الخميس، 4 سبتمبر</div></div>
-                    <button class="today-btn">اليوم</button>
-                </div>
-                <div class="day-progress"><div class="progress-info"><span>إنجاز اليوم</span><strong>1 / 3</strong></div><div class="progress-bar"><div class="progress-fill" style="width:33%"></div></div></div>
-            </div>
-            <div class="quick-add"><div class="quick-add-plus">+</div><input type="text" placeholder="أضف مهمة بسرعة..." /><div class="quick-add-hint">Enter للإضافة</div></div>
-            <div id="viewContainer">
-                <section class="task-section">
-                    <div class="section-header"><div class="section-title"><span class="section-dot"></span><span>المهام</span><span class="section-count">2</span></div><div class="section-actions"><button class="section-action">إنهاء الكل</button></div></div>
-                    <div class="task-list">
-                        <div class="task-row"><button class="task-check"></button><span class="priority-dot priority-high"></span><div class="task-main"><div class="task-title">مراجعة LINQ</div><div class="task-meta"><span class="task-meta-item">◷ 10:00</span><span class="task-meta-item">▤ ملاحظات</span></div></div><button class="task-more">⋮</button></div>
-                        <div class="task-row completed"><button class="task-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l4 4L19 6"/></svg></button><span class="priority-dot priority-medium"></span><div class="task-main"><div class="task-title">حل تمارين C#</div><div class="task-meta"><span class="task-meta-item">▣ 5 سبتمبر</span></div></div><button class="task-more">⋮</button></div>
-                        <div class="task-row"><button class="task-check"></button><span class="priority-dot priority-low"></span><div class="task-main"><div class="task-title">بناء API للـ Student Management</div><div class="task-meta"><span class="task-meta-item">↻ يومي</span></div></div><button class="task-more">⋮</button></div>
+            @if(_view=="today"){
+                <div class="day-header">
+                    <div class="day-info">
+                        <div class="day-nav">
+                            <button class="day-nav-btn" @onclick="PrevDay" title="اليوم السابق">→</button>
+                            <button class="day-nav-btn" @onclick="NextDay" title="اليوم التالي">←</button>
+                        </div>
+                        <div class="date-block">
+                            <div class="date-title">@(_currentDate.Date==DateTime.Today ? "اليوم" : FormatDate(_currentDate))</div>
+                            <div class="date-subtitle">@FormatDate(_currentDate)</div>
+                        </div>
+                        <button class="today-btn" @onclick="GoToday">اليوم</button>
+                        <input type="date" class="date-picker" value="@_currentDate.ToString("yyyy-MM-dd")" @onchange="OnDatePicked" title="اختيار تاريخ" />
                     </div>
-                </section>
-                @* Board/Matrix مخفيين حالياً - هيظهروا بزرار الـ Topbar في الربط *@
+                    <div class="day-progress">
+                        <div class="progress-info"><span>إنجاز اليوم</span><strong>@_dayCompleted / @_dayTotal</strong></div>
+                        <div class="progress-bar"><div class="progress-fill" style="width:@_dayPercent%"></div></div>
+                    </div>
+                </div>
+            }
+
+            @if(_view!="completed" && _view!="archived"){
+                <div class="quick-add">
+                    <div class="quick-add-plus">+</div>
+                    <input type="text" placeholder="أضف مهمة بسرعة..." @bind="_quickTitle" @bind:event="oninput" @onkeydown="OnQuickKeyDown" />
+                    <div class="quick-add-hint">Enter للإضافة</div>
+                </div>
+            }
+
+            <div id="viewContainer">
+                @if(_view=="today"){
+                    @DayListView
+                } else if(_view=="upcoming"){
+                    @UpcomingView
+                } else if(_view=="no-date"){
+                    @NoDateView
+                } else if(_view=="completed"){
+                    @CompletedView
+                } else if(_view=="archived"){
+                    @ArchivedView
+                } else if(_view=="board"){
+                    @BoardView
+                } else if(_view=="matrix"){
+                    @MatrixView
+                }
             </div>
         </section>
     </main>
 
-    <aside class="details"><div class="details-header"><div class="details-header-title">تفاصيل المهمة</div><button class="icon-btn">×</button></div><div class="details-body"><div class="details-title">مراجعة LINQ</div></div><div class="details-footer"><button class="archive-btn">▱</button><button class="delete-btn">×</button><button class="save-btn">حفظ التغييرات</button></div></aside>
+    <aside class="details @(_selectedTask!=null ? "open" : "")" id="detailsPanel">
+        <div class="details-header">
+            <div class="details-header-title">تفاصيل المهمة</div>
+            <div class="details-header-actions">
+                <button class="icon-btn" @onclick="CloseDetails" title="إغلاق">×</button>
+            </div>
+        </div>
+        <div class="details-body">
+            @if(_selectedTask!=null){
+                <div class="details-title">@_selectedTask.Title</div>
+                <div class="field">
+                    <label class="field-label">اسم المهمة</label>
+                    <input class="field-input" @bind="_editTitle" />
+                </div>
+                <div class="details-grid">
+                    <div class="field">
+                        <label class="field-label">التاريخ</label>
+                        <input class="field-input" type="date" value="@_editDate" @onchange="e => _editDate = e.Value?.ToString()" />
+                    </div>
+                    <div class="field">
+                        <label class="field-label">الوقت</label>
+                        <input class="field-input" type="time" value="@_editTime" @onchange="e => _editTime = e.Value?.ToString()" />
+                    </div>
+                </div>
+                <div class="details-grid">
+                    <div class="field">
+                        <label class="field-label">الأولوية</label>
+                        <select class="field-select" @bind="_editPriority">
+                            <option value="low">منخفضة</option>
+                            <option value="medium">متوسطة</option>
+                            <option value="high">عالية</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label class="field-label">التكرار</label>
+                        <select class="field-select" @bind="_editRepeat">
+                            <option value="none">بدون تكرار</option>
+                            <option value="daily">يومي</option>
+                            <option value="weekly">أسبوعي</option>
+                            <option value="monthly">شهري</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label">Eisenhower</label>
+                    <select class="field-select" @bind="_editQuadrant">
+                        <option value="1">مهم وعاجل</option>
+                        <option value="2">مهم وغير عاجل</option>
+                        <option value="3">غير مهم وعاجل</option>
+                        <option value="4">غير مهم وغير عاجل</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label class="field-label">الحالة</label>
+                    <button class="status-btn @(_selectedTask.IsDone ? "completed" : "")" @onclick="()=>ToggleTask(_selectedTask)">
+                        @(_selectedTask.IsDone ? "✓ تم الإنجاز" : "○ قيد التنفيذ")
+                    </button>
+                </div>
+                <div class="field">
+                    <label class="field-label">ملاحظات</label>
+                    <textarea class="field-textarea" @bind="_editNotes" placeholder="أضف أي تفاصيل تحتاجها..."></textarea>
+                </div>
+                @if(_selectedTask.CompletedAt!=null){
+                    <div style="font-size:10px;color:var(--muted);padding-top:5px;">تم الإنجاز: @FormatDateTime(_selectedTask.CompletedAt.Value)</div>
+                }
+                @if(_selectedTask.ArchivedAt!=null){
+                    <div style="margin-top:12px;padding:10px;background:var(--surface-soft);border-radius:8px;font-size:10px;color:var(--muted);">هذه المهمة موجودة في الأرشيف.</div>
+                }
+            }
+        </div>
+        <div class="details-footer">
+            <button class="archive-btn" @onclick="ArchiveSelected" title="أرشفة">@(_selectedTask?.ArchivedAt!=null ? "↶" : "▱")</button>
+            <button class="delete-btn" @onclick="DeleteSelected" title="حذف">×</button>
+            <button class="save-btn" @onclick="SaveSelected">حفظ التغييرات</button>
+        </div>
+    </aside>
 </div>
 
-<div class="modal-overlay"><div class="modal"><div class="modal-header"><div class="modal-title">إضافة مهمة جديدة</div><button class="icon-btn">×</button></div><div class="modal-body"><div class="field"><label class="field-label">اسم المهمة</label><input class="field-input" placeholder="مثلاً: مراجعة LINQ" /></div></div><div class="modal-footer"><button class="secondary-btn">إلغاء</button><button class="primary-btn">إضافة المهمة</button></div></div></div>
-<div class="context-menu"><button class="context-item">✓ تغيير حالة الإنجاز</button><button class="context-item">✎ تعديل</button><button class="context-item">▱ أرشفة</button><button class="context-item danger">× حذف</button></div>
+@if(_showCreateModal){
+<div class="modal-overlay open" @onclick="CloseCreateModal">
+    <div class="modal" @onclick:stopPropagation="true">
+        <div class="modal-header">
+            <div class="modal-title">إضافة مهمة جديدة</div>
+            <button class="icon-btn" @onclick="CloseCreateModal">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="field">
+                <label class="field-label">اسم المهمة</label>
+                <input class="field-input" @bind="_newTitle" placeholder="مثلاً: مراجعة LINQ" />
+            </div>
+            <button type="button" class="secondary-btn" style="margin-bottom:12px; width:100%;" @onclick="()=> _showSchedule = !_showSchedule">
+                @(_showSchedule ? "إلغاء الجدولة" : "+ جدولة المهمة")
+            </button>
+            @if(_showSchedule){
+            <div class="details-grid">
+                <div class="field">
+                    <label class="field-label">التاريخ</label>
+                    <input class="field-input" type="date" value="@_newDate" @onchange="e => _newDate = e.Value?.ToString()" />
+                </div>
+                <div class="field">
+                    <label class="field-label">الوقت</label>
+                    <input class="field-input" type="time" value="@_newTime" @onchange="e => _newTime = e.Value?.ToString()" />
+                </div>
+            </div>
+            }
+            <div class="details-grid">
+                <div class="field">
+                    <label class="field-label">الأولوية</label>
+                    <select class="field-select" @bind="_newPriority">
+                        <option value="low">منخفضة</option>
+                        <option value="medium">متوسطة</option>
+                        <option value="high">عالية</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label class="field-label">التكرار</label>
+                    <select class="field-select" @bind="_newRepeat">
+                        <option value="none">بدون تكرار</option>
+                        <option value="daily">يومي</option>
+                        <option value="weekly">أسبوعي</option>
+                        <option value="monthly">شهري</option>
+                    </select>
+                </div>
+            </div>
+            <div class="field">
+                <label class="field-label">ملاحظات</label>
+                <textarea class="field-textarea" @bind="_newNotes" placeholder="اختياري..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="primary-btn" @onclick="CreateTask">إضافة المهمة</button>
+            <button class="secondary-btn" @onclick="CloseCreateModal">إلغاء</button>
+        </div>
+    </div>
+</div>
+}
 
+@if(_contextTaskId!=null){
+<div class="context-menu open" style="left:@(_contextX)px; top:@(_contextY)px;">
+    <button class="context-item" @onclick="ContextComplete">✓ تغيير حالة الإنجاز</button>
+    <button class="context-item" @onclick="ContextEdit">✎ تعديل</button>
+    <button class="context-item" @onclick="ContextArchive">▱ أرشفة</button>
+    <button class="context-item danger" @onclick="ContextDelete">× حذف</button>
+</div>
+}
+
+
+<style>
+
+        /* =========================================================
+           ROOT
+        ========================================================= */
+
+        :root {
+            --bg: #FAFAF9;
+            --surface: #FFFFFF;
+            --surface-soft: #F5F5F4;
+
+            --border: #E7E5E4;
+            --border-light: #E7E5E4;
+            --border2: #D6D3D1;
+
+            --text: #1C1917;
+            --text-soft: #78716C;
+            --muted: #78716C;
+
+            --orange: #FF6B35;
+            --orange-soft: #F5F5F4;
+
+            --green: #1C1917;
+            --green-soft: #F5F5F4;
+
+            --blue: #57534E;
+            --blue-soft: #F5F5F4;
+
+            --red: #DC2626;
+            --red-soft: rgba(220, 38, 38, .08);
+
+            --yellow: #78716C;
+            --yellow-soft: #F5F5F4;
+
+            --purple: #57534E;
+            --purple-soft: #F5F5F4;
+
+            --radius-sm: 8px;
+            --radius: 12px;
+            --radius-lg: 16px;
+
+            --sidebar-width: 255px;
+            --details-width: 350px;
+
+            --shadow: 0 8px 32px rgba(0, 0, 0, .12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Tajawal", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        button,
+        input,
+        textarea,
+        select {
+            font: inherit;
+        }
+
+        button {
+            border: 0;
+            cursor: pointer;
+        }
+
+        input,
+        textarea,
+        select {
+            outline: none;
+        }
+
+        /* =========================================================
+           APP
+        ========================================================= */
+
+        .app {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* =========================================================
+           SIDEBAR — NEW DESIGN (RIGHT FIXED — MINIMAL)
+        ========================================================= */
+
+        .sidebar {
+            width: var(--sidebar-width);
+            flex-shrink: 0;
+
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+
+            padding: 14px 12px;
+
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+
+            z-index: 50;
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: width .22s ease, padding .22s ease;
+        }
+
+        .sidebar.collapsed {
+            width: 72px;
+            padding: 14px 8px;
+        }
+
+        /* --- toggle — square inside, not on border --- */
+        .sidebar-top {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .sidebar.collapsed .sidebar-top {
+            justify-content: center;
+        }
+
+        .sidebar-toggle {
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+            display: grid;
+            place-items: center;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-soft);
+            transition: .15s ease;
+        }
+
+        .sidebar-toggle:hover {
+            background: var(--surface-soft);
+            color: var(--text);
+            border-color: var(--border2);
+        }
+
+        .sidebar-toggle svg {
+            width: 16px;
+            height: 16px;
+            display: block;
+            transition: transform .22s ease;
+        }
+
+        .sidebar.collapsed .sidebar-toggle svg {
+            transform: rotate(180deg);
+        }
+
+        /* --- 5 squares — replaces brand + old vertical nav --- */
+        .nav-squares {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+            margin-bottom: 14px;
+        }
+
+        .sidebar.collapsed .nav-squares {
+            grid-template-columns: 1fr;
+            gap: 8px;
+            justify-items: center;
+        }
+
+        .nav-square {
+            aspect-ratio: 1 / 1;
+            width: 100%;
+            position: relative;
+            display: grid;
+            place-items: center;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-soft);
+            transition: .15s ease;
+        }
+
+        .nav-square:hover {
+            background: var(--surface-soft);
+            color: var(--text);
+            border-color: var(--border2);
+        }
+
+        .nav-square.active {
+            background: var(--text);
+            color: #fff;
+            border-color: var(--text);
+        }
+
+        .nav-square svg {
+            width: 18px;
+            height: 18px;
+            display: block;
+        }
+
+        .nav-square-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 4px;
+            border-radius: 6px;
+            background: var(--text);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            display: grid;
+            place-items: center;
+            line-height: 1;
+            border: 1px solid var(--surface);
+        }
+
+        .nav-square.active .nav-square-count {
+            background: #fff;
+            color: var(--text);
+            border-color: var(--text);
+        }
+
+        .sidebar.collapsed .nav-square {
+            width: 44px;
+            height: 44px;
+        }
+
+        .sidebar.collapsed .nav-square-count {
+            top: -4px;
+            right: -4px;
+        }
+
+        /* --- today card — minimal --- */
+        .today-card {
+            background: var(--surface-soft);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 12px;
+            margin-bottom: 16px;
+        }
+
+        .sidebar.collapsed .today-card {
+            display: none;
+        }
+
+        .today-card-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--muted);
+            letter-spacing: .04em;
+            margin-bottom: 6px;
+        }
+
+        .today-card-date {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.4;
+            margin-bottom: 6px;
+        }
+
+        .today-card-time {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text);
+            line-height: 1;
+            letter-spacing: .02em;
+            direction: ltr;
+            text-align: right;
+        }
+
+        .today-card-sub {
+            margin-top: 6px;
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .nav-section {
+            margin-bottom: 20px;
+        }
+
+        .nav-label {
+            font-size: 11px;
+            color: var(--muted);
+
+            padding: 0 12px;
+            margin-bottom: 7px;
+
+            font-weight: 700;
+        }
+
+        .sidebar.collapsed .nav-label {
+            display: none;
+        }
+
+        .nav-item {
+            width: 100%;
+
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            padding: 10px 12px;
+
+            border-radius: 10px;
+
+            background: transparent;
+            color: var(--text-soft);
+
+            text-align: right;
+
+            transition: .15s ease;
+        }
+
+        .nav-item:hover {
+            background: var(--surface-soft);
+            color: var(--text);
+        }
+
+        .nav-item.active {
+            background: var(--text);
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .nav-icon {
+            width: 19px;
+            text-align: center;
+            font-size: 15px;
+        }
+
+        .nav-count {
+            margin-right: auto;
+
+            min-width: 21px;
+            height: 21px;
+
+            display: grid;
+            place-items: center;
+
+            padding: 0 6px;
+
+            border-radius: 6px;
+
+            font-size: 11px;
+            background: var(--surface-soft);
+            color: var(--muted);
+        }
+
+        .nav-item.active .nav-count {
+            background: rgba(255, 255, 255, .18);
+            color: #fff;
+        }
+
+        .sidebar.collapsed .nav-item {
+            justify-content: center;
+            padding: 11px;
+        }
+
+        .sidebar.collapsed .nav-item span:not(.nav-icon),
+        .sidebar.collapsed .nav-count {
+            display: none;
+        }
+
+        .main.sidebar-collapsed {
+            margin-right: 72px;
+            width: calc(100% - 72px);
+        }
+
+        /* =========================================================
+           MAIN
+        ========================================================= */
+
+        .main {
+            margin-right: var(--sidebar-width);
+
+            width: calc(100% - var(--sidebar-width));
+
+            min-width: 0;
+
+            transition: .2s ease;
+        }
+
+        .main.details-open {
+            margin-left: var(--details-width);
+        }
+
+        /* =========================================================
+           TOPBAR
+        ========================================================= */
+
+        .topbar {
+            height: 52px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 0 16px;
+
+            border-bottom: 1px solid var(--border);
+
+            background: var(--surface);
+
+            position: sticky;
+            top: 0;
+            z-index: 30;
+        }
+
+        .topbar-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .topbar-title h1 {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+
+        .view-switcher {
+            display: flex;
+            align-items: center;
+
+            padding: 3px;
+
+            background: var(--surface-soft);
+            border: 1px solid var(--border);
+
+            border-radius: 10px;
+        }
+
+        .view-btn {
+            padding: 7px 12px;
+
+            background: transparent;
+            color: var(--muted);
+
+            border-radius: 7px;
+
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .view-btn:hover {
+            color: var(--text);
+        }
+
+        .view-btn.active {
+            background: var(--text);
+            color: #fff;
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 32px;
+            height: 32px;
+
+            display: grid;
+            place-items: center;
+
+            border-radius: 10px;
+
+            color: var(--text-soft);
+
+            border: 1px solid var(--border);
+
+            background: var(--surface);
+        }
+
+        .icon-btn:hover {
+            background: var(--surface-soft);
+        }
+
+        .primary-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+
+            height: 32px;
+
+            padding: 0 12px;
+
+            background: var(--text);
+            color: white;
+
+            border-radius: 10px;
+
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .primary-btn:hover {
+            opacity: .9;
+        }
+
+        /* =========================================================
+           CONTENT
+        ========================================================= */
+
+        .content {
+            max-width: 1080px;
+            margin: 0 auto;
+
+            padding: 28px 30px 60px;
+        }
+
+        /* =========================================================
+           DAY HEADER
+        ========================================================= */
+
+        .day-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            margin-bottom: 22px;
+        }
+
+        .day-info {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+        }
+
+        .day-nav {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .day-nav-btn {
+            width: 32px;
+            height: 32px;
+
+            display: grid;
+            place-items: center;
+
+            border-radius: 8px;
+
+            color: var(--text-soft);
+            background: transparent;
+        }
+
+        .day-nav-btn:hover {
+            background: white;
+            border: 1px solid var(--border);
+        }
+
+        .date-block {
+            min-width: 175px;
+        }
+
+        .date-title {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .date-subtitle {
+            margin-top: 3px;
+
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .today-btn {
+            padding: 6px 10px;
+
+            border: 1px solid var(--border);
+            background: white;
+
+            border-radius: 7px;
+
+            font-size: 11px;
+            font-weight: 700;
+
+            color: var(--text-soft);
+        }
+
+        .today-btn:hover {
+            border-color: var(--text);
+            color: var(--text);
+        }
+
+        .date-picker {
+            width: 34px;
+            height: 34px;
+
+            border: 1px solid var(--border);
+            background: white;
+
+            border-radius: 8px;
+
+            cursor: pointer;
+            color: var(--text-soft);
+        }
+
+        .day-progress {
+            min-width: 180px;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+
+            margin-bottom: 7px;
+
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .progress-info strong {
+            color: var(--text);
+        }
+
+        .progress-bar {
+            height: 6px;
+
+            border-radius: 20px;
+            background: var(--border);
+
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0;
+
+            background: var(--text);
+            border-radius: inherit;
+
+            transition: width .25s ease;
+        }
+
+        /* =========================================================
+           QUICK ADD
+        ========================================================= */
+
+        .quick-add {
+            display: flex;
+            align-items: center;
+
+            background: var(--surface);
+
+            border: 1px solid var(--border);
+
+            border-radius: 12px;
+
+            margin-bottom: 24px;
+
+            transition: .15s ease;
+        }
+
+        .quick-add:focus-within {
+            border-color: var(--text);
+        }
+
+        .quick-add-plus {
+            width: 46px;
+
+            display: grid;
+            place-items: center;
+
+            font-size: 19px;
+            color: var(--text);
+        }
+
+        .quick-add input {
+            flex: 1;
+
+            height: 50px;
+
+            border: 0;
+
+            font-size: 13px;
+            color: var(--text);
+
+            background: transparent;
+        }
+
+        .quick-add input::placeholder {
+            color: var(--muted);
+        }
+
+        .quick-add-hint {
+            padding: 0 14px;
+
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        /* =========================================================
+           SECTION
+        ========================================================= */
+
+        .task-section {
+            margin-bottom: 25px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            margin-bottom: 9px;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .section-dot {
+            width: 7px;
+            height: 7px;
+
+            border-radius: 50%;
+            background: var(--border2);
+        }
+
+        .section-count {
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .section-action {
+            font-size: 11px;
+            color: var(--muted);
+            background: transparent;
+            padding: 4px 6px;
+            border-radius: 6px;
+        }
+
+        .section-action:hover {
+            background: var(--surface-soft);
+            color: var(--text);
+        }
+
+        /* =========================================================
+           TASK LIST
+        ========================================================= */
+
+        .task-list {
+            background: var(--surface);
+
+            border: 1px solid var(--border);
+
+            border-radius: 12px;
+
+            overflow: hidden;
+        }
+
+        .task-row {
+            min-height: 55px;
+
+            display: flex;
+            align-items: center;
+
+            gap: 10px;
+
+            padding: 8px 13px;
+
+            border-bottom: 1px solid var(--border-light);
+
+            cursor: pointer;
+
+            transition: background .12s ease;
+        }
+
+        .task-row:last-child {
+            border-bottom: 0;
+        }
+
+        .task-row:hover {
+            background: var(--surface-soft);
+        }
+
+        .task-row.selected {
+            background: var(--surface-soft);
+        }
+
+        .task-check {
+            width: 19px;
+            height: 19px;
+
+            flex-shrink: 0;
+
+            border: 1px solid var(--border2);
+            border-radius: 6px;
+
+            background: var(--surface);
+
+            display: grid;
+            place-items: center;
+
+            transition: .15s ease;
+        }
+
+        .task-check:hover {
+            border-color: var(--text);
+        }
+
+        .task-row.completed .task-check {
+            background: var(--text);
+            border-color: var(--text);
+            color: white;
+        }
+
+        .task-check svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .priority-dot {
+            width: 7px;
+            height: 7px;
+
+            flex-shrink: 0;
+
+            border-radius: 50%;
+        }
+
+        .priority-low {
+            background: #A8A29E;
+        }
+
+        .priority-medium {
+            background: #78716C;
+        }
+
+        .priority-high {
+            background: #57534E;
+        }
+
+        .priority-urgent {
+            background: #1C1917;
+        }
+
+        .task-main {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .task-title {
+            font-size: 12px;
+            font-weight: 500;
+
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .task-row.completed .task-title {
+            color: var(--muted);
+            text-decoration: line-through;
+        }
+
+        .task-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            margin-top: 3px;
+
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        .task-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .task-more {
+            width: 28px;
+            height: 28px;
+
+            display: grid;
+            place-items: center;
+
+            border-radius: 7px;
+
+            color: var(--muted);
+            background: transparent;
+
+            opacity: 0;
+        }
+
+        .task-row:hover .task-more {
+            opacity: 1;
+        }
+
+        .task-more:hover {
+            background: var(--surface-soft);
+            color: var(--text);
+        }
+
+        /* =========================================================
+           EMPTY
+        ========================================================= */
+
+        .empty {
+            padding: 55px 20px;
+
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+
+            text-align: center;
+        }
+
+        .empty-icon {
+            width: 48px;
+            height: 48px;
+
+            display: grid;
+            place-items: center;
+
+            border-radius: 14px;
+
+            background: var(--surface-soft);
+
+            color: var(--muted);
+
+            font-size: 20px;
+
+            margin-bottom: 13px;
+        }
+
+        .empty-title {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .empty-text {
+            max-width: 300px;
+
+            margin-top: 5px;
+
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.7;
+        }
+
+        /* =========================================================
+           UPCOMING / OTHER VIEWS
+        ========================================================= */
+
+        .date-group {
+            margin-bottom: 24px;
+        }
+
+        .date-group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            margin-bottom: 8px;
+        }
+
+        .date-group-title {
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .date-group-title span {
+            color: var(--muted);
+            font-weight: 500;
+            margin-right: 5px;
+        }
+
+        .date-group-count {
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        /* =========================================================
+           BOARD
+        ========================================================= */
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+
+            gap: 13px;
+
+            align-items: start;
+        }
+
+        .board-column {
+            background: var(--surface-soft);
+
+            border: 1px solid var(--border);
+
+            border-radius: 14px;
+
+            padding: 10px;
+
+            min-height: 250px;
+        }
+
+        .board-column-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 3px 4px 10px;
+        }
+
+        .board-column-title {
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .board-column-count {
+            min-width: 22px;
+            height: 21px;
+
+            display: grid;
+            place-items: center;
+
+            border-radius: 6px;
+
+            background: white;
+
+            color: var(--muted);
+
+            font-size: 10px;
+        }
+
+        .board-list {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .board-card {
+            background: var(--surface);
+
+            border: 1px solid var(--border);
+
+            border-radius: 10px;
+
+            padding: 10px;
+
+            cursor: pointer;
+
+            transition: .15s ease;
+        }
+
+        .board-card:hover {
+            box-shadow: 0 1px 2px rgba(0,0,0,.04);
+        }
+
+        .board-card-title {
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.4;
+
+            margin-bottom: 9px;
+        }
+
+        .board-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            color: var(--muted);
+
+            font-size: 10px;
+        }
+
+        /* =========================================================
+           EISENHOWER
+        ========================================================= */
+
+        .matrix {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+
+            gap: 12px;
+        }
+
+        .matrix-box {
+            background: var(--surface);
+
+            border: 1px solid var(--border);
+
+            border-radius: 14px;
+
+            padding: 13px;
+
+            min-height: 220px;
+        }
+
+        .matrix-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            margin-bottom: 11px;
+        }
+
+        .matrix-title {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .matrix-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+        }
+
+        .matrix-subtitle {
+            color: var(--muted);
+            font-size: 10px;
+        }
+
+        .matrix-tasks {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .matrix-task {
+            padding: 9px 10px;
+
+            border: 1px solid var(--border-light);
+
+            border-radius: 8px;
+
+            font-size: 11px;
+
+            cursor: pointer;
+        }
+
+        .matrix-task:hover {
+            background: var(--surface-soft);
+        }
+
+        /* =========================================================
+           DETAILS SIDEBAR
+        ========================================================= */
+
+        .details {
+            width: var(--details-width);
+
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+
+            background: white;
+
+            border-right: 1px solid var(--border);
+
+            z-index: 60;
+
+            transform: translateX(-100%);
+            transition: transform .22s ease;
+
+            display: flex;
+            flex-direction: column;
+        }
+
+        .details.open {
+            transform: translateX(0);
+        }
+
+        .details-header {
+            height: 72px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 0 18px;
+
+            border-bottom: 1px solid var(--border);
+        }
+
+        .details-header-title {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .details-header-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .details-body {
+            flex: 1;
+            overflow-y: auto;
+
+            padding: 20px;
+        }
+
+        .details-title {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.5;
+
+            margin-bottom: 20px;
+        }
+
+        .field {
+            margin-bottom: 18px;
+        }
+
+        .field-label {
+            display: block;
+
+            font-size: 10px;
+            color: var(--muted);
+
+            font-weight: 700;
+
+            margin-bottom: 7px;
+        }
+
+        .field-input,
+        .field-select,
+        .field-textarea {
+            width: 100%;
+
+            border: 1px solid var(--border);
+
+            background: var(--bg);
+
+            border-radius: 10px;
+
+            padding: 8px 10px;
+
+            color: var(--text);
+
+            font-size: 12px;
+        }
+
+        .field-input:focus,
+        .field-select:focus,
+        .field-textarea:focus {
+            background: var(--surface);
+            border-color: var(--text);
+        }
+
+        .field-textarea {
+            min-height: 100px;
+            resize: vertical;
+
+            line-height: 1.7;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 9px;
+        }
+
+        .status-btn {
+            width: 100%;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+
+            padding: 10px;
+
+            border: 1px solid var(--border);
+
+            border-radius: 10px;
+
+            background: var(--surface);
+
+            font-size: 11px;
+            font-weight: 700;
+
+            color: var(--text-soft);
+        }
+
+        .status-btn.completed {
+            background: var(--text);
+            border-color: var(--text);
+            color: #fff;
+        }
+
+        .details-footer {
+            border-top: 1px solid var(--border);
+
+            padding: 13px 18px;
+
+            display: flex;
+            gap: 8px;
+        }
+
+        .save-btn {
+            flex: 1;
+
+            height: 32px;
+
+            border-radius: 10px;
+
+            background: var(--text);
+            color: white;
+
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .save-btn:hover {
+            opacity: .9;
+        }
+
+        .delete-btn {
+            width: 40px;
+            height: 32px;
+
+            border-radius: 10px;
+
+            background: var(--red-soft);
+            color: var(--red);
+        }
+
+        .archive-btn {
+            width: 40px;
+            height: 32px;
+
+            border-radius: 10px;
+
+            background: var(--surface-soft);
+            color: var(--text-soft);
+        }
+
+        /* =========================================================
+           MODAL
+        ========================================================= */
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+
+            background: rgba(28,25,23,.45);
+
+            display: none;
+            align-items: center;
+            justify-content: center;
+
+            z-index: 100;
+
+            padding: 20px;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            width: 100%;
+            max-width: 450px;
+
+            background: var(--surface);
+
+            border: 1px solid var(--border);
+
+            border-radius: 16px;
+
+            box-shadow: 0 20px 40px rgba(0,0,0,.06);
+
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 16px 16px 10px;
+
+            border-bottom: 1px solid var(--border);
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .modal-body {
+            padding: 16px;
+        }
+
+        .modal-footer {
+            padding: 13px 16px;
+
+            border-top: 1px solid var(--border);
+
+            display: flex;
+            justify-content: flex-start;
+            gap: 6px;
+        }
+
+        .secondary-btn {
+            height: 32px;
+
+            padding: 0 12px;
+
+            border: 1px solid var(--border);
+
+            background: var(--surface);
+
+            border-radius: 10px;
+
+            color: var(--text);
+
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .secondary-btn:hover {
+            background: var(--surface-soft);
+        }
+
+        /* =========================================================
+           CONTEXT MENU
+        ========================================================= */
+
+        .context-menu {
+            position: fixed;
+
+            min-width: 155px;
+
+            background: var(--surface);
+
+            border: 1px solid var(--border);
+
+            border-radius: 10px;
+
+            box-shadow: 0 8px 24px rgba(0,0,0,.1);
+
+            padding: 5px;
+
+            z-index: 200;
+
+            display: none;
+        }
+
+        .context-menu.open {
+            display: block;
+        }
+
+        .context-item {
+            width: 100%;
+
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            padding: 8px 9px;
+
+            border-radius: 6px;
+
+            background: transparent;
+
+            color: var(--text-soft);
+
+            font-size: 11px;
+
+            text-align: right;
+        }
+
+        .context-item:hover {
+            background: var(--surface-soft);
+            color: var(--text);
+        }
+
+        .context-item.danger {
+            color: var(--red);
+        }
+
+        /* =========================================================
+           RESPONSIVE
+        ========================================================= */
+
+        @@media (max-width: 1000px) {
+            :root {
+                --sidebar-width: 220px;
+            }
+
+            .board {
+                grid-template-columns: 1fr;
+            }
+
+            .day-progress {
+                display: none;
+            }
+        }
+
+        @@media (max-width: 760px) {
+            .sidebar {
+                width: 62px;
+                padding: 15px 8px;
+            }
+
+            .sidebar .nav-squares {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar .today-card {
+                display: none;
+            }
+
+            .nav-label,
+            .nav-item span:not(.nav-icon),
+            .nav-count {
+                display: none;
+            }
+
+            .sidebar-top {
+                justify-content: center;
+            }
+
+            .nav-item {
+                justify-content: center;
+                padding: 11px;
+            }
+
+            .main {
+                margin-right: 62px;
+                width: calc(100% - 62px);
+            }
+
+            .main.sidebar-collapsed {
+                margin-right: 62px;
+                width: calc(100% - 62px);
+            }
+
+            .topbar {
+                padding: 0 15px;
+            }
+
+            .topbar-title h1 {
+                display: none;
+            }
+
+            .view-switcher {
+                margin-right: 0;
+            }
+
+            .content {
+                padding: 20px 15px 50px;
+            }
+
+            .day-header {
+                align-items: flex-start;
+            }
+
+            .date-block {
+                min-width: 0;
+            }
+
+            .date-title {
+                font-size: 17px;
+            }
+
+            .matrix {
+                grid-template-columns: 1fr;
+            }
+
+            .details {
+                width: min(350px, 90vw);
+            }
+
+            .main.details-open {
+                margin-left: 0;
+            }
+        }
+
+        @@media (max-width: 500px) {
+            .view-btn {
+                padding: 7px 8px;
+                font-size: 10px;
+            }
+
+            .primary-btn span {
+                display: none;
+            }
+
+            .day-header {
+                gap: 10px;
+            }
+
+            .day-nav {
+                order: 2;
+            }
+
+            .day-info {
+                gap: 6px;
+            }
+
+            .today-btn {
+                display: none;
+            }
+
+            .task-meta-item.hide-mobile {
+                display: none;
+            }
+        }
+
+        /* =========================================================
+           SCROLLBAR
+        ========================================================= */
+
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border2);
+            border-radius: 4px;
+        }
+
+        /* =========================================================
+           UTILITY
+        ========================================================= */
+
+        .hidden {
+            display: none !important;
+        }
+
+        .text-green {
+            color: var(--green);
+        }
+
+        .text-muted {
+            color: var(--muted);
+        }
+    
+</style>
+
+
+@code {
+    private string _view = "today";
+    private string _layout = "list"; // kept for parity with tasks-page.html (board/matrix as views, not layout)
+    private DateTime _currentDate = DateTime.Today;
+    private AppTask? _selectedTask;
+    private bool _sidebarCollapsed;
+    private bool _showCreateModal;
+    private string? _contextTaskId;
+    private double _contextX, _contextY;
+
+    private string _quickTitle = "";
+    private string _newTitle = "";
+    private string? _newDate;
+    private string? _newTime;
+    private string _newPriority = "medium";
+    private string _newRepeat = "none";
+    private string _newNotes = "";
+    private bool _showSchedule = false;
+
+    private string _editTitle = "";
+    private string? _editDate;
+    private string? _editTime;
+    private string _editPriority = "medium";
+    private string _editRepeat = "none";
+    private int _editQuadrant = 2;
+    private string _editNotes = "";
+
+    private System.Threading.Timer? _clockTimer;
+    private string _currentDateStr = "";
+    private string _currentTimeStr = "";
+    private string _currentSubStr = "";
+
+    private int _todayCount, _upcomingCount, _noDateCount, _completedCount, _archivedCount;
+    private int _dayTotal, _dayCompleted, _dayPercent;
+
+    private string PageTitle => _view switch {
+        "today" => "اليوم",
+        "upcoming" => "القادمة",
+        "no-date" => "بدون تاريخ",
+        "completed" => "تم الإنجاز",
+        "archived" => "الأرشيف",
+        "board" => "Board",
+        "matrix" => "Eisenhower",
+        _ => "Tasks"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await TaskState.InitAsync();
+        TaskState.OnStateChanged += OnStateChanged;
+        _view = TaskState.CurrentView;
+        _currentDate = TaskState.CurrentDate;
+        _sidebarCollapsed = TaskState.SidebarCollapsed;
+        UpdateCounts();
+        StartClock();
+    }
+
+    private void OnStateChanged()
+    {
+        _view = TaskState.CurrentView;
+        _currentDate = TaskState.CurrentDate;
+        _sidebarCollapsed = TaskState.SidebarCollapsed;
+        UpdateCounts();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void StartClock()
+    {
+        UpdateClock();
+        _clockTimer = new System.Threading.Timer(_ => {
+            InvokeAsync(() => { UpdateClock(); StateHasChanged(); });
+        }, null, 0, 1000);
+    }
+
+    private void UpdateClock()
+    {
+        var now = DateTime.Now;
+        var ar = new System.Globalization.CultureInfo("ar-EG");
+        _currentDateStr = now.ToString("dddd، d MMMM yyyy", ar);
+        _currentTimeStr = now.ToString("hh:mm:ss tt", ar);
+        _currentSubStr = now.ToString("ddd", ar) + " • " + now.ToString("yyyy-MM-dd");
+    }
+
+    private void UpdateCounts()
+    {
+        _ = _layout;
+        var tasks = TaskState.Tasks;
+        var today = DateTime.Today;
+        var active = tasks.Where(t => t.ArchivedAt == null).ToList();
+        _todayCount = active.Count(t => t.DueDate?.Date == today && !t.IsDone);
+        // For badge today we count pending today only (like HTML)
+        var todayTasks = active.Where(t => t.DueDate?.Date == today || t.ScheduledDate?.Date == today).ToList();
+        // upcoming: dueDate > today and not done
+        _upcomingCount = active.Count(t => {
+            var d = t.DueDate ?? t.ScheduledDate;
+            return d.HasValue && d.Value.Date > today && !t.IsDone;
+        });
+        _noDateCount = active.Count(t => (t.DueDate==null && t.ScheduledDate==null) && !t.IsDone);
+        _completedCount = active.Count(t => t.IsDone);
+        _archivedCount = tasks.Count(t => t.ArchivedAt!=null);
+
+        var dayTasks = active.Where(t => (t.DueDate?.Date==_currentDate.Date) || (t.ScheduledDate?.Date==_currentDate.Date)).ToList();
+        _dayTotal = dayTasks.Count;
+        _dayCompleted = dayTasks.Count(t=>t.IsDone);
+        _dayPercent = _dayTotal==0?0:(int)Math.Round((double)_dayCompleted/_dayTotal*100);
+    }
+
+    private void ToggleSidebar(){ TaskState.ToggleSidebar(); }
+    private void SetView(string v){
+        TaskState.SetView(v);
+        // close details when switching views maybe
+        if(v!="today" && _selectedTask!=null) {}
+    }
+    private void PrevDay(){ TaskState.PrevDay(); }
+    private void NextDay(){ TaskState.NextDay(); }
+    private void GoToday(){ TaskState.GoToday(); }
+    private void OnDatePicked(ChangeEventArgs e){
+        if(DateTime.TryParse(e.Value?.ToString(), out var d)) TaskState.SetCurrentDate(d);
+    }
+
+    private List<AppTask> ActiveTasks() => TaskState.Tasks.Where(t=>t.ArchivedAt==null).ToList();
+
+    private List<AppTask> TasksForDate(DateTime date)
+    {
+        var d = date.Date;
+        return ActiveTasks().Where(t => (t.DueDate?.Date==d) || (t.ScheduledDate?.Date==d)).OrderBy(t=>t.IsDone).ThenBy(t=> PriorityOrder(t.Priority)).ThenBy(t=> t.ScheduledTime ?? TimeSpan.MaxValue).ThenBy(t=>t.CreatedAt).ToList();
+    }
+    private int PriorityOrder(string p) => p switch { "urgent"=>0, "high"=>1, "medium"=>2, _=>3 };
+
+    private async Task QuickAdd()
+    {
+        var title = _quickTitle.Trim();
+        if(string.IsNullOrWhiteSpace(title)) return;
+        var task = new AppTask{
+            Id = Guid.NewGuid().ToString(),
+            Title = title,
+            Priority = "medium",
+            IsDone = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            DueDate = _view=="today" ? _currentDate.Date : null,
+            ScheduledDate = _view=="today" ? _currentDate.Date : null,
+            RecurrenceDays = "none",
+            EisenhowerQuadrant = 2,
+            Notes = ""
+        };
+        await TaskState.AddTaskAsync(task);
+        _quickTitle="";
+        UpdateCounts();
+    }
+
+    private async Task OnQuickKeyDown(KeyboardEventArgs e){
+        if(e.Key=="Enter") await QuickAdd();
+    }
+
+    private void OpenCreateModal(){
+        _newTitle="";
+        _newDate = _currentDate.ToString("yyyy-MM-dd");
+        _newTime=null;
+        _newPriority="medium";
+        _newRepeat="none";
+        _newNotes="";
+        _showSchedule=false;
+        _showCreateModal=true;
+    }
+    private void CloseCreateModal()=> _showCreateModal=false;
+
+    private async Task CreateTask(){
+        var title=_newTitle.Trim();
+        if(string.IsNullOrWhiteSpace(title)) return;
+        TimeSpan? ts = null;
+        DateTime? due = null;
+        if(_showSchedule){
+            if(!string.IsNullOrWhiteSpace(_newTime) && TimeSpan.TryParse(_newTime, out var parsed)) ts=parsed;
+            if(!string.IsNullOrWhiteSpace(_newDate) && DateTime.TryParse(_newDate, out var d)) due = d.Date;
+            else due = DateTime.Today;
+        } else {
+            due = DateTime.Today;
+            ts = null;
+        }
+        var newId = Guid.NewGuid().ToString();
+        var isRec = _newRepeat!="none";
+        var task=new AppTask{
+            Id=newId,
+            Title=title,
+            Priority=_newPriority,
+            IsDone=false,
+            CreatedAt=DateTime.UtcNow,
+            UpdatedAt=DateTime.UtcNow,
+            DueDate=due,
+            ScheduledDate=due,
+            ScheduledTime=ts,
+            RecurrenceDays=_newRepeat,
+            IsRecurring=isRec,
+            EisenhowerQuadrant=2,
+            Notes=_newNotes?.Trim()??"",
+            TemplateId = isRec ? newId : null
+        };
+        await TaskState.AddTaskAsync(task);
+        _showCreateModal=false;
+        UpdateCounts();
+    }
+
+    private void OpenDetails(string id){
+        if(_selectedTask?.Id==id){ CloseDetails(); return; }
+        var task=TaskState.Tasks.FirstOrDefault(x=>x.Id==id);
+        if(task==null) return;
+        _selectedTask=task;
+        TaskState.SetSelectedTask(id);
+        _editTitle=task.Title;
+        _editDate=(task.DueDate ?? task.ScheduledDate)?.ToString("yyyy-MM-dd");
+        _editTime=task.ScheduledTime?.ToString(@"hh\:mm");
+        _editPriority=task.Priority ?? "medium";
+        _editRepeat=string.IsNullOrWhiteSpace(task.RecurrenceDays)?"none":task.RecurrenceDays;
+        _editQuadrant=task.EisenhowerQuadrant;
+        _editNotes=task.Notes ?? "";
+    }
+    private void CloseDetails(){ _selectedTask=null; TaskState.SetSelectedTask(null); }
+
+    private async Task SaveSelected(){
+        if(_selectedTask==null) return;
+        if(string.IsNullOrWhiteSpace(_editTitle)) return;
+        _selectedTask.Title=_editTitle.Trim();
+        DateTime? due = null;
+        if(!string.IsNullOrWhiteSpace(_editDate) && DateTime.TryParse(_editDate, out var d)) due = d.Date;
+        _selectedTask.DueDate=due;
+        _selectedTask.ScheduledDate=due;
+        if(!string.IsNullOrWhiteSpace(_editTime) && TimeSpan.TryParse(_editTime, out var ts)) _selectedTask.ScheduledTime=ts; else _selectedTask.ScheduledTime=null;
+        _selectedTask.Priority=_editPriority;
+        _selectedTask.RecurrenceDays=_editRepeat;
+        _selectedTask.IsRecurring=_editRepeat!="none";
+        _selectedTask.EisenhowerQuadrant=_editQuadrant;
+        _selectedTask.Notes=_editNotes?.Trim()??"";
+        await TaskState.UpdateTaskAsync(_selectedTask);
+        UpdateCounts();
+    }
+
+    private async Task ToggleTask(AppTask task){ await TaskState.ToggleTaskAsync(task); UpdateCounts(); }
+    private async Task ArchiveSelected(){ if(_selectedTask==null) return; await TaskState.ArchiveTaskAsync(_selectedTask.Id); CloseDetails(); UpdateCounts(); }
+    private async Task DeleteSelected(){ if(_selectedTask==null) return; await TaskState.DeleteTaskAsync(_selectedTask.Id); CloseDetails(); UpdateCounts(); }
+    private async Task CompleteAllVisible(){
+        var tasks=TasksForDate(_currentDate).Where(t=>!t.IsDone).ToList();
+        foreach(var t in tasks) await TaskState.ToggleTaskAsync(t);
+        UpdateCounts();
+    }
+
+    // Context menu
+    private void ShowContext(Microsoft.AspNetCore.Components.Web.MouseEventArgs e, string id){
+        _contextTaskId=id;
+        _contextX=e.ClientX;
+        _contextY=e.ClientY;
+    }
+    private void CloseContext()=> _contextTaskId=null;
+    private async Task ContextComplete(){ if(_contextTaskId==null) return; var id=_contextTaskId; CloseContext(); await TaskState.ToggleTaskByIdAsync(id); UpdateCounts(); }
+    private void ContextEdit(){ if(_contextTaskId==null) return; var id=_contextTaskId; CloseContext(); OpenDetails(id); }
+    private async Task ContextArchive(){ if(_contextTaskId==null) return; var id=_contextTaskId; CloseContext(); await TaskState.ArchiveTaskAsync(id); UpdateCounts(); }
+    private async Task ContextDelete(){ if(_contextTaskId==null) return; var id=_contextTaskId; CloseContext(); await TaskState.DeleteTaskAsync(id); if(_selectedTask?.Id==id) CloseDetails(); UpdateCounts(); }
+
+    private string FormatDate(DateTime d) => d.ToString("dddd، d MMMM", new System.Globalization.CultureInfo("ar-EG"));
+    private string FormatShortDate(DateTime? d) => d==null?"": d.Value.ToString("d MMM", new System.Globalization.CultureInfo("ar-EG"));
+    private string FormatDateTime(DateTime d) => d.ToString("d MMM hh:mm tt", new System.Globalization.CultureInfo("ar-EG"));
+    private string PriorityLabel(string p) => p switch{ "low"=>"منخفضة","medium"=>"متوسطة","high"=>"عالية","urgent"=>"عاجلة", _=>"متوسطة"};
+    private string RepeatLabel(string r) => r switch{ "daily"=>"يومي","weekly"=>"أسبوعي","monthly"=>"شهري", _=>""};
+
+    private RenderFragment DayListView => @<text>
+        @{
+            var tasks = TasksForDate(_currentDate);
+            var pending = tasks.Where(t=>!t.IsDone).ToList();
+            var completed = tasks.Where(t=>t.IsDone).ToList();
+        }
+        @if(!tasks.Any()){
+            <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">لا توجد مهام لهذا اليوم</div><div class="empty-text">ابدأ بإضافة أول مهمة ليومك.</div></div></div>
+        } else {
+            <section class="task-section">
+                <div class="section-header"><div class="section-title"><span class="section-dot"></span><span>المهام</span><span class="section-count">@pending.Count</span></div><div class="section-actions"><button class="section-action" @onclick="CompleteAllVisible">إنهاء الكل</button></div></div>
+                <div class="task-list">
+                    @if(pending.Any()){
+                        @foreach(var task in pending){ @TaskRow(task) }
+                    } else {
+                        <div class="empty" style="padding:35px"><div class="empty-text">لا توجد مهام هنا</div></div>
+                    }
+                </div>
+            </section>
+            @if(completed.Any()){
+                <section class="task-section">
+                    <div class="section-header"><div class="section-title"><span class="section-dot" style="background:var(--text)"></span><span>تم الإنجاز</span><span class="section-count">@completed.Count</span></div></div>
+                    <div class="task-list">@foreach(var task in completed){ @TaskRow(task) }</div>
+                </section>
+            }
+        }
+    </text>;
+
+    private RenderFragment TaskRow(AppTask task) => @<text>
+        <div class="task-row @(task.IsDone?"completed":"") @(_selectedTask?.Id==task.Id?"selected":"")" @onclick="()=>OpenDetails(task.Id)" @oncontextmenu="(e)=>ShowContext(e, task.Id)" @oncontextmenu:preventDefault="true">
+            <button class="task-check" @onclick="async (e)=>{ await ToggleTask(task); }" @onclick:stopPropagation="true" title="تغيير الحالة">
+                @if(task.IsDone){<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>}
+            </button>
+            <span class="priority-dot priority-@(task.Priority ?? "low")"></span>
+            <div class="task-main">
+                <div class="task-title">@task.Title</div>
+                <div class="task-meta">
+                    @if(task.ScheduledTime!=null){<span class="task-meta-item">◷ @task.ScheduledTime?.ToString(@"hh\:mm")</span>}
+                    @if(task.DueDate!=null && task.DueDate?.Date != _currentDate.Date){<span class="task-meta-item">▣ @FormatShortDate(task.DueDate)</span>}
+                    @if(!string.IsNullOrWhiteSpace(task.RecurrenceDays) && task.RecurrenceDays!="none"){<span class="task-meta-item">↻ @RepeatLabel(task.RecurrenceDays)</span>}
+                    @if(!string.IsNullOrWhiteSpace(task.Notes)){<span class="task-meta-item">▤ ملاحظات</span>}
+                </div>
+            </div>
+            <button class="task-more" @onclick="(e)=>ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button>
+        </div>
+    </text>;
+
+    private RenderFragment UpcomingView => @<text>
+        @{
+            var today=DateTime.Today;
+            var tasks=ActiveTasks().Where(t=>{ var d=t.DueDate??t.ScheduledDate; return d.HasValue && d.Value.Date>today && !t.IsDone;}).OrderBy(t=>t.DueDate??t.ScheduledDate).ToList();
+            var groups=tasks.GroupBy(t=>(t.DueDate??t.ScheduledDate)!.Value.Date).OrderBy(g=>g.Key).ToList();
+        }
+        @if(!tasks.Any()){
+            <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">مفيش مهام قادمة</div><div class="empty-text">أي مهمة تضيف لها تاريخ مستقبلي هتظهر هنا.</div></div></div>
+        } else {
+            @foreach(var g in groups){
+                <section class="date-group">
+                    <div class="date-group-header"><div class="date-group-title">@FormatDate(g.Key) <span>@(g.Key==today.AddDays(1)?"غدًا":"")</span></div><div class="date-group-count">@g.Count() مهام</div></div>
+                    <div class="task-list">@foreach(var task in g){ @TaskRow(task) }</div>
+                </section>
+            }
+        }
+    </text>;
+
+    private RenderFragment NoDateView => @<text>
+        @{
+            var tasks=ActiveTasks().Where(t=>t.DueDate==null && t.ScheduledDate==null).OrderBy(t=>PriorityOrder(t.Priority)).ThenBy(t=>t.CreatedAt).ToList();
+        }
+        @if(!tasks.Any()){
+            <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">كل مهامك لها تاريخ</div><div class="empty-text">ممتاز. مفيش مهام معلقة بدون موعد.</div></div></div>
+        } else {
+            <section class="task-section">
+                <div class="section-header"><div class="section-title"><span class="section-dot"></span>بدون تاريخ<span class="section-count">@tasks.Count</span></div></div>
+                <div class="task-list">@foreach(var task in tasks){ @TaskRow(task) }</div>
+            </section>
+        }
+    </text>;
+
+    private RenderFragment CompletedView => @<text>
+        @{
+            var tasks=ActiveTasks().Where(t=>t.IsDone).OrderByDescending(t=>t.CompletedAt ?? t.UpdatedAt).ToList();
+        }
+        @if(!tasks.Any()){
+            <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">لسه مفيش إنجازات</div><div class="empty-text">المهام اللي هتخلصها هتظهر هنا كـ History.</div></div></div>
+        } else {
+            <section class="task-section">
+                <div class="section-header"><div class="section-title"><span class="section-dot" style="background:var(--text)"></span>كل الإنجازات<span class="section-count">@tasks.Count</span></div></div>
+                <div class="task-list">@foreach(var task in tasks){ @TaskRow(task) }</div>
+            </section>
+        }
+    </text>;
+
+    private RenderFragment ArchivedView => @<text>
+        @{
+            var tasks=TaskState.Tasks.Where(t=>t.ArchivedAt!=null).OrderByDescending(t=>t.ArchivedAt).ToList();
+        }
+        @if(!tasks.Any()){
+            <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">الأرشيف فاضي</div><div class="empty-text">المهام اللي مش عايزها في الـ workspace الرئيسي تقدر تأرشفها هنا.</div></div></div>
+        } else {
+            <section class="task-section">
+                <div class="section-header"><div class="section-title"><span class="section-dot" style="background:var(--muted)"></span>الأرشيف<span class="section-count">@tasks.Count</span></div><button class="section-action" @onclick="async ()=>{ foreach(var t in tasks) await TaskState.RestoreTaskAsync(t.Id); UpdateCounts(); }">استرجاع الكل</button></div>
+                <div class="task-list">@foreach(var task in tasks){ @TaskRow(task) }</div>
+            </section>
+        }
+    </text>;
+
+    private RenderFragment BoardView => @<text>
+        @{
+            var active=ActiveTasks();
+            var todo=active.Where(t=>!t.IsDone && (t.DueDate!=null||t.ScheduledDate!=null)).ToList();
+            var noDate=active.Where(t=>!t.IsDone && t.DueDate==null && t.ScheduledDate==null).ToList();
+            var done=active.Where(t=>t.IsDone).ToList();
+        }
+        <div class="board">
+            <div class="board-column">
+                <div class="board-column-header"><div class="board-column-title">قيد التنفيذ</div><div class="board-column-count">@todo.Count</div></div>
+                <div class="board-list">
+                    @if(todo.Any()){ @foreach(var task in todo){ <div class="board-card" @onclick="()=>OpenDetails(task.Id)"><div class="board-card-title">@task.Title</div><div class="board-card-footer"><span>@(task.DueDate!=null?FormatShortDate(task.DueDate):"بدون تاريخ")</span><span>@PriorityLabel(task.Priority)</span></div></div> } } else { <div style="padding:30px 10px;text-align:center;color:var(--muted);font-size:10px;">فاضي</div> }
+                </div>
+            </div>
+            <div class="board-column">
+                <div class="board-column-header"><div class="board-column-title">بدون تاريخ</div><div class="board-column-count">@noDate.Count</div></div>
+                <div class="board-list">
+                    @if(noDate.Any()){ @foreach(var task in noDate){ <div class="board-card" @onclick="()=>OpenDetails(task.Id)"><div class="board-card-title">@task.Title</div><div class="board-card-footer"><span>بدون تاريخ</span><span>@PriorityLabel(task.Priority)</span></div></div> } } else { <div style="padding:30px 10px;text-align:center;color:var(--muted);font-size:10px;">فاضي</div> }
+                </div>
+            </div>
+            <div class="board-column">
+                <div class="board-column-header"><div class="board-column-title">تم الإنجاز</div><div class="board-column-count">@done.Count</div></div>
+                <div class="board-list">
+                    @if(done.Any()){ @foreach(var task in done){ <div class="board-card" @onclick="()=>OpenDetails(task.Id)"><div class="board-card-title">@task.Title</div><div class="board-card-footer"><span>@(task.DueDate!=null?FormatShortDate(task.DueDate):"بدون تاريخ")</span><span>@PriorityLabel(task.Priority)</span></div></div> } } else { <div style="padding:30px 10px;text-align:center;color:var(--muted);font-size:10px;">فاضي</div> }
+                </div>
+            </div>
+        </div>
+    </text>;
+
+    private RenderFragment MatrixView => @<text>
+        @{
+            var tasks=ActiveTasks().Where(t=>!t.IsDone).ToList();
+            var quadrants = new[] {
+                new { id=1, title="مهم وعاجل", sub="اعمله الآن", dot="var(--text)"},
+                new { id=2, title="مهم وغير عاجل", sub="خطط له", dot="var(--text-soft)"},
+                new { id=3, title="غير مهم وعاجل", sub="فوّضه", dot="var(--muted)"},
+                new { id=4, title="غير مهم وغير عاجل", sub="احذفه أو أجّله", dot="var(--border2)"}
+            };
+        }
+        <div class="matrix">
+            @foreach(var q in quadrants){
+                var qTasks=tasks.Where(t=> (t.EisenhowerQuadrant==q.id)).ToList();
+                <div class="matrix-box">
+                    <div class="matrix-header"><div class="matrix-title"><span class="matrix-dot" style="background:@q.dot"></span>@q.title</div><div class="matrix-subtitle">@q.sub</div></div>
+                    <div class="matrix-tasks">
+                        @if(qTasks.Any()){
+                            @foreach(var task in qTasks){ <div class="matrix-task" @onclick="()=>OpenDetails(task.Id)">@task.Title</div> }
+                        } else {
+                            <div style="color:var(--muted);font-size:10px;padding:20px 5px;text-align:center;">لا توجد مهام</div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </text>;
+
+    public void Dispose()
+    {
+        TaskState.OnStateChanged -= OnStateChanged;
+        _clockTimer?.Dispose();
+    }
+}

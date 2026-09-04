@@ -39,5 +39,11 @@ namespace Jamrah.Core.Entities
         public int EisenhowerQuadrant { get; set; } = 1;
 
         public string Notes { get; set; } = string.Empty;
+
+        public DateTime? ArchivedAt { get; set; }
+
+        public DateTime? CompletedAt { get; set; }
+
+        public string? TemplateId { get; set; }
     }
 }

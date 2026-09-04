@@ -10,17 +10,19 @@ namespace Jamrah;
 public partial class MainPage : ContentPage
 {
     private readonly ICalendarStateService _calendarState;
+    private readonly ISettingsRepository _settingsRepository;
     private BlazorWebView? _calendarWebView;
     private BlazorWebView? _tasksWebView;
     private BlazorWebView? _pomodoroWebView;
     private enum ActivePage { None, Tasks, Pomodoro, Calendar }
     private ActivePage _activePage = ActivePage.None;
 
-    public MainPage(ICalendarStateService calendarState)
+    public MainPage(ICalendarStateService calendarState, ISettingsRepository settingsRepository)
     {
         InitializeComponent();
         _calendarState = calendarState;
-    
+        _settingsRepository = settingsRepository;
+     
         ShowTasksPage();
     }
 
@@ -73,7 +75,7 @@ public partial class MainPage : ContentPage
             ComponentType = typeof(Presentation.Calendar.CalendarPage)
         });
         MainContent.Children.Add(_calendarWebView);
-        EnableZoomWithPersistence(_calendarWebView);
+        EnableZoomWithPersistence(_calendarWebView, "calendar");
     }
 
     private void EnsureTasksWebView()
@@ -89,7 +91,7 @@ public partial class MainPage : ContentPage
             ComponentType = typeof(Presentation.Tasks.TaskPage)
         });
         MainContent.Children.Add(_tasksWebView);
-        EnableZoomWithPersistence(_tasksWebView);
+        EnableZoomWithPersistence(_tasksWebView, "tasks");
     }
 
     private void EnsurePomodoroWebView()
@@ -105,27 +107,57 @@ public partial class MainPage : ContentPage
             ComponentType = typeof(Presentation.Pomodoro.PomodoroPage)
         });
         MainContent.Children.Add(_pomodoroWebView);
-        EnableZoomWithPersistence(_pomodoroWebView);
+        EnableZoomWithPersistence(_pomodoroWebView, "pomodoro");
     }
 
-    // ─── Disable Zoom (Windows only) ────────────────────────────────────────────
+    // ─── Zoom per-page persisted in Settings table ──────────────────────────
 
-    private void EnableZoomWithPersistence(BlazorWebView webView)
+    private void EnableZoomWithPersistence(BlazorWebView webView, string pageKey)
     {
-#if WINDOWS
         webView.HandlerChanged += async (_, _) =>
         {
+#if WINDOWS
             if (webView.Handler?.PlatformView is WebView2 platformView)
             {
                 await platformView.EnsureCoreWebView2Async();
                 if (platformView.CoreWebView2 != null)
                 {
-                    platformView.CoreWebView2.Settings.IsZoomControlEnabled = true;
-                    platformView.CoreWebView2.Settings.IsPinchZoomEnabled   = true;
+                    try { platformView.CoreWebView2.Settings.IsZoomControlEnabled = false; } catch {}
+                    try { platformView.CoreWebView2.Settings.IsPinchZoomEnabled = false; } catch {}
+
+                    double savedZoom = 1.0;
+                    try { savedZoom = await _settingsRepository.GetZoomAsync(pageKey); } catch {}
+                    try
+                    {
+                        var js = $"if(window.jamrahZoom) window.jamrahZoom.init('{pageKey}', {savedZoom.ToString(System.Globalization.CultureInfo.InvariantCulture)}); else document.documentElement.style.zoom='{savedZoom.ToString(System.Globalization.CultureInfo.InvariantCulture)}';";
+                        await platformView.CoreWebView2.ExecuteScriptAsync(js);
+                    }
+                    catch { }
+
+                    platformView.CoreWebView2.WebMessageReceived += async (s, e) =>
+                    {
+                        try
+                        {
+                            var msg = e.TryGetWebMessageAsString();
+                            if (string.IsNullOrWhiteSpace(msg)) return;
+                            using var doc = System.Text.Json.JsonDocument.Parse(msg);
+                            if (!doc.RootElement.TryGetProperty("type", out var t) || t.GetString() != "zoom") return;
+                            if (!doc.RootElement.TryGetProperty("page", out var p) || p.GetString() != pageKey) return;
+                            if (!doc.RootElement.TryGetProperty("zoom", out var z)) return;
+                            var zoomVal = z.GetDouble();
+                            await _settingsRepository.SetZoomAsync(pageKey, zoomVal);
+                        }
+                        catch { }
+                    };
                 }
             }
-        };
+#else
+            // Android / other: still use JS zoom via BlazorWebView Evaluate
+            // Settings table will be used when Blazor loads via JS interop fallback
+            // For now ensure Settings table initialized
+            try { await _settingsRepository.GetZoomAsync(pageKey); } catch {}
 #endif
+        };
     }
 
     // ─── Active page highlight ───────────────────────────────────────────────

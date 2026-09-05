@@ -2,11 +2,11 @@
 @using Jamrah.Core.Entities
 @using Jamrah.Application.Services
 @using Jamrah.Presentation.Shared
-@layout MainLayout
 @inject TaskStateService TaskState
 @inject NavigationManager Nav
 @implements IDisposable
 
+<MainLayout>
 <div class="app app--no-sidebar" dir="rtl">
 
     <main class="main @(_sidebarCollapsed ? "sidebar-collapsed" : "") @(_selectedTask!=null ? "details-open" : "")" id="main">
@@ -212,7 +212,7 @@
     <button class="context-item danger" @onclick="ContextDelete">× حذف</button>
 </div>
 }
-
+</MainLayout>
 
 <style>
 

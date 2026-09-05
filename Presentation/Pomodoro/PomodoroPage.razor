@@ -1,11 +1,11 @@
 ﻿@using Microsoft.JSInterop
 @namespace Jamrah.Presentation.Pomodoro
-@layout Jamrah.Presentation.Shared.MainLayout
 @implements IDisposable
 @inject Jamrah.Application.Services.PrayerTimesService PrayerService
 @inject Jamrah.Application.Services.PomodoroSoundService Sound
 @inject IJSRuntime JS
 
+<MainLayout>
 <div class="app-container" dir="rtl" style="flex-direction:row-reverse;">
 
     <div class="right-panel">
@@ -263,7 +263,7 @@
         </div>
     </div>
 }
-
+</MainLayout>
 
 <style>
     *{ font-family:'Tajawal',sans-serif !important; }

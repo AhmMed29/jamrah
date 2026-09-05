@@ -1,5 +1,4 @@
 ﻿@namespace Jamrah.Presentation.Calendar
-@layout Jamrah.Presentation.Shared.MainLayout
 @implements IDisposable
 @using Microsoft.JSInterop
 @inject ICalendarStateService StateService
@@ -30,7 +29,9 @@
 </style>
 
 @inject IJSRuntime JS
+@using Jamrah.Presentation.Shared
 
+<MainLayout>
 <div class="cal-wrapper" dir="rtl">
     <div class="cal-sidebar @(_isSidebarCollapsed ? "collapsed" : "")">
         <div style="padding:12px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border);">
@@ -170,6 +171,7 @@
         </div>
     </div>
 }
+</MainLayout>
 
 @code {
     private bool _isSidebarCollapsed = false;

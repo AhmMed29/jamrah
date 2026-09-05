@@ -7,10 +7,12 @@
     <TaskSidebar />
     <div class="global-main @(_collapsed ? "sidebar-collapsed" : "")">
         @Body
+        @ChildContent
     </div>
 </div>
 
 <style>
+    :root { --sidebar-width: 255px; }
     .global-app {
         display: flex;
         min-height: 100vh;
@@ -29,6 +31,7 @@
         width: calc(100% - 72px);
     }
     @@media (max-width: 1000px) {
+        :root { --sidebar-width: 220px; }
         .global-main {
             margin-right: 220px;
             width: calc(100% - 220px);
@@ -44,6 +47,7 @@
 </style>
 
 @code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
     private bool _collapsed;
     protected override async Task OnInitializedAsync()
     {

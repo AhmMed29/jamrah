@@ -1,10 +1,11 @@
 @namespace Jamrah.Presentation.Planning
-@layout Jamrah.Presentation.Shared.MainLayout
 @using Markdig
 @using Microsoft.JSInterop
+@using Jamrah.Presentation.Shared
 @inject Jamrah.Core.Interfaces.IPlanningRepository PlanningRepo
 @inject IJSRuntime JS
 
+<MainLayout>
 <div class="planning-app" dir="rtl">
     <div class="planning-header">
         <div class="planning-title">التخطيط</div>
@@ -79,6 +80,7 @@
     .planning-footer{ height:32px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border-top:1px solid #E7E5E4; background:#FAFAF9; font-size:11px; color:#78716C; flex-shrink:0; }
     .planning-path{ font-family:monospace; direction:ltr; }
 </style>
+</MainLayout>
 
 @code {
     private string _content = "";

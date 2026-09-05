@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using Jamrah.Core.Entities;
 using SQLite;
@@ -51,14 +50,14 @@ namespace Jamrah.Application.Services
         }
 
         // ── Fetch full month from API and cache ──────────────────────────────
-        public async Task FetchMonthAsync(int year, int month, CancellationToken ct = default)
+        public async Task FetchMonthAsync(int year, int month)
         {
             var url = $"https://api.aladhan.com/v1/calendar/{year}/{month}" +
                       $"?latitude={Location.Latitude}&longitude={Location.Longitude}" +
                       $"&method={Location.Method}";
             try
             {
-                var json = await _http.GetStringAsync(url, ct);
+                var json = await _http.GetStringAsync(url);
                 using var doc = JsonDocument.Parse(json);
                 var data = doc.RootElement.GetProperty("data");
 
@@ -90,24 +89,6 @@ namespace Jamrah.Application.Services
                 }
             }
             catch { }
-        }
-
-        // ── Day lookup (cache only, no fetch) ────────────────────────────────
-        public async Task<PrayerTimeEntry?> GetDayAsync(DateTime date)
-        {
-            var key = $"{date.Year}-{date.Month}-{date.Day}";
-            return await _db!.FindAsync<PrayerTimeEntry>(key);
-        }
-
-        // ── Ensure whole month is cached (one API call max per month) ─────────
-        public async Task EnsureMonthAsync(int year, int month)
-        {
-            var prefix = $"{year}-{month}-";
-            var cached = await _db!.QueryAsync<PrayerTimeEntry>(
-                "SELECT * FROM PrayerTimes WHERE DateKey LIKE ?", prefix + "%");
-            if (cached.Count >= DateTime.DaysInMonth(year, month)) return;
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-            await FetchMonthAsync(year, month, cts.Token);
         }
 
         // ── Change location ──────────────────────────────────────────────────

@@ -10,23 +10,11 @@ namespace Jamrah.Application.Services
     public class TaskStateService : ITaskStateService
     {
         private readonly ITaskRepository _repository;
-        private readonly PrayerTimesService _prayers;
 
-        public TaskStateService(ITaskRepository repository, PrayerTimesService prayers)
+        public TaskStateService(ITaskRepository repository)
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-            _prayers = prayers ?? throw new ArgumentNullException(nameof(prayers));
         }
-
-        // الصلوات المفروضة — تعريف ثابت (بدون صفوف templates في الداتابيز)
-        private static readonly (string Key, string Title, Func<PrayerTimeEntry, string> GetTime)[] PrayerDefs = new[]
-        {
-            ("prayer:fajr",    "صلاة الفجر",   (Func<PrayerTimeEntry, string>)(e => e.Fajr)),
-            ("prayer:dhuhr",   "صلاة الظهر",   (Func<PrayerTimeEntry, string>)(e => e.Dhuhr)),
-            ("prayer:asr",     "صلاة العصر",   (Func<PrayerTimeEntry, string>)(e => e.Asr)),
-            ("prayer:maghrib", "صلاة المغرب",  (Func<PrayerTimeEntry, string>)(e => e.Maghrib)),
-            ("prayer:isha",    "صلاة العشاء",  (Func<PrayerTimeEntry, string>)(e => e.Isha)),
-        };
 
         public List<TaskFolder> Folders { get; set; } = new();
         public List<KanbanColumn> Columns { get; set; } = new();
@@ -241,64 +229,12 @@ namespace Jamrah.Application.Services
                 changed = true;
             }
 
-            // --- الصلوات المفروضة: مهام يومية من مواعيد الـ API — الشهر الحالي فقط ---
-            try
+            // --- تنظيف بقايا مهام الصلوات (اتشالت من المهام نهائياً) ---
+            foreach (var t in Tasks.Where(x => x.TemplateId != null && x.TemplateId.StartsWith("prayer:")).ToList())
             {
-                await _prayers.InitAsync();
-                var pnow = DateTime.Today;
-                var pend = new DateTime(pnow.Year, pnow.Month, DateTime.DaysInMonth(pnow.Year, pnow.Month));
-                await _prayers.EnsureMonthAsync(pnow.Year, pnow.Month);
-                for (var d = pnow; d <= pend; d = d.AddDays(1))
-                {
-                    var entry = await _prayers.GetDayAsync(d);
-                    if (entry == null) continue;
-                    foreach (var def in PrayerDefs)
-                    {
-                        bool has = Tasks.Any(x => x.TemplateId == def.Key
-                            && ((x.DueDate?.Date == d) || (x.ScheduledDate?.Date == d)));
-                        if (has) continue;
-                        if (!TimeSpan.TryParse(def.GetTime(entry), out var ts)) continue;
-                        var inst = new AppTask {
-                            Id = Guid.NewGuid().ToString(),
-                            Title = def.Title,
-                            Priority = "medium",
-                            IsDone = false,
-                            DueDate = d,
-                            ScheduledDate = d,
-                            ScheduledTime = ts,
-                            RecurrenceDays = "daily",
-                            IsRecurring = true,
-                            EisenhowerQuadrant = 2,
-                            Notes = "",
-                            ColumnId = "",
-                            FolderId = "default-general",
-                            TemplateId = def.Key,
-                            CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow,
-                            ArchivedAt = null,
-                            CompletedAt = null
-                        };
-                        await _repository.SaveTaskAsync(inst);
-                        changed = true;
-                    }
-                }
-                // تحديث المواعيد لو اتغيرت (تغيير الموقع/طريقة الحساب)
-                foreach (var t in Tasks.Where(x => x.TemplateId != null && x.TemplateId.StartsWith("prayer:")
-                    && x.DueDate.HasValue && x.DueDate.Value.Year == pnow.Year && x.DueDate.Value.Month == pnow.Month).ToList())
-                {
-                    var entry = await _prayers.GetDayAsync(t.DueDate!.Value.Date);
-                    if (entry == null) continue;
-                    var def = PrayerDefs.FirstOrDefault(p => p.Key == t.TemplateId);
-                    if (def.Key == null) continue;
-                    if (TimeSpan.TryParse(def.GetTime(entry), out var ts) && t.ScheduledTime != ts)
-                    {
-                        t.ScheduledTime = ts;
-                        await _repository.SaveTaskAsync(t);
-                        changed = true;
-                    }
-                }
+                await _repository.DeleteTaskAsync(t.Id);
+                changed = true;
             }
-            catch { }
 
             if (changed)
             {

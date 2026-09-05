@@ -1158,41 +1158,6 @@
             background: var(--surface-soft);
         }
 
-        /* =========================================================
-           PRAYER ROWS — thin animated gradient border only
-        ========================================================= */
-
-        @@property --prayer-angle {
-            syntax: '@("<angle>")';
-            initial-value: 0deg;
-            inherits: false;
-        }
-
-        .task-row.prayer {
-            border: 1px solid transparent;
-            background:
-                linear-gradient(var(--surface), var(--surface)) padding-box,
-                conic-gradient(from var(--prayer-angle), #FF6B35, #D9481C, #B45309, #D4AF37, #7C3AED, #FF6B35) border-box;
-            animation: prayer-border-spin 6s linear infinite;
-        }
-
-        .task-row.prayer:hover,
-        .task-row.prayer.selected {
-            background:
-                linear-gradient(var(--surface-soft), var(--surface-soft)) padding-box,
-                conic-gradient(from var(--prayer-angle), #FF6B35, #D9481C, #B45309, #D4AF37, #7C3AED, #FF6B35) border-box;
-        }
-
-        @@keyframes prayer-border-spin {
-            to { --prayer-angle: 360deg; }
-        }
-
-        @@media (prefers-reduced-motion: reduce) {
-            .task-row.prayer {
-                animation: none;
-            }
-        }
-
         .task-check {
             width: 19px;
             height: 19px;
@@ -2493,7 +2458,6 @@
     private string FormatShortDate(DateTime? d) => d==null?"": d.Value.ToString("d MMM", new System.Globalization.CultureInfo("ar-EG"));
     private string FormatDateTime(DateTime d) => d.ToString("d MMM hh:mm tt", new System.Globalization.CultureInfo("ar-EG"));
     private string PriorityLabel(string p) => p switch{ "low"=>"منخفضة","medium"=>"متوسطة","high"=>"عالية","urgent"=>"عاجلة", _=>"متوسطة"};
-    private bool IsPrayer(AppTask task) => (task.TemplateId ?? "").StartsWith("prayer:");
     private string RepeatLabel(string r) => r switch{ "daily"=>"يومي","weekly"=>"أسبوعي","monthly"=>"شهري", _=>""};
 
     private RenderFragment DayListView => @<text>
@@ -2552,7 +2516,7 @@
     </text>;
 
     private RenderFragment TaskRow(AppTask task) => @<text>
-        <div class="task-row @(task.IsDone?"completed":"") @(IsPrayer(task)?"prayer":"") @(_selectedTask?.Id==task.Id?"selected":"")" @onclick="()=>OpenDetails(task.Id)" @oncontextmenu="(e)=>ShowContext(e, task.Id)" @oncontextmenu:preventDefault="true">
+        <div class="task-row @(task.IsDone?"completed":"") @(_selectedTask?.Id==task.Id?"selected":"")" @onclick="()=>OpenDetails(task.Id)" @oncontextmenu="(e)=>ShowContext(e, task.Id)" @oncontextmenu:preventDefault="true">
             <button class="task-check" @onclick="async (e)=>{ await ToggleTask(task); }" @onclick:stopPropagation="true" title="تغيير الحالة">
                 @if(task.IsDone){<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>}
             </button>

@@ -60,6 +60,8 @@ jobs:
         with:
           name: jamrah-exe
           path: ./artifacts/exe
+      - name: List artifacts (debug)
+        run: dir ./artifacts /s
       - name: Create Release v4.3.0
         uses: softprops/action-gh-release@v2
         with:
@@ -69,7 +71,9 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            ./artifacts/apk/*.apk
-            ./artifacts/exe/*.exe
+            ./artifacts/apk/**/*.apk
+            ./artifacts/exe/**/*.exe
+            ./artifacts/**/*.apk
+            ./artifacts/**/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

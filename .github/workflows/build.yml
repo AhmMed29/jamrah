@@ -61,7 +61,7 @@ jobs:
           name: jamrah-exe
           path: ./artifacts/exe
       - name: List artifacts (debug)
-        run: dir ./artifacts /s
+        run: Get-ChildItem -Path ./artifacts -Recurse | Format-Table -AutoSize
       - name: Create Release v4.3.0
         uses: softprops/action-gh-release@v2
         with:

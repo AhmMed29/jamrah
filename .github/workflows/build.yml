@@ -41,3 +41,35 @@ jobs:
         with:
           name: jamrah-exe
           path: bin/Release/**/publish/*.exe
+
+  release:
+    needs: [build-apk, build-exe]
+    runs-on: windows-latest
+    if: github.ref == 'refs/heads/chore/clean-repo-code-only' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: jamrah-apk
+          path: ./artifacts/apk
+      - name: Download EXE
+        uses: actions/download-artifact@v4
+        with:
+          name: jamrah-exe
+          path: ./artifacts/exe
+      - name: Create Release v4.3.0
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v4.3.0
+          name: "Jamrah v4.3.0"
+          body: "Planning + per-page zoom + recurring monthly + archive toggles + fixes"
+          draft: false
+          prerelease: false
+          files: |
+            ./artifacts/apk/*.apk
+            ./artifacts/exe/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

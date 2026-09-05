@@ -41,5 +41,7 @@ namespace Jamrah.Core.Entities
         public List<SessionGroup>? Children { get; init; }
         public List<Session>? Sessions { get; init; }
         public bool Open { get; set; }
+        public bool IsToday { get; set; }
+        public bool IsSimple { get; set; }
     }
 }

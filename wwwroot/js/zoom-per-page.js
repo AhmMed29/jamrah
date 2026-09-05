@@ -1,6 +1,8 @@
 window.jamrahZoom = (function(){
     let currentPage = null;
     let currentZoom = 1;
+    const pageDefaults = { tasks: 1.5, pomodoro: 1.7 };
+    function defaultFor(pageKey){ return pageDefaults[pageKey] || 1; }
     function apply(z){
         currentZoom = Math.max(0.5, Math.min(2.5, z));
         document.documentElement.style.zoom = currentZoom;
@@ -10,7 +12,7 @@ window.jamrahZoom = (function(){
     return {
         init: function(pageKey, zoom){
             currentPage = pageKey;
-            currentZoom = zoom || 1;
+            currentZoom = zoom || defaultFor(pageKey);
             function doApply(){
                 try { document.documentElement.style.zoom = currentZoom; } catch(e){}
             }
@@ -27,7 +29,7 @@ window.jamrahZoom = (function(){
                     e.preventDefault();
                     if(e.key === '+' || e.key === '=') apply(currentZoom + 0.1);
                     else if(e.key === '-' || e.key === '_') apply(currentZoom - 0.1);
-                    else if(e.key === '0') apply(1);
+                    else if(e.key === '0') apply(defaultFor(currentPage));
                 }
             });
             // Ctrl + wheel

@@ -1056,6 +1056,65 @@
             color: var(--text);
         }
 
+        .group-header {
+            cursor: pointer;
+            user-select: none;
+            border-radius: 8px;
+            padding: 4px 6px;
+            margin: 0 -6px 9px;
+            transition: background .12s ease;
+        }
+
+        .group-header:hover {
+            background: var(--surface-soft);
+        }
+
+        .group-chevron {
+            display: inline-block;
+            transition: transform .18s ease;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1;
+        }
+
+        .group-header.closed .group-chevron {
+            transform: rotate(-90deg);
+        }
+
+        .group-range {
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        .group-now {
+            outline: 1px solid var(--text);
+            outline-offset: 2px;
+        }
+
+        .sort-btn {
+            font-size: 10px;
+            color: var(--muted);
+            background: var(--surface-soft);
+            border: 1px solid var(--border);
+            padding: 3px 8px;
+            border-radius: 7px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .sort-btn:hover {
+            color: var(--text);
+            border-color: var(--text);
+        }
+
+        .group-empty {
+            padding: 18px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 11px;
+        }
+
         /* =========================================================
            TASK LIST
         ========================================================= */
@@ -1097,6 +1156,41 @@
 
         .task-row.selected {
             background: var(--surface-soft);
+        }
+
+        /* =========================================================
+           PRAYER ROWS — thin animated gradient border only
+        ========================================================= */
+
+        @@property --prayer-angle {
+            syntax: '@("<angle>")';
+            initial-value: 0deg;
+            inherits: false;
+        }
+
+        .task-row.prayer {
+            border: 1px solid transparent;
+            background:
+                linear-gradient(var(--surface), var(--surface)) padding-box,
+                conic-gradient(from var(--prayer-angle), #FF6B35, #D9481C, #B45309, #D4AF37, #7C3AED, #FF6B35) border-box;
+            animation: prayer-border-spin 6s linear infinite;
+        }
+
+        .task-row.prayer:hover,
+        .task-row.prayer.selected {
+            background:
+                linear-gradient(var(--surface-soft), var(--surface-soft)) padding-box,
+                conic-gradient(from var(--prayer-angle), #FF6B35, #D9481C, #B45309, #D4AF37, #7C3AED, #FF6B35) border-box;
+        }
+
+        @@keyframes prayer-border-spin {
+            to { --prayer-angle: 360deg; }
+        }
+
+        @@media (prefers-reduced-motion: reduce) {
+            .task-row.prayer {
+                animation: none;
+            }
         }
 
         .task-check {
@@ -2045,6 +2139,10 @@
     private int _dayTotal, _dayCompleted, _dayPercent;
     private bool _archDay = true, _archWeek = false, _archMonth = false, _archYear = false;
 
+    private bool _morningOpen = true, _untimedOpen = true, _eveningOpen = true;
+    private bool _morningDoneOpen = false, _untimedDoneOpen = false, _eveningDoneOpen = false;
+    private string _untimedSort = "priority"; // priority | oldest | newest
+
     private string PageTitle => _view switch {
         "today" => "اليوم",
         "upcoming" => "القادمة",
@@ -2062,6 +2160,7 @@
         _view = TaskState.CurrentView;
         _currentDate = TaskState.CurrentDate;
         _sidebarCollapsed = TaskState.SidebarCollapsed;
+        LoadGroupPrefs();
         UpdateCounts();
         StartClock();
     }
@@ -2174,6 +2273,88 @@
         return ActiveTasks().Where(t => (t.DueDate?.Date==d) || (t.ScheduledDate?.Date==d)).OrderBy(t=>t.IsDone).ThenBy(t=> PriorityOrder(t.Priority)).ThenBy(t=> t.ScheduledTime ?? TimeSpan.MaxValue).ThenBy(t=>t.CreatedAt).ToList();
     }
     private int PriorityOrder(string p) => p switch { "urgent"=>0, "high"=>1, "medium"=>2, _=>3 };
+
+    private static readonly TimeSpan Noon = new TimeSpan(12, 0, 0);
+
+    private void LoadGroupPrefs()
+    {
+        try {
+            _morningOpen = Microsoft.Maui.Storage.Preferences.Get("tasks.morningOpen", true);
+            _untimedOpen = Microsoft.Maui.Storage.Preferences.Get("tasks.untimedOpen", true);
+            _eveningOpen = Microsoft.Maui.Storage.Preferences.Get("tasks.eveningOpen", true);
+            _morningDoneOpen = Microsoft.Maui.Storage.Preferences.Get("tasks.morningDoneOpen", false);
+            _untimedDoneOpen = Microsoft.Maui.Storage.Preferences.Get("tasks.untimedDoneOpen", false);
+            _eveningDoneOpen = Microsoft.Maui.Storage.Preferences.Get("tasks.eveningDoneOpen", false);
+            var s = Microsoft.Maui.Storage.Preferences.Get("tasks.untimedSort", "priority");
+            if (s == "oldest" || s == "newest" || s == "priority") _untimedSort = s;
+        } catch { }
+    }
+    private void SaveGroupPrefs()
+    {
+        try {
+            Microsoft.Maui.Storage.Preferences.Set("tasks.morningOpen", _morningOpen);
+            Microsoft.Maui.Storage.Preferences.Set("tasks.untimedOpen", _untimedOpen);
+            Microsoft.Maui.Storage.Preferences.Set("tasks.eveningOpen", _eveningOpen);
+            Microsoft.Maui.Storage.Preferences.Set("tasks.morningDoneOpen", _morningDoneOpen);
+            Microsoft.Maui.Storage.Preferences.Set("tasks.untimedDoneOpen", _untimedDoneOpen);
+            Microsoft.Maui.Storage.Preferences.Set("tasks.eveningDoneOpen", _eveningDoneOpen);
+            Microsoft.Maui.Storage.Preferences.Set("tasks.untimedSort", _untimedSort);
+        } catch { }
+    }
+
+    private List<AppTask> DayTasks(DateTime date)
+    {
+        var d = date.Date;
+        return ActiveTasks().Where(t => (t.DueDate?.Date==d) || (t.ScheduledDate?.Date==d)).ToList();
+    }
+    private List<AppTask> MorningPending(DateTime date) => DayTasks(date)
+        .Where(t => !t.IsDone && t.ScheduledTime != null && t.ScheduledTime.Value < Noon)
+        .OrderBy(t => t.ScheduledTime).ThenBy(t => PriorityOrder(t.Priority)).ThenBy(t => t.CreatedAt).ToList();
+    private List<AppTask> EveningPending(DateTime date) => DayTasks(date)
+        .Where(t => !t.IsDone && t.ScheduledTime != null && t.ScheduledTime.Value >= Noon)
+        .OrderBy(t => t.ScheduledTime).ThenBy(t => PriorityOrder(t.Priority)).ThenBy(t => t.CreatedAt).ToList();
+    private List<AppTask> UntimedPending(DateTime date)
+    {
+        var q = DayTasks(date).Where(t => !t.IsDone && t.ScheduledTime == null);
+        return _untimedSort switch {
+            "oldest" => q.OrderBy(t => t.CreatedAt).ToList(),
+            "newest" => q.OrderByDescending(t => t.CreatedAt).ToList(),
+            _ => q.OrderBy(t => PriorityOrder(t.Priority)).ThenBy(t => t.CreatedAt).ToList(),
+        };
+    }
+    private List<AppTask> MorningDone(DateTime date) => DayTasks(date)
+        .Where(t => t.IsDone && t.ScheduledTime != null && t.ScheduledTime.Value < Noon)
+        .OrderBy(t => t.ScheduledTime).ToList();
+    private List<AppTask> EveningDone(DateTime date) => DayTasks(date)
+        .Where(t => t.IsDone && t.ScheduledTime != null && t.ScheduledTime.Value >= Noon)
+        .OrderBy(t => t.ScheduledTime).ToList();
+    private List<AppTask> UntimedDone(DateTime date) => DayTasks(date)
+        .Where(t => t.IsDone && t.ScheduledTime == null)
+        .OrderByDescending(t => t.CompletedAt ?? t.UpdatedAt).ToList();
+    private void ToggleGroup(string which)
+    {
+        switch (which) {
+            case "m": _morningOpen = !_morningOpen; break;
+            case "u": _untimedOpen = !_untimedOpen; break;
+            case "e": _eveningOpen = !_eveningOpen; break;
+            case "md": _morningDoneOpen = !_morningDoneOpen; break;
+            case "ud": _untimedDoneOpen = !_untimedDoneOpen; break;
+            case "ed": _eveningDoneOpen = !_eveningDoneOpen; break;
+        }
+        SaveGroupPrefs();
+    }
+    private void CycleUntimedSort()
+    {
+        _untimedSort = _untimedSort switch { "priority" => "oldest", "oldest" => "newest", _ => "priority" };
+        SaveGroupPrefs();
+    }
+    private string UntimedSortLabel() => _untimedSort switch { "oldest" => "الأقدم", "newest" => "الأحدث", _ => "أولوية" };
+    private bool IsCurrentPeriod(bool isMorning)
+    {
+        if (_currentDate.Date != DateTime.Today) return false;
+        var h = DateTime.Now.Hour;
+        return isMorning ? h < 12 : h >= 12;
+    }
 
     private async Task QuickAdd()
     {
@@ -2312,38 +2493,66 @@
     private string FormatShortDate(DateTime? d) => d==null?"": d.Value.ToString("d MMM", new System.Globalization.CultureInfo("ar-EG"));
     private string FormatDateTime(DateTime d) => d.ToString("d MMM hh:mm tt", new System.Globalization.CultureInfo("ar-EG"));
     private string PriorityLabel(string p) => p switch{ "low"=>"منخفضة","medium"=>"متوسطة","high"=>"عالية","urgent"=>"عاجلة", _=>"متوسطة"};
+    private bool IsPrayer(AppTask task) => (task.TemplateId ?? "").StartsWith("prayer:");
     private string RepeatLabel(string r) => r switch{ "daily"=>"يومي","weekly"=>"أسبوعي","monthly"=>"شهري", _=>""};
 
     private RenderFragment DayListView => @<text>
         @{
-            var tasks = TasksForDate(_currentDate);
-            var pending = tasks.Where(t=>!t.IsDone).ToList();
-            var completed = tasks.Where(t=>t.IsDone).ToList();
+            var morn = MorningPending(_currentDate);
+            var untimed = UntimedPending(_currentDate);
+            var even = EveningPending(_currentDate);
+            var mornDone = MorningDone(_currentDate);
+            var untimedDone = UntimedDone(_currentDate);
+            var evenDone = EveningDone(_currentDate);
+            var totalPending = morn.Count + untimed.Count + even.Count;
+            var totalDone = mornDone.Count + untimedDone.Count + evenDone.Count;
         }
-        @if(!tasks.Any()){
+        @if(totalPending==0 && totalDone==0){
             <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">لا توجد مهام لهذا اليوم</div><div class="empty-text">ابدأ بإضافة أول مهمة ليومك.</div></div></div>
         } else {
-            <section class="task-section">
-                <div class="section-header"><div class="section-title"><span class="section-dot"></span><span>المهام</span><span class="section-count">@pending.Count</span></div><div class="section-actions"><button class="section-action" @onclick="CompleteAllVisible">إنهاء الكل</button></div></div>
-                <div class="task-list">
-                    @if(pending.Any()){
-                        @foreach(var task in pending){ @TaskRow(task) }
-                    } else {
-                        <div class="empty" style="padding:35px"><div class="empty-text">لا توجد مهام هنا</div></div>
-                    }
-                </div>
-            </section>
-            @if(completed.Any()){
-                <section class="task-section">
-                    <div class="section-header"><div class="section-title"><span class="section-dot" style="background:var(--text)"></span><span>تم الإنجاز</span><span class="section-count">@completed.Count</span></div></div>
-                    <div class="task-list">@foreach(var task in completed){ @TaskRow(task) }</div>
-                </section>
+            @TimeGroup("m", "☀️ مهام الصباح", morn, _morningOpen, true, "", true)
+            @TimeGroup("u", "مهام بدون وقت", untimed, _untimedOpen, false, "", null, true)
+            @TimeGroup("e", "🌙 مهام المساء", even, _eveningOpen, true, "", false)
+            @if(totalDone>0){
+                <div style="margin-top:8px;"></div>
+                @TimeGroup("md", "تم الإنجاز — الصباح", mornDone, _morningDoneOpen, true, "", true, false, true)
+                @TimeGroup("ud", "تم الإنجاز — بدون وقت", untimedDone, _untimedDoneOpen, false, "", null, false, true)
+                @TimeGroup("ed", "تم الإنجاز — المساء", evenDone, _eveningDoneOpen, true, "", false, false, true)
             }
         }
     </text>;
 
+    private RenderFragment TimeGroup(string key, string title, List<AppTask> tasks, bool isOpen, bool isTimed, string rangeLabel, bool? isMorning, bool showSortBtn = false, bool isDoneGroup = false) => @<text>
+        <section class="task-section">
+            <div class="section-header group-header @(isOpen?"":"closed") @(isMorning!=null && IsCurrentPeriod(isMorning.Value) && !isDoneGroup ? "group-now" : "")" @onclick="()=>ToggleGroup(key)">
+                <div class="section-title">
+                    <span class="group-chevron">∨</span>
+                    <span class="section-dot" style="@(isDoneGroup ? "background:var(--text)" : "")"></span>
+                    <span>@title</span>
+                    <span class="section-count">@tasks.Count</span>
+                    @if(!string.IsNullOrWhiteSpace(rangeLabel)){<span class="group-range">@rangeLabel</span>}
+                </div>
+                <div class="section-actions">
+                    @if(showSortBtn){
+                        <button class="sort-btn" @onclick="()=>CycleUntimedSort()" @onclick:stopPropagation="true" title="تغيير الترتيب">ترتيب: @UntimedSortLabel() ⇅</button>
+                    }
+                </div>
+            </div>
+            @if(isOpen){
+                <div class="task-list">
+                    @if(tasks.Any()){
+                        @foreach(var task in tasks){ @TaskRow(task) }
+                    } else {
+                        <div class="group-empty">@(isDoneGroup ? "لا توجد مهام منجزة هنا" : isTimed ? "لا توجد مهام موقوتة هنا" : "لا توجد مهام بدون وقت — أضف من فوق ⬆")
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+    </text>;
+
     private RenderFragment TaskRow(AppTask task) => @<text>
-        <div class="task-row @(task.IsDone?"completed":"") @(_selectedTask?.Id==task.Id?"selected":"")" @onclick="()=>OpenDetails(task.Id)" @oncontextmenu="(e)=>ShowContext(e, task.Id)" @oncontextmenu:preventDefault="true">
+        <div class="task-row @(task.IsDone?"completed":"") @(IsPrayer(task)?"prayer":"") @(_selectedTask?.Id==task.Id?"selected":"")" @onclick="()=>OpenDetails(task.Id)" @oncontextmenu="(e)=>ShowContext(e, task.Id)" @oncontextmenu:preventDefault="true">
             <button class="task-check" @onclick="async (e)=>{ await ToggleTask(task); }" @onclick:stopPropagation="true" title="تغيير الحالة">
                 @if(task.IsDone){<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>}
             </button>

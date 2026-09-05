@@ -10,11 +10,23 @@ namespace Jamrah.Application.Services
     public class TaskStateService : ITaskStateService
     {
         private readonly ITaskRepository _repository;
+        private readonly PrayerTimesService _prayers;
 
-        public TaskStateService(ITaskRepository repository)
+        public TaskStateService(ITaskRepository repository, PrayerTimesService prayers)
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+            _prayers = prayers ?? throw new ArgumentNullException(nameof(prayers));
         }
+
+        // الصلوات المفروضة — تعريف ثابت (بدون صفوف templates في الداتابيز)
+        private static readonly (string Key, string Title, Func<PrayerTimeEntry, string> GetTime)[] PrayerDefs = new[]
+        {
+            ("prayer:fajr",    "صلاة الفجر",   (Func<PrayerTimeEntry, string>)(e => e.Fajr)),
+            ("prayer:dhuhr",   "صلاة الظهر",   (Func<PrayerTimeEntry, string>)(e => e.Dhuhr)),
+            ("prayer:asr",     "صلاة العصر",   (Func<PrayerTimeEntry, string>)(e => e.Asr)),
+            ("prayer:maghrib", "صلاة المغرب",  (Func<PrayerTimeEntry, string>)(e => e.Maghrib)),
+            ("prayer:isha",    "صلاة العشاء",  (Func<PrayerTimeEntry, string>)(e => e.Isha)),
+        };
 
         public List<TaskFolder> Folders { get; set; } = new();
         public List<KanbanColumn> Columns { get; set; } = new();
@@ -42,7 +54,12 @@ namespace Jamrah.Application.Services
 
         public async Task ArchiveTaskAsync(string id) { await _repository.ArchiveTaskAsync(id); await RefreshDataAsync(); }
         public async Task RestoreTaskAsync(string id) { await _repository.RestoreTaskAsync(id); await RefreshDataAsync(); }
-        public async Task ToggleTaskByIdAsync(string id) { await _repository.ToggleTaskAsync(id); await RefreshDataAsync(); }
+        public async Task ToggleTaskByIdAsync(string id)
+        {
+            var task = Tasks.FirstOrDefault(t => t.Id == id);
+            if (task == null) return;
+            await ToggleTaskAsync(task);
+        }
 
         public async Task InitAsync()
         {
@@ -57,6 +74,14 @@ namespace Jamrah.Application.Services
             Tasks = await _repository.GetTasksAsync();
 
             bool changed = false;
+
+            // --- أي مهمة منجزة → أرشيف (منجَز = مؤرشَف دائماً) ---
+            foreach (var t in Tasks.Where(x => x.IsDone && x.ArchivedAt == null).ToList())
+            {
+                t.ArchivedAt = t.CompletedAt ?? DateTime.UtcNow;
+                await _repository.SaveTaskAsync(t);
+                changed = true;
+            }
             var today = DateTime.Today;
             var todayDayIndex = (int)today.DayOfWeek;
 
@@ -216,6 +241,65 @@ namespace Jamrah.Application.Services
                 changed = true;
             }
 
+            // --- الصلوات المفروضة: مهام يومية من مواعيد الـ API — الشهر الحالي فقط ---
+            try
+            {
+                await _prayers.InitAsync();
+                var pnow = DateTime.Today;
+                var pend = new DateTime(pnow.Year, pnow.Month, DateTime.DaysInMonth(pnow.Year, pnow.Month));
+                await _prayers.EnsureMonthAsync(pnow.Year, pnow.Month);
+                for (var d = pnow; d <= pend; d = d.AddDays(1))
+                {
+                    var entry = await _prayers.GetDayAsync(d);
+                    if (entry == null) continue;
+                    foreach (var def in PrayerDefs)
+                    {
+                        bool has = Tasks.Any(x => x.TemplateId == def.Key
+                            && ((x.DueDate?.Date == d) || (x.ScheduledDate?.Date == d)));
+                        if (has) continue;
+                        if (!TimeSpan.TryParse(def.GetTime(entry), out var ts)) continue;
+                        var inst = new AppTask {
+                            Id = Guid.NewGuid().ToString(),
+                            Title = def.Title,
+                            Priority = "medium",
+                            IsDone = false,
+                            DueDate = d,
+                            ScheduledDate = d,
+                            ScheduledTime = ts,
+                            RecurrenceDays = "daily",
+                            IsRecurring = true,
+                            EisenhowerQuadrant = 2,
+                            Notes = "",
+                            ColumnId = "",
+                            FolderId = "default-general",
+                            TemplateId = def.Key,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            ArchivedAt = null,
+                            CompletedAt = null
+                        };
+                        await _repository.SaveTaskAsync(inst);
+                        changed = true;
+                    }
+                }
+                // تحديث المواعيد لو اتغيرت (تغيير الموقع/طريقة الحساب)
+                foreach (var t in Tasks.Where(x => x.TemplateId != null && x.TemplateId.StartsWith("prayer:")
+                    && x.DueDate.HasValue && x.DueDate.Value.Year == pnow.Year && x.DueDate.Value.Month == pnow.Month).ToList())
+                {
+                    var entry = await _prayers.GetDayAsync(t.DueDate!.Value.Date);
+                    if (entry == null) continue;
+                    var def = PrayerDefs.FirstOrDefault(p => p.Key == t.TemplateId);
+                    if (def.Key == null) continue;
+                    if (TimeSpan.TryParse(def.GetTime(entry), out var ts) && t.ScheduledTime != ts)
+                    {
+                        t.ScheduledTime = ts;
+                        await _repository.SaveTaskAsync(t);
+                        changed = true;
+                    }
+                }
+            }
+            catch { }
+
             if (changed)
             {
                 Tasks = await _repository.GetTasksAsync();
@@ -276,11 +360,16 @@ namespace Jamrah.Application.Services
 
         public async Task DeleteColumnAsync(string id)
         {
-            // Optional: delete or move tasks in this column
+            // حذف عمود → مهامه تروح الأرشيف (بدل الحذف النهائي)
             var tasksInCol = Tasks.Where(t => t.ColumnId == id).ToList();
             foreach (var t in tasksInCol)
             {
-                await _repository.DeleteTaskAsync(t.Id);
+                if (t.ArchivedAt == null)
+                {
+                    t.ArchivedAt = DateTime.UtcNow;
+                    t.UpdatedAt = DateTime.Now;
+                    await _repository.SaveTaskAsync(t);
+                }
             }
 
             await _repository.DeleteColumnAsync(id);
@@ -298,7 +387,18 @@ namespace Jamrah.Application.Services
         public async Task ToggleTaskAsync(AppTask task)
         {
             task.IsDone = !task.IsDone;
-            task.CompletedAt = task.IsDone ? DateTime.UtcNow : null;
+            if (task.IsDone)
+            {
+                // إنجاز → أرشيف مباشرة
+                task.CompletedAt = DateTime.UtcNow;
+                task.ArchivedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                // إلغاء الإنجاز → ترجع نشطة
+                task.CompletedAt = null;
+                task.ArchivedAt = null;
+            }
             task.UpdatedAt = DateTime.Now;
             await _repository.SaveTaskAsync(task);
             await RefreshDataAsync();
@@ -306,7 +406,19 @@ namespace Jamrah.Application.Services
 
         public async Task DeleteTaskAsync(string id)
         {
-            await _repository.DeleteTaskAsync(id);
+            var task = Tasks.FirstOrDefault(t => t.Id == id);
+            if (task != null && task.ArchivedAt == null)
+            {
+                // حذف مهمة نشطة → أرشيف (سلة) بدل الحذف النهائي
+                task.ArchivedAt = DateTime.UtcNow;
+                task.UpdatedAt = DateTime.Now;
+                await _repository.SaveTaskAsync(task);
+            }
+            else
+            {
+                // حذف من داخل الأرشيف → حذف نهائي
+                await _repository.DeleteTaskAsync(id);
+            }
             await RefreshDataAsync();
         }
 

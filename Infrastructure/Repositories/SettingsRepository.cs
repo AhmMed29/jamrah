@@ -33,6 +33,7 @@ namespace Jamrah.Infrastructure.Repositories
                     Directory.CreateDirectory(dir);
                 _database = new SQLiteAsyncConnection(_dbPath);
                 await _database.CreateTableAsync<Setting>().ConfigureAwait(false);
+                await ApplyZoomDefaultsMigrationAsync().ConfigureAwait(false);
                 _isInitialized = true;
             }
             finally { _initLock.Release(); }
@@ -54,6 +55,13 @@ namespace Jamrah.Infrastructure.Repositories
             await _database!.InsertOrReplaceAsync(s).ConfigureAwait(false);
         }
 
+        public static double DefaultZoomForPage(string? pageKey) => pageKey switch
+        {
+            "tasks" => 1.5,
+            "pomodoro" => 1.7,
+            _ => 1.0,
+        };
+
         public async Task<double> GetZoomAsync(string pageKey)
         {
             var v = await GetAsync($"zoom_{pageKey}").ConfigureAwait(false);
@@ -64,7 +72,7 @@ namespace Jamrah.Infrastructure.Repositories
                 if (d > 5.0) d = 5.0;
                 return d;
             }
-            return 1.0;
+            return DefaultZoomForPage(pageKey);
         }
 
         public async Task SetZoomAsync(string pageKey, double zoom)
@@ -72,6 +80,17 @@ namespace Jamrah.Infrastructure.Repositories
             if (zoom < 0.25) zoom = 0.25;
             if (zoom > 5.0) zoom = 5.0;
             await SetAsync($"zoom_{pageKey}", zoom.ToString(System.Globalization.CultureInfo.InvariantCulture)).ConfigureAwait(false);
+        }
+
+        // One-time migration: force the new per-page natural zoom (tasks 1.5 / pomodoro 1.7)
+        // by dropping any previously saved values, then remember that we did it.
+        private async Task ApplyZoomDefaultsMigrationAsync()
+        {
+            var marker = await _database!.FindAsync<Setting>("zoom_defaults_v2").ConfigureAwait(false);
+            if (marker?.Value == "done") return;
+            await _database.ExecuteAsync("DELETE FROM Settings WHERE Key=?", "zoom_tasks").ConfigureAwait(false);
+            await _database.ExecuteAsync("DELETE FROM Settings WHERE Key=?", "zoom_pomodoro").ConfigureAwait(false);
+            await _database.InsertOrReplaceAsync(new Setting { Key = "zoom_defaults_v2", Value = "done", UpdatedAt = DateTime.UtcNow }).ConfigureAwait(false);
         }
     }
 }

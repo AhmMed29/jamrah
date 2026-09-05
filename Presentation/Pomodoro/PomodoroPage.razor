@@ -16,7 +16,7 @@
         </div>
             @foreach (var g in _toggles)
             {
-                <ToggleGroup @key="g.Id" Group="g" OnSessionClick="OpenSessionDetails" TimeLabelProvider="GetSessionTimeLabel" OnSessionDelete="QuickDeleteSession" />
+                <ToggleGroup @key="g.Id" Group="g" Level="0" OnSessionClick="OpenSessionDetails" TimeLabelProvider="GetSessionTimeLabel" OnSessionDelete="QuickDeleteSession" OnToggle="OnToggleGroupChanged" />
             }
     </div>
 
@@ -68,7 +68,7 @@
             <div class="info-row"><span>المدة</span><span>@DurationText</span></div>
         </div>
 
-        <button class="dur-btn" style="width:100%; margin-top:2px;" @onclick="() => _soundModalOpen = true">🔊 اعدادات الصوت</button>
+        <button class="dur-btn" style="width:100%; margin-top:2px;" @onclick="() => _soundModalOpen = true">اعدادات الصوت</button>
 
         @if (_soundModalOpen)
         {
@@ -266,7 +266,7 @@
 
 <style>
     *{ font-family:'Tajawal',sans-serif !important; }
-    :root { --bg:#FAFAF9; --card:#FFFFFF; --card2:#F5F5F4; --border:#E7E5E4; --border2:#D6D3D1; --text:#1C1917; --muted:#78716C; --accent:#FF6B35; }
+    :root { --bg:#FAFAF9; --card:#FFFFFF; --card2:#F5F5F4; --border:#E7E5E4; --border2:#D6D3D1; --text:#1C1917; --muted:#78716C; --gray-tag:#A8A29E; --accent:#FF6B35; --shadow-sm:0 1px 2px rgba(0,0,0,.04); --shadow-md:0 1px 3px rgba(0,0,0,.05),0 6px 16px rgba(0,0,0,.05); }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background:var(--bg); color:var(--text); height:100vh; overflow:hidden; font-size:13px; }
 
@@ -305,23 +305,121 @@
     .prayer-table{ width:100%; border-collapse:collapse; font-size:11px; } .prayer-table td,.prayer-table th{ border:1px solid var(--border); padding:6px; text-align:center; }
     .prayer-table th{ background:var(--card); font-weight:700; } .prayer-table .next-prayer td{ background:var(--text); color:#fff; } .prayer-table tr:hover td:not(.next-prayer td){ background:var(--card2); }
 
-    .right-panel{ flex:1; background:var(--card); border:1px solid var(--border); border-radius:16px; display:flex; flex-direction:column; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; min-height:0; }
+    .right-panel{ flex:1; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-md); display:flex; flex-direction:column; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; min-height:0; }
     .right-panel::-webkit-scrollbar{ display:none; width:0; height:0; } .right-panel::-webkit-scrollbar-thumb{ background:transparent; }
-    .view-modes, .view-tabs{ display:flex; border-bottom:1px solid var(--border); } .view-btn{ flex:1; padding:10px; border:none; background:transparent; border-left:1px solid var(--border); cursor:pointer; color:var(--muted); font-size:12px; }
-    .view-btn.active{ background:var(--text); color:#fff; } .view-btn:last-child{ border-left:none; } .view-btn:hover:not(.active){ background:var(--card2); }
 
+    /* ===== أزرار العرض ===== */
+    .view-modes{ display:flex; gap:4px; padding:10px 12px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--card); z-index:2; border-radius:16px 16px 0 0; }
+    .view-btn{ flex:1; padding:7px 0; border-radius:9px; border:none; background:transparent; color:var(--muted); font-size:12px; cursor:pointer; transition:.12s; }
+    .view-btn.active{ background:var(--text); color:#fff; box-shadow:var(--shadow-sm); } .view-btn:hover:not(.active){ background:var(--card2); }
+
+    /* ===== التوجل الهرمي — بالمللي من tasks-page.html ===== */
     .toggle-group{ border-bottom:none; }
-    .toggle-header{ padding:8px 10px; display:flex; justify-content:space-between; cursor:pointer; font-weight:700; font-size:12px; background:var(--card); border:1px solid var(--border); border-radius:10px; margin:6px 10px 0; }
-    .toggle-header:hover{ background:var(--card2); } .toggle-icon{ font-size:12px; margin-left:6px; }
-    .session-item{ padding:8px 10px; display:grid; gap:8px; align-items:center; border-top:1px solid var(--border); background:var(--card); font-size:12px; cursor:pointer; }
-    .session-item:hover{ background:var(--card2); }
-    .session-item--new{ display:grid; grid-template-columns:1fr 90px 110px; gap:8px; align-items:center; direction:rtl; border:1px solid var(--border); border-radius:10px; margin:0 10px; background:var(--card); }
-    .session-item--new:hover{ background:var(--card2); }
-    .session-time{ font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; text-align:left; direction:ltr; white-space:nowrap; justify-self:start; background:var(--bg); border:1px solid var(--border); padding:2px 6px; border-radius:20px; }
+    .toggle-header{
+        display:grid; grid-template-columns:minmax(125px,190px) 1fr auto;
+        align-items:center; gap:12px;
+        padding:8px 12px; margin:2px 10px 0;
+        background:transparent; border:none; border-radius:11px;
+        cursor:pointer; font-weight:600; font-size:12.5px; color:var(--text);
+        transition:background .12s ease; user-select:none;
+    }
+    .toggle-header:hover{ background:var(--card2); }
+    .level-0>.toggle-header{ font-weight:700; font-size:13px; padding:10px 12px; }
+    .toggle-label{ display:flex; align-items:center; gap:8px; overflow:hidden; white-space:nowrap; }
+    .toggle-icon{ width:16px; height:16px; display:grid; place-items:center; color:var(--muted); font-size:11px; transition:transform .2s cubic-bezier(.4,0,.2,1); flex-shrink:0; }
+    .toggle-group.open > .toggle-header .toggle-icon{ transform:rotate(90deg); }
+    .toggle-group.open > .toggle-header--simple .toggle-icon{ transform:rotate(90deg); }
+    .today-badge{ background:var(--text); color:#fff; font-size:9px; font-weight:600; padding:2px 8px; border-radius:99px; flex-shrink:0; }
+    /* توجل بسيط "عرض جميع الأيام" — يومي فقط */
+    .toggle-group--simple{ margin:8px 10px 0; }
+    .toggle-header--simple{
+        display:flex; justify-content:center; align-items:center;
+        background:var(--card); border:1px dashed var(--border); border-radius:11px;
+        padding:10px 12px; margin:0; font-weight:600; font-size:12.5px; color:var(--muted);
+    }
+    .toggle-header--simple:hover{ background:var(--card2); border-color:var(--border2); color:var(--text); }
+    .toggle-group--simple .toggle-label{ justify-content:center; }
+    .toggle-meta{
+        color:var(--muted); font-weight:500; font-size:10.5px; font-variant-numeric:tabular-nums;
+        white-space:nowrap; background:var(--card2); padding:4px 10px; border-radius:99px;
+        display:flex; align-items:center; gap:6px;
+    }
+    .toggle-meta .meta-total{ color:var(--text); font-weight:700; }
+    .nested{
+        margin:4px 22px 0 8px; padding-inline-start:10px;
+        border-inline-start:2px solid var(--card2);
+    }
+    .day-histogram{ display:flex; align-items:flex-end; height:14px; width:100%; gap:2px; }
+    .level-0 .day-histogram{ height:20px; } .level-1 .day-histogram{ height:16px; }
+    .hist-bar{ flex:1; height:100%; display:flex; align-items:flex-end; position:relative; min-width:3px; cursor:default; }
+    .hist-fill{
+        width:100%; min-height:18%; border-radius:3px 3px 1px 1px;
+        transform-origin:bottom; animation:barGrow .45s cubic-bezier(.4,0,.2,1); transition:filter .15s ease;
+    }
+    @@keyframes barGrow{ from{ transform:scaleY(0); } to{ transform:scaleY(1); } }
+    .hist-bar:hover .hist-fill{ filter:brightness(1.15) saturate(1.15); }
+    .hist-tip{
+        position:absolute; bottom:calc(100% + 8px); left:50%;
+        transform:translateX(-50%) translateY(4px) scale(.95);
+        background:var(--text); color:#fff; font-size:10.5px; font-weight:600;
+        padding:5px 10px; border-radius:9px; white-space:nowrap;
+        box-shadow:0 4px 14px rgba(0,0,0,.2); opacity:0; pointer-events:none;
+        transition:opacity .16s ease,transform .16s cubic-bezier(.4,0,.2,1);
+        z-index:10; font-variant-numeric:tabular-nums; display:flex; align-items:center;
+    }
+    .hist-tip i{ display:inline-block; width:8px; height:8px; border-radius:3px; margin-inline-end:6px; flex-shrink:0; }
+    .hist-tip::after{
+        content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+        border:5px solid transparent; border-top-color:var(--text);
+    }
+    .hist-bar:hover .hist-tip{ opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+    .hist-empty{ color:var(--muted); font-size:10px; align-self:center; }
+
+    /* ===== صف الجلسة — جدولي بالمللي ===== */
+    .sessions-body{ display:grid; grid-template-rows:0fr; transition:grid-template-rows .24s cubic-bezier(.4,0,.2,1); }
+    .toggle-group.open > .sessions-body{ grid-template-rows:1fr; }
+    .sessions-inner{ min-height:0; overflow:hidden; }
+    .toggle-group.open > .sessions-body > .sessions-inner{ overflow:visible; }
+    .sessions-list{ margin:6px 12px 2px; padding-top:4px; border-top:1px solid var(--border); }
+    .session-item{
+        display:grid; grid-template-columns:64px minmax(0,1fr) 54px 82px 118px 22px;
+        align-items:center; gap:10px; padding:7px 8px;
+        border-bottom:1px solid var(--card2); cursor:pointer; transition:background .12s ease;
+        font-size:12px; background:transparent;
+    }
+    .session-item:last-child{ border-bottom:none; } .session-item:hover{ background:var(--card2); }
+    .session-tag{
+        display:block; text-align:center; font-size:10px; font-weight:600; color:#fff;
+        padding:3px 4px; border-radius:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .session-name{ font-weight:500; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .session-progress{ height:5px; background:var(--card2); overflow:hidden; border-radius:99px; }
+    .session-progress-fill{ display:block; height:100%; border-radius:99px; }
+    .session-time{ color:var(--muted); font-size:10.5px; font-variant-numeric:tabular-nums; direction:ltr; white-space:nowrap; text-align:left; }
+    .session-time b{ color:var(--text); font-weight:600; }
+    .session-range{ font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--muted); font-size:10.5px; text-align:left; direction:ltr; }
+    .session-range b{ font-weight:600; color:var(--text); }
+    .session-del{
+        width:22px; height:22px; background:none; color:var(--muted); border-radius:7px; border:none; cursor:pointer;
+        display:inline-grid; place-items:center; transition:.15s; opacity:0;
+    }
+    .session-item:hover .session-del{ opacity:1; } .session-del:hover{ color:#DC2626; background:rgba(220,38,38,.1); }
+
+    /* احتفاظ بتوافق قديم */
     .session-title{ text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; direction:rtl; font-weight:500; }
-    .tag-placeholder{ justify-self:center; width:1px; }
-    .time-stamp{ color:var(--muted); font-size:11px; }
     .tag-badge{ padding:2px 7px; border-radius:20px; font-size:10px; border:1px solid var(--border); justify-self:center; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .tag-placeholder{ justify-self:center; width:1px; }
+
+    @@media (max-width:1200px){
+        .session-progress{ display:none; }
+        .session-item{ grid-template-columns:64px minmax(0,1fr) 82px 118px 22px; }
+    }
+    @@media (max-width:768px){
+        .toggle-header{ grid-template-columns:auto 1fr auto; }
+        .session-item{ grid-template-columns:58px minmax(0,1fr) 74px 20px; gap:7px; }
+        .session-range{ display:none; }
+        .nested{ margin:4px 10px 0 4px; }
+    }
 
     .modal-overlay{ position:fixed; inset:0; background:rgba(28,25,23,.22); backdrop-filter:blur(4px); z-index:99; display:none; justify-content:center; align-items:center; }
     .modal-group{ display:flex; gap:0; }
@@ -362,6 +460,7 @@
     private DateTime? _startedAt;
     private string _viewMode = "daily";
     private List<SessionGroup> _toggles = new();
+    private bool _togglesInitialized = false;
     private readonly List<Session> _sessions = new();
     private readonly List<Tag> _tags = new();
     private Session? _currentSession;
@@ -906,6 +1005,12 @@
         RebuildToggles();
     }
 
+    private void OnToggleGroupChanged(SessionGroup g)
+    {
+        g.Open = !g.Open;
+        InvokeAsync(StateHasChanged);
+    }
+
     private void RebuildToggles()
     {
         var openIds = new HashSet<string>();
@@ -916,6 +1021,7 @@
             .ThenByDescending(s => s.Time)
             .ToList();
         var now = DateTime.Now;
+        var todayKey = $"{now.Year}-{now.Month}-{now.Day}";
 
         switch (_viewMode)
         {
@@ -923,7 +1029,7 @@
                 _toggles = ordered.GroupBy(s => WeekNumber(ParseDate(s.Date)))
                     .OrderByDescending(g => g.Key)
                     .Select(g => GroupWithChildren($"W{g.Key}", $"الأسبوع {g.Key}", g.Count(),
-                        g.GroupBy(s => s.Date).Select(d => Group($"{g.Key}-{d.Key}", FullDateLabel(d.Key), d.ToList())).ToList()))
+                        g.GroupBy(s => s.Date).Select(d => Group($"{g.Key}-{d.Key}", FullDateLabel(d.Key), d.ToList(), d.Key == todayKey)).ToList()))
                     .ToList();
                 break;
             case "monthly":
@@ -937,14 +1043,38 @@
                         BuildMonthsOfYear(now.Year, now.Month, ordered)),
                 };
                 break;
-            default:
-                _toggles = ordered.GroupBy(s => s.Date)
-                    .Select(g => Group($"tg-{g.Key}", FullDateLabel(g.Key), g.ToList()))
-                    .ToList();
+            default: // يومي — النهارده فوق + توجل بسيط "عرض جميع الأيام" تحته
+                {
+                    var allDayGroups = ordered.GroupBy(s => s.Date)
+                        .Select(g => Group($"tg-{g.Key}", FullDateLabel(g.Key), g.ToList(), g.Key == todayKey))
+                        .ToList();
+                    var todayGroup = allDayGroups.FirstOrDefault(g => g.IsToday);
+                    if (todayGroup == null)
+                    {
+                        todayGroup = Group($"tg-{todayKey}", FullDateLabel(todayKey), new List<Session>(), true);
+                    }
+                    var otherGroups = allDayGroups.Where(g => g.Id != todayGroup.Id).ToList();
+                    _toggles = new List<SessionGroup> { todayGroup };
+                    if (otherGroups.Count > 0)
+                    {
+                        var wrapper = new SessionGroup
+                        {
+                            Id = "show-all-days",
+                            Label = "عرض جميع الأيام",
+                            Count = otherGroups.Sum(g => g.Count),
+                            Children = otherGroups,
+                            IsSimple = true
+                        };
+                        _toggles.Add(wrapper);
+                    }
+                }
                 break;
         }
         
         RestoreOpenState(_toggles, openIds);
+        // افتح أول مجموعة افتراضياً فقط عند أول تحميل (مثل HTML i===0)، بعدها يحترم إغلاق المستخدم
+        if (!_togglesInitialized && openIds.Count == 0 && _toggles.Count > 0) _toggles[0].Open = true;
+        _togglesInitialized = true;
     }
     
     private static void CollectOpenIds(List<SessionGroup> groups, HashSet<string> ids)
@@ -959,13 +1089,15 @@
     {
         foreach (var g in groups)
         {
-            if (ids.Contains(g.Id)) g.Open = true;
+            g.Open = ids.Contains(g.Id);
             if (g.Children != null) RestoreOpenState(g.Children, ids);
         }
     }
 
     private static List<SessionGroup> BuildMonthsOfYear(int year, int currentMonth, List<Session> ordered)
     {
+        var now = DateTime.Now;
+        var todayKey = $"{now.Year}-{now.Month}-{now.Day}";
         var byMonth = ordered
             .Where(s => s.Date.StartsWith($"{year}-"))
             .GroupBy(s => s.Date[..s.Date.LastIndexOf('-')])
@@ -975,21 +1107,22 @@
         {
             var key = $"{year}-{m}";
             var monthSessions = byMonth.TryGetValue(key, out var list) ? list : new List<Session>();
-            var dayLimit = m == currentMonth ? DateTime.Now.Day : DateTime.DaysInMonth(year, m);
+            var dayLimit = m == currentMonth ? now.Day : DateTime.DaysInMonth(year, m);
             var children = new List<SessionGroup>();
             for (var d = 1; d <= dayLimit; d++)
             {
                 var dateStr = $"{year}-{m}-{d}";
                 var daySessions = monthSessions.Where(s => s.Date == dateStr).ToList();
-                children.Add(Group($"d-{dateStr}", FullDateLabel(dateStr), daySessions));
+                var isToday = dateStr == todayKey;
+                children.Add(Group($"d-{dateStr}", FullDateLabel(dateStr), daySessions, isToday));
             }
             months.Add(GroupWithChildren($"m-{key}", MonthLabel(key), monthSessions.Count, children));
         }
         return months;
     }
 
-    private static SessionGroup Group(string id, string label, List<Session> sessions) =>
-        new() { Id = id, Label = label, Count = sessions.Count, Sessions = sessions };
+    private static SessionGroup Group(string id, string label, List<Session> sessions, bool isToday = false) =>
+        new() { Id = id, Label = label, Count = sessions.Count, Sessions = sessions, IsToday = isToday };
 
     private static SessionGroup GroupWithChildren(string id, string label, int count, List<SessionGroup> children) =>
         new() { Id = id, Label = label, Count = count, Children = children };

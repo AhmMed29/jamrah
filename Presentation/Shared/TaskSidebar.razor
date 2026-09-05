@@ -1,0 +1,372 @@
+@namespace Jamrah.Presentation.Shared
+@using Jamrah.Application.Services
+@inject TaskStateService TaskState
+@implements IDisposable
+
+<aside class="sidebar @(_sidebarCollapsed ? "collapsed" : "")" id="globalSidebar">
+    <div class="sidebar-top">
+        <button class="sidebar-toggle" @onclick="ToggleSidebar" title="طي / توسيع" aria-label="طي السايدبار">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M15 18L9 12L15 6"></path>
+            </svg>
+        </button>
+    </div>
+
+    <div class="nav-squares">
+        <button class="nav-square @(_view=="today" ? "active" : "")" @onclick='() => SetView("today")' title="اليوم">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                <path d="M16 2v4M8 2v4M3 10h18"></path>
+                <circle cx="12" cy="15" r="2.1"></circle>
+            </svg>
+            @if(_todayCount>0){<span class="nav-square-count">@_todayCount</span>}
+        </button>
+        <button class="nav-square @(_view=="completed" ? "active" : "")" @onclick='() => SetView("completed")' title="تم الإنجاز">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"></circle>
+                <path d="M8.5 12l2.3 2.3L15.5 9.5"></path>
+            </svg>
+            @if(_completedCount>0){<span class="nav-square-count">@_completedCount</span>}
+        </button>
+        <button class="nav-square @(_view=="archived" ? "active" : "")" @onclick='() => SetView("archived")' title="الأرشيف">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="5" rx="1.2"></rect>
+                <path d="M5 9h14v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9z"></path>
+                <path d="M9.5 13h5"></path>
+            </svg>
+            @if(_archivedCount>0){<span class="nav-square-count">@_archivedCount</span>}
+        </button>
+        <button class="nav-square @(_view=="upcoming" ? "active" : "")" @onclick='() => SetView("upcoming")' title="القادمة">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                <path d="M16 2v4M8 2v4M3 10h18"></path>
+                <path d="M12 15l3 -3 3 3"></path>
+                <path d="M12 12v6"></path>
+            </svg>
+            @if(_upcomingCount>0){<span class="nav-square-count">@_upcomingCount</span>}
+        </button>
+    </div>
+
+    <div class="today-card">
+        <div class="today-card-label">اليوم</div>
+        <div class="today-card-date">@_currentDateStr</div>
+        <div class="today-card-time">@_currentTimeStr</div>
+        <div class="today-card-sub">@_currentSubStr</div>
+    </div>
+
+    <div class="nav-section">
+        <div class="nav-label">VIEWS</div>
+        <button class="nav-item @(_view=="board" ? "active" : "")" @onclick='() => SetView("board")'>
+            <span class="nav-icon">▦</span><span>Board</span>
+        </button>
+        <button class="nav-item @(_view=="matrix" ? "active" : "")" @onclick='() => SetView("matrix")'>
+            <span class="nav-icon">⊞</span><span>Eisenhower</span>
+        </button>
+    </div>
+</aside>
+
+<style>
+    :root {
+        --sidebar-width: 255px;
+        --details-width: 350px;
+    }
+    .sidebar {
+        width: var(--sidebar-width);
+        flex-shrink: 0;
+        background: var(--surface, #FFFFFF);
+        border-left: 1px solid var(--border, #E7E5E4);
+        padding: 14px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        position: fixed;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 50;
+        overflow-y: auto;
+        overflow-x: hidden;
+        transition: width .22s ease, padding .22s ease;
+    }
+    .sidebar.collapsed {
+        width: 72px;
+        padding: 14px 8px;
+    }
+    .sidebar-top {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        margin-bottom: 12px;
+    }
+    .sidebar.collapsed .sidebar-top {
+        justify-content: center;
+    }
+    .sidebar-toggle {
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        border-radius: 8px;
+        border: 1px solid var(--border, #E7E5E4);
+        background: var(--surface, #FFFFFF);
+        color: var(--text-soft, #78716C);
+        transition: .15s ease;
+    }
+    .sidebar-toggle:hover {
+        background: var(--surface-soft, #F5F5F4);
+        color: var(--text, #1C1917);
+        border-color: var(--border2, #D6D3D1);
+    }
+    .sidebar-toggle svg {
+        width: 16px;
+        height: 16px;
+        display: block;
+        transition: transform .22s ease;
+    }
+    .sidebar.collapsed .sidebar-toggle svg {
+        transform: rotate(180deg);
+    }
+    .nav-squares {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        margin-bottom: 14px;
+    }
+    .sidebar.collapsed .nav-squares {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        justify-items: center;
+    }
+    .nav-square {
+        aspect-ratio: 1 / 1;
+        width: 100%;
+        position: relative;
+        display: grid;
+        place-items: center;
+        border-radius: 10px;
+        border: 1px solid var(--border, #E7E5E4);
+        background: var(--surface, #FFFFFF);
+        color: var(--text-soft, #78716C);
+        transition: .15s ease;
+    }
+    .nav-square:hover {
+        background: var(--surface-soft, #F5F5F4);
+        color: var(--text, #1C1917);
+        border-color: var(--border2, #D6D3D1);
+    }
+    .nav-square.active {
+        background: var(--text, #1C1917);
+        color: #fff;
+        border-color: var(--text, #1C1917);
+    }
+    .nav-square svg {
+        width: 18px;
+        height: 18px;
+        display: block;
+    }
+    .nav-square-count {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 4px;
+        border-radius: 6px;
+        background: var(--text, #1C1917);
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        display: grid;
+        place-items: center;
+        line-height: 1;
+        border: 1px solid var(--surface, #FFFFFF);
+    }
+    .nav-square.active .nav-square-count {
+        background: #fff;
+        color: var(--text, #1C1917);
+        border-color: var(--text, #1C1917);
+    }
+    .sidebar.collapsed .nav-square {
+        width: 44px;
+        height: 44px;
+    }
+    .today-card {
+        background: var(--surface-soft, #F5F5F4);
+        border: 1px solid var(--border, #E7E5E4);
+        border-radius: 12px;
+        padding: 14px 12px;
+        margin-bottom: 16px;
+    }
+    .sidebar.collapsed .today-card {
+        display: none;
+    }
+    .today-card-label {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--muted, #78716C);
+        letter-spacing: .04em;
+        margin-bottom: 6px;
+    }
+    .today-card-date {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text, #1C1917);
+        line-height: 1.4;
+        margin-bottom: 6px;
+    }
+    .today-card-time {
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--text, #1C1917);
+        line-height: 1;
+        letter-spacing: .02em;
+        direction: ltr;
+        text-align: right;
+    }
+    .today-card-sub {
+        margin-top: 6px;
+        font-size: 11px;
+        color: var(--muted, #78716C);
+    }
+    .nav-section {
+        margin-bottom: 20px;
+    }
+    .nav-label {
+        font-size: 11px;
+        color: var(--muted, #78716C);
+        padding: 0 12px;
+        margin-bottom: 7px;
+        font-weight: 700;
+    }
+    .sidebar.collapsed .nav-label {
+        display: none;
+    }
+    .nav-item {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--text-soft, #78716C);
+        text-align: right;
+        transition: .15s ease;
+    }
+    .nav-item:hover {
+        background: var(--surface-soft, #F5F5F4);
+        color: var(--text, #1C1917);
+    }
+    .nav-item.active {
+        background: var(--text, #1C1917);
+        color: #fff;
+        font-weight: 700;
+    }
+    .nav-icon {
+        width: 19px;
+        text-align: center;
+        font-size: 15px;
+    }
+    .sidebar.collapsed .nav-item {
+        justify-content: center;
+        padding: 11px;
+    }
+    .sidebar.collapsed .nav-item span:not(.nav-icon) {
+        display: none;
+    }
+    @@media (max-width: 1000px) {
+        :root { --sidebar-width: 220px; }
+    }
+    @@media (max-width: 760px) {
+        .sidebar {
+            width: 62px;
+            padding: 15px 8px;
+        }
+        .sidebar .nav-squares {
+            grid-template-columns: 1fr;
+        }
+        .sidebar .today-card {
+            display: none;
+        }
+        .nav-label,
+        .nav-item span:not(.nav-icon) {
+            display: none;
+        }
+        .sidebar-top {
+            justify-content: center;
+        }
+        .nav-item {
+            justify-content: center;
+            padding: 11px;
+        }
+    }
+</style>
+
+@code {
+    private string _view = "today";
+    private bool _sidebarCollapsed;
+    private int _todayCount, _upcomingCount, _completedCount, _archivedCount;
+    private string _currentDateStr = "", _currentTimeStr = "", _currentSubStr = "";
+    private System.Threading.Timer? _clockTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await TaskState.InitAsync();
+        _view = TaskState.CurrentView;
+        _sidebarCollapsed = TaskState.SidebarCollapsed;
+        UpdateCounts();
+        StartClock();
+        TaskState.OnStateChanged += OnStateChanged;
+    }
+
+    private void OnStateChanged()
+    {
+        _view = TaskState.CurrentView;
+        _sidebarCollapsed = TaskState.SidebarCollapsed;
+        UpdateCounts();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void StartClock()
+    {
+        UpdateClock();
+        _clockTimer = new System.Threading.Timer(_ => {
+            InvokeAsync(() => { UpdateClock(); StateHasChanged(); });
+        }, null, 0, 1000);
+    }
+
+    private void UpdateClock()
+    {
+        var now = DateTime.Now;
+        var ar = new System.Globalization.CultureInfo("ar-EG");
+        _currentDateStr = now.ToString("dddd، d MMMM yyyy", ar);
+        _currentTimeStr = now.ToString("hh:mm:ss tt", ar);
+        _currentSubStr = now.ToString("ddd", ar) + " • " + now.ToString("yyyy-MM-dd");
+    }
+
+    private void UpdateCounts()
+    {
+        var tasks = TaskState.Tasks;
+        var today = DateTime.Today;
+        var active = tasks.Where(t => t.ArchivedAt == null).ToList();
+        _todayCount = active.Count(t => t.DueDate?.Date == today && !t.IsDone);
+        _upcomingCount = active.Count(t => {
+            var d = t.DueDate ?? t.ScheduledDate;
+            return d.HasValue && d.Value.Date > today && !t.IsDone
+                   && (t.RecurrenceDays=="none" || string.IsNullOrWhiteSpace(t.RecurrenceDays))
+                   && !t.IsRecurring;
+        });
+        _completedCount = active.Count(t => t.IsDone);
+        _archivedCount = tasks.Count(t => t.ArchivedAt!=null);
+    }
+
+    private void ToggleSidebar() => TaskState.ToggleSidebar();
+    private void SetView(string v) => TaskState.SetView(v);
+
+    public void Dispose()
+    {
+        TaskState.OnStateChanged -= OnStateChanged;
+        _clockTimer?.Dispose();
+    }
+}

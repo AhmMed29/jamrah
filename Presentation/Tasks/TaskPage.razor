@@ -1,72 +1,13 @@
 @namespace Jamrah.Presentation.Tasks
 @using Jamrah.Core.Entities
 @using Jamrah.Application.Services
+@using Jamrah.Presentation.Shared
+@layout MainLayout
 @inject TaskStateService TaskState
 @inject NavigationManager Nav
 @implements IDisposable
 
-<div class="app" dir="rtl">
-    <aside class="sidebar @( _sidebarCollapsed ? "collapsed" : "" )" id="sidebar">
-        <div class="sidebar-top">
-            <button class="sidebar-toggle" @onclick="ToggleSidebar" title="طي / توسيع" aria-label="طي السايدبار">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M15 18L9 12L15 6"></path>
-                </svg>
-            </button>
-        </div>
-
-        <div class="nav-squares">
-            <button class="nav-square @(_view=="today" ? "active" : "")" @onclick='() => SetView("today")' title="اليوم">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-                    <path d="M16 2v4M8 2v4M3 10h18"></path>
-                    <circle cx="12" cy="15" r="2.1"></circle>
-                </svg>
-                @if(_todayCount>0){<span class="nav-square-count">@_todayCount</span>}
-            </button>
-            <button class="nav-square @(_view=="completed" ? "active" : "")" @onclick='() => SetView("completed")' title="تم الإنجاز">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9"></circle>
-                    <path d="M8.5 12l2.3 2.3L15.5 9.5"></path>
-                </svg>
-                @if(_completedCount>0){<span class="nav-square-count">@_completedCount</span>}
-            </button>
-            <button class="nav-square @(_view=="archived" ? "active" : "")" @onclick='() => SetView("archived")' title="الأرشيف">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="3" y="4" width="18" height="5" rx="1.2"></rect>
-                    <path d="M5 9h14v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9z"></path>
-                    <path d="M9.5 13h5"></path>
-                </svg>
-                @if(_archivedCount>0){<span class="nav-square-count">@_archivedCount</span>}
-            </button>
-            <button class="nav-square @(_view=="upcoming" ? "active" : "")" @onclick='() => SetView("upcoming")' title="القادمة">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-                    <path d="M16 2v4M8 2v4M3 10h18"></path>
-                    <path d="M12 15l3 -3 3 3"></path>
-                    <path d="M12 12v6"></path>
-                </svg>
-                @if(_upcomingCount>0){<span class="nav-square-count">@_upcomingCount</span>}
-            </button>
-        </div>
-
-        <div class="today-card">
-            <div class="today-card-label">اليوم</div>
-            <div class="today-card-date">@_currentDateStr</div>
-            <div class="today-card-time">@_currentTimeStr</div>
-            <div class="today-card-sub">@_currentSubStr</div>
-        </div>
-
-        <div class="nav-section">
-            <div class="nav-label">VIEWS</div>
-            <button class="nav-item @(_view=="board" ? "active" : "")" @onclick='() => SetView("board")'>
-                <span class="nav-icon">▦</span><span>Board</span>
-            </button>
-            <button class="nav-item @(_view=="matrix" ? "active" : "")" @onclick='() => SetView("matrix")'>
-                <span class="nav-icon">⊞</span><span>Eisenhower</span>
-            </button>
-        </div>
-    </aside>
+<div class="app app--no-sidebar" dir="rtl">
 
     <main class="main @(_sidebarCollapsed ? "sidebar-collapsed" : "") @(_selectedTask!=null ? "details-open" : "")" id="main">
         <header class="topbar">
@@ -685,6 +626,17 @@
 
         .main.details-open {
             margin-left: var(--details-width);
+        }
+
+        /* عند استخدام السايدبار العام الجديد — main داخل TaskPage لا يحتاج margin */
+        .app--no-sidebar .main,
+        .app--no-sidebar .main.sidebar-collapsed {
+            margin-right: 0;
+            width: 100%;
+        }
+        .app--no-sidebar.main,
+        .app--no-sidebar .main {
+            transition: none;
         }
 
         /* =========================================================

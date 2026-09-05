@@ -1,0 +1,63 @@
+@namespace Jamrah.Presentation.Shared
+@inherits LayoutComponentBase
+@inject Jamrah.Application.Services.TaskStateService TaskState
+@implements IDisposable
+
+<div class="global-app" dir="rtl">
+    <TaskSidebar />
+    <div class="global-main @(_collapsed ? "sidebar-collapsed" : "")">
+        @Body
+    </div>
+</div>
+
+<style>
+    .global-app {
+        display: flex;
+        min-height: 100vh;
+        background: var(--bg, #FAFAF9);
+    }
+    .global-main {
+        flex: 1;
+        margin-right: var(--sidebar-width, 255px);
+        width: calc(100% - var(--sidebar-width, 255px));
+        min-width: 0;
+        min-height: 100vh;
+        transition: margin-right .22s ease, width .22s ease;
+    }
+    .global-main.sidebar-collapsed {
+        margin-right: 72px;
+        width: calc(100% - 72px);
+    }
+    @@media (max-width: 1000px) {
+        .global-main {
+            margin-right: 220px;
+            width: calc(100% - 220px);
+        }
+    }
+    @@media (max-width: 760px) {
+        .global-main,
+        .global-main.sidebar-collapsed {
+            margin-right: 62px;
+            width: calc(100% - 62px);
+        }
+    }
+</style>
+
+@code {
+    private bool _collapsed;
+    protected override async Task OnInitializedAsync()
+    {
+        await TaskState.InitAsync();
+        _collapsed = TaskState.SidebarCollapsed;
+        TaskState.OnStateChanged += OnStateChanged;
+    }
+    private void OnStateChanged()
+    {
+        _collapsed = TaskState.SidebarCollapsed;
+        InvokeAsync(StateHasChanged);
+    }
+    public void Dispose()
+    {
+        TaskState.OnStateChanged -= OnStateChanged;
+    }
+}

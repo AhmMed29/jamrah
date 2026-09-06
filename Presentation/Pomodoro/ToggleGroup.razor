@@ -1,81 +1,192 @@
-@namespace Jamrah.Presentation.Pomodoro
+﻿@namespace Jamrah.Presentation.Pomodoro
+@using System.Linq
+@{
+    var allSessions = Collect(Group);
+    var totalSec = allSessions.Sum(s => s.ElapsedSeconds);
+    var aggs = AggByTag(allSessions);
+    var lvl = Math.Min(Level, 2);
+}
 
-<div class="toggle-group">
-    <div class="toggle-header" @onclick="() => { Group.Open = !Group.Open; }">
-        <div><span class="toggle-icon">@(Group.Open ? "-" : "+")</span><span>@Group.Label</span></div>
-        <span>@Group.Count جلسة</span>
-    </div>
-    @if (Group.Open)
+<div class="toggle-group level-@lvl @(Group.IsSimple ? "toggle-group--simple" : "") @(Group.Open ? "open" : "")">
+    @if (Group.IsSimple)
     {
-        if (Group.Children != null)
+        <div class="toggle-header toggle-header--simple" @onclick="Toggle" @onclick:stopPropagation="true">
+            <div class="toggle-label">
+                <span class="toggle-icon">›</span>
+                <span>@Group.Label</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="toggle-header" @onclick="Toggle" @onclick:stopPropagation="true">
+            <div class="toggle-label">
+                <span class="toggle-icon">›</span>
+                <span>@Group.Label</span>
+                @if (Group.IsToday)
+                {
+                    <span class="today-badge">اليوم</span>
+                }
+            </div>
+            <div class="day-histogram">
+                @if (aggs.Count == 0)
+                {
+                    <span class="hist-empty">—</span>
+                }
+                else
+                {
+                    var max = aggs.Max(a => a.Seconds);
+                    @for (int i = 0; i < aggs.Count; i++)
+                    {
+                        var a = aggs[i];
+                        var hPct = Math.Max(18, (int)Math.Round((double)a.Seconds / max * 100));
+                        var delay = i * 40;
+                        <div class="hist-bar" style="animation-delay:@(delay)ms">
+                            <div class="hist-fill" style="height:@(hPct)%;background:linear-gradient(180deg,@(a.Color)DD,@(a.Color))"></div>
+                            <span class="hist-tip"><i style="background:@a.Color"></i>@a.Name • @FmtDur(a.Seconds)</span>
+                        </div>
+                    }
+                }
+            </div>
+            <span class="toggle-meta"><span class="meta-count">@CountLabel(allSessions.Count)</span><span>•</span><span class="meta-total">@FmtDur(totalSec)</span></span>
+        </div>
+    }
+    <div class="sessions-body"><div class="sessions-inner">
+        @if (Group.Children != null)
         {
-            @foreach (var child in Group.Children)
-            {
-                <ToggleGroup @key="child.Id" Group="child" OnSessionClick="OnSessionClick" TimeLabelProvider="TimeLabelProvider" OnSessionDelete="OnSessionDelete" />
-            }
+            <div class="nested">
+                @foreach (var child in Group.Children)
+                {
+                    <ToggleGroup @key="child.Id" Group="child" Level="@(Level+1)" OnSessionClick="OnSessionClick" TimeLabelProvider="TimeLabelProvider" OnSessionDelete="OnSessionDelete" OnToggle="OnToggle" />
+                }
+            </div>
         }
         else if (Group.Sessions != null)
         {
-            @foreach (var s in Group.Sessions)
-            {
-                var capturedS = s;
-                <div class="session-item session-item--new session-deletable" @onclick="() => OnSessionClick.InvokeAsync(capturedS)">
-                    <span class="session-title">@capturedS.Title</span>
-                    @if (capturedS.Tag != null)
-                    {
-                        <span class="tag-badge" style="background:@capturedS.Tag.Color; color:@TagTextColor(capturedS.Tag);">@capturedS.Tag.Name</span>
-                    }
-                    else
-                    {
-                        <span class="tag-placeholder"></span>
-                    }
-                    <span class="session-time">@(TimeLabelProvider?.Invoke(capturedS) ?? $"{TimeSpan.FromSeconds(capturedS.ElapsedSeconds):mm\\:ss}/{TimeSpan.FromMinutes(capturedS.PlannedMinutes):mm\\:ss}")</span>
-                    <button class="session-delete-btn"
-                            title="حذف الجلسة"
-                            @onclick:stopPropagation="true"
-                            @onclick="() => OnSessionDelete.InvokeAsync(capturedS.Id)">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6l-1 14H6L5 6"></path>
-                            <path d="M10 11v6"></path>
-                            <path d="M14 11v6"></path>
-                            <path d="M9 6V4h6v2"></path>
-                        </svg>
-                    </button>
-                </div>
-            }
+            <div class="sessions-list">
+                @foreach (var s in Group.Sessions)
+                {
+                    var capturedS = s;
+                    var tagColor = capturedS.Tag?.Color ?? capturedS.TagColor ?? "#A8A29E";
+                    if (string.IsNullOrWhiteSpace(tagColor)) tagColor = "#A8A29E";
+                    var tagName = capturedS.Tag?.Name ?? (!string.IsNullOrWhiteSpace(capturedS.TagName) ? capturedS.TagName : "بدون تاج");
+                    var isNoTag = capturedS.Tag == null && string.IsNullOrWhiteSpace(capturedS.TagName);
+                    if (isNoTag) tagColor = "#A8A29E";
+                    var elapsedSec = capturedS.ElapsedSeconds;
+                    var plannedSec = capturedS.PlannedMinutes * 60;
+                    var pct = plannedSec > 0 ? (int)Math.Round((double)elapsedSec / plannedSec * 100) : 0;
+                    if (pct > 100) pct = 100;
+                    if (pct < 0) pct = 0;
+                    // range clock
+                    var startMin = ParseTimeToMinutes(capturedS.Time);
+                    var elapsedMin = (int)Math.Round(elapsedSec / 60.0);
+                    var endMin = startMin + elapsedMin;
+                    var startClock = FmtClock(startMin);
+                    var endClock = FmtClock(endMin);
+                    var timeLabel = TimeLabelProvider?.Invoke(capturedS) ?? $"{TimeSpan.FromSeconds(elapsedSec):mm\\:ss}/{TimeSpan.FromMinutes(capturedS.PlannedMinutes):mm\\:ss}";
+                    var timeParts = timeLabel.Split('/');
+                    var timeBold = timeParts.Length > 0 ? timeParts[0] : timeLabel;
+                    var timeRest = timeParts.Length > 1 ? "/" + timeParts[1] : "";
+                    <div class="session-item" @onclick="() => OnSessionClick.InvokeAsync(capturedS)" title="@capturedS.Title">
+                        <span class="session-tag" style="background:@tagColor">@tagName</span>
+                        <span class="session-name">@capturedS.Title</span>
+                        <span class="session-progress"><span class="session-progress-fill" style="width:@(pct)%;background:@tagColor"></span></span>
+                        <span class="session-time"><b>@timeBold</b>@timeRest</span>
+                        <span class="session-range">@startClock – <b>@endClock</b></span>
+                        <button class="session-del" title="حذف" @onclick:stopPropagation="true" @onclick="() => OnSessionDelete.InvokeAsync(capturedS.Id)">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                        </button>
+                    </div>
+                }
+            </div>
         }
-    }
+    </div></div>
 </div>
-
-<style>
-    .session-deletable { position: relative; }
-    .session-delete-btn {
-        opacity: 0;
-        border: none;
-        background: none;
-        cursor: pointer;
-        color: var(--muted);
-        width: 26px;
-        height: 26px;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: opacity .15s, background .15s, color .15s;
-        flex-shrink: 0;
-    }
-    .session-deletable:hover .session-delete-btn { opacity: 1; }
-    .session-delete-btn:hover { background: rgba(220,38,38,.1); color: #DC2626; }
-    .session-item--new { grid-template-columns: 1fr 90px 110px 28px; }
-</style>
 
 @code {
     [Parameter] public SessionGroup Group { get; set; } = null!;
+    [Parameter] public int Level { get; set; }
     [Parameter] public EventCallback<Session> OnSessionClick { get; set; }
     [Parameter] public EventCallback<string> OnSessionDelete { get; set; }
     [Parameter] public Func<Session, string>? TimeLabelProvider { get; set; }
+    [Parameter] public EventCallback<SessionGroup> OnToggle { get; set; }
 
-    private static string TagTextColor(Tag t) => t.Color == "#000000" ? "white" : "black";
+    private async Task Toggle()
+    {
+        if (OnToggle.HasDelegate)
+            await OnToggle.InvokeAsync(Group);
+        else
+        {
+            Group.Open = !Group.Open;
+            StateHasChanged();
+        }
+    }
+
+    private static List<Session> Collect(SessionGroup g)
+    {
+        if (g.Sessions != null) return g.Sessions;
+        if (g.Children == null) return new List<Session>();
+        var list = new List<Session>();
+        foreach (var c in g.Children) list.AddRange(Collect(c));
+        return list;
+    }
+
+    private sealed record Agg(string Name, string Color, int Seconds);
+
+    private static List<Agg> AggByTag(List<Session> sessions)
+    {
+        var map = new Dictionary<string, Agg>();
+        foreach (var s in sessions)
+        {
+            var name = !string.IsNullOrWhiteSpace(s.Tag?.Name) ? s.Tag!.Name : (!string.IsNullOrWhiteSpace(s.TagName) ? s.TagName : "بدون تاج");
+            var color = !string.IsNullOrWhiteSpace(s.Tag?.Color) ? s.Tag!.Color : (!string.IsNullOrWhiteSpace(s.TagColor) ? s.TagColor : "#A8A29E");
+            if (string.IsNullOrWhiteSpace(color)) color = "#A8A29E";
+            // normalize empty tag
+            if (s.Tag == null && string.IsNullOrWhiteSpace(s.TagName)) { name = "بدون تاج"; color = "#A8A29E"; }
+            var key = name + "|" + color;
+            if (map.TryGetValue(key, out var existing))
+                map[key] = existing with { Seconds = existing.Seconds + s.ElapsedSeconds };
+            else
+                map[key] = new Agg(name, color, s.ElapsedSeconds);
+        }
+        return map.Values.OrderByDescending(a => a.Seconds).ToList();
+    }
+
+    private static string FmtDur(int secs)
+    {
+        var m = (int)Math.Round(secs / 60.0);
+        if (m >= 60) { var h = m / 60; var rm = m % 60; return rm != 0 ? $"{h}س {rm}د" : $"{h}س"; }
+        return $"{m}د";
+    }
+
+    private static string CountLabel(int n)
+    {
+        if (n == 0) return "لا جلسات";
+        if (n == 1) return "جلسة واحدة";
+        if (n == 2) return "جلستان";
+        if (n <= 10) return $"{n} جلسات";
+        return $"{n} جلسة";
+    }
+
+    private static string FmtClock(int totalMinutes)
+    {
+        // normalize to 0..1439
+        totalMinutes = ((totalMinutes % 1440) + 1440) % 1440;
+        var h = totalMinutes / 60;
+        var mm = totalMinutes % 60;
+        var ampm = h >= 12 ? "م" : "ص";
+        var h12 = h % 12; if (h12 == 0) h12 = 12;
+        return $"{h12}:{mm:D2} {ampm}";
+    }
+
+    private static int ParseTimeToMinutes(string time)
+    {
+        if (string.IsNullOrWhiteSpace(time)) return 0;
+        if (TimeSpan.TryParse(time, out var ts)) return (int)ts.TotalMinutes;
+        // try HH:mm
+        var parts = time.Split(':');
+        if (parts.Length >= 2 && int.TryParse(parts[0], out var h) && int.TryParse(parts[1], out var m))
+            return h * 60 + m;
+        return 0;
+    }
 }
-

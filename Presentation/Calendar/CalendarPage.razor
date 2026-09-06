@@ -1,8 +1,7 @@
-@namespace Jamrah.Presentation.Calendar
+﻿@namespace Jamrah.Presentation.Calendar
 @implements IDisposable
 @using Microsoft.JSInterop
 @inject ICalendarStateService StateService
-@inject IJSRuntime JS
 
 <style>
 .cal-wrapper{ display:flex; height:100vh; background:var(--bg,#FAFAF9); font-family:'Tajawal',sans-serif; }
@@ -26,9 +25,10 @@
 .cal-header .btn.primary{ background:var(--text); color:#fff; border-color:var(--text); }
 .seg{ display:flex; background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:2px; gap:2px; }
 .seg button{ padding:6px 12px; border:none; border-radius:8px; background:transparent; cursor:pointer; font-size:12px; color:var(--muted); }
-.seg button:hover{ color:var(--text); }
-.seg button.active{ background:var(--text); color:#fff; }
+
 </style>
+
+@inject IJSRuntime JS
 
 <div class="cal-wrapper" dir="rtl">
     <div class="cal-sidebar @(_isSidebarCollapsed ? "collapsed" : "")">

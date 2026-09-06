@@ -140,7 +140,77 @@ namespace Jamrah.Infrastructure.Repositories
 
             task.UpdatedAt = DateTime.UtcNow;
 
+            // Auto-assign TemplateId for recurring templates
+            if (!string.IsNullOrWhiteSpace(task.RecurrenceDays) && task.RecurrenceDays != "none" && string.IsNullOrWhiteSpace(task.TemplateId))
+            {
+                task.TemplateId = task.Id;
+            }
+
             await _database!.InsertOrReplaceAsync(task).ConfigureAwait(false);
+
+            // توليد شهر كامل للمهام المتكررة (Phase 2 شهري)
+            if (task.Id == task.TemplateId && !string.IsNullOrWhiteSpace(task.RecurrenceDays) && task.RecurrenceDays != "none" && task.DueDate.HasValue)
+            {
+                var start = task.DueDate.Value.Date;
+                var end = new DateTime(start.Year, start.Month, DateTime.DaysInMonth(start.Year, start.Month));
+                // daily: كل يوم بعد البداية لآخر الشهر
+                if (task.RecurrenceDays == "daily")
+                {
+                    for (var d = start.AddDays(1); d <= end; d = d.AddDays(1))
+                    {
+                        var exists = await _database!.Table<AppTask>().Where(t => t.TemplateId == task.TemplateId && t.DueDate == d).CountAsync().ConfigureAwait(false) > 0;
+                        if (exists) continue;
+                        var inst = new AppTask
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Title = task.Title,
+                            Priority = task.Priority,
+                            IsDone = false,
+                            DueDate = d,
+                            ScheduledDate = d,
+                            ScheduledTime = task.ScheduledTime,
+                            RecurrenceDays = task.RecurrenceDays,
+                            IsRecurring = task.IsRecurring,
+                            EisenhowerQuadrant = task.EisenhowerQuadrant,
+                            Notes = task.Notes,
+                            ColumnId = task.ColumnId,
+                            FolderId = task.FolderId,
+                            TemplateId = task.TemplateId,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        await _database!.InsertAsync(inst).ConfigureAwait(false);
+                    }
+                }
+                else if (task.RecurrenceDays == "weekly")
+                {
+                    for (var d = start.AddDays(7); d <= end; d = d.AddDays(7))
+                    {
+                        var exists = await _database!.Table<AppTask>().Where(t => t.TemplateId == task.TemplateId && t.DueDate == d).CountAsync().ConfigureAwait(false) > 0;
+                        if (exists) continue;
+                        var inst = new AppTask
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Title = task.Title,
+                            Priority = task.Priority,
+                            IsDone = false,
+                            DueDate = d,
+                            ScheduledDate = d,
+                            ScheduledTime = task.ScheduledTime,
+                            RecurrenceDays = task.RecurrenceDays,
+                            IsRecurring = task.IsRecurring,
+                            EisenhowerQuadrant = task.EisenhowerQuadrant,
+                            Notes = task.Notes,
+                            ColumnId = task.ColumnId,
+                            FolderId = task.FolderId,
+                            TemplateId = task.TemplateId,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        await _database!.InsertAsync(inst).ConfigureAwait(false);
+                    }
+                }
+            }
         }
 
         public async Task DeleteTaskAsync(string id)
@@ -150,6 +220,69 @@ namespace Jamrah.Infrastructure.Repositories
 
             await InitAsync().ConfigureAwait(false);
             await _database!.DeleteAsync<AppTask>(id).ConfigureAwait(false);
+        }
+
+        public async Task ArchiveTaskAsync(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return;
+            await InitAsync().ConfigureAwait(false);
+            var task = await _database!.FindAsync<AppTask>(id).ConfigureAwait(false);
+            if (task == null) return;
+            task.ArchivedAt = task.ArchivedAt.HasValue ? null : DateTime.UtcNow;
+            task.UpdatedAt = DateTime.UtcNow;
+            await _database.UpdateAsync(task).ConfigureAwait(false);
+        }
+
+        public async Task RestoreTaskAsync(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return;
+            await InitAsync().ConfigureAwait(false);
+            var task = await _database!.FindAsync<AppTask>(id).ConfigureAwait(false);
+            if (task == null || !task.ArchivedAt.HasValue) return;
+            task.ArchivedAt = null;
+            task.UpdatedAt = DateTime.UtcNow;
+            await _database.UpdateAsync(task).ConfigureAwait(false);
+        }
+
+        public async Task<List<AppTask>> GetArchivedTasksAsync()
+        {
+            await InitAsync().ConfigureAwait(false);
+            return await _database!.Table<AppTask>().Where(t => t.ArchivedAt != null).OrderByDescending(t => t.ArchivedAt).ToListAsync().ConfigureAwait(false);
+        }
+
+        public async Task<List<AppTask>> GetCompletedTasksAsync()
+        {
+            await InitAsync().ConfigureAwait(false);
+            var today = DateTime.Today;
+            var all = await _database!.Table<AppTask>().Where(t => t.IsDone && t.ArchivedAt == null).ToListAsync().ConfigureAwait(false);
+            return all.Where(t => (t.DueDate?.Date == today) || (t.ScheduledDate?.Date == today) || (t.DueDate == null && t.ScheduledDate == null && t.CompletedAt?.Date == today))
+                      .OrderByDescending(t => t.CompletedAt ?? t.UpdatedAt).ToList();
+        }
+
+        public async Task<List<AppTask>> GetUpcomingTasksAsync()
+        {
+            await InitAsync().ConfigureAwait(false);
+            var today = DateTime.Today;
+            return await _database!.Table<AppTask>().Where(t => t.ArchivedAt == null && !t.IsDone && t.DueDate != null && t.DueDate > today && (t.RecurrenceDays == "none" || t.RecurrenceDays == null || t.RecurrenceDays == "") && !t.IsRecurring).OrderBy(t => t.DueDate).ToListAsync().ConfigureAwait(false);
+        }
+
+        public async Task<List<AppTask>> GetNoDateTasksAsync()
+        {
+            await InitAsync().ConfigureAwait(false);
+            return await _database!.Table<AppTask>().Where(t => t.ArchivedAt == null && t.DueDate == null).OrderByDescending(t => t.CreatedAt).ToListAsync().ConfigureAwait(false);
+        }
+
+        public async Task ToggleTaskAsync(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return;
+            await InitAsync().ConfigureAwait(false);
+            var task = await _database!.FindAsync<AppTask>(id).ConfigureAwait(false);
+            if (task == null) return;
+            task.IsDone = !task.IsDone;
+            task.CompletedAt = task.IsDone ? DateTime.UtcNow : null;
+            task.UpdatedAt = DateTime.UtcNow;
+
+            await _database.UpdateAsync(task).ConfigureAwait(false);
         }
     }
 }

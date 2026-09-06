@@ -1,4 +1,4 @@
-@namespace Jamrah.Presentation.Pomodoro
+﻿@namespace Jamrah.Presentation.Pomodoro
 @using Microsoft.JSInterop
 @inject Jamrah.Application.Services.PomodoroSoundService SoundService
 @inject IJSRuntime JS
@@ -61,6 +61,7 @@
     </div>
 </div>
 
+
 <style>
     .sound-modal-overlay{ position:fixed; inset:0; background:rgba(28,25,23,.30); z-index:120; display:flex; align-items:center; justify-content:center; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
     .sound-modal{ width:680px; max-height:75vh; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:0 20px 40px rgba(0,0,0,.08); display:flex; flex-direction:column; overflow:hidden; }
@@ -87,6 +88,7 @@
     .sound-modal-footer .modal-btn{ height:34px; padding:0 16px; border-radius:10px; border:1px solid var(--border); background:var(--card); cursor:pointer; font-size:12px; color:var(--text); }
     .sound-modal-footer .modal-btn.primary{ background:var(--text); color:#fff; border-color:var(--text); }
     .sound-modal-footer .modal-btn:hover{ opacity:.9; }
+
 </style>
 
 @code {
@@ -147,4 +149,5 @@
 
     private void Close() => OnClose.InvokeAsync();
 }
+
 

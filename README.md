@@ -6,12 +6,6 @@
 
 <p align="center"><i>ember of productivity</i></p>
 
-> please note that the stack is completely changed to maui blazor hybrid instead of electron,
-> this will lead to a major updates and more and more features because my stack is .Net so i could write C# well !
-> the old stable version was 'VIBE CODED' I HATE IT. for each component i was asking ai what to do and spend hours solving its probelms either in UI or Logic !
-> the new versions now is very simple and i can handle everything and I OWN THE CODE NOT AI.
-> Thank You, hope my app helps you, your CONTRIBUTIONS appreciated
-
 ---
 
 Jamrah is a local-first productivity app built with .NET 9 + MAUI (Blazor Hybrid).

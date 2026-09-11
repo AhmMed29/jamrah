@@ -1,0 +1,27 @@
+@namespace Jamrah.Presentation.Shared
+@using Jamrah.Presentation.Bookmarks
+
+<div class="page-shell @(_slim ? "slim" : "")">
+    <AppSidebar OnToggleSidebar="() => _slim = !_slim"
+                OnNavigate="OnSidebarNavigate"
+                OnNewFolder='() => FolderModal.InvokeAsync(("folder", null, null))'
+                OnNewCollection='() => FolderModal.InvokeAsync(("collection", null, null))'
+                OnNewSmart='() => FolderModal.InvokeAsync(("smart", null, null))'
+                OnFolderMenu='id => FolderModal.InvokeAsync(("folder", id, null))'
+                OnCollectionMenu='id => FolderModal.InvokeAsync(("collection", null, id))' />
+    <div class="page-shell-frame">@ChildContent</div>
+</div>
+@if (_slim)
+{
+    <button class="page-shell-expand" @onclick="() => _slim = false" title="Open sidebar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3,6 L21,6 L21,8 L3,8 L3,6 Z M3,11 L21,11 L21,13 L3,13 L3,11 Z M3,16 L21,16 L21,18 L3,18 L3,16 Z"/></svg>
+    </button>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback<(string Ctx, string? Id, string? Tag)> OnSidebarNavigate { get; set; }
+    [Parameter] public EventCallback<(string Mode, string? FolderId, string? CollectionId)> FolderModal { get; set; }
+
+    private bool _slim;
+}

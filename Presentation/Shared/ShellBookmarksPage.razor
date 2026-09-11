@@ -1,0 +1,10 @@
+@namespace Jamrah.Presentation.Shared
+@using Jamrah.Presentation.Bookmarks
+
+<PageShell OnSidebarNavigate='async t => { if (Bm != null) await Bm.Navigate(t); }' OnFolderModal='m => { if (Bm != null) Bm.OpenFolderModal(m.Mode, m.FolderId, m.CollectionId); return Task.CompletedTask; }'>
+    <BookmarkPage @ref="Bm" />
+</PageShell>
+
+@code {
+    private BookmarkPage? Bm;
+}

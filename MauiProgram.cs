@@ -39,6 +39,7 @@ namespace Jamrah
             builder.Services.AddSingleton<ITaskStateService>(sp => sp.GetRequiredService<TaskStateService>());
             builder.Services.AddSingleton<BookmarkStateService>();
             builder.Services.AddSingleton<BookmarkEmbedService>();
+            builder.Services.AddSingleton<IAppNavService, AppNavService>();
 
             // Register MAUI Blazor Services
             builder.Services.AddMauiBlazorWebView();

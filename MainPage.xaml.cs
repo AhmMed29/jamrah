@@ -1,9 +1,9 @@
 using Jamrah.Core.Interfaces;
+using Jamrah.Presentation.Shared;
 using Microsoft.AspNetCore.Components.WebView.Maui;
 #if WINDOWS
 using Microsoft.UI.Xaml.Controls;
 #endif
-using PointerEventArgs = Microsoft.Maui.Controls.PointerEventArgs;
 
 namespace Jamrah;
 
@@ -11,126 +11,97 @@ public partial class MainPage : ContentPage
 {
     private readonly ICalendarStateService _calendarState;
     private readonly ISettingsRepository _settingsRepository;
+    private readonly IAppNavService _navService;
     private BlazorWebView? _calendarWebView;
     private BlazorWebView? _tasksWebView;
     private BlazorWebView? _pomodoroWebView;
     private BlazorWebView? _planningWebView;
     private BlazorWebView? _bookmarkWebView;
-    private enum ActivePage { None, Tasks, Pomodoro, Calendar, Planning, Bookmarks }
-    private ActivePage _activePage = ActivePage.None;
-    private bool _sidebarCollapsed;
 
-    // Unified sidebar palette (#F7F6F3 warm cream family)
-    private static readonly Color SbBg      = Color.FromArgb("#F7F6F3");
-    private static readonly Color SbHover   = Color.FromArgb("#F1EFE9");
-    private static readonly Color SbInk     = Color.FromArgb("#181715");
-    private static readonly Color SbInk2    = Color.FromArgb("#59554E");
-    private static readonly Color SbWhite   = Color.FromArgb("#FFFFFF");
-
-    public MainPage(ICalendarStateService calendarState, ISettingsRepository settingsRepository)
+    public MainPage(ICalendarStateService calendarState, ISettingsRepository settingsRepository, IAppNavService navService)
     {
         InitializeComponent();
         _calendarState = calendarState;
         _settingsRepository = settingsRepository;
+        _navService = navService;
+        _navService.PageRequested += OnNavPageRequested;
         _ = _settingsRepository.InitAsync();
 
         ShowTasksPage();
     }
 
+    // ─── Blazor → native page switching (app sidebar nav buttons) ────────────
+
+    private void OnNavPageRequested(string page)
+    {
+        Dispatcher.Dispatch(() =>
+        {
+            switch (page)
+            {
+                case "tasks": ShowTasksPage(); break;
+                case "pomodoro": ShowPomodoroPage(); break;
+                case "calendar": ShowCalendarPage(); break;
+                case "planning": ShowPlanningPage(); break;
+                case "bookmarks": ShowBookmarksPage(); break;
+            }
+        });
+    }
 
     // ─── Content area switching ──────────────────────────────────────────────
-
-    private void OnPomodoroTapped(object sender, TappedEventArgs e)      => ShowPomodoroPage();
-    private void OnMyTasksTapped(object sender, TappedEventArgs e)        => ShowTasksPage();
-    private void OnCalendarMonthTapped(object sender, TappedEventArgs e)  => ShowCalendarPage();
-    private void OnPlanningTapped(object sender, TappedEventArgs e)       => ShowPlanningPage();
-    private void OnBookmarksTapped(object sender, TappedEventArgs e)      => ShowBookmarksPage();
-    private void OnSidebarCollapseTapped(object sender, TappedEventArgs e) => SetSidebarCollapsed(!_sidebarCollapsed);
 
     private void ShowPomodoroPage()
     {
         EnsurePomodoroWebView();
+        _navService.SetCurrent("pomodoro");
         if (_calendarWebView != null) _calendarWebView.IsVisible = false;
         if (_tasksWebView != null) _tasksWebView.IsVisible = false;
         if (_planningWebView != null) _planningWebView.IsVisible = false;
         if (_bookmarkWebView != null) _bookmarkWebView.IsVisible = false;
         _pomodoroWebView!.IsVisible = true;
-        SetActivePage(ActivePage.Pomodoro);
     }
 
     private void ShowCalendarPage()
     {
         EnsureCalendarWebView();
+        _navService.SetCurrent("calendar");
         if (_tasksWebView != null) _tasksWebView.IsVisible = false;
         if (_pomodoroWebView != null) _pomodoroWebView.IsVisible = false;
         if (_planningWebView != null) _planningWebView.IsVisible = false;
         if (_bookmarkWebView != null) _bookmarkWebView.IsVisible = false;
         _calendarWebView!.IsVisible = true;
-        SetActivePage(ActivePage.Calendar);
     }
 
     private void ShowTasksPage()
     {
         EnsureTasksWebView();
+        _navService.SetCurrent("tasks");
         if (_calendarWebView != null) _calendarWebView.IsVisible = false;
         if (_pomodoroWebView != null) _pomodoroWebView.IsVisible = false;
         if (_planningWebView != null) _planningWebView.IsVisible = false;
         if (_bookmarkWebView != null) _bookmarkWebView.IsVisible = false;
         _tasksWebView!.IsVisible = true;
-        SetActivePage(ActivePage.Tasks);
     }
 
     private void ShowPlanningPage()
     {
         EnsurePlanningWebView();
+        _navService.SetCurrent("planning");
         if (_calendarWebView != null) _calendarWebView.IsVisible = false;
         if (_tasksWebView != null) _tasksWebView.IsVisible = false;
         if (_pomodoroWebView != null) _pomodoroWebView.IsVisible = false;
         if (_bookmarkWebView != null) _bookmarkWebView.IsVisible = false;
         _planningWebView!.IsVisible = true;
-        SetActivePage(ActivePage.Planning);
     }
 
     private void ShowBookmarksPage()
     {
         EnsureBookmarksWebView();
+        _navService.SetCurrent("bookmarks");
         if (_calendarWebView != null) _calendarWebView.IsVisible = false;
         if (_tasksWebView != null) _tasksWebView.IsVisible = false;
         if (_pomodoroWebView != null) _pomodoroWebView.IsVisible = false;
         if (_planningWebView != null) _planningWebView.IsVisible = false;
         _bookmarkWebView!.IsVisible = true;
-        SetActivePage(ActivePage.Bookmarks);
-    }
-
-    // ─── Sidebar collapse (Slim Mode: 250px <-> 64px) ────────────────────────
-
-    private void SetSidebarCollapsed(bool collapsed)
-    {
-        _sidebarCollapsed = collapsed;
-        ShellGrid.ColumnDefinitions = new Microsoft.Maui.Controls.ColumnDefinitionCollection
-        {
-            new Microsoft.Maui.Controls.ColumnDefinition { Width = new GridLength(collapsed ? 64 : 250) },
-            new Microsoft.Maui.Controls.ColumnDefinition { Width = GridLength.Star }
-        };
-
-        BrandName.IsVisible = !collapsed;
-        MenuSectionLbl.IsVisible = !collapsed;
-        TasksLbl.IsVisible = !collapsed;
-        PomoLbl.IsVisible = !collapsed;
-        CalLbl.IsVisible = !collapsed;
-        PlanningLbl.IsVisible = !collapsed;
-        BmLbl.IsVisible = !collapsed;
-
-        var rowOption = collapsed ? LayoutOptions.Center : LayoutOptions.Start;
-        TasksBtnRow.HorizontalOptions = rowOption;
-        PomoBtnRow.HorizontalOptions = rowOption;
-        CalBtnRow.HorizontalOptions = rowOption;
-        PlanningBtnRow.HorizontalOptions = rowOption;
-        BmBtnRow.HorizontalOptions = rowOption;
-
-        BrandRow.HorizontalOptions = collapsed ? LayoutOptions.Center : LayoutOptions.Start;
-        BrandRow.Padding = collapsed ? new Thickness(0, 4, 0, 12) : new Thickness(16, 4, 12, 12);
-        CollapseIcon.ScaleX = collapsed ? -1 : 1;
     }
 
     // ─── Ensure WebViews (lazy per page - Android single WebView) ────────────
@@ -145,7 +116,7 @@ public partial class MainPage : ContentPage
         _calendarWebView.RootComponents.Add(new Microsoft.AspNetCore.Components.WebView.Maui.RootComponent
         {
             Selector      = "#app",
-            ComponentType = typeof(Presentation.Calendar.CalendarPage)
+            ComponentType = typeof(Presentation.Shared.ShellCalendarPage)
         });
         MainContent.Children.Add(_calendarWebView);
         EnableZoomWithPersistence(_calendarWebView, "calendar");
@@ -161,7 +132,7 @@ public partial class MainPage : ContentPage
         _tasksWebView.RootComponents.Add(new RootComponent
         {
             Selector      = "#app",
-            ComponentType = typeof(Presentation.Tasks.TaskPage)
+            ComponentType = typeof(Presentation.Shared.ShellTaskPage)
         });
         MainContent.Children.Add(_tasksWebView);
         EnableZoomWithPersistence(_tasksWebView, "tasks");
@@ -177,7 +148,7 @@ public partial class MainPage : ContentPage
         _pomodoroWebView.RootComponents.Add(new RootComponent
         {
             Selector      = "#app",
-            ComponentType = typeof(Presentation.Pomodoro.PomodoroPage)
+            ComponentType = typeof(Presentation.Shared.ShellPomodoroPage)
         });
         MainContent.Children.Add(_pomodoroWebView);
         EnableZoomWithPersistence(_pomodoroWebView, "pomodoro");
@@ -193,7 +164,7 @@ public partial class MainPage : ContentPage
         _planningWebView.RootComponents.Add(new RootComponent
         {
             Selector      = "#app",
-            ComponentType = typeof(Presentation.Planning.PlanningPage)
+            ComponentType = typeof(Presentation.Shared.ShellPlanningPage)
         });
         MainContent.Children.Add(_planningWebView);
         EnableZoomWithPersistence(_planningWebView, "planning");
@@ -209,7 +180,7 @@ public partial class MainPage : ContentPage
         _bookmarkWebView.RootComponents.Add(new RootComponent
         {
             Selector      = "#app",
-            ComponentType = typeof(Presentation.Bookmarks.BookmarkPage)
+            ComponentType = typeof(Presentation.Shared.ShellBookmarksPage)
         });
         MainContent.Children.Add(_bookmarkWebView);
         EnableZoomWithPersistence(_bookmarkWebView, "bookmarks");
@@ -270,56 +241,4 @@ public partial class MainPage : ContentPage
 #endif
         };
     }
-
-    // ─── Active page highlight ───────────────────────────────────────────────
-
-    private void StyleNavButton(Microsoft.Maui.Controls.Border border, Microsoft.Maui.Controls.Shapes.Path icon, Label label, bool active)
-    {
-        border.Background = active ? SbInk : Colors.Transparent;
-        icon.Fill = new SolidColorBrush(active ? SbWhite : SbInk2);
-        label.TextColor = active ? SbWhite : SbInk2;
-    }
-
-    private void SetActivePage(ActivePage page)
-    {
-        _activePage = page;
-
-        StyleNavButton(TasksBtnBorder, TasksIcon, TasksLbl, page == ActivePage.Tasks);
-        StyleNavButton(PomoBtnBorder, PomoIcon, PomoLbl, page == ActivePage.Pomodoro);
-        StyleNavButton(CalBtnBorder, CalIcon, CalLbl, page == ActivePage.Calendar);
-        StyleNavButton(PlanningBtnBorder, PlanningIcon, PlanningLbl, page == ActivePage.Planning);
-        StyleNavButton(BmBtnBorder, BmIcon, BmLbl, page == ActivePage.Bookmarks);
-    }
-
-    // ─── Hover effects ───────────────────────────────────────────────────────
-
-    private void OnTasksBtnEnter(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Tasks)       TasksBtnBorder.Background = SbHover; }
-    private void OnTasksBtnExit(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Tasks)       TasksBtnBorder.Background = Colors.Transparent; }
-
-    private void OnPomoBtnEnter(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Pomodoro)    PomoBtnBorder.Background  = SbHover; }
-    private void OnPomoBtnExit(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Pomodoro)    PomoBtnBorder.Background  = Colors.Transparent; }
-
-    private void OnCalBtnEnter(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Calendar)    CalBtnBorder.Background   = SbHover; }
-    private void OnCalBtnExit(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Calendar)    CalBtnBorder.Background   = Colors.Transparent; }
-
-    private void OnPlanningBtnEnter(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Planning)    PlanningBtnBorder.Background = SbHover; }
-    private void OnPlanningBtnExit(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Planning)    PlanningBtnBorder.Background = Colors.Transparent; }
-
-    private void OnBmBtnEnter(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Bookmarks)   BmBtnBorder.Background = SbHover; }
-    private void OnBmBtnExit(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Bookmarks)   BmBtnBorder.Background = Colors.Transparent; }
-
-    private void OnCollapseBtnEnter(object sender, PointerEventArgs e)
-    { CollapseBorder.Background = SbHover; }
-    private void OnCollapseBtnExit(object sender, PointerEventArgs e)
-    { CollapseBorder.Background = Colors.Transparent; }
 }

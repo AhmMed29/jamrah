@@ -6,17 +6,10 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-<div class="bmk @(_slim ? "slim" : "")">
-    <BookmarkSidebar OnNavigate="Navigate" OnToggleSidebar="() => _slim = !_slim"
-                     OnNewFolder='() => OpenFolderModal("folder", null, null)'
-                     OnNewCollection='() => OpenFolderModal("collection", null, null)'
-                     OnNewSmart='() => OpenFolderModal("smart", null, null)'
-                     OnFolderMenu='id => OpenFolderModal("folder", id, null)'
-                     OnCollectionMenu='id => OpenFolderModal("collection", null, id)' />
+<div class="bmk">
     <div class="bmk-frame">
         <BookmarkTopBar Search="@State.Search" OnSearch="OnSearch" OnClearSearch="() => OnSearch(string.Empty)"
-                        OnAdd='() => { _editItemId = null; _showItemModal = true; }'
-                        OnToggleSidebar="() => _slim = !_slim" />
+                        OnAdd='() => { _editItemId = null; _showItemModal = true; }' />
         <main class="bmk-main">
             @if (!_ready)
             {
@@ -381,7 +374,6 @@
 
 @code {
     private bool _ready;
-    private bool _slim;
     private string _view = "grid";
     private string _sort = "added";
     private bool _showItemModal;
@@ -428,7 +420,7 @@
         _sort = string.IsNullOrEmpty(vs.Sort) ? BookmarkQuery.DefaultSort(State.Route.Ctx) : vs.Sort;
     }
 
-    private async Task Navigate((string Ctx, string? Id, string? Tag) nav)
+    public async Task Navigate((string Ctx, string? Id, string? Tag) nav)
     {
         State.SetRoute(nav.Ctx, nav.Id, nav.Tag);
         _confirmEmptyTrash = false;
@@ -467,7 +459,7 @@
         await State.SetViewStateAsync(VKey, _view, _sort);
     }
 
-    private void OpenFolderModal(string mode, string? folderId, string? colId)
+    public void OpenFolderModal(string mode, string? folderId, string? colId)
     {
         _folderModalMode = mode;
         _folderEditId = folderId;

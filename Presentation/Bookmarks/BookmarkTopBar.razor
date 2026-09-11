@@ -2,9 +2,6 @@
 @inject BookmarkStateService State
 
 <header class="bmk-top">
-    <button class="ibtn" @onclick="() => OnToggleSidebar.InvokeAsync()" title="Toggle sidebar">
-        @((MarkupString)BookmarkIcons.Svg("list", 16))
-    </button>
     <div class="qwrap">
         <span class="sic">@((MarkupString)BookmarkIcons.Svg("search", 15))</span>
         <input class="bmk-q" placeholder="Search — try  type:book  tag:backend  favorite:true"
@@ -26,5 +23,4 @@
     [Parameter] public EventCallback<string> OnSearch { get; set; }
     [Parameter] public EventCallback OnClearSearch { get; set; }
     [Parameter] public EventCallback OnAdd { get; set; }
-    [Parameter] public EventCallback OnToggleSidebar { get; set; }
 }

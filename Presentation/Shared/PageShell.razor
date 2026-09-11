@@ -4,11 +4,11 @@
 <div class="page-shell @(_slim ? "slim" : "")">
     <AppSidebar OnToggleSidebar="() => _slim = !_slim"
                 OnNavigate="OnSidebarNavigate"
-                OnNewFolder='() => FolderModal.InvokeAsync(("folder", null, null))'
-                OnNewCollection='() => FolderModal.InvokeAsync(("collection", null, null))'
-                OnNewSmart='() => FolderModal.InvokeAsync(("smart", null, null))'
-                OnFolderMenu='id => FolderModal.InvokeAsync(("folder", id, null))'
-                OnCollectionMenu='id => FolderModal.InvokeAsync(("collection", null, id))' />
+                OnNewFolder='() => OnFolderModal.InvokeAsync(("folder", null, null))'
+                OnNewCollection='() => OnFolderModal.InvokeAsync(("collection", null, null))'
+                OnNewSmart='() => OnFolderModal.InvokeAsync(("smart", null, null))'
+                OnFolderMenu='id => OnFolderModal.InvokeAsync(("folder", id, null))'
+                OnCollectionMenu='id => OnFolderModal.InvokeAsync(("collection", null, id))' />
     <div class="page-shell-frame">@ChildContent</div>
 </div>
 @if (_slim)
@@ -21,7 +21,7 @@
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public EventCallback<(string Ctx, string? Id, string? Tag)> OnSidebarNavigate { get; set; }
-    [Parameter] public EventCallback<(string Mode, string? FolderId, string? CollectionId)> FolderModal { get; set; }
+    [Parameter] public EventCallback<(string Mode, string? FolderId, string? CollectionId)> OnFolderModal { get; set; }
 
     private bool _slim;
 }

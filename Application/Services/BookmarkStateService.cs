@@ -57,7 +57,17 @@ namespace Jamrah.Application.Services
         public event Action? OnStateChanged;
         private void NotifyStateChanged() => OnStateChanged?.Invoke();
 
-        public async Task InitAsync()
+        private Task? _initTask;
+
+        /// <summary>Single-flight init: concurrent callers share one load (multiple WebViews/components init together).</summary>
+        public Task InitAsync()
+        {
+            if (_initTask == null || _initTask.IsFaulted)
+                _initTask = InitCoreAsync();
+            return _initTask;
+        }
+
+        private async Task InitCoreAsync()
         {
             await _repository.InitAsync();
             await RefreshDataAsync();

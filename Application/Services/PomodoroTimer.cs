@@ -5,7 +5,7 @@ namespace Jamrah.Application.Services
     public sealed class PomodoroTimer : IDisposable
     {
         private TimeSpan _duration;
-        private System.Threading.Timer? _timer;
+        private Timer? _timer;
 
         public PomodoroTimer(TimeSpan duration)
         {
@@ -24,7 +24,7 @@ namespace Jamrah.Application.Services
         {
             if (IsRunning || IsCompleted) return;
             IsRunning = true;
-            _timer = new System.Threading.Timer(_ => TickOnce(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+            _timer = new Timer(_ => TickOnce(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
         }
 
         public void Pause()

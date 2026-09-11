@@ -49,6 +49,12 @@
 .page-shell .sb-folder.closed>.chev{transform:rotate(-90deg)}
 .page-shell .sb-navi{font-weight:700}
 
+/* Library group nested under the Bookmarks nav button */
+.page-shell .bm-nest{margin-left:14px;border-left:1px solid var(--line);padding-left:4px}
+.page-shell .sb-navi .chev{margin-left:auto;display:grid;place-items:center;color:var(--ink3);transition:transform .18s}
+.page-shell .sb-navi.closed .chev{transform:rotate(-90deg)}
+.page-shell .sb-navi.on .chev{color:#ffffff99}
+
 /* Tree + misc */
 .page-shell .sb-sub{margin-left:15px;border-left:1px solid var(--line);padding-left:2px}
 .page-shell .sb-add{display:flex;align-items:center;gap:8px;padding:5px 10px;margin:2px 8px;border-radius:8px;color:var(--ink3);font-size:12.5px;font-weight:500;cursor:pointer}

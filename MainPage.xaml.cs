@@ -202,57 +202,76 @@ public partial class MainPage : ContentPage
 
     private void EnableZoomWithPersistence(BlazorWebView webView, string pageKey)
     {
-        webView.HandlerChanged += async (_, _) =>
-        {
 #if WINDOWS
-            if (webView.Handler?.PlatformView is WebView2 platformView)
+        WebView2? wiredPlatformView = null;
+        void Wire()
+        {
+            if (webView.Handler?.PlatformView is WebView2 platformView && !ReferenceEquals(platformView, wiredPlatformView))
             {
-                // سجل المستمع قبل Ensure لضمان عدم فوات أول NavigationCompleted
-                async Task ApplyZoomAsync()
-                {
-                    try
-                    {
-                        var z = await _settingsRepository.GetZoomAsync(pageKey);
-                        _pinnedZooms[pageKey] = z;
-                        var js = $"if(window.jamrahZoom) window.jamrahZoom.init('{pageKey}', {z.ToString(System.Globalization.CultureInfo.InvariantCulture)}); else document.documentElement.style.zoom='{z.ToString(System.Globalization.CultureInfo.InvariantCulture)}';";
-                        if (platformView.CoreWebView2 != null)
-                            await platformView.CoreWebView2.ExecuteScriptAsync(js);
-                    }
-                    catch { }
-                }
-
-                await platformView.EnsureCoreWebView2Async();
-                if (platformView.CoreWebView2 != null)
-                {
-                    try { platformView.CoreWebView2.Settings.IsZoomControlEnabled = false; } catch {}
-                    try { platformView.CoreWebView2.Settings.IsPinchZoomEnabled = false; } catch {}
-
-                    // اشترك قبل أي تنقل لضمان التقاط أول تحميل لـ pomodoro/calendar
-                    platformView.CoreWebView2.NavigationCompleted += async (s, e) => await ApplyZoomAsync();
-                    platformView.CoreWebView2.WebMessageReceived += (s, e) =>
-                    {
-                        try
-                        {
-                            var msg = e.TryGetWebMessageAsString();
-                            if (string.IsNullOrWhiteSpace(msg)) return;
-                            using var doc = System.Text.Json.JsonDocument.Parse(msg);
-                            if (!doc.RootElement.TryGetProperty("type", out var t) || t.GetString() != "zoom") return;
-                            if (!doc.RootElement.TryGetProperty("page", out var p) || p.GetString() != pageKey) return;
-                            if (!doc.RootElement.TryGetProperty("zoom", out var z)) return;
-                            UpdatePillFromMessage(pageKey, z.GetDouble());
-                        }
-                        catch { }
-                    };
-
-                    await ApplyZoomAsync();
-                }
+                wiredPlatformView = platformView;
+                _ = WireZoomAsync(platformView, pageKey);
             }
+        }
+        Wire();
+        webView.HandlerChanged += (_, _) => Wire();
 #else
-            try { _pinnedZooms[pageKey] = await _settingsRepository.GetZoomAsync(pageKey); } catch {}
-            // Android: سيطبّق الزوم عبر JS بعد تحميل Blazor (zoom-per-page.js يعمل على كل المنصات)
+        _ = WireZoomNonWindowsAsync(pageKey);
 #endif
-        };
     }
+
+#if WINDOWS
+    private async Task WireZoomAsync(WebView2 platformView, string pageKey)
+    {
+        try
+        {
+            await platformView.EnsureCoreWebView2Async();
+            if (platformView.CoreWebView2 == null) return;
+
+            try { platformView.CoreWebView2.Settings.IsZoomControlEnabled = false; } catch {}
+            try { platformView.CoreWebView2.Settings.IsPinchZoomEnabled = false; } catch {}
+
+            // سجل المستمع قبل Ensure لضمان عدم فوات أول NavigationCompleted
+            async Task ApplyZoomAsync()
+            {
+                try
+                {
+                    var z = await _settingsRepository.GetZoomAsync(pageKey);
+                    _pinnedZooms[pageKey] = z;
+                    var js = $"if(window.jamrahZoom) window.jamrahZoom.init('{pageKey}', {z.ToString(System.Globalization.CultureInfo.InvariantCulture)}); else document.documentElement.style.zoom='{z.ToString(System.Globalization.CultureInfo.InvariantCulture)}';";
+                    if (platformView.CoreWebView2 != null)
+                        await platformView.CoreWebView2.ExecuteScriptAsync(js);
+                }
+                catch { }
+            }
+
+            // اشترك قبل أي تنقل لضمان التقاط أول تحميل لـ pomodoro/calendar
+            platformView.CoreWebView2.NavigationCompleted += async (s, e) => await ApplyZoomAsync();
+            platformView.CoreWebView2.WebMessageReceived += (s, e) =>
+            {
+                try
+                {
+                    var msg = e.TryGetWebMessageAsString();
+                    if (string.IsNullOrWhiteSpace(msg)) return;
+                    using var doc = System.Text.Json.JsonDocument.Parse(msg);
+                    if (!doc.RootElement.TryGetProperty("type", out var t) || t.GetString() != "zoom") return;
+                    if (!doc.RootElement.TryGetProperty("page", out var p) || p.GetString() != pageKey) return;
+                    if (!doc.RootElement.TryGetProperty("zoom", out var z)) return;
+                    UpdatePillFromMessage(pageKey, z.GetDouble());
+                }
+                catch { }
+            };
+
+            await ApplyZoomAsync();
+        }
+        catch { }
+    }
+#else
+    private async Task WireZoomNonWindowsAsync(string pageKey)
+    {
+        try { _pinnedZooms[pageKey] = await _settingsRepository.GetZoomAsync(pageKey); } catch {}
+        // Android: سيطبّق الزوم عبر JS بعد تحميل Blazor (zoom-per-page.js يعمل على كل المنصات)
+    }
+#endif
 
     private void EnsurePill()
     {
@@ -313,7 +332,7 @@ public partial class MainPage : ContentPage
             Content = row
         };
 
-        MainContent.Children.Add(_pill);
+        PillLayer.Children.Add(_pill);
     }
 
     private void UpdatePillFromMessage(string pageKey, double zoom)
@@ -338,8 +357,6 @@ public partial class MainPage : ContentPage
     {
         if (_pill == null) return;
         _pill.IsVisible = true;
-        MainContent.Children.Remove(_pill);
-        MainContent.Children.Add(_pill);
         var gen = ++_pillGen;
         _ = Task.Delay(2000).ContinueWith(_ =>
         {

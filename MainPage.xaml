@@ -4,7 +4,9 @@
              x:Class="Jamrah.MainPage"
              Shell.NavBarIsVisible="False">
 
-    <Grid x:Name="MainContent">
+    <Grid>
+        <Grid x:Name="MainContent" />
+        <Grid x:Name="PillLayer" InputTransparent="True" CascadeInputTransparent="False" />
     </Grid>
 
 </ContentPage>

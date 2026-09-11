@@ -1,0 +1,30 @@
+@using Jamrah.Application.Services
+@inject BookmarkStateService State
+
+<header class="bmk-top">
+    <button class="ibtn" @onclick="() => OnToggleSidebar.InvokeAsync()" title="Toggle sidebar">
+        @((MarkupString)BookmarkIcons.Svg("list", 16))
+    </button>
+    <div class="qwrap">
+        <span class="sic">@((MarkupString)BookmarkIcons.Svg("search", 15))</span>
+        <input class="bmk-q" placeholder="Search — try  type:book  tag:backend  favorite:true"
+               value="@Search" @oninput="e => OnSearch.InvokeAsync(e.Value?.ToString() ?? string.Empty)" spellcheck="false" />
+        @if (!string.IsNullOrEmpty(Search))
+        {
+            <button class="qclr" @onclick="() => OnClearSearch.InvokeAsync()" title="Clear">
+                @((MarkupString)BookmarkIcons.Svg("x", 13))
+            </button>
+        }
+    </div>
+    <div class="top-r">
+        <button class="btn pri" @onclick="() => OnAdd.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("plus", 14)) Add item</button>
+    </div>
+</header>
+
+@code {
+    [Parameter] public string Search { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> OnSearch { get; set; }
+    [Parameter] public EventCallback OnClearSearch { get; set; }
+    [Parameter] public EventCallback OnAdd { get; set; }
+    [Parameter] public EventCallback OnToggleSidebar { get; set; }
+}

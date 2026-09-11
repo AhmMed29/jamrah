@@ -15,8 +15,17 @@ public partial class MainPage : ContentPage
     private BlazorWebView? _tasksWebView;
     private BlazorWebView? _pomodoroWebView;
     private BlazorWebView? _planningWebView;
-    private enum ActivePage { None, Tasks, Pomodoro, Calendar, Planning }
+    private BlazorWebView? _bookmarkWebView;
+    private enum ActivePage { None, Tasks, Pomodoro, Calendar, Planning, Bookmarks }
     private ActivePage _activePage = ActivePage.None;
+    private bool _sidebarCollapsed;
+
+    // Unified sidebar palette (#F7F6F3 warm cream family)
+    private static readonly Color SbBg      = Color.FromArgb("#F7F6F3");
+    private static readonly Color SbHover   = Color.FromArgb("#F1EFE9");
+    private static readonly Color SbInk     = Color.FromArgb("#181715");
+    private static readonly Color SbInk2    = Color.FromArgb("#59554E");
+    private static readonly Color SbWhite   = Color.FromArgb("#FFFFFF");
 
     public MainPage(ICalendarStateService calendarState, ISettingsRepository settingsRepository)
     {
@@ -24,17 +33,19 @@ public partial class MainPage : ContentPage
         _calendarState = calendarState;
         _settingsRepository = settingsRepository;
         _ = _settingsRepository.InitAsync();
-     
+
         ShowTasksPage();
     }
 
-    
+
     // ─── Content area switching ──────────────────────────────────────────────
 
     private void OnPomodoroTapped(object sender, TappedEventArgs e)      => ShowPomodoroPage();
     private void OnMyTasksTapped(object sender, TappedEventArgs e)        => ShowTasksPage();
     private void OnCalendarMonthTapped(object sender, TappedEventArgs e)  => ShowCalendarPage();
     private void OnPlanningTapped(object sender, TappedEventArgs e)       => ShowPlanningPage();
+    private void OnBookmarksTapped(object sender, TappedEventArgs e)      => ShowBookmarksPage();
+    private void OnSidebarCollapseTapped(object sender, TappedEventArgs e) => SetSidebarCollapsed(!_sidebarCollapsed);
 
     private void ShowPomodoroPage()
     {
@@ -42,6 +53,7 @@ public partial class MainPage : ContentPage
         if (_calendarWebView != null) _calendarWebView.IsVisible = false;
         if (_tasksWebView != null) _tasksWebView.IsVisible = false;
         if (_planningWebView != null) _planningWebView.IsVisible = false;
+        if (_bookmarkWebView != null) _bookmarkWebView.IsVisible = false;
         _pomodoroWebView!.IsVisible = true;
         SetActivePage(ActivePage.Pomodoro);
     }
@@ -52,6 +64,7 @@ public partial class MainPage : ContentPage
         if (_tasksWebView != null) _tasksWebView.IsVisible = false;
         if (_pomodoroWebView != null) _pomodoroWebView.IsVisible = false;
         if (_planningWebView != null) _planningWebView.IsVisible = false;
+        if (_bookmarkWebView != null) _bookmarkWebView.IsVisible = false;
         _calendarWebView!.IsVisible = true;
         SetActivePage(ActivePage.Calendar);
     }
@@ -62,6 +75,7 @@ public partial class MainPage : ContentPage
         if (_calendarWebView != null) _calendarWebView.IsVisible = false;
         if (_pomodoroWebView != null) _pomodoroWebView.IsVisible = false;
         if (_planningWebView != null) _planningWebView.IsVisible = false;
+        if (_bookmarkWebView != null) _bookmarkWebView.IsVisible = false;
         _tasksWebView!.IsVisible = true;
         SetActivePage(ActivePage.Tasks);
     }
@@ -72,8 +86,51 @@ public partial class MainPage : ContentPage
         if (_calendarWebView != null) _calendarWebView.IsVisible = false;
         if (_tasksWebView != null) _tasksWebView.IsVisible = false;
         if (_pomodoroWebView != null) _pomodoroWebView.IsVisible = false;
+        if (_bookmarkWebView != null) _bookmarkWebView.IsVisible = false;
         _planningWebView!.IsVisible = true;
         SetActivePage(ActivePage.Planning);
+    }
+
+    private void ShowBookmarksPage()
+    {
+        EnsureBookmarksWebView();
+        if (_calendarWebView != null) _calendarWebView.IsVisible = false;
+        if (_tasksWebView != null) _tasksWebView.IsVisible = false;
+        if (_pomodoroWebView != null) _pomodoroWebView.IsVisible = false;
+        if (_planningWebView != null) _planningWebView.IsVisible = false;
+        _bookmarkWebView!.IsVisible = true;
+        SetActivePage(ActivePage.Bookmarks);
+    }
+
+    // ─── Sidebar collapse (Slim Mode: 250px <-> 64px) ────────────────────────
+
+    private void SetSidebarCollapsed(bool collapsed)
+    {
+        _sidebarCollapsed = collapsed;
+        ShellGrid.ColumnDefinitions = new Microsoft.Maui.Controls.ColumnDefinitionCollection
+        {
+            new Microsoft.Maui.Controls.ColumnDefinition { Width = new GridLength(collapsed ? 64 : 250) },
+            new Microsoft.Maui.Controls.ColumnDefinition { Width = GridLength.Star }
+        };
+
+        BrandName.IsVisible = !collapsed;
+        MenuSectionLbl.IsVisible = !collapsed;
+        TasksLbl.IsVisible = !collapsed;
+        PomoLbl.IsVisible = !collapsed;
+        CalLbl.IsVisible = !collapsed;
+        PlanningLbl.IsVisible = !collapsed;
+        BmLbl.IsVisible = !collapsed;
+
+        var rowOption = collapsed ? LayoutOptions.Center : LayoutOptions.Start;
+        TasksBtnRow.HorizontalOptions = rowOption;
+        PomoBtnRow.HorizontalOptions = rowOption;
+        CalBtnRow.HorizontalOptions = rowOption;
+        PlanningBtnRow.HorizontalOptions = rowOption;
+        BmBtnRow.HorizontalOptions = rowOption;
+
+        BrandRow.HorizontalOptions = collapsed ? LayoutOptions.Center : LayoutOptions.Start;
+        BrandRow.Padding = collapsed ? new Thickness(0, 4, 0, 12) : new Thickness(16, 4, 12, 12);
+        CollapseIcon.ScaleX = collapsed ? -1 : 1;
     }
 
     // ─── Ensure WebViews (lazy per page - Android single WebView) ────────────
@@ -142,6 +199,22 @@ public partial class MainPage : ContentPage
         EnableZoomWithPersistence(_planningWebView, "planning");
     }
 
+    private void EnsureBookmarksWebView()
+    {
+        if (_bookmarkWebView != null) return;
+        _bookmarkWebView = new BlazorWebView
+        {
+            HostPage = "wwwroot/index.html",
+        };
+        _bookmarkWebView.RootComponents.Add(new RootComponent
+        {
+            Selector      = "#app",
+            ComponentType = typeof(Presentation.Bookmarks.BookmarkPage)
+        });
+        MainContent.Children.Add(_bookmarkWebView);
+        EnableZoomWithPersistence(_bookmarkWebView, "bookmarks");
+    }
+
     // ─── Zoom per-page persisted in Settings table ──────────────────────────
 
     private void EnableZoomWithPersistence(BlazorWebView webView, string pageKey)
@@ -200,69 +273,53 @@ public partial class MainPage : ContentPage
 
     // ─── Active page highlight ───────────────────────────────────────────────
 
+    private void StyleNavButton(Microsoft.Maui.Controls.Border border, Microsoft.Maui.Controls.Shapes.Path icon, Label label, bool active)
+    {
+        border.Background = active ? SbInk : Colors.Transparent;
+        icon.Fill = new SolidColorBrush(active ? SbWhite : SbInk2);
+        label.TextColor = active ? SbWhite : SbInk2;
+    }
+
     private void SetActivePage(ActivePage page)
     {
         _activePage = page;
 
-        // Reset all - Unified Light
-        TasksBtnBorder.Background = Color.FromArgb("#FFFFFF");
-        PomoBtnBorder.Background  = Color.FromArgb("#FFFFFF");
-        CalBtnBorder.Background   = Color.FromArgb("#FFFFFF");
-        PlanningBtnBorder.Background = Color.FromArgb("#FFFFFF");
-        TasksBtnBorder.Stroke = Color.FromArgb("#E7E5E4");
-        PomoBtnBorder.Stroke  = Color.FromArgb("#E7E5E4");
-        CalBtnBorder.Stroke   = Color.FromArgb("#E7E5E4");
-        PlanningBtnBorder.Stroke = Color.FromArgb("#E7E5E4");
-        TasksIcon.Fill = new SolidColorBrush(Color.FromArgb("#78716C"));
-        PomoIcon.Fill  = new SolidColorBrush(Color.FromArgb("#78716C"));
-        CalIcon.Fill   = new SolidColorBrush(Color.FromArgb("#78716C"));
-        PlanningIcon.Fill = new SolidColorBrush(Color.FromArgb("#78716C"));
-
-        // Highlight active
-        switch (page)
-        {
-            case ActivePage.Tasks:
-                TasksBtnBorder.Background = Color.FromArgb("#1C1917");
-                TasksBtnBorder.Stroke = Color.FromArgb("#1C1917");
-                TasksIcon.Fill = new SolidColorBrush(Color.FromArgb("#FFFFFF"));
-                break;
-            case ActivePage.Pomodoro:
-                PomoBtnBorder.Background = Color.FromArgb("#1C1917");
-                PomoBtnBorder.Stroke = Color.FromArgb("#1C1917");
-                PomoIcon.Fill = new SolidColorBrush(Color.FromArgb("#FFFFFF"));
-                break;
-            case ActivePage.Calendar:
-                CalBtnBorder.Background = Color.FromArgb("#1C1917");
-                CalBtnBorder.Stroke = Color.FromArgb("#1C1917");
-                CalIcon.Fill = new SolidColorBrush(Color.FromArgb("#FFFFFF"));
-                break;
-            case ActivePage.Planning:
-                PlanningBtnBorder.Background = Color.FromArgb("#1C1917");
-                PlanningBtnBorder.Stroke = Color.FromArgb("#1C1917");
-                PlanningIcon.Fill = new SolidColorBrush(Color.FromArgb("#FFFFFF"));
-                break;
-        }
+        StyleNavButton(TasksBtnBorder, TasksIcon, TasksLbl, page == ActivePage.Tasks);
+        StyleNavButton(PomoBtnBorder, PomoIcon, PomoLbl, page == ActivePage.Pomodoro);
+        StyleNavButton(CalBtnBorder, CalIcon, CalLbl, page == ActivePage.Calendar);
+        StyleNavButton(PlanningBtnBorder, PlanningIcon, PlanningLbl, page == ActivePage.Planning);
+        StyleNavButton(BmBtnBorder, BmIcon, BmLbl, page == ActivePage.Bookmarks);
     }
 
     // ─── Hover effects ───────────────────────────────────────────────────────
 
     private void OnTasksBtnEnter(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Tasks)     TasksBtnBorder.Background = Color.FromArgb("#F5F5F4"); }
+    { if (_activePage != ActivePage.Tasks)       TasksBtnBorder.Background = SbHover; }
     private void OnTasksBtnExit(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Tasks)     TasksBtnBorder.Background = Color.FromArgb("#FFFFFF"); }
+    { if (_activePage != ActivePage.Tasks)       TasksBtnBorder.Background = Colors.Transparent; }
 
     private void OnPomoBtnEnter(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Pomodoro)  PomoBtnBorder.Background  = Color.FromArgb("#F5F5F4"); }
+    { if (_activePage != ActivePage.Pomodoro)    PomoBtnBorder.Background  = SbHover; }
     private void OnPomoBtnExit(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Pomodoro)  PomoBtnBorder.Background  = Color.FromArgb("#FFFFFF"); }
+    { if (_activePage != ActivePage.Pomodoro)    PomoBtnBorder.Background  = Colors.Transparent; }
 
     private void OnCalBtnEnter(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Calendar)  CalBtnBorder.Background   = Color.FromArgb("#F5F5F4"); }
+    { if (_activePage != ActivePage.Calendar)    CalBtnBorder.Background   = SbHover; }
     private void OnCalBtnExit(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Calendar)  CalBtnBorder.Background   = Color.FromArgb("#FFFFFF"); }
+    { if (_activePage != ActivePage.Calendar)    CalBtnBorder.Background   = Colors.Transparent; }
 
     private void OnPlanningBtnEnter(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Planning)  PlanningBtnBorder.Background = Color.FromArgb("#F5F5F4"); }
+    { if (_activePage != ActivePage.Planning)    PlanningBtnBorder.Background = SbHover; }
     private void OnPlanningBtnExit(object sender, PointerEventArgs e)
-    { if (_activePage != ActivePage.Planning)  PlanningBtnBorder.Background = Color.FromArgb("#FFFFFF"); }
+    { if (_activePage != ActivePage.Planning)    PlanningBtnBorder.Background = Colors.Transparent; }
+
+    private void OnBmBtnEnter(object sender, PointerEventArgs e)
+    { if (_activePage != ActivePage.Bookmarks)   BmBtnBorder.Background = SbHover; }
+    private void OnBmBtnExit(object sender, PointerEventArgs e)
+    { if (_activePage != ActivePage.Bookmarks)   BmBtnBorder.Background = Colors.Transparent; }
+
+    private void OnCollapseBtnEnter(object sender, PointerEventArgs e)
+    { CollapseBorder.Background = SbHover; }
+    private void OnCollapseBtnExit(object sender, PointerEventArgs e)
+    { CollapseBorder.Background = Colors.Transparent; }
 }

@@ -1,0 +1,44 @@
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@inject BookmarkStateService State
+
+<div class="sb-i sb-folder @(IsOn ? "on" : "") @(Folder.IsOpen ? "" : "closed") has-dots"
+     @onclick="Open">
+    @if (Kids.Count > 0)
+    {
+        <span class="chev" @onclick:stopPropagation="true" @onclick="ToggleOpen">
+            @((MarkupString)BookmarkIcons.Svg("chevD", 13))
+        </span>
+    }
+    @((MarkupString)BookmarkIcons.FdIcon(Folder.Icon, "folder"))<span class="n">@Folder.Name</span>
+    <span class="dots" @onclick:stopPropagation="true" @onclick="() => OnFolderMenu.InvokeAsync(Folder.Id)">
+        @((MarkupString)BookmarkIcons.Svg("dots", 14))
+    </span>
+    <span class="c">@BookmarkQuery.CountFolder(Folder.Id, State)</span>
+</div>
+@if (Kids.Count > 0 && Folder.IsOpen)
+{
+    <div class="sb-sub">
+        @foreach (var k in Kids)
+        {
+            <BookmarkFolderRow Folder="k" OnNavigate="OnNavigate" OnFolderMenu="OnFolderMenu" />
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public BookmarkFolder Folder { get; set; } = null!;
+    [Parameter] public EventCallback<(string Ctx, string? Id, string? Tag)> OnNavigate { get; set; }
+    [Parameter] public EventCallback<string> OnFolderMenu { get; set; }
+
+    private List<BookmarkFolder> Kids => State.Folders.Where(f => f.ParentId == Folder.Id).ToList();
+    private bool IsOn => State.Route.Ctx == "folder" && State.Route.Id == Folder.Id;
+
+    private Task Open() => OnNavigate.InvokeAsync(("folder", Folder.Id, null));
+
+    private async Task ToggleOpen()
+    {
+        Folder.IsOpen = !Folder.IsOpen;
+        await State.SaveFolderAsync(Folder);
+    }
+}

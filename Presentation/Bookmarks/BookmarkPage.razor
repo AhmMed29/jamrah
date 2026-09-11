@@ -1,0 +1,619 @@
+@namespace Jamrah.Presentation.Bookmarks
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@using Microsoft.JSInterop
+@inject BookmarkStateService State
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="bmk @(_slim ? "slim" : "")">
+    <BookmarkSidebar OnNavigate="Navigate" OnToggleSidebar="() => _slim = !_slim"
+                     OnNewFolder='() => OpenFolderModal("folder", null, null)'
+                     OnNewCollection='() => OpenFolderModal("collection", null, null)'
+                     OnNewSmart='() => OpenFolderModal("smart", null, null)'
+                     OnFolderMenu='id => OpenFolderModal("folder", id, null)'
+                     OnCollectionMenu='id => OpenFolderModal("collection", null, id)' />
+    <div class="bmk-frame">
+        <BookmarkTopBar Search="@State.Search" OnSearch="OnSearch" OnClearSearch="() => OnSearch(string.Empty)"
+                        OnAdd='() => { _editItemId = null; _showItemModal = true; }'
+                        OnToggleSidebar="() => _slim = !_slim" />
+        <main class="bmk-main">
+            @if (!_ready)
+            {
+                <div class="page"><div class="empty"><h3>Loading library…</h3></div></div>
+            }
+            else if (State.Route.Ctx == "home")
+            {
+                <div class="page">
+                    <div class="hero-g">@((MarkupString)(Greeting() + "<em>.</em>"))</div>
+                    <div class="hero-sub">@Alive().Count items · @State.Folders.Count folders · @State.Collections.Count collections &nbsp;·&nbsp; press <kbd>Ctrl K</kbd> to search</div>
+                    <div class="hero-search">
+                        <input value="@State.Search" @oninput="e => OnSearch(e.Value?.ToString() ?? string.Empty)" placeholder="Search your library…" />
+                        @((MarkupString)BookmarkIcons.Svg("search", 17))
+                    </div>
+                    @if (ActiveKhatm() != null)
+                    {
+                        var qa = ActiveKhatm()!;
+                        <section class="hsec"><div class="hsec-h"><span class="hsec-t">Quran — الختمة</span><a class="hsec-a" @onclick='() => Navigate(("quran", null, null))'>open tracker →</a></div>
+                        <div class="card" style="padding:18px 20px;max-width:560px" @onclick='() => Navigate(("quran", null, null))'>
+                            <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:14px">الختمة الحالية</b><span class="mono" style="font-size:12px;color:var(--ink3);direction:ltr">@qa.Page / 604</span></div>
+                            <div class="bar" style="margin-top:10px"><i style="width:@(qa.Page * 100 / 604)%"></i></div>
+                            <div style="margin-top:8px;font-size:12.5px;color:var(--ink3);font-weight:600">@(TodayPages() > 0 ? $"الورد اليومي: {TodayPages()} صفحة · " : "سجّل ورد اليوم · ")الجزء @((qa.Page - 1) / 20 + 1)</div>
+                        </div></section>
+                    }
+                    <section class="hsec"><div class="hsec-h"><span class="hsec-t">Recently Added</span><a class="hsec-a" @onclick='() => Navigate(("all", null, null))'>view all →</a></div>
+                        <div class="hrow">@foreach (var it in HomeRec()) { <BookmarkCard Item="it" TemplateId="minimalImage" OnOpen="OpenItem" OnToggleFav="ToggleFav" /> }</div></section>
+                    @if (HomeCont().Count > 0)
+                    {
+                        <section class="hsec"><div class="hsec-h"><span class="hsec-t">Continue</span><a class="hsec-a" @onclick='() => Navigate(("all", null, null))'>view all →</a></div>
+                            <div class="hrow wide">@foreach (var it in HomeCont()) { <BookmarkCard Item="it" TemplateId="reading" OnOpen="OpenItem" OnToggleFav="ToggleFav" /> }</div></section>
+                    }
+                    @if (HomeFavs().Count > 0)
+                    {
+                        <section class="hsec"><div class="hsec-h"><span class="hsec-t">Favorites</span><a class="hsec-a" @onclick='() => Navigate(("favorites", null, null))'>view all →</a></div>
+                            <div class="hrow">@foreach (var it in HomeFavs()) { <BookmarkCard Item="it" TemplateId="minimalImage" OnOpen="OpenItem" OnToggleFav="ToggleFav" /> }</div></section>
+                    }
+                    @if (HomePins().Count > 0)
+                    {
+                        <section class="hsec"><div class="hsec-h"><span class="hsec-t">Pinned</span><a class="hsec-a" @onclick='() => Navigate(("pinned", null, null))'>view all →</a></div>
+                            <div class="hrow">@foreach (var it in HomePins()) { <BookmarkCard Item="it" TemplateId="minimalImage" OnOpen="OpenItem" OnToggleFav="ToggleFav" /> }</div></section>
+                    }
+                    @if (HomeClips().Count > 0)
+                    {
+                        <section class="hsec"><div class="hsec-h"><span class="hsec-t">Clipboard — recent copies</span><a class="hsec-a" @onclick='() => Navigate(("clipboard", null, null))'>open →</a></div>
+                            <div class="hcol">
+                                @foreach (var c in HomeClips())
+                                {
+                                    <div class="card" style="padding:13px 15px" @onclick='() => Navigate(("clipboard", null, null))'>
+                                        <div class="mono" style="font-size:11.5px;color:var(--ink2);line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;word-break:break-word">@(c.Text.Length > 180 ? c.Text[..180] : c.Text)</div>
+                                        <div class="clip-m" style="margin-top:8px">@BookmarkCardData.FmtAgo(c.At)@(c.Pinned ? " · pinned" : "")</div>
+                                    </div>
+                                }
+                            </div></section>
+                    }
+                    <section class="hsec"><div class="hsec-h"><span class="hsec-t">Collections</span></div>
+                        <div class="hcol">
+                            @foreach (var c in State.Collections)
+                            {
+                                var cid = c.Id;
+                                var cicon = string.IsNullOrEmpty(c.Icon) ? (BookmarkQuery.ParseSmart(c.SmartJson) != null ? "spark" : "layers") : c.Icon;
+                                <div class="card" style="padding:16px 18px" @onclick='() => Navigate(("collection", cid, null))'>
+                                    <div style="display:flex;align-items:center;gap:9px;color:var(--ink2)">
+                                        @((MarkupString)BookmarkIcons.FdIcon(cicon, "layers"))<b style="font-size:14px;color:var(--ink)">@c.Name</b>
+                                        @(BookmarkQuery.ParseSmart(c.SmartJson) != null ? (MarkupString)"<span class=\"st\" style=\"--c:#0f766e\">smart</span>" : (MarkupString)"")
+                                    </div>
+                                    <div style="margin-top:10px;font-size:12.5px;color:var(--ink3);font-weight:500">@BookmarkQuery.CountCollection(c, State) items · @State.Folders.Count(fd => fd.CollectionId == cid) folders</div>
+                                </div>
+                            }
+                        </div></section>
+                    <section class="hsec"><div class="hsec-h"><span class="hsec-t">Statistics</span></div>
+                        <div class="stats">
+                            @foreach (var (t, n, max) in TypeStats())
+                            {
+                                <div class="stat"><span class="sn">@BookmarkQuery.TypeName(t)</span><span class="sv">@n</span><span class="sb"><i style="width:@(n * 100 / max)%"></i></span></div>
+                            }
+                        </div></section>
+                </div>
+            }
+            else if (State.Route.Ctx == "quran")
+            {
+                <div class="page">
+                    <div class="ph-row"><h1 class="ph-title">Quran</h1><span class="ph-sub">الختمة والورد اليومي</span>
+                        <button class="btn sm" style="margin-left:auto" @onclick="NewKhatm">+ New khatm</button></div>
+                    @if (ActiveKhatm() == null)
+                    {
+                        <div class="empty"><h3>No active khatm.</h3><p>Start a new khatm to track your 604 pages.</p></div>
+                    }
+                    else
+                    {
+                        var qa = ActiveKhatm()!;
+                        <div class="q-grid">
+                            <div>
+                                <div class="qcard">
+                                    <div class="q-k">Current page</div>
+                                    <div class="q-big">@qa.Page <span>/ 604</span></div>
+                                    <div class="bar" style="margin-top:10px"><i style="width:@(qa.Page * 100 / 604)%"></i></div>
+                                    <div class="q-meta">الجزء @((qa.Page - 1) / 20 + 1) · @Math.Round(qa.Page * 100.0 / 604)% complete</div>
+                                    <div class="q-wir">
+                                        <div class="fld"><label>Pages read</label><input type="number" min="1" max="604" value="@_wridInput" @oninput="e => _wridInput = e.Value?.ToString() ?? string.Empty" /></div>
+                                        <button class="btn pri sm" @onclick="AddWrid">Log wrid</button>
+                                    </div>
+                                    @if (TodayPages() > 0) { <div class="q-today" style="margin-top:10px">الورد اليومي: @TodayPages() صفحة ✓</div> }
+                                    <div class="q-wirhint">Log how many pages you read — the khatm page advances automatically.</div>
+                                </div>
+                                <div class="qcard" style="margin-top:16px">
+                                    <div class="q-k">Juz’an (30)</div>
+                                    <div class="q-juz" style="margin-top:10px">
+                                        @for (var j = 0; j < 30; j++)
+                                        {
+                                            var s = j * 20 + 1; var e2 = (j + 1) * 20;
+                                            var done = qa.Page > e2; var cur = qa.Page >= s && qa.Page <= e2;
+                                            <div class="qj @(done ? "done" : "") @(cur ? "cur" : "")"><b>@(j + 1)</b><span>@s-@e2</span></div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="qcard">
+                                <div class="q-k">Reading log</div>
+                                @foreach (var l in State.QuranLogs.Where(x => x.KhatmId == qa.Id).OrderByDescending(x => x.At))
+                                {
+                                    var lid = l.Id;
+                                    <div class="q-stat"><span>@l.At.ToString("MMM d") · <b class="mono">@l.FromPage → @l.ToPage</b></span>
+                                        <button class="mini" @onclick="() => State.DeleteQuranLogAsync(lid)">@((MarkupString)BookmarkIcons.Svg("x", 12))</button></div>
+                                }
+                                @if (!State.QuranLogs.Any(x => x.KhatmId == qa.Id)) { <p style="color:var(--ink3);font-size:12.5px;margin-top:8px">No entries yet.</p> }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else if (State.Route.Ctx == "clipboard")
+            {
+                <div class="page">
+                    <div class="ph-row"><h1 class="ph-title">Clipboard</h1><span class="ph-sub">@State.Clips.Count saved</span></div>
+                    <div class="clipcard">
+                        <textarea value="@_clipInput" @oninput="e => _clipInput = e.Value?.ToString() ?? string.Empty" placeholder="Paste text or a link to keep it here…" style="width:100%;min-height:64px;border:0;outline:none;font-size:13px;background:none;resize:vertical"></textarea>
+                        <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn pri sm" @onclick="AddClip">Save clip</button></div>
+                    </div>
+                    @foreach (var c in State.Clips.OrderByDescending(x => x.Pinned).ThenByDescending(x => x.At))
+                    {
+                        var clip = c;
+                        <div class="clipcard @(clip.Pinned ? "pin" : "")">
+                            <div class="clip-t">@clip.Text</div>
+                            <div class="clip-f"><span class="clip-m">@BookmarkCardData.FmtAgo(clip.At)@(clip.Pinned ? " · pinned" : "")</span>
+                                <span class="clip-acts">
+                                    <button class="btn sm" @onclick="() => CopyClip(clip.Text)">Copy</button>
+                                    <button class="btn sm" @onclick="() => ToggleClipPin(clip)">@(clip.Pinned ? "Unpin" : "Pin")</button>
+                                    <button class="btn sm dgr" @onclick="() => State.DeleteClipAsync(clip.Id)">Delete</button>
+                                </span></div>
+                        </div>
+                    }
+                    @if (State.Clips.Count == 0) { <div class="empty"><h3>Clipboard is empty.</h3><p>Save anything you copy often — snippets, links, addresses.</p></div> }
+                </div>
+            }
+            else if (State.Route.Ctx == "tags")
+            {
+                <div class="page">
+                    <div class="ph-row"><h1 class="ph-title">Tags</h1><span class="ph-sub">@State.Tags.Count tags · click one to browse</span></div>
+                    @if (State.Tags.Count == 0) { <div class="empty"><h3>No tags yet.</h3><p>Tags appear here as you add them to items.</p></div> }
+                    @foreach (var t in State.Tags.OrderByDescending(t => BookmarkQuery.TagCount(t.Name, State)))
+                    {
+                        var tag = t;
+                        <div class="tagrow" @onclick='() => Navigate(("tag", null, tag.Name))'>
+                            <span class="cdot" style="background:@(string.IsNullOrEmpty(tag.Color) ? "#c9c5bc" : tag.Color)"></span>
+                            <b>#@tag.Name</b><span class="cnt">@BookmarkQuery.TagCount(tag.Name, State) items</span>
+                            <span class="acts" @onclick:stopPropagation="true">
+                                <input type="color" value="@(string.IsNullOrEmpty(tag.Color) ? "#c9c5bc" : tag.Color)" @onchange="e => SaveTagColor(tag, e.Value?.ToString() ?? string.Empty)" style="width:30px;height:26px;border:1px solid var(--line);border-radius:6px;padding:1px;background:var(--surface)" title="Tag color" />
+                            </span>
+                        </div>
+                    }
+                </div>
+            }
+            else if (State.Route.Ctx == "templates")
+            {
+                <div class="page">
+                    <div class="ph-row"><h1 class="ph-title">Templates</h1><span class="ph-sub">22 built-in card styles · applied automatically per type</span></div>
+                    <div class="hcol">
+                        @foreach (var (id, name, cat) in GalleryTemplates)
+                        {
+                            <div class="tpl-tile">
+                                <div class="tn">@name <span style="color:var(--ink3);font-weight:600">· @cat</span></div>
+                                <div style="margin-top:10px;pointer-events:none">
+                                    <div class="card" data-static="1">@((MarkupString)BookmarkTemplates.Render(SampleItem(), id, State.Tags))</div>
+                                </div>
+                                <div class="tf"><span class="mono" style="font-size:11px;color:var(--ink3)">@id</span></div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else if (State.Route.Ctx == "settings")
+            {
+                <div class="page">
+                    <div class="ph-row"><h1 class="ph-title">Settings</h1><span class="ph-sub">backup &amp; shortcuts</span></div>
+                    <div class="qcard" style="max-width:640px">
+                        <div class="q-k">Library backup (JSON)</div>
+                        <div class="q-meta">@State.Items.Count(i => !i.Deleted) items · @State.Folders.Count folders · @State.Collections.Count collections</div>
+                        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+                            <button class="btn pri sm" @onclick="ExportBackup">@((MarkupString)BookmarkIcons.Svg("download", 13)) Export JSON</button>
+                            <label class="btn sm" style="cursor:pointer">@((MarkupString)BookmarkIcons.Svg("upload", 13)) Import JSON
+                                <InputFile OnChange="ImportFile" accept=".json,application/json" style="display:none" />
+                            </label>
+                        </div>
+                        <p class="hint" style="margin-top:10px">Import replaces the whole library — export first to be safe.</p>
+                    </div>
+                    <div class="qcard" style="max-width:640px;margin-top:16px">
+                        <div class="q-k">Search operators</div>
+                        <div class="q-meta"><span class="mono">type:book</span> · <span class="mono">tag:backend</span> · <span class="mono">author:joel</span> · <span class="mono">favorite:true</span> · <span class="mono">year:2024</span></div>
+                    </div>
+                    <div class="qcard" style="max-width:640px;margin-top:16px">
+                        <div class="q-k">Zoom shortcuts (per page)</div>
+                        <div class="q-meta"><kbd>Ctrl +</kbd> <kbd>Ctrl -</kbd> <kbd>Ctrl 0</kbd> · <kbd>Ctrl</kbd> + mouse wheel</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                var items = SortedRouteItems();
+                var isTrash = State.Route.Ctx == "trash";
+                var col = State.Route.Ctx == "collection" ? State.Collections.FirstOrDefault(c => c.Id == State.Route.Id) : null;
+                <div class="page">
+                    <div class="ph-row"><h1 class="ph-title">@BookmarkQuery.TitleFor(State.Route, State)</h1>
+                        <span class="ph-sub">@items.Count item@(items.Count == 1 ? "" : "s")@(isTrash ? " · deleted items stay until removed" : "")</span>
+                        @if (col != null && BookmarkQuery.ParseSmart(col.SmartJson) == null)
+                        {
+                            <span style="margin-left:auto" class="mono"></span>
+                        }
+                    </div>
+                    @if (State.Route.Ctx == "folder")
+                    {
+                        var chain = FolderChain(State.Route.Id ?? "");
+                        @if (chain.Count > 0)
+                        {
+                            var firstColl = State.Collections.FirstOrDefault(c => c.Id == chain[0].CollectionId);
+                            <div class="crumbs">
+                                @if (firstColl != null)
+                                {
+                                    var fcid = firstColl.Id;
+                                    <span class="crumb" @onclick='() => Navigate(("collection", fcid, null))'>
+                                        @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(firstColl.Icon) ? "layers" : firstColl.Icon, "layers")) @firstColl.Name
+                                    </span>
+                                }
+                                @for (var ci = 0; ci < chain.Count; ci++)
+                                {
+                                    var cfd = chain[ci];
+                                    var last = ci == chain.Count - 1;
+                                    var cfdId = cfd.Id;
+                                    @if (ci > 0 || firstColl != null) { <span>›</span> }
+                                    @if (last)
+                                    {
+                                        <span class="crumb end">
+                                            @if (!string.IsNullOrEmpty(cfd.Icon)) { @((MarkupString)BookmarkIcons.FdIcon(cfd.Icon, "folder")) } @cfd.Name
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="crumb" @onclick='() => Navigate(("folder", cfdId, null))'>
+                                            @if (!string.IsNullOrEmpty(cfd.Icon)) { @((MarkupString)BookmarkIcons.FdIcon(cfd.Icon, "folder")) } @cfd.Name
+                                        </span>
+                                    }
+                                }
+                            </div>
+                        }
+                    }
+                    @if (!string.IsNullOrEmpty(State.Search))
+                    {
+                        <div class="res-head"><span>Results for <b>“@State.Search”</b> — @items.Count found</span>
+                            <button class="btn sm" @onclick='() => OnSearch(string.Empty)'>@((MarkupString)BookmarkIcons.Svg("x", 12)) Clear</button></div>
+                    }
+                    <BookmarkToolbar View="@_view" Sort="@_sort" TotalCount="@items.Count"
+                                     OnView="ChangeView" OnSort="ChangeSort" OnChanged="() => StateHasChanged()" />
+                    @if (isTrash && items.Count > 0)
+                    {
+                        <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+                            <button class="btn sm dgr" @onclick="EmptyTrash">@((MarkupString)BookmarkIcons.Svg("trash", 13)) @(_confirmEmptyTrash ? "Click again to confirm" : "Empty trash")</button>
+                        </div>
+                    }
+                    @if (_view == "table")
+                    {
+                        @if (items.Count == 0)
+                        {
+                            <BookmarkEmpty IsLibraryEmpty="@(State.Items.Count == 0)" Search="@State.Search"
+                                           OnAdd='() => { _editItemId = null; _showItemModal = true; }'
+                                           OnClearSearch='() => OnSearch(string.Empty)' />
+                        }
+                        else
+                        {
+                            <table class="tbl"><thead><tr><th>Title</th><th>Type</th><th>Meta</th><th>Tags</th><th>Rating</th><th>Added</th></tr></thead>
+                            <tbody>
+                                @foreach (var it in items)
+                                {
+                                    var tid = it.Id;
+                                    <tr class="card" @onclick="() => OpenItem(tid)">@((MarkupString)BookmarkTemplates.TableCells(it, State.Tags))</tr>
+                                }
+                            </tbody></table>
+                        }
+                    }
+                    else if (items.Count == 0)
+                    {
+                        <BookmarkEmpty IsLibraryEmpty="@(State.Items.Count == 0)" Search="@State.Search"
+                                       OnAdd='() => { _editItemId = null; _showItemModal = true; }'
+                                       OnClearSearch='() => OnSearch(string.Empty)' />
+                    }
+                    else if (_view == "timeline")
+                    {
+                        @foreach (var grp in items.GroupBy(i => i.CreatedAt.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture)))
+                        {
+                            <div class="tl-g"><div class="tl-m">@grp.Key</div><div class="tl-r">
+                                @foreach (var it in grp)
+                                {
+                                    <div class="tl-i"><BookmarkCard Item="it" TemplateId="@BookmarkQuery.CardTplFor(it, _view)" OnOpen="OpenItem" OnToggleFav="ToggleFav" /></div>
+                                }
+                            </div></div>
+                        }
+                    }
+                    else if (_view == "compact")
+                    {
+                        @foreach (var it in items) { <BookmarkCard Item="it" TemplateId="compact" OnOpen="OpenItem" OnToggleFav="ToggleFav" /> }
+                    }
+                    else if (_view == "list")
+                    {
+                        <div class="v-list">@foreach (var it in items) { <BookmarkCard Item="it" TemplateId="@BookmarkQuery.CardTplFor(it, _view)" OnOpen="OpenItem" OnToggleFav="ToggleFav" /> }</div>
+                    }
+                    else if (_view == "masonry")
+                    {
+                        <div class="v-masonry">@foreach (var it in items) { <BookmarkCard Item="it" TemplateId="@BookmarkQuery.CardTplFor(it, _view)" OnOpen="OpenItem" OnToggleFav="ToggleFav" /> }</div>
+                    }
+                    else
+                    {
+                        <div style="display:grid;gap:16px;align-items:start;grid-template-columns:repeat(auto-fill,minmax(235px,1fr))">
+                            @foreach (var it in items) { <BookmarkCard Item="it" TemplateId="@BookmarkQuery.CardTplFor(it, _view)" OnOpen="OpenItem" OnToggleFav="ToggleFav" /> }
+                        </div>
+                    }
+                </div>
+            }
+        </main>
+    </div>
+</div>
+
+@if (State.DetailId != null)
+{
+    <BookmarkDrawer ItemId="@State.DetailId" OnClose="() => State.SetDetail(null)"
+                    OnNavigate="Navigate" OnOpen="OpenItem"
+                    OnEdit="id => { _editItemId = id; _showItemModal = true; }"
+                    OnChanged="() => StateHasChanged()" />
+}
+@if (_showItemModal)
+{
+    <BookmarkItemModal EditId="@_editItemId" OnClose="() => _showItemModal = false"
+                       OnSaved="msg => { _showItemModal = false; ShowToast(msg); }" />
+}
+@if (_folderModalMode != null)
+{
+    <BookmarkFolderModal Mode="@_folderModalMode" FolderId="@_folderEditId" CollectionId="@_colEditId"
+                         OnClose="() => _folderModalMode = null"
+                         OnSaved="msg => { _folderModalMode = null; ShowToast(msg); }" />
+}
+@if (_toast != null)
+{
+    <div class="bmk-toasts"><div class="toast">@_toast</div></div>
+}
+
+@code {
+    private bool _ready;
+    private bool _slim;
+    private string _view = "grid";
+    private string _sort = "added";
+    private bool _showItemModal;
+    private string? _editItemId;
+    private string? _folderModalMode;
+    private string? _folderEditId;
+    private string? _colEditId;
+    private string? _toast;
+    private int _toastToken;
+    private bool _confirmEmptyTrash;
+    private string _wridInput = string.Empty;
+    private string _clipInput = string.Empty;
+
+    private static readonly (string Id, string Name, string Cat)[] GalleryTemplates = new[]
+    {
+        ("minimal", "Minimal Card", "Minimal"), ("minimalImage", "Minimal Image", "Minimal"),
+        ("linkcard", "Link", "Minimal"), ("post", "Post", "Minimal"), ("compact", "Compact Row", "Minimal"),
+        ("poster", "Poster", "Media"), ("cinematic", "Cinematic", "Media"), ("hero", "Hero", "Media"),
+        ("landscape", "Landscape", "Media"), ("photo", "Photo", "Media"), ("audio", "Audio", "Media"),
+        ("thumbGrid", "Thumbnail Grid", "Media"), ("book", "Book Cover", "Reading"),
+        ("reading", "Reading Progress", "Reading"), ("shelf", "Shelf", "Reading"),
+        ("note", "Note", "General"), ("dev", "Developer", "Developer"), ("file", "File", "Files"),
+        ("horizontal", "Horizontal", "General"), ("magazine", "Magazine", "General"),
+        ("detailed", "Detailed", "General"), ("metadata", "Metadata", "General"),
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        State.OnStateChanged += OnState;
+        await State.InitAsync();
+        await LoadVS();
+        _ready = true;
+    }
+
+    private void OnState() => InvokeAsync(StateHasChanged);
+    public void Dispose() => State.OnStateChanged -= OnState;
+
+    private string VKey => State.Route.Ctx + (State.Route.Id != null ? ":" + State.Route.Id : "") + (State.Route.Tag != null ? ":" + State.Route.Tag : "");
+
+    private async Task LoadVS()
+    {
+        var vs = await State.GetViewStateAsync(VKey);
+        _view = string.IsNullOrEmpty(vs.View) ? "grid" : vs.View;
+        _sort = string.IsNullOrEmpty(vs.Sort) ? BookmarkQuery.DefaultSort(State.Route.Ctx) : vs.Sort;
+    }
+
+    private async Task Navigate((string Ctx, string? Id, string? Tag) nav)
+    {
+        State.SetRoute(nav.Ctx, nav.Id, nav.Tag);
+        _confirmEmptyTrash = false;
+        await LoadVS();
+        StateHasChanged();
+    }
+
+    private async Task OnSearch(string s)
+    {
+        var searchable = new[] { "all", "favorites", "pinned", "recent", "folder", "collection", "tag", "archive", "trash" };
+        if (!string.IsNullOrEmpty(s) && !searchable.Contains(State.Route.Ctx))
+        {
+            State.SetRoute("all");
+            await LoadVS();
+        }
+        State.SetSearch(s);
+    }
+
+    private async Task OpenItem(string id)
+    {
+        State.SetDetail(id);
+        await State.TouchOpenedAsync(id);
+    }
+
+    private Task ToggleFav(string id) => State.ToggleFavoriteAsync(id);
+
+    private async Task ChangeView(string v)
+    {
+        _view = v;
+        await State.SetViewStateAsync(VKey, _view, _sort);
+    }
+
+    private async Task ChangeSort(string s)
+    {
+        _sort = s;
+        await State.SetViewStateAsync(VKey, _view, _sort);
+    }
+
+    private void OpenFolderModal(string mode, string? folderId, string? colId)
+    {
+        _folderModalMode = mode;
+        _folderEditId = folderId;
+        _colEditId = colId;
+    }
+
+    private void ShowToast(string msg)
+    {
+        var t = ++_toastToken;
+        _toast = msg;
+        StateHasChanged();
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(3500);
+            if (_toastToken == t) await InvokeAsync(() => { _toast = null; StateHasChanged(); });
+        });
+    }
+
+    // ─── pure view helpers ───────────────────────────────────────────────────
+
+    private List<BookmarkItem> Alive() => State.Items.Where(i => !i.Deleted && !i.Archived).ToList();
+    private List<BookmarkItem> HomeRec() => Alive().OrderByDescending(i => i.CreatedAt).Take(8).ToList();
+    private List<BookmarkItem> HomeCont() => Alive().Where(i => (BookmarkCardData.From(i).Progress ?? 0) is > 0 and < 100).Take(8).ToList();
+    private List<BookmarkItem> HomeFavs() => Alive().Where(i => i.Favorite).Take(8).ToList();
+    private List<BookmarkItem> HomePins() => Alive().Where(i => i.Pinned).Take(8).ToList();
+    private List<BookmarkClip> HomeClips() => State.Clips.OrderByDescending(c => c.At).Take(6).ToList();
+    private BookmarkQuranKhatm? ActiveKhatm() => State.Khatms.OrderByDescending(k => k.StartedAt).FirstOrDefault();
+
+    private int TodayPages()
+    {
+        var today = DateTime.Today;
+        return State.QuranLogs.Where(l => l.At.Date == today).Sum(l => Math.Max(0, l.ToPage - l.FromPage));
+    }
+
+    private List<(string Type, int Count, int Max)> TypeStats()
+    {
+        var groups = Alive().GroupBy(i => i.Type).Select(g => (Type: g.Key, Count: g.Count())).OrderByDescending(x => x.Count).Take(10).ToList();
+        var max = groups.Count > 0 ? groups[0].Count : 1;
+        return groups.Select(x => (x.Type, x.Count, max)).ToList();
+    }
+
+    private string Greeting()
+    {
+        var h = DateTime.Now.Hour;
+        return h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+    }
+
+    private BookmarkItem SampleItem() => Alive().FirstOrDefault() ?? new BookmarkItem
+    {
+        Id = "x", Title = "A sample item", Type = "link", Description = "This is how your data will look.",
+        Url = "https://example.com", TagsJson = "[\"sample\"]", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+    };
+
+    private List<BookmarkFolder> FolderChain(string fid)
+    {
+        var chain = new List<BookmarkFolder>();
+        var fd = State.Folders.FirstOrDefault(x => x.Id == fid);
+        var n = 0;
+        while (fd != null && n++ < 50) { chain.Insert(0, fd); fd = State.Folders.FirstOrDefault(x => x.Id == fd.ParentId); }
+        return chain;
+    }
+
+    private List<BookmarkItem> SortedRouteItems()
+    {
+        var items = BookmarkQuery.RouteItems(State);
+        BookmarkQuery.ApplySort(items, _sort);
+        return items;
+    }
+
+    private async Task EmptyTrash()
+    {
+        if (!_confirmEmptyTrash) { _confirmEmptyTrash = true; return; }
+        _confirmEmptyTrash = false;
+        foreach (var it in State.Items.Where(i => i.Deleted).ToList())
+            await State.DeleteItemAsync(it.Id, true);
+        ShowToast("Trash emptied");
+    }
+
+    private async Task AddWrid()
+    {
+        var qa = ActiveKhatm();
+        if (qa == null || !int.TryParse(_wridInput, out var n) || n <= 0) return;
+        var to = Math.Min(604, qa.Page + n);
+        await State.SaveQuranLogAsync(new BookmarkQuranLog { KhatmId = qa.Id, At = DateTime.UtcNow, FromPage = qa.Page, ToPage = to });
+        qa.Page = to;
+        await State.SaveKhatmAsync(qa);
+        _wridInput = string.Empty;
+        ShowToast("Wrid saved ✓");
+    }
+
+    private async Task NewKhatm()
+    {
+        await State.SaveKhatmAsync(new BookmarkQuranKhatm { StartedAt = DateTime.UtcNow, Page = 1 });
+        ShowToast("New khatm started ✓");
+    }
+
+    private async Task AddClip()
+    {
+        if (string.IsNullOrWhiteSpace(_clipInput)) return;
+        await State.SaveClipAsync(new BookmarkClip { Text = _clipInput.Trim(), At = DateTime.UtcNow });
+        _clipInput = string.Empty;
+        ShowToast("Clip saved ✓");
+    }
+
+    private async Task ToggleClipPin(BookmarkClip clip)
+    {
+        clip.Pinned = !clip.Pinned;
+        await State.SaveClipAsync(clip);
+    }
+
+    private async Task CopyClip(string text)
+    {
+        try
+        {
+            var ok = await JS.InvokeAsync<bool>("bmInterop.copyText", text);
+            ShowToast(ok ? "Copied ✓" : "Copy failed");
+        }
+        catch { ShowToast("Copy failed"); }
+    }
+
+    private async Task SaveTagColor(BookmarkTag tag, string color)
+    {
+        tag.Color = color;
+        await State.SaveTagAsync(tag);
+    }
+
+    private async Task ExportBackup()
+    {
+        try
+        {
+            var json = await State.ExportJsonAsync();
+            await JS.InvokeVoidAsync("bmInterop.download", "athenaeum-backup.json", json);
+            ShowToast("Exported ✓");
+        }
+        catch { ShowToast("Export failed"); }
+    }
+
+    private async Task ImportFile(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs e)
+    {
+        try
+        {
+            using var s = e.File.OpenReadStream(10_000_000);
+            using var r = new System.IO.StreamReader(s);
+            await State.ImportJsonAsync(await r.ReadToEndAsync());
+            ShowToast("Imported ✓");
+        }
+        catch { ShowToast("Invalid backup file"); }
+    }
+}

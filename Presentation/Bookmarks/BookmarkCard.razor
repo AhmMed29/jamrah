@@ -1,0 +1,21 @@
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@inject BookmarkStateService State
+
+<div class="card" @onclick="() => OnOpen.InvokeAsync(Item.Id)">
+    @((MarkupString)BookmarkTemplates.Render(Item, TemplateId, State.Tags))
+    <button class="favb @(Item.Favorite ? "on" : "") @(LightTemplates.Contains(TemplateId) ? "lt" : "")"
+            @onclick:stopPropagation="true" @onclick="() => OnToggleFav.InvokeAsync(Item.Id)" title="Favorite">
+        @((MarkupString)BookmarkIcons.Svg("star", 13))
+    </button>
+</div>
+
+@code {
+    [Parameter] public BookmarkItem Item { get; set; } = null!;
+    [Parameter] public string TemplateId { get; set; } = "detailed";
+    [Parameter] public EventCallback<string> OnOpen { get; set; }
+    [Parameter] public EventCallback<string> OnToggleFav { get; set; }
+
+    private static readonly HashSet<string> LightTemplates = new()
+        { "minimalImage", "poster", "cinematic", "hero", "landscape", "thumbGrid", "shelf" };
+}

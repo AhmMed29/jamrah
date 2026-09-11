@@ -19,9 +19,8 @@
 .bmk button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .bmk input,.bmk select,.bmk textarea{font:inherit;color:var(--ink)}
 .bmk svg{flex:none;vertical-align:-3px}
-.bmk ::-webkit-scrollbar{width:9px;height:9px}
-.bmk ::-webkit-scrollbar-thumb{background:#d8d4cc;border-radius:5px;border:2px solid var(--bg)}
-.bmk ::-webkit-scrollbar-track{background:transparent}
+.bmk ::-webkit-scrollbar{display:none}
+.bmk{scrollbar-width:none}
 .bmk .mono{font-family:var(--mono)}
 .bmk kbd{font-family:var(--mono);font-size:10.5px;font-weight:600;border:1px solid var(--line2);border-bottom-width:2px;border-radius:5px;padding:1px 6px;background:var(--surface);color:var(--ink2)}
 .bmk{display:grid;grid-template-columns:1fr;height:100vh}

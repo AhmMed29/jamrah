@@ -11,15 +11,13 @@
 
 /* Reset + base — scoped to the sidebar only so page styles stay untouched */
 .page-shell .app-sb,.page-shell .app-sb *{margin:0;padding:0;box-sizing:border-box}
-.page-shell .app-sb{font-family:var(--sans);color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased;
+.page-shell .app-sb{font-family:var(--sans);color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased;scrollbar-width:none;
     overflow-y:auto;overflow-x:hidden;border-right:1px solid var(--line);background:var(--bg);white-space:nowrap;height:100vh;width:250px;
     transition:margin-left .28s cubic-bezier(.25,.9,.3,1),opacity .25s ease}
 .page-shell.slim .app-sb{margin-left:-250px;opacity:0;pointer-events:none}
 .page-shell .app-sb button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .page-shell .app-sb svg{flex:none;vertical-align:-3px}
-.page-shell .app-sb ::-webkit-scrollbar{width:9px;height:9px}
-.page-shell .app-sb ::-webkit-scrollbar-thumb{background:#d8d4cc;border-radius:5px;border:2px solid var(--bg)}
-.page-shell .app-sb ::-webkit-scrollbar-track{background:transparent}
+.page-shell .app-sb ::-webkit-scrollbar{display:none}
 
 /* Brand */
 .page-shell .sb-brand{display:flex;align-items:center;gap:10px;padding:18px 16px 12px}

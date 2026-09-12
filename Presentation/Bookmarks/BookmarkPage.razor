@@ -376,18 +376,15 @@
                 </div>
             }
         </main>
+        @if (State.DetailId != null)
+        {
+            <BookmarkDrawer ItemId="@State.DetailId" OnClose="() => State.SetDetail(null)"
+                            OnNavigate="Navigate" OnOpen="OpenItem"
+                            OnEdit="id => { _editItemId = id; _showItemModal = true; }"
+                            OnChanged="() => StateHasChanged()" />
+        }
     </div>
 </div>
-
-@if (State.DetailId != null)
-{
-    <!-- TEMP-DIAG -->
-    <div style="position:fixed;top:0;left:0;background:red;color:#fff;z-index:99999;padding:4px 10px;font-size:13px;font-weight:700">DRAWER-ON</div>
-    <BookmarkDrawer ItemId="@State.DetailId" OnClose="() => State.SetDetail(null)"
-                    OnNavigate="Navigate" OnOpen="OpenItem"
-                    OnEdit="id => { _editItemId = id; _showItemModal = true; }"
-                    OnChanged="() => StateHasChanged()" />
-}
 @if (_showItemModal)
 {
     <BookmarkItemModal EditId="@_editItemId" OnClose="() => _showItemModal = false"

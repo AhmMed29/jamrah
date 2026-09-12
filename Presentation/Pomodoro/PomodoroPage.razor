@@ -22,6 +22,7 @@
     </div>
 
     <div class="left-panel">
+        <div class="pomo-controls">
         <div class="today-card">
             <div class="today-card-date">@_currentDateStr</div>
             <div class="today-card-time">@_currentTimeStr</div>
@@ -74,7 +75,9 @@
             <div class="info-row"><span>وقت النهاية</span><span>@FinalTimeText</span></div>
             <div class="info-row"><span>المدة</span><span>@DurationText</span></div>
         </div>
+        </div>
 
+        <div class="pomo-extra">
         <button class="dur-btn" style="width:100%; margin-top:2px;" @onclick="() => _soundModalOpen = true">اعدادات الصوت</button>
 
         @if (_soundModalOpen)
@@ -115,6 +118,7 @@
                 تغيير المنطقة
             </button>
 
+        </div>
         </div>
     </div></div>
 
@@ -281,6 +285,7 @@
     .app-container { display:flex; height:100vh; gap:16px; padding:16px; background:var(--bg); }
 
     .left-panel { width:360px; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; overflow-y:auto; flex-shrink:0; scrollbar-width:thin; -ms-overflow-style:auto; min-height:0; }
+    .pomo-controls, .pomo-extra { display:flex; flex-direction:column; gap:12px; min-width:0; }
 
     .today-card { background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:14px 12px; }
     .today-card-label { font-size:10px; font-weight:700; color:var(--muted); letter-spacing:.04em; margin-bottom:6px; }

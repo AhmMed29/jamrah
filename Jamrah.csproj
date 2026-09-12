@@ -74,6 +74,13 @@
 		<Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\ClipAgent\ClipAgent.csproj&quot; -c $(Configuration) --nologo -v:q" />
 	</Target>
 
+	<!-- Dev-loop helper (revert: delete this Target): kill the running ClipAgent before copy,
+	     otherwise the copy below fails with MSB3021/3027 file-lock errors on every build.
+	     The agent auto-restarts on next app launch. ContinueOnError covers "not running". -->
+	<Target Name="KillClipAgentBeforeCopy" BeforeTargets="CopyClipAgent" Condition="$([System.String]::Copy('$(TargetFramework)').Contains('windows'))">
+		<Exec Command="taskkill /F /IM ClipAgent.exe" ContinueOnError="true" />
+	</Target>
+
 	<Target Name="CopyClipAgent" AfterTargets="Build" Condition="$([System.String]::Copy('$(TargetFramework)').Contains('windows'))">
 		<ItemGroup>
 			<ClipAgentBin Include="ClipAgent\bin\$(Configuration)\net9.0-windows10.0.19041.0\ClipAgent.exe;ClipAgent\bin\$(Configuration)\net9.0-windows10.0.19041.0\ClipAgent.runtimeconfig.json;ClipAgent\bin\$(Configuration)\net9.0-windows10.0.19041.0\*.dll" />

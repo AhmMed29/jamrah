@@ -79,6 +79,7 @@ public partial class MainPage : ContentPage
 #if WINDOWS
         _ = SuspendViewAsync(_bookmarkWebView);
 #endif
+        EnsureZoomWired(_pomodoroWebView, "pomodoro");
     }
 
     private void ShowCalendarPage()
@@ -140,6 +141,7 @@ public partial class MainPage : ContentPage
 #if WINDOWS
         ResumeView(_bookmarkWebView);
 #endif
+        EnsureZoomWired(_bookmarkWebView, "bookmarks");
     }
 
     // ─── Splash + startup warmup (tasks/pomodoro/bookmarks preloaded) ────────
@@ -263,7 +265,7 @@ public partial class MainPage : ContentPage
     {
         try
         {
-            var ensure = platformView.EnsureCoreWebView2Async();
+            var ensure = platformView.EnsureCoreWebView2Async().AsTask();
             var done = await Task.WhenAny(ensure, Task.Delay(TimeSpan.FromSeconds(10)));
             if (done != ensure) return false;
             await ensure;
@@ -424,8 +426,8 @@ public partial class MainPage : ContentPage
             {
                 try
                 {
-                    // TEMP-ZOOM-TEST: value 2.5 to verify the zoom path applies (final target: 1.7; original: await _settingsRepository.GetZoomAsync(pageKey))
-                    var z = 2.5;
+                    // TEMP-1.7: fixed zoom until pill issue resolved (revert to: await _settingsRepository.GetZoomAsync(pageKey))
+                    var z = 1.7;
                     _pinnedZooms[pageKey] = z;
                     // DIAG-TEMP: remove after diagnosis
                     System.Diagnostics.Debug.WriteLine($"[ZOOM-DIAG] ApplyZoom {pageKey} z={z}");

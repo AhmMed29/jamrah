@@ -12,8 +12,8 @@ window.jamrahZoom = (function(){
     return {
         init: function(pageKey, zoom){
             currentPage = pageKey;
-            // TEMP-ZOOM-TEST: value 2.5 to verify the zoom path applies (final target: 1.7; revert to: zoom || defaultFor(pageKey))
-            currentZoom = 2.5;
+            // TEMP-1.7: fixed zoom until pill issue resolved (revert to: zoom || defaultFor(pageKey))
+            currentZoom = 1.7;
             function doApply(){
                 try { document.documentElement.style.zoom = currentZoom; } catch(e){}
             }

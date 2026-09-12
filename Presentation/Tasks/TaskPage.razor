@@ -1,80 +1,53 @@
 @namespace Jamrah.Presentation.Tasks
 @using Jamrah.Core.Entities
 @using Jamrah.Application.Services
+@using Microsoft.JSInterop
 @inject TaskStateService TaskState
 @inject NavigationManager Nav
+@inject Microsoft.JSInterop.IJSRuntime JS
 @implements IDisposable
 
 <div class="app" dir="rtl">
-    <aside class="sidebar @( _sidebarCollapsed ? "collapsed" : "" )" id="sidebar">
-        <div class="sidebar-top">
-            <button class="sidebar-toggle" @onclick="ToggleSidebar" title="طي / توسيع" aria-label="طي السايدبار">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M15 18L9 12L15 6"></path>
-                </svg>
-            </button>
-        </div>
-
-        <div class="nav-squares">
-            <button class="nav-square @(_view=="today" ? "active" : "")" @onclick='() => SetView("today")' title="اليوم">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-                    <path d="M16 2v4M8 2v4M3 10h18"></path>
-                    <circle cx="12" cy="15" r="2.1"></circle>
-                </svg>
-                @if(_todayCount>0){<span class="nav-square-count">@_todayCount</span>}
-            </button>
-            <button class="nav-square @(_view=="completed" ? "active" : "")" @onclick='() => SetView("completed")' title="تم الإنجاز">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9"></circle>
-                    <path d="M8.5 12l2.3 2.3L15.5 9.5"></path>
-                </svg>
-                @if(_completedCount>0){<span class="nav-square-count">@_completedCount</span>}
-            </button>
-            <button class="nav-square @(_view=="archived" ? "active" : "")" @onclick='() => SetView("archived")' title="الأرشيف">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="3" y="4" width="18" height="5" rx="1.2"></rect>
-                    <path d="M5 9h14v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9z"></path>
-                    <path d="M9.5 13h5"></path>
-                </svg>
-                @if(_archivedCount>0){<span class="nav-square-count">@_archivedCount</span>}
-            </button>
-            <button class="nav-square @(_view=="upcoming" ? "active" : "")" @onclick='() => SetView("upcoming")' title="القادمة">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-                    <path d="M16 2v4M8 2v4M3 10h18"></path>
-                    <path d="M12 15l3 -3 3 3"></path>
-                    <path d="M12 12v6"></path>
-                </svg>
-                @if(_upcomingCount>0){<span class="nav-square-count">@_upcomingCount</span>}
-            </button>
-        </div>
-
-        <div class="today-card">
-            <div class="today-card-label">اليوم</div>
-            <div class="today-card-date">@_currentDateStr</div>
-            <div class="today-card-time">@_currentTimeStr</div>
-            <div class="today-card-sub">@_currentSubStr</div>
-        </div>
-
-        <div class="nav-section">
-            <div class="nav-label">VIEWS</div>
-            <button class="nav-item @(_view=="board" ? "active" : "")" @onclick='() => SetView("board")'>
-                <span class="nav-icon">▦</span><span>Board</span>
-            </button>
-            <button class="nav-item @(_view=="matrix" ? "active" : "")" @onclick='() => SetView("matrix")'>
-                <span class="nav-icon">⊞</span><span>Eisenhower</span>
-            </button>
-        </div>
-    </aside>
-
-    <main class="main @(_sidebarCollapsed ? "sidebar-collapsed" : "") @(_selectedTask!=null ? "details-open" : "")" id="main">
+    <main class="main @(_selectedTask!=null ? "details-open" : "")" id="main">
         <header class="topbar">
             <div class="topbar-title">
                 <h1>@PageTitle</h1>
             </div>
             <div class="topbar-actions">
-                <button class="icon-btn" @onclick="GoToday" title="اليوم">◷</button>
+                <div class="view-capsule">
+                    <button class="capsule-btn @(_view=="today" ? "active" : "")" @onclick='() => SetView("today")' title="اليوم">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                            <path d="M16 2v4M8 2v4M3 10h18"></path>
+                            <circle cx="12" cy="15" r="2.1"></circle>
+                        </svg>
+                        @if(_todayCount>0){<span class="capsule-count">@_todayCount</span>}
+                    </button>
+                    <button class="capsule-btn @(_view=="completed" ? "active" : "")" @onclick='() => SetView("completed")' title="تم الإنجاز">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"></circle>
+                            <path d="M8.5 12l2.3 2.3L15.5 9.5"></path>
+                        </svg>
+                        @if(_completedCount>0){<span class="capsule-count">@_completedCount</span>}
+                    </button>
+                    <button class="capsule-btn @(_view=="archived" ? "active" : "")" @onclick='() => SetView("archived")' title="الأرشيف">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3" y="4" width="18" height="5" rx="1.2"></rect>
+                            <path d="M5 9h14v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9z"></path>
+                            <path d="M9.5 13h5"></path>
+                        </svg>
+                        @if(_archivedCount>0){<span class="capsule-count">@_archivedCount</span>}
+                    </button>
+                    <button class="capsule-btn @(_view=="upcoming" ? "active" : "")" @onclick='() => SetView("upcoming")' title="القادمة">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                            <path d="M16 2v4M8 2v4M3 10h18"></path>
+                            <path d="M12 15l3 -3 3 3"></path>
+                            <path d="M12 12v6"></path>
+                        </svg>
+                        @if(_upcomingCount>0){<span class="capsule-count">@_upcomingCount</span>}
+                    </button>
+                </div>
                 <button class="primary-btn" @onclick="OpenCreateModal"><span>+</span><span>مهمة جديدة</span></button>
             </div>
         </header>
@@ -88,11 +61,14 @@
                             <button class="day-nav-btn" @onclick="NextDay" title="اليوم التالي">←</button>
                         </div>
                         <div class="date-block">
-                            <div class="date-title">@(_currentDate.Date==DateTime.Today ? "اليوم" : FormatDate(_currentDate))</div>
+                            <div class="date-title" style="cursor:pointer" title="اختيار تاريخ" @onclick="OpenDatePicker">@(_currentDate.Date==DateTime.Today ? "اليوم" : FormatDate(_currentDate))</div>
                             <div class="date-subtitle">@FormatDate(_currentDate)</div>
                         </div>
-                        <button class="today-btn" @onclick="GoToday">اليوم</button>
-                        <input type="date" class="date-picker" value="@_currentDate.ToString("yyyy-MM-dd")" @onchange="OnDatePicked" title="اختيار تاريخ" />
+                        @if (_currentDate.Date != DateTime.Today)
+                        {
+                            <button class="today-btn" @onclick="GoToday">اليوم</button>
+                        }
+                        <input type="date" id="taskDatePicker" class="date-picker" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px" value="@_currentDate.ToString("yyyy-MM-dd")" @onchange="OnDatePicked" title="اختيار تاريخ" />
                     </div>
                     <div class="day-progress">
                         <div class="progress-info"><span>إنجاز اليوم</span><strong>@_dayCompleted / @_dayTotal</strong></div>
@@ -313,8 +289,6 @@
             --radius-sm: 8px;
             --radius: 12px;
             --radius-lg: 16px;
-
-            --sidebar-width: 255px;
             --details-width: 350px;
 
             --shadow: 0 8px 32px rgba(0, 0, 0, .12);
@@ -360,210 +334,7 @@
             min-height: 100vh;
         }
 
-        /* =========================================================
-           SIDEBAR — NEW DESIGN (RIGHT FIXED — MINIMAL)
-        ========================================================= */
-
-        .sidebar {
-            width: var(--sidebar-width);
-            flex-shrink: 0;
-
-            background: var(--surface);
-            border-left: 1px solid var(--border);
-
-            padding: 14px 12px;
-
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-
-            position: fixed;
-            right: 0;
-            top: 0;
-            bottom: 0;
-
-            z-index: 50;
-            overflow-y: auto;
-            overflow-x: hidden;
-            transition: width .22s ease, padding .22s ease;
-        }
-
-        .sidebar.collapsed {
-            width: 72px;
-            padding: 14px 8px;
-        }
-
-        /* --- toggle — square inside, not on border --- */
-        .sidebar-top {
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            margin-bottom: 12px;
-        }
-
-        .sidebar.collapsed .sidebar-top {
-            justify-content: center;
-        }
-
-        .sidebar-toggle {
-            width: 32px;
-            height: 32px;
-            flex-shrink: 0;
-            display: grid;
-            place-items: center;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background: var(--surface);
-            color: var(--text-soft);
-            transition: .15s ease;
-        }
-
-        .sidebar-toggle:hover {
-            background: var(--surface-soft);
-            color: var(--text);
-            border-color: var(--border2);
-        }
-
-        .sidebar-toggle svg {
-            width: 16px;
-            height: 16px;
-            display: block;
-            transition: transform .22s ease;
-        }
-
-        .sidebar.collapsed .sidebar-toggle svg {
-            transform: rotate(180deg);
-        }
-
-        /* --- 4 squares — بعد حذف بدون تاريخ --- */
-        .nav-squares {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
-            margin-bottom: 14px;
-        }
-
-        .sidebar.collapsed .nav-squares {
-            grid-template-columns: 1fr;
-            gap: 8px;
-            justify-items: center;
-        }
-
-        .nav-square {
-            aspect-ratio: 1 / 1;
-            width: 100%;
-            position: relative;
-            display: grid;
-            place-items: center;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            background: var(--surface);
-            color: var(--text-soft);
-            transition: .15s ease;
-        }
-
-        .nav-square:hover {
-            background: var(--surface-soft);
-            color: var(--text);
-            border-color: var(--border2);
-        }
-
-        .nav-square.active {
-            background: var(--text);
-            color: #fff;
-            border-color: var(--text);
-        }
-
-        .nav-square svg {
-            width: 18px;
-            height: 18px;
-            display: block;
-        }
-
-        .nav-square-count {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            min-width: 18px;
-            height: 18px;
-            padding: 0 4px;
-            border-radius: 6px;
-            background: var(--text);
-            color: #fff;
-            font-size: 10px;
-            font-weight: 700;
-            display: grid;
-            place-items: center;
-            line-height: 1;
-            border: 1px solid var(--surface);
-        }
-
-        .nav-square.active .nav-square-count {
-            background: #fff;
-            color: var(--text);
-            border-color: var(--text);
-        }
-
-        .sidebar.collapsed .nav-square {
-            width: 44px;
-            height: 44px;
-        }
-
-        .sidebar.collapsed .nav-square-count {
-            top: -4px;
-            right: -4px;
-        }
-
-        /* --- today card — minimal --- */
-        .today-card {
-            background: var(--surface-soft);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 14px 12px;
-            margin-bottom: 16px;
-        }
-
-        .sidebar.collapsed .today-card {
-            display: none;
-        }
-
-        .today-card-label {
-            font-size: 10px;
-            font-weight: 700;
-            color: var(--muted);
-            letter-spacing: .04em;
-            margin-bottom: 6px;
-        }
-
-        .today-card-date {
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--text);
-            line-height: 1.4;
-            margin-bottom: 6px;
-        }
-
-        .today-card-time {
-            font-size: 22px;
-            font-weight: 800;
-            color: var(--text);
-            line-height: 1;
-            letter-spacing: .02em;
-            direction: ltr;
-            text-align: right;
-        }
-
-        .today-card-sub {
-            margin-top: 6px;
-            font-size: 11px;
-            color: var(--muted);
-        }
-
-        .nav-section {
-            margin-bottom: 20px;
-        }
-
-        .archive-toggles{
+                .archive-toggles{
             display:flex;
             gap:6px;
             margin-bottom:14px;
@@ -581,102 +352,11 @@
         .archive-toggle:hover{ background:var(--surface-soft); color:var(--text); }
         .archive-toggle.active{ background:var(--text); color:#fff; }
 
-        .nav-label {
-            font-size: 11px;
-            color: var(--muted);
-
-            padding: 0 12px;
-            margin-bottom: 7px;
-
-            font-weight: 700;
-        }
-
-        .sidebar.collapsed .nav-label {
-            display: none;
-        }
-
-        .nav-item {
-            width: 100%;
-
-            display: flex;
-            align-items: center;
-            gap: 10px;
-
-            padding: 10px 12px;
-
-            border-radius: 10px;
-
-            background: transparent;
-            color: var(--text-soft);
-
-            text-align: right;
-
-            transition: .15s ease;
-        }
-
-        .nav-item:hover {
-            background: var(--surface-soft);
-            color: var(--text);
-        }
-
-        .nav-item.active {
-            background: var(--text);
-            color: #fff;
-            font-weight: 700;
-        }
-
-        .nav-icon {
-            width: 19px;
-            text-align: center;
-            font-size: 15px;
-        }
-
-        .nav-count {
-            margin-right: auto;
-
-            min-width: 21px;
-            height: 21px;
-
-            display: grid;
-            place-items: center;
-
-            padding: 0 6px;
-
-            border-radius: 6px;
-
-            font-size: 11px;
-            background: var(--surface-soft);
-            color: var(--muted);
-        }
-
-        .nav-item.active .nav-count {
-            background: rgba(255, 255, 255, .18);
-            color: #fff;
-        }
-
-        .sidebar.collapsed .nav-item {
-            justify-content: center;
-            padding: 11px;
-        }
-
-        .sidebar.collapsed .nav-item span:not(.nav-icon),
-        .sidebar.collapsed .nav-count {
-            display: none;
-        }
-
-        .main.sidebar-collapsed {
-            margin-right: 72px;
-            width: calc(100% - 72px);
-        }
-
         /* =========================================================
            MAIN
         ========================================================= */
 
         .main {
-            margin-right: var(--sidebar-width);
-
-            width: calc(100% - var(--sidebar-width));
 
             min-width: 0;
 
@@ -778,6 +458,67 @@
 
         .icon-btn:hover {
             background: var(--surface-soft);
+        }
+        /* --- view capsule � segmented views in topbar --- */
+        .view-capsule {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            padding: 3px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+        }
+
+        .capsule-btn {
+            position: relative;
+            width: 36px;
+            height: 30px;
+            display: grid;
+            place-items: center;
+            border-radius: 7px;
+            color: var(--text-soft);
+            transition: .15s ease;
+        }
+
+        .capsule-btn:hover {
+            background: var(--surface-soft);
+            color: var(--text);
+        }
+
+        .capsule-btn.active {
+            background: var(--text);
+            color: #fff;
+        }
+
+        .capsule-btn svg {
+            width: 17px;
+            height: 17px;
+            display: block;
+        }
+
+        .capsule-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            min-width: 17px;
+            height: 17px;
+            padding: 0 4px;
+            border-radius: 6px;
+            background: var(--text);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            display: grid;
+            place-items: center;
+            line-height: 1;
+            border: 1px solid var(--surface);
+        }
+
+        .capsule-btn.active .capsule-count {
+            background: #fff;
+            color: var(--text);
+            border-color: var(--text);
         }
 
         .primary-btn {
@@ -1908,7 +1649,6 @@
 
         @@media (max-width: 1000px) {
             :root {
-                --sidebar-width: 220px;
             }
 
             .board {
@@ -1921,43 +1661,6 @@
         }
 
         @@media (max-width: 760px) {
-            .sidebar {
-                width: 62px;
-                padding: 15px 8px;
-            }
-
-            .sidebar .nav-squares {
-                grid-template-columns: 1fr;
-            }
-
-            .sidebar .today-card {
-                display: none;
-            }
-
-            .nav-label,
-            .nav-item span:not(.nav-icon),
-            .nav-count {
-                display: none;
-            }
-
-            .sidebar-top {
-                justify-content: center;
-            }
-
-            .nav-item {
-                justify-content: center;
-                padding: 11px;
-            }
-
-            .main {
-                margin-right: 62px;
-                width: calc(100% - 62px);
-            }
-
-            .main.sidebar-collapsed {
-                margin-right: 62px;
-                width: calc(100% - 62px);
-            }
 
             .topbar {
                 padding: 0 15px;
@@ -2073,7 +1776,6 @@
     private string _layout = "list"; // kept for parity with tasks-page.html (board/matrix as views, not layout)
     private DateTime _currentDate = DateTime.Today;
     private AppTask? _selectedTask;
-    private bool _sidebarCollapsed;
     private bool _showCreateModal;
     private string? _contextTaskId;
     private double _contextX, _contextY;
@@ -2094,11 +1796,6 @@
     private string _editRepeat = "none";
     private int _editQuadrant = 2;
     private string _editNotes = "";
-
-    private System.Threading.Timer? _clockTimer;
-    private string _currentDateStr = "";
-    private string _currentTimeStr = "";
-    private string _currentSubStr = "";
 
     private int _todayCount, _upcomingCount, _noDateCount, _completedCount, _archivedCount;
     private int _dayTotal, _dayCompleted, _dayPercent;
@@ -2124,36 +1821,25 @@
         TaskState.OnStateChanged += OnStateChanged;
         _view = TaskState.CurrentView;
         _currentDate = TaskState.CurrentDate;
-        _sidebarCollapsed = TaskState.SidebarCollapsed;
         LoadGroupPrefs();
         UpdateCounts();
-        StartClock();
     }
 
     private void OnStateChanged()
     {
         _view = TaskState.CurrentView;
         _currentDate = TaskState.CurrentDate;
-        _sidebarCollapsed = TaskState.SidebarCollapsed;
         UpdateCounts();
         InvokeAsync(StateHasChanged);
     }
 
-    private void StartClock()
+    private async Task OpenDatePicker()
     {
-        UpdateClock();
-        _clockTimer = new System.Threading.Timer(_ => {
-            InvokeAsync(() => { UpdateClock(); StateHasChanged(); });
-        }, null, 0, 1000);
-    }
-
-    private void UpdateClock()
-    {
-        var now = DateTime.Now;
-        var ar = new System.Globalization.CultureInfo("ar-EG");
-        _currentDateStr = now.ToString("dddd، d MMMM yyyy", ar);
-        _currentTimeStr = now.ToString("hh:mm:ss tt", ar);
-        _currentSubStr = now.ToString("ddd", ar) + " • " + now.ToString("yyyy-MM-dd");
+        try
+        {
+            await JS.InvokeVoidAsync("eval", "var el=document.getElementById('taskDatePicker'); if(el.showPicker){el.showPicker();}else{el.click();}");
+        }
+        catch { }
     }
 
     private void UpdateCounts()
@@ -2217,7 +1903,6 @@
         return all;
     }
 
-    private void ToggleSidebar(){ TaskState.ToggleSidebar(); }
     private void SetView(string v){
         TaskState.SetView(v);
         // close details when switching views maybe
@@ -2665,6 +2350,5 @@
     public void Dispose()
     {
         TaskState.OnStateChanged -= OnStateChanged;
-        _clockTimer?.Dispose();
     }
 }

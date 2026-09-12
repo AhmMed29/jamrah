@@ -21,6 +21,13 @@
     </div>
 
     <div class="left-panel">
+        <div class="today-card">
+            <div class="today-card-label">اليوم</div>
+            <div class="today-card-date">@_currentDateStr</div>
+            <div class="today-card-time">@_currentTimeStr</div>
+            <div class="today-card-sub">@_currentSubStr</div>
+        </div>
+
         <div class="timer-box @(_currentSession != null ? "has-session" : "")" @onclick="OnTimerBoxClick">
             <div class="timer-adjust timer-adjust--left">
                 <button class="adj-btn adj-btn--large" @onclick:stopPropagation="true" @onclick="() => AdjustPlannedMinutes(-5)" title="-5 دقائق">−5</button>
@@ -274,6 +281,12 @@
     .app-container { display:flex; height:100vh; gap:16px; padding:16px; background:var(--bg); }
 
     .left-panel { width:360px; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; overflow-y:auto; flex-shrink:0; scrollbar-width:none; -ms-overflow-style:none; min-height:0; }
+
+    .today-card { background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:14px 12px; }
+    .today-card-label { font-size:10px; font-weight:700; color:var(--muted); letter-spacing:.04em; margin-bottom:6px; }
+    .today-card-date { font-size:13px; font-weight:700; color:var(--text); line-height:1.4; margin-bottom:6px; }
+    .today-card-time { font-size:22px; font-weight:800; color:var(--text); line-height:1; letter-spacing:.02em; direction:ltr; text-align:right; }
+    .today-card-sub { margin-top:6px; font-size:11px; color:var(--muted); }
     .left-panel::-webkit-scrollbar { display:none; width:0; height:0; } .left-panel::-webkit-scrollbar-thumb{ background:transparent; }
 
     .timer-box { background:var(--card2); border:1px solid var(--border); border-radius:14px; padding:16px; text-align:center; cursor:pointer; position:relative; display:flex; align-items:center; justify-content:center; gap:12px; }
@@ -575,10 +588,35 @@
                 null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
             await LoadFromDbAsync();
             RebuildToggles();
+            StartClock();
         }catch(Exception ex){
             Console.Error.WriteLine($"Pomodoro INIT FAIL: {ex}");
             await JS.InvokeVoidAsync("eval", $"document.getElementById('blazor-error-msg').textContent='{ex.Message.Replace("'","\\'")}';document.getElementById('blazor-error-ui').style.display='block'");
         }
+    }
+
+    // ─── Clock (moved from Tasks sidebar today-card) ───
+
+    private System.Threading.Timer? _clockTimer;
+    private string _currentDateStr = "";
+    private string _currentTimeStr = "";
+    private string _currentSubStr = "";
+
+    private void StartClock()
+    {
+        UpdateClock();
+        _clockTimer = new System.Threading.Timer(_ => {
+            InvokeAsync(() => { UpdateClock(); StateHasChanged(); });
+        }, null, 0, 1000);
+    }
+
+    private void UpdateClock()
+    {
+        var now = DateTime.Now;
+        var ar = new System.Globalization.CultureInfo("ar-EG");
+        _currentDateStr = now.ToString("dddd، d MMMM yyyy", ar);
+        _currentTimeStr = now.ToString("hh:mm:ss tt", ar);
+        _currentSubStr = now.ToString("ddd", ar) + " • " + now.ToString("yyyy-MM-dd");
     }
 
     private void UpdateNextPrayer()
@@ -1156,6 +1194,7 @@
         _timer.Completed -= OnTimerEvent;
         _timer.Dispose();
         _prayerTimer?.Dispose();
+        _clockTimer?.Dispose();
     }
 }
 

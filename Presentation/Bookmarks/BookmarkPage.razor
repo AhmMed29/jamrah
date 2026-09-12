@@ -4,6 +4,7 @@
 @using Microsoft.JSInterop
 @inject BookmarkStateService State
 @inject IJSRuntime JS
+@inject Jamrah.Core.Interfaces.IClipAgentService ClipAgent
 @implements IDisposable
 
 <div class="bmk">
@@ -58,7 +59,14 @@
                                 @foreach (var c in HomeClips())
                                 {
                                     <div class="card" style="padding:13px 15px" @onclick='() => Navigate(("clipboard", null, null))'>
-                                        <div class="mono" style="font-size:11.5px;color:var(--ink2);line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;word-break:break-word">@(c.Text.Length > 180 ? c.Text[..180] : c.Text)</div>
+                                        @if (c.Kind == "image" && !string.IsNullOrEmpty(c.FilePath))
+                                        {
+                                            <img src="http://jamrahclips.local/@c.FilePath" style="max-width:100%;max-height:120px;border-radius:8px;display:block" alt="" />
+                                        }
+                                        else
+                                        {
+                                            <div class="mono" style="font-size:11.5px;color:var(--ink2);line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;word-break:break-word">@(c.Text.Length > 180 ? c.Text[..180] : c.Text)</div>
+                                        }
                                         <div class="clip-m" style="margin-top:8px">@BookmarkCardData.FmtAgo(c.At)@(c.Pinned ? " · pinned" : "")</div>
                                     </div>
                                 }
@@ -144,6 +152,14 @@
             {
                 <div class="page">
                     <div class="ph-row"><h1 class="ph-title">Clipboard</h1><span class="ph-sub">@State.Clips.Count saved</span></div>
+                    @if (ClipAgent.IsSupported)
+                    {
+                        <div class="clipcard" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                            <button class="btn sm @(_capOn ? "pri" : "")" @onclick="ToggleCapture">@(_capOn ? "⏺ Capture on" : "○ Capture off")</button>
+                            <button class="btn sm @(_autoOn ? "pri" : "")" @onclick="ToggleAutoStart">@(_autoOn ? "✓ Start with Windows" : "Start with Windows")</button>
+                            <span class="clip-m">@(_agentRunning ? "agent running" : "agent idle") · every copy is auto-saved</span>
+                        </div>
+                    }
                     <div class="clipcard">
                         <textarea value="@_clipInput" @oninput="e => _clipInput = e.Value?.ToString() ?? string.Empty" placeholder="Paste text or a link to keep it here…" style="width:100%;min-height:64px;border:0;outline:none;font-size:13px;background:none;resize:vertical"></textarea>
                         <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn pri sm" @onclick="AddClip">Save clip</button></div>
@@ -152,10 +168,24 @@
                     {
                         var clip = c;
                         <div class="clipcard @(clip.Pinned ? "pin" : "")">
-                            <div class="clip-t">@clip.Text</div>
+                            @if (clip.Kind == "image" && !string.IsNullOrEmpty(clip.FilePath))
+                            {
+                                <img src="http://jamrahclips.local/@clip.FilePath" style="max-width:100%;border-radius:8px;display:block;cursor:pointer" @onclick="() => OpenClipFile(clip)" alt="" />
+                            }
+                            else
+                            {
+                                <div class="clip-t">@clip.Text</div>
+                            }
                             <div class="clip-f"><span class="clip-m">@BookmarkCardData.FmtAgo(clip.At)@(clip.Pinned ? " · pinned" : "")</span>
                                 <span class="clip-acts">
-                                    <button class="btn sm" @onclick="() => CopyClip(clip.Text)">Copy</button>
+                                    @if (clip.Kind == "image" && !string.IsNullOrEmpty(clip.FilePath))
+                                    {
+                                        <button class="btn sm" @onclick="() => OpenClipFile(clip)">Open</button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn sm" @onclick="() => CopyClip(clip.Text)">Copy</button>
+                                    }
                                     <button class="btn sm" @onclick="() => ToggleClipPin(clip)">@(clip.Pinned ? "Unpin" : "Pin")</button>
                                     <button class="btn sm dgr" @onclick="() => State.DeleteClipAsync(clip.Id)">Delete</button>
                                 </span></div>
@@ -405,11 +435,70 @@
         State.OnStateChanged += OnState;
         await State.InitAsync();
         await LoadVS();
+        await LoadAgentState();
+        _clipTimer = new System.Threading.Timer(async _ =>
+        {
+            try
+            {
+                if (State.Route.Ctx == "clipboard")
+                {
+                    await State.RefreshClipsAsync();
+                    _agentRunning = ClipAgent.IsAgentRunning();
+                }
+            }
+            catch { }
+        }, null, 5000, 5000);
         _ready = true;
     }
 
     private void OnState() => InvokeAsync(StateHasChanged);
-    public void Dispose() => State.OnStateChanged -= OnState;
+    public void Dispose()
+    {
+        try { _clipTimer?.Dispose(); } catch { }
+        State.OnStateChanged -= OnState;
+    }
+
+    private bool _capOn = true;
+    private bool _autoOn = true;
+    private bool _agentRunning;
+    private System.Threading.Timer? _clipTimer;
+
+    private async Task LoadAgentState()
+    {
+        if (!ClipAgent.IsSupported) return;
+        try
+        {
+            _capOn = await ClipAgent.IsCaptureEnabledAsync();
+            _autoOn = await ClipAgent.IsAutoStartEnabledAsync();
+            _agentRunning = ClipAgent.IsAgentRunning();
+        }
+        catch { }
+    }
+
+    private async Task ToggleCapture()
+    {
+        _capOn = !_capOn;
+        await ClipAgent.SetCaptureEnabledAsync(_capOn);
+        try { _agentRunning = ClipAgent.IsAgentRunning(); } catch { }
+    }
+
+    private async Task ToggleAutoStart()
+    {
+        _autoOn = !_autoOn;
+        await ClipAgent.SetAutoStartEnabledAsync(_autoOn);
+    }
+
+    private Task OpenClipFile(BookmarkClip clip)
+    {
+        try
+        {
+            var path = System.IO.Path.Combine(ClipAgent.ClipsDir, clip.FilePath ?? string.Empty);
+            if (System.IO.File.Exists(path))
+                return Microsoft.Maui.ApplicationModel.Launcher.OpenAsync(new Microsoft.Maui.ApplicationModel.OpenFileRequest { File = new Microsoft.Maui.Storage.ReadOnlyFile(path) });
+        }
+        catch { }
+        return Task.CompletedTask;
+    }
 
     private string VKey => State.Route.Ctx + (State.Route.Id != null ? ":" + State.Route.Id : "") + (State.Route.Tag != null ? ":" + State.Route.Tag : "");
 

@@ -35,6 +35,8 @@ namespace Jamrah.Infrastructure.Repositories
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
                 _database = new SQLiteAsyncConnection(_dbPath);
+                try { await _database.ExecuteAsync("PRAGMA journal_mode=WAL;").ConfigureAwait(false); } catch { }
+                try { await _database.ExecuteAsync("PRAGMA busy_timeout=5000;").ConfigureAwait(false); } catch { }
                 await _database.CreateTableAsync<BookmarkItem>().ConfigureAwait(false);
                 await _database.CreateTableAsync<BookmarkFolder>().ConfigureAwait(false);
                 await _database.CreateTableAsync<BookmarkCollection>().ConfigureAwait(false);

@@ -219,6 +219,12 @@ namespace Jamrah.Application.Services
             await RefreshDataAsync();
         }
 
+        public async Task RefreshClipsAsync()
+        {
+            Clips = await _repository.GetClipsAsync();
+            NotifyStateChanged();
+        }
+
         public async Task SaveTagAsync(BookmarkTag tag)
         {
             await _repository.SaveTagAsync(tag);

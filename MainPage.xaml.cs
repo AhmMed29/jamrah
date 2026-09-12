@@ -12,6 +12,7 @@ public partial class MainPage : ContentPage
     private readonly ICalendarStateService _calendarState;
     private readonly ISettingsRepository _settingsRepository;
     private readonly IAppNavService _navService;
+    private readonly IClipAgentService _clipAgent;
     private BlazorWebView? _calendarWebView;
     private BlazorWebView? _tasksWebView;
     private BlazorWebView? _pomodoroWebView;
@@ -25,14 +26,16 @@ public partial class MainPage : ContentPage
     private readonly Dictionary<string, double> _pinnedZooms = new();
     private int _pillGen;
 
-    public MainPage(ICalendarStateService calendarState, ISettingsRepository settingsRepository, IAppNavService navService)
+    public MainPage(ICalendarStateService calendarState, ISettingsRepository settingsRepository, IAppNavService navService, IClipAgentService clipAgent)
     {
         InitializeComponent();
         _calendarState = calendarState;
         _settingsRepository = settingsRepository;
         _navService = navService;
+        _clipAgent = clipAgent;
         _navService.PageRequested += OnNavPageRequested;
         _ = _settingsRepository.InitAsync();
+        _ = _clipAgent.ApplyStartupStateAsync();
 
         ShowTasksPage();
     }
@@ -229,6 +232,17 @@ public partial class MainPage : ContentPage
 
             try { platformView.CoreWebView2.Settings.IsZoomControlEnabled = false; } catch {}
             try { platformView.CoreWebView2.Settings.IsPinchZoomEnabled = false; } catch {}
+
+            if (pageKey == "bookmarks")
+            {
+                try
+                {
+                    var clipsDir = System.IO.Path.Combine(Microsoft.Maui.Storage.FileSystem.AppDataDirectory, "clips");
+                    System.IO.Directory.CreateDirectory(clipsDir);
+                    platformView.CoreWebView2.SetVirtualHostNameToFolderMapping("jamrahclips.local", clipsDir, Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
+                }
+                catch { }
+            }
 
             // سجل المستمع قبل Ensure لضمان عدم فوات أول NavigationCompleted
             async Task ApplyZoomAsync()

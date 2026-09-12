@@ -1,6 +1,7 @@
 using Jamrah.Core.Interfaces;
 using Jamrah.Presentation.Shared;
 using Microsoft.AspNetCore.Components.WebView.Maui;
+using Microsoft.Maui.Storage;
 #if WINDOWS
 using Microsoft.UI.Xaml.Controls;
 #endif
@@ -25,6 +26,7 @@ public partial class MainPage : ContentPage
     private double _pillZoom;
     private readonly Dictionary<string, double> _pinnedZooms = new();
     private int _pillGen;
+    private bool _warmupStarted;
 
     public MainPage(ICalendarStateService calendarState, ISettingsRepository settingsRepository, IAppNavService navService, IClipAgentService clipAgent)
     {
@@ -34,10 +36,15 @@ public partial class MainPage : ContentPage
         _navService = navService;
         _clipAgent = clipAgent;
         _navService.PageRequested += OnNavPageRequested;
-        _ = _settingsRepository.InitAsync();
-        _ = _clipAgent.ApplyStartupStateAsync();
+        Loaded += OnPageLoaded;
+    }
 
-        ShowTasksPage();
+    private async void OnPageLoaded(object? sender, EventArgs e)
+    {
+        Loaded -= OnPageLoaded;
+        if (_warmupStarted) return;
+        _warmupStarted = true;
+        await RunWarmupAsync();
     }
 
     // ─── Blazor → native page switching (app sidebar nav buttons) ────────────
@@ -69,6 +76,9 @@ public partial class MainPage : ContentPage
         if (_planningWebView != null) _planningWebView.IsVisible = false;
         if (_bookmarkWebView != null) _bookmarkWebView.IsVisible = false;
         _pomodoroWebView!.IsVisible = true;
+#if WINDOWS
+        _ = SuspendViewAsync(_bookmarkWebView);
+#endif
     }
 
     private void ShowCalendarPage()
@@ -81,6 +91,9 @@ public partial class MainPage : ContentPage
         if (_planningWebView != null) _planningWebView.IsVisible = false;
         if (_bookmarkWebView != null) _bookmarkWebView.IsVisible = false;
         _calendarWebView!.IsVisible = true;
+#if WINDOWS
+        _ = SuspendViewAsync(_bookmarkWebView);
+#endif
     }
 
     private void ShowTasksPage()
@@ -93,6 +106,9 @@ public partial class MainPage : ContentPage
         if (_planningWebView != null) _planningWebView.IsVisible = false;
         if (_bookmarkWebView != null) _bookmarkWebView.IsVisible = false;
         _tasksWebView!.IsVisible = true;
+#if WINDOWS
+        _ = SuspendViewAsync(_bookmarkWebView);
+#endif
     }
 
     private void ShowPlanningPage()
@@ -105,6 +121,9 @@ public partial class MainPage : ContentPage
         if (_pomodoroWebView != null) _pomodoroWebView.IsVisible = false;
         if (_bookmarkWebView != null) _bookmarkWebView.IsVisible = false;
         _planningWebView!.IsVisible = true;
+#if WINDOWS
+        _ = SuspendViewAsync(_bookmarkWebView);
+#endif
     }
 
     private void ShowBookmarksPage()
@@ -117,7 +136,122 @@ public partial class MainPage : ContentPage
         if (_pomodoroWebView != null) _pomodoroWebView.IsVisible = false;
         if (_planningWebView != null) _planningWebView.IsVisible = false;
         _bookmarkWebView!.IsVisible = true;
+#if WINDOWS
+        ResumeView(_bookmarkWebView);
+#endif
     }
+
+    // ─── Splash + startup warmup (tasks/pomodoro/bookmarks preloaded) ────────
+
+    private async Task RunWarmupAsync()
+    {
+        try
+        {
+            await LoadSplashAsync();
+            await SetSplashAsync(5, "جاري تجهيز الإعدادات...");
+            await _settingsRepository.InitAsync();
+            _ = _clipAgent.ApplyStartupStateAsync();
+            await SetSplashAsync(10, "جاري تحميل المهام...");
+            EnsureTasksWebView();
+            if (_tasksWebView != null) _tasksWebView.IsVisible = false;
+            await WaitForBlazorReadyAsync(_tasksWebView);
+            await SetSplashAsync(40, "جاري تحميل البومودورو...");
+            EnsurePomodoroWebView();
+            if (_pomodoroWebView != null) _pomodoroWebView.IsVisible = false;
+            await WaitForBlazorReadyAsync(_pomodoroWebView);
+            await SetSplashAsync(65, "جاري تحميل المحفوظات...");
+            EnsureBookmarksWebView();
+            if (_bookmarkWebView != null) _bookmarkWebView.IsVisible = false;
+            await WaitForBlazorReadyAsync(_bookmarkWebView);
+            await SetSplashAsync(90, "اللمسات الأخيرة...");
+        }
+        catch { }
+        try { await SetSplashAsync(100, "اكتمل التحميل ✓"); } catch { }
+        await Task.Delay(350);
+        SplashLayer.IsVisible = false;
+        ShowTasksPage();
+    }
+
+    private async Task LoadSplashAsync()
+    {
+        try
+        {
+            using var stream = await FileSystem.OpenAppPackageFileAsync("wwwroot/splash.html");
+            using var reader = new StreamReader(stream);
+            SplashView.Source = new HtmlWebViewSource { Html = await reader.ReadToEndAsync() };
+        }
+        catch { }
+    }
+
+    private async Task SetSplashAsync(int percent, string stage)
+    {
+        try
+        {
+            var safe = stage.Replace("'", "\\'");
+            await SplashView.EvaluateJavaScriptAsync($"setSplashProgress({percent}, '{safe}')");
+        }
+        catch { }
+    }
+
+    private static async Task WaitForBlazorReadyAsync(BlazorWebView? webView)
+    {
+        try
+        {
+            if (webView == null) return;
+            for (var i = 0; i < 100 && webView.Handler == null; i++)
+                await Task.Delay(100);
+#if WINDOWS
+            if (webView.Handler?.PlatformView is not WebView2 platformView) return;
+            await platformView.EnsureCoreWebView2Async();
+            if (platformView.CoreWebView2 == null) return;
+            var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            void OnNav(object? s, object? e) => tcs.TrySetResult();
+            platformView.NavigationCompleted += OnNav;
+            try
+            {
+                await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(15)));
+                await Task.Delay(800);
+            }
+            finally
+            {
+                platformView.NavigationCompleted -= OnNav;
+            }
+#else
+            await Task.Delay(1500);
+#endif
+        }
+        catch { }
+    }
+
+#if WINDOWS
+    private static async Task SuspendViewAsync(BlazorWebView? webView)
+    {
+        try
+        {
+            if (webView?.Handler?.PlatformView is WebView2 platformView
+                && platformView.CoreWebView2 != null
+                && !platformView.CoreWebView2.IsSuspended)
+            {
+                await platformView.CoreWebView2.TrySuspendAsync();
+            }
+        }
+        catch { }
+    }
+
+    private static void ResumeView(BlazorWebView? webView)
+    {
+        try
+        {
+            if (webView?.Handler?.PlatformView is WebView2 platformView
+                && platformView.CoreWebView2 != null
+                && platformView.CoreWebView2.IsSuspended)
+            {
+                platformView.CoreWebView2.Resume();
+            }
+        }
+        catch { }
+    }
+#endif
 
     // ─── Ensure WebViews (lazy per page - Android single WebView) ────────────
 

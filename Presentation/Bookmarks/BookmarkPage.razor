@@ -5,6 +5,7 @@
 @inject BookmarkStateService State
 @inject IJSRuntime JS
 @inject Jamrah.Core.Interfaces.IClipAgentService ClipAgent
+@inject IAppNavService Nav
 @implements IDisposable
 
 <div class="bmk">
@@ -435,6 +436,31 @@
         await State.InitAsync();
         await LoadVS();
         await LoadAgentState();
+        Nav.CurrentChanged += OnVisibilityChanged;
+        if (Nav.CurrentPage == "bookmarks")
+            StartClipTimer();
+        _ready = true;
+    }
+
+    private void OnState() => InvokeAsync(StateHasChanged);
+    public void Dispose()
+    {
+        Nav.CurrentChanged -= OnVisibilityChanged;
+        try { _clipTimer?.Dispose(); } catch { }
+        State.OnStateChanged -= OnState;
+    }
+
+    // ─── Clip refresh timer runs only while this page is visible ───
+
+    private void OnVisibilityChanged(string page)
+    {
+        if (page == "bookmarks") StartClipTimer();
+        else StopClipTimer();
+    }
+
+    private void StartClipTimer()
+    {
+        if (_clipTimer != null) return;
         _clipTimer = new System.Threading.Timer(async _ =>
         {
             try
@@ -447,14 +473,12 @@
             }
             catch { }
         }, null, 5000, 5000);
-        _ready = true;
     }
 
-    private void OnState() => InvokeAsync(StateHasChanged);
-    public void Dispose()
+    private void StopClipTimer()
     {
-        try { _clipTimer?.Dispose(); } catch { }
-        State.OnStateChanged -= OnState;
+        _clipTimer?.Dispose();
+        _clipTimer = null;
     }
 
     private bool _capOn = true;

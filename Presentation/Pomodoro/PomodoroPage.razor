@@ -4,6 +4,7 @@
 @inject Jamrah.Application.Services.PrayerTimesService PrayerService
 @inject Jamrah.Application.Services.PomodoroSoundService Sound
 @inject IJSRuntime JS
+@inject IAppNavService Nav
 
 <div class="app-container" dir="rtl" style="flex-direction:row-reverse;">
 
@@ -582,12 +583,11 @@
             await PrayerService.InitAsync();
             _todayPrayers = await PrayerService.GetTodayAsync();
             UpdateNextPrayer();
-            _prayerTimer = new System.Threading.Timer(_ =>
-                    InvokeAsync(() => { UpdateNextPrayer(); StateHasChanged(); }),
-                null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+            Nav.CurrentChanged += OnVisibilityChanged;
             await LoadFromDbAsync();
             RebuildToggles();
-            StartClock();
+            if (Nav.CurrentPage == "pomodoro")
+                StartUiTimers();
         }catch(Exception ex){
             Console.Error.WriteLine($"Pomodoro INIT FAIL: {ex}");
             await JS.InvokeVoidAsync("eval", $"document.getElementById('blazor-error-msg').textContent='{ex.Message.Replace("'","\\'")}';document.getElementById('blazor-error-ui').style.display='block'");
@@ -601,8 +601,34 @@
     private string _currentTimeStr = "";
     private string _currentSubStr = "";
 
+    // ─── UI timers pause while this page is hidden (session timer + sounds untouched) ───
+
+    private void OnVisibilityChanged(string page)
+    {
+        if (page == "pomodoro") StartUiTimers();
+        else StopUiTimers();
+    }
+
+    private void StartUiTimers()
+    {
+        if (_prayerTimer == null)
+            _prayerTimer = new System.Threading.Timer(_ =>
+                    InvokeAsync(() => { UpdateNextPrayer(); StateHasChanged(); }),
+                null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+        StartClock();
+    }
+
+    private void StopUiTimers()
+    {
+        _prayerTimer?.Dispose();
+        _prayerTimer = null;
+        _clockTimer?.Dispose();
+        _clockTimer = null;
+    }
+
     private void StartClock()
     {
+        if (_clockTimer != null) return;
         UpdateClock();
         _clockTimer = new System.Threading.Timer(_ => {
             InvokeAsync(() => { UpdateClock(); StateHasChanged(); });
@@ -1189,6 +1215,7 @@
 
     public void Dispose()
     {
+        Nav.CurrentChanged -= OnVisibilityChanged;
         _timer.Tick -= OnTimerEvent;
         _timer.Completed -= OnTimerEvent;
         _timer.Dispose();

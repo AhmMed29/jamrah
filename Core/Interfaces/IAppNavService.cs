@@ -15,6 +15,9 @@ namespace Jamrah.Core.Interfaces
         /// <summary>Raised whenever shared sidebar UI state changes (e.g. Bookmarks group expanded/collapsed).</summary>
         event Action? Changed;
 
+        /// <summary>Raised by the shell (MainPage) whenever the visible page changes (native show/hide, not Blazor routing). Carries the new page id.</summary>
+        event Action<string>? CurrentChanged;
+
         /// <summary>Request switching to a page by id.</summary>
         void Request(string page);
 

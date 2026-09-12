@@ -5,9 +5,12 @@
              Shell.NavBarIsVisible="False">
 
     <Grid>
-        <Grid x:Name="SplashLayer">  <WebView x:Name="SplashView" /> </Grid>
         <Grid x:Name="MainContent" />
         <Grid x:Name="PillLayer" InputTransparent="True" CascadeInputTransparent="False" />
+        <!-- Splash overlay on top: plain WebView (static HTML, no Blazor boot) until warmup completes -->
+        <Grid x:Name="SplashLayer">
+            <WebView x:Name="SplashView" />
+        </Grid>
     </Grid>
 
 </ContentPage>

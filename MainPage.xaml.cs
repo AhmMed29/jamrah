@@ -383,7 +383,8 @@ public partial class MainPage : ContentPage
             {
                 try
                 {
-                    var z = await _settingsRepository.GetZoomAsync(pageKey);
+                    // TEMP-1.7: fixed zoom until pill issue resolved (revert to: await _settingsRepository.GetZoomAsync(pageKey))
+                    var z = 1.7;
                     _pinnedZooms[pageKey] = z;
                     var js = $"if(window.jamrahZoom) window.jamrahZoom.init('{pageKey}', {z.ToString(System.Globalization.CultureInfo.InvariantCulture)}); else document.documentElement.style.zoom='{z.ToString(System.Globalization.CultureInfo.InvariantCulture)}';";
                     if (platformView.CoreWebView2 != null)

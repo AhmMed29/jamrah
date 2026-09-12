@@ -12,7 +12,8 @@ window.jamrahZoom = (function(){
     return {
         init: function(pageKey, zoom){
             currentPage = pageKey;
-            currentZoom = zoom || defaultFor(pageKey);
+            // TEMP-1.7: fixed zoom until pill issue resolved (revert to: zoom || defaultFor(pageKey))
+            currentZoom = 1.7;
             function doApply(){
                 try { document.documentElement.style.zoom = currentZoom; } catch(e){}
             }

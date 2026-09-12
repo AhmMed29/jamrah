@@ -109,6 +109,7 @@ public partial class MainPage : ContentPage
 #if WINDOWS
         _ = SuspendViewAsync(_bookmarkWebView);
 #endif
+        EnsureZoomWired(_tasksWebView, "tasks");
     }
 
     private void ShowPlanningPage()
@@ -202,7 +203,7 @@ public partial class MainPage : ContentPage
                 await Task.Delay(100);
 #if WINDOWS
             if (webView.Handler?.PlatformView is not WebView2 platformView) return;
-            await platformView.EnsureCoreWebView2Async();
+            await EnsureCoreReadyAsync(platformView, "warmup");
             if (platformView.CoreWebView2 == null) return;
             var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             void OnNav(object? s, object? e) => tcs.TrySetResult();
@@ -252,6 +253,43 @@ public partial class MainPage : ContentPage
         catch { }
     }
 #endif
+
+    // ─── Zoom wiring helpers (bounded Ensure + second chance on visible) ────
+
+    private readonly HashSet<string> _zoomVerified = new();
+
+#if WINDOWS
+    private static async Task<bool> EnsureCoreReadyAsync(WebView2 platformView, string why)
+    {
+        try
+        {
+            var ensure = platformView.EnsureCoreWebView2Async();
+            var done = await Task.WhenAny(ensure, Task.Delay(TimeSpan.FromSeconds(10)));
+            if (done != ensure) return false;
+            await ensure;
+            return platformView.CoreWebView2 != null;
+        }
+        catch (Exception ex)
+        {
+            // DIAG-TEMP: remove after diagnosis
+            System.Diagnostics.Debug.WriteLine($"[ZOOM-DIAG] EnsureFail {why}: {ex.GetType().Name}: {ex.Message}");
+            return false;
+        }
+    }
+#endif
+
+    // Second-chance wiring: retried when the page is actually shown (environment complete).
+    private void EnsureZoomWired(BlazorWebView? webView, string pageKey)
+    {
+#if WINDOWS
+        if (webView == null) return;
+        lock (_zoomVerified)
+        {
+            if (_zoomVerified.Contains(pageKey)) return;
+        }
+        EnableZoomWithPersistence(webView, pageKey);
+#endif
+    }
 
     // ─── Ensure WebViews (lazy per page - Android single WebView) ────────────
 
@@ -343,6 +381,8 @@ public partial class MainPage : ContentPage
         WebView2? wiredPlatformView = null;
         void Wire()
         {
+            // DIAG-TEMP: remove after diagnosis
+            System.Diagnostics.Debug.WriteLine($"[ZOOM-DIAG] Wire {pageKey}: handlerPresent={webView.Handler != null}");
             if (webView.Handler?.PlatformView is WebView2 platformView && !ReferenceEquals(platformView, wiredPlatformView))
             {
                 wiredPlatformView = platformView;
@@ -361,8 +401,9 @@ public partial class MainPage : ContentPage
     {
         try
         {
-            await platformView.EnsureCoreWebView2Async();
-            if (platformView.CoreWebView2 == null) return;
+            if (!await EnsureCoreReadyAsync(platformView, pageKey + "/wire")) return;
+            // DIAG-TEMP: remove after diagnosis
+            System.Diagnostics.Debug.WriteLine($"[ZOOM-DIAG] WireZoomAsync {pageKey}: coreReady=True");
 
             try { platformView.CoreWebView2.Settings.IsZoomControlEnabled = false; } catch {}
             try { platformView.CoreWebView2.Settings.IsPinchZoomEnabled = false; } catch {}
@@ -386,6 +427,8 @@ public partial class MainPage : ContentPage
                     // TEMP-ZOOM-TEST: value 2.5 to verify the zoom path applies (final target: 1.7; original: await _settingsRepository.GetZoomAsync(pageKey))
                     var z = 2.5;
                     _pinnedZooms[pageKey] = z;
+                    // DIAG-TEMP: remove after diagnosis
+                    System.Diagnostics.Debug.WriteLine($"[ZOOM-DIAG] ApplyZoom {pageKey} z={z}");
                     var js = $"if(window.jamrahZoom) window.jamrahZoom.init('{pageKey}', {z.ToString(System.Globalization.CultureInfo.InvariantCulture)}); else document.documentElement.style.zoom='{z.ToString(System.Globalization.CultureInfo.InvariantCulture)}';";
                     if (platformView.CoreWebView2 != null)
                         await platformView.CoreWebView2.ExecuteScriptAsync(js);
@@ -394,7 +437,12 @@ public partial class MainPage : ContentPage
             }
 
             // اشترك قبل أي تنقل لضمان التقاط أول تحميل لـ pomodoro/calendar
-            platformView.CoreWebView2.NavigationCompleted += async (s, e) => await ApplyZoomAsync();
+            platformView.CoreWebView2.NavigationCompleted += async (s, e) =>
+            {
+                // DIAG-TEMP: remove after diagnosis
+                System.Diagnostics.Debug.WriteLine($"[ZOOM-DIAG] NavCompleted {pageKey}");
+                await ApplyZoomAsync();
+            };
             platformView.CoreWebView2.WebMessageReceived += (s, e) =>
             {
                 try
@@ -409,6 +457,7 @@ public partial class MainPage : ContentPage
                 }
                 catch { }
             };
+            lock (_zoomVerified) { _zoomVerified.Add(pageKey); }
 
             await ApplyZoomAsync();
         }

@@ -164,7 +164,7 @@ namespace Jamrah.Application.Services
             catch { }
         }
 
-        private void SetRunKey(bool enabled)
+        private async void SetRunKey(bool enabled)
         {
 #if WINDOWS
             try

@@ -7,7 +7,7 @@
 <style>
 .vd-wrap{position:fixed;inset:0;z-index:50}
 .vd-scrim{position:absolute;inset:0;background:rgba(24,22,20,.18)}
-.vd-drawer{width:392px;max-width:94vw;height:100%;background:#fff;border-left:1px solid #e9e6e0;box-shadow:-18px 0 60px rgba(0,0,0,.1);position:absolute;top:0;right:0;display:flex;flex-direction:column;direction:ltr;text-align:left;outline:none}
+.vd-drawer{width:min(392px,calc(94vw / var(--z,1)));max-width:94vw;height:calc(100vh / var(--z,1));background:#fff;border-left:1px solid #e9e6e0;box-shadow:-18px 0 60px rgba(0,0,0,.1);position:absolute;top:0;right:0;display:flex;flex-direction:column;direction:ltr;text-align:left;outline:none}
 .vd-head{display:flex;align-items:center;gap:8px;padding:14px 18px 10px;flex:none}
 .vd-logo{width:20px;height:14px;background:#181715;border-radius:3px;display:grid;place-items:center;color:#fff;flex:none}
 .vd-logo.yt{background:#ff0000}

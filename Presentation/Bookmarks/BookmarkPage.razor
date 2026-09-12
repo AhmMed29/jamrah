@@ -269,6 +269,76 @@
                             <span style="margin-left:auto" class="mono"></span>
                         }
                     </div>
+                    @* ADDITIVE (new): archived collections/folders/pages with restore + permanent delete.
+                       Item delete flows here too (folder/collection/page delete = archive). *@
+                    @if (State.Route.Ctx == "archive")
+                    {
+                        @foreach (var ac in State.Collections.Where(c => c.IsArchived))
+                        {
+                            var acid = ac.Id;
+                            <div class="tagrow">
+                                @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(ac.Icon) ? "layers" : ac.Icon, "layers"))
+                                <b>@ac.Name</b><span class="cnt">collection · archived</span>
+                                <span class="acts" @onclick:stopPropagation="true" style="margin-left:auto;display:flex;gap:6px">
+                                    <button class="btn sm" @onclick="() => State.RestoreCollectionAsync(acid)">Restore</button>
+                                    <button class="btn sm dgr" @onclick="() => State.DeleteCollectionAsync(acid)">Delete forever</button>
+                                </span>
+                            </div>
+                        }
+                        @foreach (var af in State.Folders.Where(f => f.IsArchived))
+                        {
+                            var afid = af.Id;
+                            <div class="tagrow">
+                                @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(af.Icon) ? "folder" : af.Icon, "folder"))
+                                <b>@af.Name</b><span class="cnt">folder · archived</span>
+                                <span class="acts" @onclick:stopPropagation="true" style="margin-left:auto;display:flex;gap:6px">
+                                    <button class="btn sm" @onclick="() => State.RestoreFolderAsync(afid)">Restore</button>
+                                    <button class="btn sm dgr" @onclick="() => State.DeleteFolderAsync(afid)">Delete forever</button>
+                                </span>
+                            </div>
+                        }
+                        @foreach (var ap in State.Pages.Where(p => p.IsArchived))
+                        {
+                            var apid = ap.Id;
+                            <div class="tagrow">
+                                @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(ap.Icon) ? "note" : ap.Icon, "note"))
+                                <b>@ap.Name</b><span class="cnt">page · archived</span>
+                                <span class="acts" @onclick:stopPropagation="true" style="margin-left:auto;display:flex;gap:6px">
+                                    <button class="btn sm" @onclick="() => State.RestorePageAsync(apid)">Restore</button>
+                                    <button class="btn sm dgr" @onclick="() => State.DeletePageAsync(apid)">Delete forever</button>
+                                </span>
+                            </div>
+                        }
+                    }
+                    @* ADDITIVE (new): breadcrumb chain for a page route *@
+                    @if (State.Route.Ctx == "page")
+                    {
+                        var pchain = PageChain(State.Route.Id ?? "");
+                        @if (pchain.Count > 0)
+                        {
+                            <div class="crumbs">
+                                @for (var pi = 0; pi < pchain.Count; pi++)
+                                {
+                                    var pcd = pchain[pi];
+                                    var plast = pi == pchain.Count - 1;
+                                    var pcdId = pcd.Id;
+                                    @if (pi > 0) { <span>›</span> }
+                                    @if (plast)
+                                    {
+                                        <span class="crumb end">
+                                            @if (!string.IsNullOrEmpty(pcd.Icon)) { @((MarkupString)BookmarkIcons.FdIcon(pcd.Icon, "note")) } @pcd.Name
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="crumb" @onclick='() => Navigate(("page", pcdId, null))'>
+                                            @if (!string.IsNullOrEmpty(pcd.Icon)) { @((MarkupString)BookmarkIcons.FdIcon(pcd.Icon, "note")) } @pcd.Name
+                                        </span>
+                                    }
+                                }
+                            </div>
+                        }
+                    }
                     @if (State.Route.Ctx == "folder")
                     {
                         var chain = FolderChain(State.Route.Id ?? "");
@@ -395,6 +465,13 @@
                                  OnClose="() => _folderModalMode = null"
                                  OnSaved="msg => { _folderModalMode = null; ShowToast(msg); }" />
         }
+        @* ADDITIVE (new): page create/edit modal *@
+        @if (_pageModalMode != null)
+        {
+            <BookmarkPageModal PageId="@_pageEditId" CollectionId="@_pageColId" FolderId="@_pageFolderId" ParentPageId="@_pageParentId"
+                               OnClose="() => _pageModalMode = null"
+                               OnSaved="msg => { _pageModalMode = null; ShowToast(msg); }" />
+        }
         @if (_toast != null)
         {
             <div class="bmk-toasts"><div class="toast">@_toast</div></div>
@@ -411,6 +488,12 @@
     private string? _folderModalMode;
     private string? _folderEditId;
     private string? _colEditId;
+    // ADDITIVE (new): page modal state.
+    private string? _pageModalMode;
+    private string? _pageEditId;
+    private string? _pageColId;
+    private string? _pageFolderId;
+    private string? _pageParentId;
     private string? _toast;
     private int _toastToken;
     private bool _confirmEmptyTrash;
@@ -542,7 +625,7 @@
 
     private async Task OnSearch(string s)
     {
-        var searchable = new[] { "all", "favorites", "pinned", "recent", "folder", "collection", "tag", "archive", "trash" };
+        var searchable = new[] { "all", "favorites", "pinned", "recent", "folder", "collection", "page", "tag", "archive", "trash" };
         if (!string.IsNullOrEmpty(s) && !searchable.Contains(State.Route.Ctx))
         {
             State.SetRoute("all");
@@ -576,6 +659,22 @@
         _folderModalMode = mode;
         _folderEditId = folderId;
         _colEditId = colId;
+        // FIX: this is called from the sidebar chain (AppSidebar → PageShell →
+        // ShellBookmarksPage), which never re-renders this component — force it,
+        // otherwise the modal stays invisible until the next navigation/refresh.
+        StateHasChanged();
+    }
+
+    // ADDITIVE (new): opened by the sidebar + button / dots on pages.
+    public void OpenPageModal(string mode, string? pageId, string? colId, string? folderId, string? parentPageId)
+    {
+        _pageModalMode = mode;
+        _pageEditId = pageId;
+        _pageColId = colId;
+        _pageFolderId = folderId;
+        _pageParentId = parentPageId;
+        // FIX: same as above — sidebar-initiated, must trigger our own render.
+        StateHasChanged();
     }
 
     private void ShowToast(string msg)
@@ -631,6 +730,16 @@
         var fd = State.Folders.FirstOrDefault(x => x.Id == fid);
         var n = 0;
         while (fd != null && n++ < 50) { chain.Insert(0, fd); fd = State.Folders.FirstOrDefault(x => x.Id == fd.ParentId); }
+        return chain;
+    }
+
+    // ADDITIVE (new): page ancestry chain (parent pages, oldest first).
+    private List<LibraryPage> PageChain(string pid)
+    {
+        var chain = new List<LibraryPage>();
+        var p = State.Pages.FirstOrDefault(x => x.Id == pid);
+        var n = 0;
+        while (p != null && n++ < 50) { chain.Insert(0, p); p = State.Pages.FirstOrDefault(x => x.Id == p.ParentPageId); }
         return chain;
     }
 

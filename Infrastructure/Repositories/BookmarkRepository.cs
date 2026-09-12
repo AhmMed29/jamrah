@@ -40,6 +40,8 @@ namespace Jamrah.Infrastructure.Repositories
                 await _database.CreateTableAsync<BookmarkItem>().ConfigureAwait(false);
                 await _database.CreateTableAsync<BookmarkFolder>().ConfigureAwait(false);
                 await _database.CreateTableAsync<BookmarkCollection>().ConfigureAwait(false);
+                // ADDITIVE: new pages table (fresh DBs get full schema automatically).
+                await _database.CreateTableAsync<LibraryPage>().ConfigureAwait(false);
                 await _database.CreateTableAsync<BookmarkTag>().ConfigureAwait(false);
                 await _database.CreateTableAsync<BookmarkCustomType>().ConfigureAwait(false);
                 await _database.CreateTableAsync<BookmarkTemplate>().ConfigureAwait(false);
@@ -47,6 +49,12 @@ namespace Jamrah.Infrastructure.Repositories
                 await _database.CreateTableAsync<BookmarkQuranLog>().ConfigureAwait(false);
                 await _database.CreateTableAsync<BookmarkClip>().ConfigureAwait(false);
                 await _database.CreateTableAsync<BookmarkViewState>().ConfigureAwait(false);
+
+                // ADDITIVE: migrate pre-existing DBs (CreateTableAsync never adds
+                // columns to existing tables, so add the new ones explicitly).
+                await EnsureColumnAsync("BookmarkFolders", "IsArchived", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
+                await EnsureColumnAsync("BookmarkCollections", "IsArchived", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
+                await EnsureColumnAsync("BookmarkItems", "PageIdsJson", "TEXT NOT NULL DEFAULT '[]'").ConfigureAwait(false);
 
                 var itemCount = await _database.Table<BookmarkItem>().CountAsync().ConfigureAwait(false);
                 var folderCount = await _database.Table<BookmarkFolder>().CountAsync().ConfigureAwait(false);
@@ -68,6 +76,21 @@ namespace Jamrah.Infrastructure.Repositories
         {
             await InitAsync().ConfigureAwait(false);
             await _database!.InsertOrReplaceAsync(entity).ConfigureAwait(false);
+        }
+
+        // ADDITIVE: minimal column migration for existing user databases.
+        private sealed class PragmaColumn
+        {
+            [Column("name")]
+            public string Name { get; set; } = string.Empty;
+        }
+
+        private async Task EnsureColumnAsync(string table, string column, string definition)
+        {
+            // NOTE: only called from InitAsync after _database is assigned (no InitAsync() here — would deadlock _initLock).
+            var cols = await _database!.QueryAsync<PragmaColumn>($"PRAGMA table_info([{table}])").ConfigureAwait(false);
+            if (!cols.Any(c => c.Name == column))
+                await _database.ExecuteAsync($"ALTER TABLE [{table}] ADD COLUMN [{column}] {definition}").ConfigureAwait(false);
         }
 
         public async Task<List<BookmarkItem>> GetItemsAsync() => await AllAsync<BookmarkItem>();
@@ -102,6 +125,15 @@ namespace Jamrah.Infrastructure.Repositories
         {
             await InitAsync().ConfigureAwait(false);
             await _database!.DeleteAsync<BookmarkCollection>(id).ConfigureAwait(false);
+        }
+
+        // ADDITIVE: pages CRUD (permanent delete only; archive is a soft flag via Save).
+        public async Task<List<LibraryPage>> GetPagesAsync() => await AllAsync<LibraryPage>();
+        public async Task SavePageAsync(LibraryPage page) => await SaveAsync(page);
+        public async Task DeletePageAsync(string id)
+        {
+            await InitAsync().ConfigureAwait(false);
+            await _database!.DeleteAsync<LibraryPage>(id).ConfigureAwait(false);
         }
 
         public async Task<List<BookmarkTag>> GetTagsAsync() => await AllAsync<BookmarkTag>();
@@ -161,6 +193,8 @@ namespace Jamrah.Infrastructure.Repositories
                 Items = await _database!.Table<BookmarkItem>().ToListAsync(),
                 Folders = await _database!.Table<BookmarkFolder>().ToListAsync(),
                 Collections = await _database!.Table<BookmarkCollection>().ToListAsync(),
+                // ADDITIVE: include pages in backup.
+                Pages = await _database!.Table<LibraryPage>().ToListAsync(),
                 Tags = await _database!.Table<BookmarkTag>().ToListAsync(),
                 CustomTypes = await _database!.Table<BookmarkCustomType>().ToListAsync(),
                 CustomTemplates = await _database!.Table<BookmarkTemplate>().ToListAsync(),
@@ -180,6 +214,8 @@ namespace Jamrah.Infrastructure.Repositories
             await _database!.DeleteAllAsync<BookmarkItem>();
             await _database!.DeleteAllAsync<BookmarkFolder>();
             await _database!.DeleteAllAsync<BookmarkCollection>();
+            // ADDITIVE: clear pages on import.
+            await _database!.DeleteAllAsync<LibraryPage>();
             await _database!.DeleteAllAsync<BookmarkTag>();
             await _database!.DeleteAllAsync<BookmarkCustomType>();
             await _database!.DeleteAllAsync<BookmarkTemplate>();
@@ -190,6 +226,8 @@ namespace Jamrah.Infrastructure.Repositories
             if (backup.Items.Count > 0) await _database.InsertAllAsync(backup.Items);
             if (backup.Folders.Count > 0) await _database.InsertAllAsync(backup.Folders);
             if (backup.Collections.Count > 0) await _database.InsertAllAsync(backup.Collections);
+            // ADDITIVE: restore pages (old backups without Pages import as empty).
+            if (backup.Pages.Count > 0) await _database.InsertAllAsync(backup.Pages);
             if (backup.Tags.Count > 0) await _database.InsertAllAsync(backup.Tags);
             if (backup.CustomTypes.Count > 0) await _database.InsertAllAsync(backup.CustomTypes);
             if (backup.CustomTemplates.Count > 0) await _database.InsertAllAsync(backup.CustomTemplates);

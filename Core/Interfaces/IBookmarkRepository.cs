@@ -21,6 +21,11 @@ namespace Jamrah.Core.Interfaces
         Task SaveCollectionAsync(BookmarkCollection collection);
         Task DeleteCollectionAsync(string id);
 
+        // ADDITIVE: pages (container like a folder, supports nesting).
+        Task<List<LibraryPage>> GetPagesAsync();
+        Task SavePageAsync(LibraryPage page);
+        Task DeletePageAsync(string id);
+
         Task<List<BookmarkTag>> GetTagsAsync();
         Task SaveTagAsync(BookmarkTag tag);
         Task DeleteTagAsync(string name);

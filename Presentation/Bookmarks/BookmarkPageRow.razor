@@ -1,0 +1,55 @@
+@namespace Jamrah.Presentation.Bookmarks
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@inject BookmarkStateService State
+
+@* ADDITIVE (new): sidebar row for a Page — mirrors BookmarkFolderRow.
+   + button adds a nested sub-page, dots open the page menu (edit/archive). *@
+<div class="sb-i sb-page @(IsOn ? "on" : "") @(Page.IsOpen ? "" : "closed") has-dots"
+     @onclick="Open">
+    @if (Kids.Count > 0)
+    {
+        <span class="chev" @onclick:stopPropagation="true" @onclick="ToggleOpen">
+            @((MarkupString)BookmarkIcons.Svg("chevD", 13))
+        </span>
+    }
+    @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(Page.Icon) ? "note" : Page.Icon, "note"))<span class="n">@Page.Name</span>
+    <span class="sb-plus" title="New sub-page" @onclick:stopPropagation="true" @onclick="() => OnNewSubPage.InvokeAsync(Page.Id)">
+        @((MarkupString)BookmarkIcons.Svg("plus", 13))
+    </span>
+    <span class="dots" @onclick:stopPropagation="true" @onclick="() => OnPageMenu.InvokeAsync(Page.Id)">
+        @((MarkupString)BookmarkIcons.Svg("dots", 14))
+    </span>
+    <span class="c">@BookmarkQuery.CountPage(Page.Id, State)</span>
+</div>
+@if (Kids.Count > 0 && Page.IsOpen)
+{
+    <div class="sb-sub">
+        @foreach (var k in Kids)
+        {
+            <BookmarkPageRow Page="k" OnNavigate="OnNavigate" OnPageMenu="OnPageMenu" OnNewSubPage="OnNewSubPage" />
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public LibraryPage Page { get; set; } = null!;
+    [Parameter] public EventCallback<(string Ctx, string? Id, string? Tag)> OnNavigate { get; set; }
+    [Parameter] public EventCallback<string> OnPageMenu { get; set; }
+    [Parameter] public EventCallback<string> OnNewSubPage { get; set; }
+
+    private List<LibraryPage> Kids => State.Pages
+        .Where(p => !p.IsArchived && p.ParentPageId == Page.Id)
+        .OrderBy(p => p.SortOrder)
+        .ThenBy(p => p.Name)
+        .ToList();
+    private bool IsOn => State.Route.Ctx == "page" && State.Route.Id == Page.Id;
+
+    private Task Open() => OnNavigate.InvokeAsync(("page", Page.Id, null));
+
+    private async Task ToggleOpen()
+    {
+        Page.IsOpen = !Page.IsOpen;
+        await State.SavePageAsync(Page);
+    }
+}

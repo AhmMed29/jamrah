@@ -162,6 +162,16 @@
                                 }
                             </select>
                         </div>
+                        @* ADDITIVE (new): file the item under a page *@
+                        <div class="fld"><label>Page</label>
+                            <select @bind="_pageId">
+                                <option value="">— none —</option>
+                                @foreach (var pg in State.Pages.Where(p => !p.IsArchived))
+                                {
+                                    <option value="@pg.Id">@PageLabel(pg.Id)</option>
+                                }
+                            </select>
+                        </div>
                         <div class="fld"><label>Collections</label>
                             <div class="tcheck">
                                 @foreach (var c in State.Collections)
@@ -204,6 +214,8 @@
     private List<string> _tags = new();
     private string _tagInput = string.Empty;
     private string _folderId = string.Empty;
+    // ADDITIVE (new): page the item is filed under.
+    private string _pageId = string.Empty;
     private List<string> _colIds = new();
     private bool _fav;
     private bool _pin;
@@ -231,6 +243,8 @@
             _title = it.Title; _desc = it.Description; _notes = it.Notes; _link = it.Url;
             _tags = BookmarkQuery.TagsOf(it);
             _folderId = BookmarkQuery.FoldersOf(it).FirstOrDefault() ?? string.Empty;
+            // ADDITIVE (new): load filed page.
+            _pageId = BookmarkQuery.PagesOf(it).FirstOrDefault() ?? string.Empty;
             _colIds = BookmarkQuery.CollectionsOf(it);
             _fav = it.Favorite; _pin = it.Pinned;
             _tpl = string.IsNullOrEmpty(it.Tpl) ? (BookmarkQuery.TypeTpl.TryGetValue(it.Type, out var d) ? d : "detailed") : it.Tpl;
@@ -288,6 +302,29 @@
         var p = State.Folders.FirstOrDefault(x => x.Id == id)?.ParentId;
         while (!string.IsNullOrEmpty(p) && n < 50) { n++; p = State.Folders.FirstOrDefault(x => x.Id == p)?.ParentId; }
         return n;
+    }
+
+    // ADDITIVE (new): page option label with its ancestry (collection › folder › parents).
+    private string PageLabel(string id)
+    {
+        var p = State.Pages.FirstOrDefault(x => x.Id == id);
+        if (p == null) return id;
+        var parts = new List<string>();
+        var n = 0;
+        var cur = p;
+        while (cur != null && n++ < 10) { parts.Insert(0, cur.Name); cur = State.Pages.FirstOrDefault(x => x.Id == cur.ParentPageId); }
+        var prefix = "";
+        if (!string.IsNullOrEmpty(p.FolderId))
+        {
+            var f = State.Folders.FirstOrDefault(x => x.Id == p.FolderId);
+            if (f != null) prefix = f.Name + " › ";
+        }
+        else if (!string.IsNullOrEmpty(p.CollectionId))
+        {
+            var c = State.Collections.FirstOrDefault(x => x.Id == p.CollectionId);
+            if (c != null) prefix = c.Name + " › ";
+        }
+        return prefix + string.Join(" › ", parts);
     }
 
     private async Task FetchEmbed()
@@ -395,6 +432,8 @@
                 it.Title = title; it.Type = _type; it.Url = _link; it.Description = _desc; it.Notes = _notes;
                 it.Thumb = thumb; it.TagsJson = System.Text.Json.JsonSerializer.Serialize(_tags);
                 it.FolderIdsJson = System.Text.Json.JsonSerializer.Serialize(string.IsNullOrEmpty(_folderId) ? new List<string>() : new List<string> { _folderId });
+                // ADDITIVE (new): persist filed page.
+                it.PageIdsJson = System.Text.Json.JsonSerializer.Serialize(string.IsNullOrEmpty(_pageId) ? new List<string>() : new List<string> { _pageId });
                 it.CollectionIdsJson = System.Text.Json.JsonSerializer.Serialize(_colIds);
                 it.MetadataJson = BuildMetadataJson(); it.Tpl = _tpl;
                 it.Favorite = _fav; it.Pinned = _pin;
@@ -407,6 +446,8 @@
                     Title = title, Type = _type, Url = _link, Description = _desc, Notes = _notes,
                     Thumb = thumb, TagsJson = System.Text.Json.JsonSerializer.Serialize(_tags),
                     FolderIdsJson = System.Text.Json.JsonSerializer.Serialize(string.IsNullOrEmpty(_folderId) ? new List<string>() : new List<string> { _folderId }),
+                    // ADDITIVE (new): persist filed page.
+                    PageIdsJson = System.Text.Json.JsonSerializer.Serialize(string.IsNullOrEmpty(_pageId) ? new List<string>() : new List<string> { _pageId }),
                     CollectionIdsJson = System.Text.Json.JsonSerializer.Serialize(_colIds),
                     MetadataJson = BuildMetadataJson(), Tpl = _tpl,
                     Favorite = _fav, Pinned = _pin,

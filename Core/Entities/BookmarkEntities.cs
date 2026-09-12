@@ -24,6 +24,8 @@ namespace Jamrah.Core.Entities
         public string TagsJson { get; set; } = "[]";
         public string FolderIdsJson { get; set; } = "[]";
         public string CollectionIdsJson { get; set; } = "[]";
+        // ADDITIVE: pages an item belongs to (mirrors FolderIdsJson).
+        public string PageIdsJson { get; set; } = "[]";
         public string RelationsJson { get; set; } = "[]";
         public string SessionsJson { get; set; } = "[]";
         public string MetadataJson { get; set; } = "{}";
@@ -47,6 +49,8 @@ namespace Jamrah.Core.Entities
         public string Name { get; set; } = string.Empty;
         public string Icon { get; set; } = string.Empty;
         public bool IsOpen { get; set; } = true;
+        // ADDITIVE: soft-archive flag (delete moves here, Archive page restores).
+        public bool IsArchived { get; set; } = false;
         public string? CollectionId { get; set; }
         public string? ParentId { get; set; }
     }
@@ -58,6 +62,8 @@ namespace Jamrah.Core.Entities
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public string Name { get; set; } = string.Empty;
         public string Icon { get; set; } = string.Empty;
+        // ADDITIVE: soft-archive flag (delete moves here, Archive page restores).
+        public bool IsArchived { get; set; } = false;
         public string? SmartJson { get; set; }
     }
 
@@ -134,6 +140,8 @@ namespace Jamrah.Core.Entities
         public List<BookmarkItem> Items { get; set; } = new();
         public List<BookmarkFolder> Folders { get; set; } = new();
         public List<BookmarkCollection> Collections { get; set; } = new();
+        // ADDITIVE: pages included in backup (old backups deserialize as empty).
+        public List<LibraryPage> Pages { get; set; } = new();
         public List<BookmarkTag> Tags { get; set; } = new();
         public List<BookmarkCustomType> CustomTypes { get; set; } = new();
         public List<BookmarkTemplate> CustomTemplates { get; set; } = new();

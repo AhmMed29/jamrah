@@ -6,6 +6,7 @@ window.jamrahZoom = (function(){
     function apply(z){
         currentZoom = Math.max(0.5, Math.min(2.5, z));
         document.documentElement.style.zoom = currentZoom;
+        try { document.documentElement.style.setProperty('--z', currentZoom); } catch(e){}
         try { if(window.chrome && window.chrome.webview) window.chrome.webview.postMessage(JSON.stringify({type:'zoom', page: currentPage, zoom: currentZoom})); } catch(e){}
     }
     let _inited = false;
@@ -16,6 +17,7 @@ window.jamrahZoom = (function(){
             currentZoom = 1.7;
             function doApply(){
                 try { document.documentElement.style.zoom = currentZoom; } catch(e){}
+                try { document.documentElement.style.setProperty('--z', currentZoom); } catch(e){}
             }
             if(document.readyState === 'loading'){
                 document.addEventListener('DOMContentLoaded', doApply, {once:true});

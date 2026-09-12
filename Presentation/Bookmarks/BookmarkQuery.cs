@@ -86,6 +86,13 @@ namespace Jamrah.Presentation.Bookmarks
             catch { return new List<string>(); }
         }
 
+        // ADDITIVE: pages an item belongs to.
+        public static List<string> PagesOf(BookmarkItem it)
+        {
+            try { return System.Text.Json.JsonSerializer.Deserialize<List<string>>(string.IsNullOrWhiteSpace(it.PageIdsJson) ? "[]" : it.PageIdsJson) ?? new List<string>(); }
+            catch { return new List<string>(); }
+        }
+
         public static List<string> RelationsOf(BookmarkItem it)
         {
             try { return System.Text.Json.JsonSerializer.Deserialize<List<string>>(string.IsNullOrWhiteSpace(it.RelationsJson) ? "[]" : it.RelationsJson) ?? new List<string>(); }
@@ -129,8 +136,39 @@ namespace Jamrah.Presentation.Bookmarks
         public static List<BookmarkItem> ItemsInCollection(string cid, BookmarkStateService s)
         {
             var fids = CollectionFolderIds(cid, s.Folders);
+            // ADDITIVE: also include items filed under this collection's pages.
+            var pids = CollectionPageIds(cid, s.Pages);
             return s.Items.Where(i => !i.Deleted && !i.Archived &&
-                (CollectionsOf(i).Contains(cid) || FoldersOf(i).Any(x => fids.Contains(x)))).ToList();
+                (CollectionsOf(i).Contains(cid) || FoldersOf(i).Any(x => fids.Contains(x)) || PagesOf(i).Any(x => pids.Contains(x)))).ToList();
+        }
+
+        // ADDITIVE: all page ids belonging to a collection (direct, via folder, or nested).
+        public static HashSet<string> CollectionPageIds(string cid, List<LibraryPage> pages)
+        {
+            var ids = new HashSet<string>();
+            void Add(LibraryPage p)
+            {
+                ids.Add(p.Id);
+                foreach (var kid in pages.Where(x => x.ParentPageId == p.Id)) Add(kid);
+            }
+            foreach (var p in pages.Where(p => p.CollectionId == cid && string.IsNullOrEmpty(p.ParentPageId)))
+                Add(p);
+            return ids;
+        }
+
+        // ADDITIVE: items filed directly under a page (plus its nested sub-pages).
+        public static List<BookmarkItem> ItemsInPage(string pid, BookmarkStateService s)
+        {
+            var ids = new HashSet<string> { pid };
+            void Add(string id)
+            {
+                foreach (var kid in s.Pages.Where(p => p.ParentPageId == id))
+                {
+                    if (ids.Add(kid.Id)) Add(kid.Id);
+                }
+            }
+            Add(pid);
+            return s.Items.Where(i => !i.Deleted && !i.Archived && PagesOf(i).Any(x => ids.Contains(x))).ToList();
         }
 
         public static List<BookmarkItem> BaseItems(BookmarkRoute r, BookmarkStateService s)
@@ -144,6 +182,8 @@ namespace Jamrah.Presentation.Bookmarks
                 "recent" => a.Where(i => !i.Deleted && !i.Archived && i.LastOpenedAt != DateTime.MinValue).ToList(),
                 "folder" => a.Where(i => !i.Deleted && !i.Archived && FoldersOf(i).Contains(r.Id ?? "")).ToList(),
                 "collection" => CollectionItems(r.Id, s),
+                // ADDITIVE: page route.
+                "page" => ItemsInPage(r.Id ?? "", s),
                 "tag" => a.Where(i => !i.Deleted && !i.Archived && TagsOf(i).Contains(r.Tag ?? "")).ToList(),
                 "archive" => a.Where(i => i.Archived && !i.Deleted).ToList(),
                 "trash" => a.Where(i => i.Deleted).ToList(),
@@ -277,12 +317,18 @@ namespace Jamrah.Presentation.Bookmarks
             "archive" => "Archive", "trash" => "Trash", "tags" => "Tags", "templates" => "Templates",
             "folder" => s.Folders.FirstOrDefault(f => f.Id == r.Id)?.Name ?? "Folder",
             "collection" => s.Collections.FirstOrDefault(c => c.Id == r.Id)?.Name ?? "Collection",
+            // ADDITIVE: page title.
+            "page" => s.Pages.FirstOrDefault(p => p.Id == r.Id)?.Name ?? "Page",
             "tag" => "#" + r.Tag,
             _ => "Library",
         };
 
         public static int CountFolder(string id, BookmarkStateService s) =>
             s.Items.Count(i => !i.Deleted && !i.Archived && FoldersOf(i).Contains(id));
+
+        // ADDITIVE: item count for a page.
+        public static int CountPage(string id, BookmarkStateService s) =>
+            s.Items.Count(i => !i.Deleted && !i.Archived && PagesOf(i).Contains(id));
 
         public static int CountCollection(BookmarkCollection c, BookmarkStateService s)
         {

@@ -8,7 +8,11 @@
                 OnNewCollection='() => OnFolderModal.InvokeAsync(("collection", null, null))'
                 OnNewSmart='() => OnFolderModal.InvokeAsync(("smart", null, null))'
                 OnFolderMenu='id => OnFolderModal.InvokeAsync(("folder", id, null))'
-                OnCollectionMenu='id => OnFolderModal.InvokeAsync(("collection", null, id))' />
+                OnCollectionMenu='id => OnFolderModal.InvokeAsync(("collection", null, id))'
+                OnNewFolderInCollection='cid => OnFolderModal.InvokeAsync(("folder", null, cid))'
+                OnNewPageInCollection='cid => OnPageModal.InvokeAsync(("page", null, cid, null, null))'
+                OnNewSubPage='pid => OnPageModal.InvokeAsync(("page", null, null, null, pid))'
+                OnPageMenu='pid => OnPageModal.InvokeAsync(("page", pid, null, null, null))' />
     <div class="page-shell-frame">@ChildContent</div>
 </div>
 @if (_slim)
@@ -22,6 +26,8 @@
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public EventCallback<(string Ctx, string? Id, string? Tag)> OnSidebarNavigate { get; set; }
     [Parameter] public EventCallback<(string Mode, string? FolderId, string? CollectionId)> OnFolderModal { get; set; }
+    // ADDITIVE (new): page modal requests (mode is always "page").
+    [Parameter] public EventCallback<(string Mode, string? PageId, string? CollectionId, string? FolderId, string? ParentPageId)> OnPageModal { get; set; }
 
     private bool _slim;
 }

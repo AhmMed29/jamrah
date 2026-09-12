@@ -1,7 +1,7 @@
 @namespace Jamrah.Presentation.Shared
 @using Jamrah.Presentation.Bookmarks
 
-<PageShell OnSidebarNavigate='async t => { if (Bm != null) await Bm.Navigate(t); }' OnFolderModal='m => { if (Bm != null) Bm.OpenFolderModal(m.Mode, m.FolderId, m.CollectionId); return Task.CompletedTask; }'>
+<PageShell OnSidebarNavigate='async t => { if (Bm != null) await Bm.Navigate(t); }' OnFolderModal='m => { if (Bm != null) Bm.OpenFolderModal(m.Mode, m.FolderId, m.CollectionId); return Task.CompletedTask; }' OnPageModal='m => { if (Bm != null) Bm.OpenPageModal(m.Mode, m.PageId, m.CollectionId, m.FolderId, m.ParentPageId); return Task.CompletedTask; }'>
     <BookmarkPage @ref="Bm" />
 </PageShell>
 

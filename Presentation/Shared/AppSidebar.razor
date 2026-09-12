@@ -63,25 +63,52 @@
             }
 
             <div class="sb-sec @(!ColOpen ? "closed" : "")" @onclick="() => ColOpen = !ColOpen">
-                <span>Collections — contain folders</span><span class="chev">@((MarkupString)BookmarkIcons.Svg("chevD", 12))</span>
+                <span>Collections — contain folders</span>
+                @* ADDITIVE: + button to add a collection *@
+                <span class="sb-sec-plus" title="New collection" @onclick:stopPropagation="true" @onclick="() => OnNewCollection.InvokeAsync()">
+                    @((MarkupString)BookmarkIcons.Svg("plus", 13))
+                </span>
+                <span class="chev">@((MarkupString)BookmarkIcons.Svg("chevD", 12))</span>
             </div>
             @if (ColOpen)
             {
-                @foreach (var c in State.Collections)
+                @foreach (var c in State.Collections.Where(c => !c.IsArchived))
                 {
                     var cid = c.Id;
                     var cicon = string.IsNullOrEmpty(c.Icon) ? (BookmarkQuery.ParseSmart(c.SmartJson) != null ? "spark" : "layers") : c.Icon;
-                    <div class="sb-i has-dots @(IsOn("collection", cid, null) ? "on" : "")" @onclick='() => NavTo("collection", cid, null)'>
+                    <div class="sb-i has-dots has-pop @(IsOn("collection", cid, null) ? "on" : "")" @onclick='() => NavTo("collection", cid, null)'>
                         @((MarkupString)BookmarkIcons.FdIcon(cicon, "folder"))<span class="n">@c.Name</span>
+                        @* ADDITIVE: + button opens a small box at the click position: new folder / new page *@
+                        <span class="sb-plus" title="Add folder or page" @onclick:stopPropagation="true" @onclick="() => TogglePop(cid)">
+                            @((MarkupString)BookmarkIcons.Svg("plus", 13))
+                        </span>
                         <span class="dots" @onclick:stopPropagation="true" @onclick="() => OnCollectionMenu.InvokeAsync(cid)">
                             @((MarkupString)BookmarkIcons.Svg("dots", 14))
                         </span>
                         <span class="c">@BookmarkQuery.CountCollection(c, State)</span>
+                        @if (_popColId == cid)
+                        {
+                            <div class="sb-pop" @onclick:stopPropagation="true">
+                                <button @onclick="() => AddFolderTo(cid)">
+                                    @((MarkupString)BookmarkIcons.Svg("folder", 14)) New folder
+                                </button>
+                                <button @onclick="() => AddPageTo(cid)">
+                                    @((MarkupString)BookmarkIcons.Svg("note", 14)) New page
+                                </button>
+                            </div>
+                        }
                     </div>
-                    @foreach (var f in State.Folders.Where(f => f.CollectionId == cid && string.IsNullOrEmpty(f.ParentId)))
+                    @foreach (var f in State.Folders.Where(f => !f.IsArchived && f.CollectionId == cid && string.IsNullOrEmpty(f.ParentId)))
                     {
                         <div class="sb-sub">
                             <BookmarkFolderRow Folder="f" OnNavigate="Fwd" OnFolderMenu="OnFolderMenu" />
+                        </div>
+                    }
+                    @* ADDITIVE: top-level pages of this collection (each with + for nested pages) *@
+                    @foreach (var p in State.Pages.Where(p => !p.IsArchived && p.CollectionId == cid && string.IsNullOrEmpty(p.FolderId) && string.IsNullOrEmpty(p.ParentPageId)).OrderBy(p => p.SortOrder).ThenBy(p => p.Name))
+                    {
+                        <div class="sb-sub">
+                            <BookmarkPageRow Page="p" OnNavigate="Fwd" OnPageMenu="FwdPageMenu" OnNewSubPage="FwdNewSubPage" />
                         </div>
                     }
                 }
@@ -94,9 +121,14 @@
             </div>
             @if (FoldOpen)
             {
-                @foreach (var f in State.Folders.Where(f => string.IsNullOrEmpty(f.CollectionId) && string.IsNullOrEmpty(f.ParentId)))
+                @foreach (var f in State.Folders.Where(f => !f.IsArchived && string.IsNullOrEmpty(f.CollectionId) && string.IsNullOrEmpty(f.ParentId)))
                 {
                     <BookmarkFolderRow Folder="f" OnNavigate="Fwd" OnFolderMenu="OnFolderMenu" />
+                }
+                @* ADDITIVE: standalone top-level pages (no collection/folder/parent) *@
+                @foreach (var p in State.Pages.Where(p => !p.IsArchived && string.IsNullOrEmpty(p.CollectionId) && string.IsNullOrEmpty(p.FolderId) && string.IsNullOrEmpty(p.ParentPageId)).OrderBy(p => p.SortOrder).ThenBy(p => p.Name))
+                {
+                    <BookmarkPageRow Page="p" OnNavigate="Fwd" OnPageMenu="FwdPageMenu" OnNewSubPage="FwdNewSubPage" />
                 }
                 <div class="sb-add" @onclick="() => OnNewFolder.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("plus", 13)) New folder</div>
             }
@@ -130,6 +162,11 @@
     }
 
     <div class="sb-foot">@State.Items.Count(i => !i.Deleted) items · stored locally,<br />on this machine only.</div>
+    @* ADDITIVE: transparent layer — clicking anywhere outside the small popup closes it *@
+    @if (_popColId != null)
+    {
+        <div class="sb-pop-overlay" @onclick="ClosePop"></div>
+    }
 </aside>
 
 @code {
@@ -140,6 +177,11 @@
     [Parameter] public EventCallback OnNewSmart { get; set; }
     [Parameter] public EventCallback<string> OnFolderMenu { get; set; }
     [Parameter] public EventCallback<string> OnCollectionMenu { get; set; }
+    // ADDITIVE (new): page management + targeted add actions (old callbacks untouched).
+    [Parameter] public EventCallback<string> OnNewFolderInCollection { get; set; }
+    [Parameter] public EventCallback<string> OnNewPageInCollection { get; set; }
+    [Parameter] public EventCallback<string> OnNewSubPage { get; set; }
+    [Parameter] public EventCallback<string> OnPageMenu { get; set; }
 
     private static readonly (string Id, string Label, string Path)[] NavItems = new[]
     {
@@ -160,6 +202,8 @@
     private bool ColOpen = true;
     private bool FoldOpen = true;
     private bool SysOpen = true;
+    // ADDITIVE: which collection's small popup (+ → new folder / new page) is open.
+    private string? _popColId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -203,6 +247,14 @@
     }
 
     private Task Fwd((string Ctx, string? Id, string? Tag) t) => OnNavigate.InvokeAsync(t);
+
+    // ADDITIVE: popup + page forwarding (old helpers untouched).
+    private void TogglePop(string cid) => _popColId = _popColId == cid ? null : cid;
+    private void ClosePop() => _popColId = null;
+    private Task AddFolderTo(string cid) { _popColId = null; return OnNewFolderInCollection.InvokeAsync(cid); }
+    private Task AddPageTo(string cid) { _popColId = null; return OnNewPageInCollection.InvokeAsync(cid); }
+    private Task FwdPageMenu(string id) => OnPageMenu.InvokeAsync(id);
+    private Task FwdNewSubPage(string id) => OnNewSubPage.InvokeAsync(id);
 
     private bool IsOn(string ctx, string? id, string? tag) =>
         Nav.CurrentPage == "bookmarks" && State.Route.Ctx == ctx && (State.Route.Id ?? null) == (id ?? null) && (State.Route.Tag ?? null) == (tag ?? null);

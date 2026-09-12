@@ -176,8 +176,10 @@
     private async Task Delete()
     {
         if (!_confirmDelete) { _confirmDelete = true; return; }
-        if (FolderId != null) await State.DeleteFolderAsync(FolderId);
-        else if (CollectionId != null) await State.DeleteCollectionAsync(CollectionId);
-        await OnSaved.InvokeAsync("Deleted");
+        // NOTE: delete moves the container to the Archive page (soft flag);
+        // permanent removal happens from the Archive page itself.
+        if (FolderId != null) await State.ArchiveFolderAsync(FolderId);
+        else if (CollectionId != null) await State.ArchiveCollectionAsync(CollectionId);
+        await OnSaved.InvokeAsync("Moved to Archive");
     }
 }

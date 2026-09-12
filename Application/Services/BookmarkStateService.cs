@@ -41,6 +41,8 @@ namespace Jamrah.Application.Services
         public List<BookmarkItem> Items { get; private set; } = new();
         public List<BookmarkFolder> Folders { get; private set; } = new();
         public List<BookmarkCollection> Collections { get; private set; } = new();
+        // ADDITIVE: pages list.
+        public List<LibraryPage> Pages { get; private set; } = new();
         public List<BookmarkTag> Tags { get; private set; } = new();
         public List<BookmarkCustomType> CustomTypes { get; private set; } = new();
         public List<BookmarkTemplate> CustomTemplates { get; private set; } = new();
@@ -78,6 +80,8 @@ namespace Jamrah.Application.Services
             Items = await _repository.GetItemsAsync();
             Folders = await _repository.GetFoldersAsync();
             Collections = await _repository.GetCollectionsAsync();
+            // ADDITIVE: load pages alongside the rest.
+            Pages = await _repository.GetPagesAsync();
             Tags = await _repository.GetTagsAsync();
             CustomTypes = await _repository.GetCustomTypesAsync();
             CustomTemplates = await _repository.GetTemplatesAsync();
@@ -187,6 +191,58 @@ namespace Jamrah.Application.Services
         {
             await _repository.DeleteCollectionAsync(id);
             await RefreshDataAsync();
+        }
+
+        // ADDITIVE: pages CRUD. Archive = soft flag (shows in Archive page),
+        // Delete = permanent removal (used from the Archive page).
+        public async Task SavePageAsync(LibraryPage page)
+        {
+            await _repository.SavePageAsync(page);
+            await RefreshDataAsync();
+        }
+
+        public async Task ArchivePageAsync(string id)
+        {
+            var page = Pages.FirstOrDefault(p => p.Id == id);
+            if (page != null) { page.IsArchived = true; await _repository.SavePageAsync(page); await RefreshDataAsync(); }
+        }
+
+        public async Task RestorePageAsync(string id)
+        {
+            var page = Pages.FirstOrDefault(p => p.Id == id);
+            if (page != null) { page.IsArchived = false; await _repository.SavePageAsync(page); await RefreshDataAsync(); }
+        }
+
+        public async Task DeletePageAsync(string id)
+        {
+            await _repository.DeletePageAsync(id);
+            await RefreshDataAsync();
+        }
+
+        // ADDITIVE: soft-archive + restore for collections/folders
+        // (old hard-delete methods above stay untouched for permanent removal).
+        public async Task ArchiveCollectionAsync(string id)
+        {
+            var c = Collections.FirstOrDefault(x => x.Id == id);
+            if (c != null) { c.IsArchived = true; await _repository.SaveCollectionAsync(c); await RefreshDataAsync(); }
+        }
+
+        public async Task RestoreCollectionAsync(string id)
+        {
+            var c = Collections.FirstOrDefault(x => x.Id == id);
+            if (c != null) { c.IsArchived = false; await _repository.SaveCollectionAsync(c); await RefreshDataAsync(); }
+        }
+
+        public async Task ArchiveFolderAsync(string id)
+        {
+            var f = Folders.FirstOrDefault(x => x.Id == id);
+            if (f != null) { f.IsArchived = true; await _repository.SaveFolderAsync(f); await RefreshDataAsync(); }
+        }
+
+        public async Task RestoreFolderAsync(string id)
+        {
+            var f = Folders.FirstOrDefault(x => x.Id == id);
+            if (f != null) { f.IsArchived = false; await _repository.SaveFolderAsync(f); await RefreshDataAsync(); }
         }
 
         public async Task SaveKhatmAsync(BookmarkQuranKhatm khatm)

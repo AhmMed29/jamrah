@@ -379,28 +379,28 @@
         </main>
         @if (State.DetailId != null)
         {
-            <BookmarkDrawer ItemId="@State.DetailId" OnClose="() => State.SetDetail(null)"
+            <BookmarkDrawerHost ItemId="@State.DetailId" OnClose="() => State.SetDetail(null)"
                             OnNavigate="Navigate" OnOpen="OpenItem"
                             OnEdit="id => { _editItemId = id; _showItemModal = true; }"
                             OnChanged="() => StateHasChanged()" />
         }
+        @if (_showItemModal)
+        {
+            <BookmarkItemModal EditId="@_editItemId" OnClose="() => _showItemModal = false"
+                               OnSaved="msg => { _showItemModal = false; ShowToast(msg); }" />
+        }
+        @if (_folderModalMode != null)
+        {
+            <BookmarkFolderModal Mode="@_folderModalMode" FolderId="@_folderEditId" CollectionId="@_colEditId"
+                                 OnClose="() => _folderModalMode = null"
+                                 OnSaved="msg => { _folderModalMode = null; ShowToast(msg); }" />
+        }
+        @if (_toast != null)
+        {
+            <div class="bmk-toasts"><div class="toast">@_toast</div></div>
+        }
     </div>
 </div>
-@if (_showItemModal)
-{
-    <BookmarkItemModal EditId="@_editItemId" OnClose="() => _showItemModal = false"
-                       OnSaved="msg => { _showItemModal = false; ShowToast(msg); }" />
-}
-@if (_folderModalMode != null)
-{
-    <BookmarkFolderModal Mode="@_folderModalMode" FolderId="@_folderEditId" CollectionId="@_colEditId"
-                         OnClose="() => _folderModalMode = null"
-                         OnSaved="msg => { _folderModalMode = null; ShowToast(msg); }" />
-}
-@if (_toast != null)
-{
-    <div class="bmk-toasts"><div class="toast">@_toast</div></div>
-}
 
 @code {
     private bool _ready;

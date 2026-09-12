@@ -312,6 +312,9 @@
 .bmk .m-x{margin-left:auto;width:30px;height:30px;display:grid;place-items:center;border-radius:8px;color:var(--ink3)}
 .bmk .m-x:hover{background:var(--hover);color:var(--ink)}
 .bmk .m-b{padding:20px 22px}
+.bmk .modal.addm{display:flex;flex-direction:column;overflow:hidden}
+.bmk .modal.addm .m-b{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none}
+.bmk .modal.addm .m-b::-webkit-scrollbar{display:none}
 .bmk .m-f{display:flex;gap:10px;justify-content:flex-end;padding:13px 22px;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--surface)}
 .bmk .fld{margin-bottom:13px}
 .bmk .fld label{display:block;font-size:11.5px;font-weight:700;letter-spacing:.03em;color:var(--ink2);margin-bottom:5px;text-transform:uppercase}

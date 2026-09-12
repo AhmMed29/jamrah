@@ -5,6 +5,7 @@
              Shell.NavBarIsVisible="False">
 
     <Grid>
+        <Grid x:Name="SplashLayer">  <WebView x:Name="SplashView" /> </Grid>
         <Grid x:Name="MainContent" />
         <Grid x:Name="PillLayer" InputTransparent="True" CascadeInputTransparent="False" />
     </Grid>

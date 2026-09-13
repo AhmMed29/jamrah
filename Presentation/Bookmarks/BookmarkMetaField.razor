@@ -1,3 +1,5 @@
+@inject Jamrah.Application.Services.LocalizationService L
+
 @if (Field.Type == "longtext")
 {
     <textarea value="@Value" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"></textarea>
@@ -23,7 +25,7 @@ else if (Field.Type == "select")
 }
 else if (Field.Type == "rating")
 {
-    <div class="rate-w"><input type="number" min="0" max="10" step="0.1" value="@Value" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" placeholder="e.g. 8.5" /></div>
+    <div class="rate-w"><input type="number" min="0" max="10" step="0.1" value="@Value" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" placeholder="@L["bmk.rateEx"]" /></div>
 }
 else if (Field.Type == "progress")
 {
@@ -44,14 +46,14 @@ else if (Field.Type == "image")
     <div class="upl">
         @if (!string.IsNullOrEmpty(Value) && (Value.StartsWith("http") || Value.StartsWith("data:"))) { <img class="imgpv" src="@Value" alt="" /> }
         <input type="url" value="@(Value.StartsWith("data:") ? "" : Value)" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" placeholder="https://…" style="flex:1;min-width:140px" />
-        <span class="hint" style="margin:0">paste a URL</span>
+        <span class="hint" style="margin:0">@L["bmk.pasteUrl"]</span>
     </div>
 }
 else if (Field.Type == "file")
 {
     <div class="upl">
-        <input type="text" value="@Value" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" placeholder="file reference…" style="flex:1;min-width:140px" />
-        <span class="hint" style="margin:0">stored as a reference</span>
+        <input type="text" value="@Value" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" placeholder="@L["bmk.fileRef"]" style="flex:1;min-width:140px" />
+        <span class="hint" style="margin:0">@L["bmk.storedRef"]</span>
     </div>
 }
 else

@@ -2,25 +2,27 @@
 @using Jamrah.Core.Entities
 @inject BookmarkStateService State
 @inject BookmarkEmbedService Embed
+@inject LocalizationService L
+@implements IDisposable
 
 <div class="modal-wrap">
     <div class="modal addm">
         @if (_picking)
         {
             <div class="m-h">
-                <button class="backbtn" @onclick="() => _picking = false">@((MarkupString)BookmarkIcons.Svg("arrowL", 13)) Back</button>
-                <span class="m-t">Choose a type</span>
+                <button class="backbtn" @onclick="() => _picking = false">@((MarkupString)BookmarkIcons.Svg("arrowL", 13)) @L["bmk.backBtn"]</button>
+                <span class="m-t">@L["bmk.chooseType"]</span>
                 <button class="m-x" @onclick="() => OnClose.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("x", 16))</button>
             </div>
             <div class="m-b">
-                <input value="@_typeQuery" @oninput="e => _typeQuery = e.Value?.ToString() ?? string.Empty" placeholder="Search types…" style="width:100%;border:1px solid var(--line2);border-radius:8px;padding:9px 12px;outline:none;margin-bottom:4px" spellcheck="false" />
-                <p style="font-size:12px;color:var(--ink3);margin:4px 0 2px">You choose the type — the library never guesses. (Fetch from the internet suggests one; you can always change it.)</p>
-                <div class="tcat">Quick</div>
+                <input value="@_typeQuery" @oninput="e => _typeQuery = e.Value?.ToString() ?? string.Empty" placeholder="@L["bmk.searchTypes"]" style="width:100%;border:1px solid var(--line2);border-radius:8px;padding:9px 12px;outline:none;margin-bottom:4px" spellcheck="false" />
+                <p style="font-size:12px;color:var(--ink3);margin:4px 0 2px">@L["bmk.typeHint"]</p>
+                <div class="tcat">@LocalizationService.CatName("Quick", L.Lang)</div>
                 <div class="tgrid">
                     @foreach (var qid in BookmarkTypeSchema.Quick)
                     {
                         <button class="tt" @onclick="() => PickType(qid)">
-                            <span class="ic">@((MarkupString)BookmarkIcons.Svg(BookmarkQuery.TypeIcon(qid), 16))</span><b>@BookmarkQuery.TypeName(qid)</b>
+                            <span class="ic">@((MarkupString)BookmarkIcons.Svg(BookmarkQuery.TypeIcon(qid), 16))</span><b>@BookmarkQuery.TypeName(qid, L.Lang)</b>
                         </button>
                     }
                 </div>
@@ -29,12 +31,12 @@
                     var inCat = BookmarkQuery.Types.Keys.Where(t => (BookmarkTypeSchema.Cats.TryGetValue(t, out var c) ? c : "Custom") == cat && MatchesTypeQuery(t)).ToList();
                     @if (inCat.Count > 0)
                     {
-                        <div class="tcat">@cat</div>
+                        <div class="tcat">@LocalizationService.CatName(cat, L.Lang)</div>
                         <div class="tgrid">
                             @foreach (var cid in inCat)
                             {
                                 <button class="tt" @onclick="() => PickType(cid)">
-                                    <span class="ic">@((MarkupString)BookmarkIcons.Svg(BookmarkQuery.TypeIcon(cid), 16))</span><b>@BookmarkQuery.TypeName(cid)</b>
+                                    <span class="ic">@((MarkupString)BookmarkIcons.Svg(BookmarkQuery.TypeIcon(cid), 16))</span><b>@BookmarkQuery.TypeName(cid, L.Lang)</b>
                                 </button>
                             }
                         </div>
@@ -54,20 +56,20 @@
             var imgField = big.FirstOrDefault(f => f.Type == "image");
 
             <div class="m-h">
-                <span class="m-t">@(_editId == null ? "New item" : "Edit item")</span>
-                <button type="button" class="typechip" @onclick="() => _picking = true" title="Change type">
-                    @((MarkupString)BookmarkIcons.Svg(BookmarkQuery.TypeIcon(_type), 14))<b>@BookmarkQuery.TypeName(_type)</b>@((MarkupString)BookmarkIcons.Svg("chevD", 12))
+                <span class="m-t">@(_editId == null ? L["bmk.newItem"] : L["bmk.editItem"])</span>
+                <button type="button" class="typechip" @onclick="() => _picking = true" title="@L["bmk.changeType"]">
+                    @((MarkupString)BookmarkIcons.Svg(BookmarkQuery.TypeIcon(_type), 14))<b>@BookmarkQuery.TypeName(_type, L.Lang)</b>@((MarkupString)BookmarkIcons.Svg("chevD", 12))
                 </button>
                 <button class="m-x" @onclick="() => OnClose.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("x", 16))</button>
             </div>
             <div class="m-b">
                 @if (contentField == null)
                 {
-                    <div class="fld"><label>Link · embed from the internet</label>
+                    <div class="fld"><label>@L["bmk.linkEmbed"]</label>
                         <div class="embedrow">
-                            <input type="url" @bind="_link" placeholder="Paste any post URL — YouTube · Facebook · X · Instagram · TikTok · Reddit… or any page" spellcheck="false" />
+                            <input type="url" @bind="_link" placeholder="@L["bmk.linkPh"]" spellcheck="false" />
                             <button type="button" class="btn pri" @onclick="FetchEmbed" disabled="@_fetching">
-                                @if (_fetching) { <span class="spin"></span> } else { @((MarkupString)BookmarkIcons.Svg("download", 13)) } Fetch
+                                @if (_fetching) { <span class="spin"></span> } else { @((MarkupString)BookmarkIcons.Svg("download", 13)) } @L["bmk.fetch"]
                             </button>
                         </div>
                         @if (_fetchMsg != null)
@@ -80,30 +82,30 @@
                         }
                         @if (!string.IsNullOrEmpty(_thumbUrl))
                         {
-                            <div class="embprev"><img src="@_thumbUrl" alt="" /><div><b>@(_fetchProvider ?? "Cover")</b><span>cover · saved as this item's thumbnail</span></div></div>
+                            <div class="embprev"><img src="@_thumbUrl" alt="" /><div><b>@(_fetchProvider ?? L["bmk.coverLbl"])</b><span>@L["bmk.coverHint"]</span></div></div>
                         }
-                        <p class="hint">Fetch calls free public embed services (no accounts, no keys) — title, text, cover, author &amp; platform are filled automatically, and social posts embed live when opened.</p>
+                        <p class="hint">@L["bmk.fetchHint"]</p>
                     </div>
                 }
-                <div class="fld"><label>Title</label><input type="text" @bind="_title" placeholder="Auto from link" /></div>
+                <div class="fld"><label>@L["bmk.thTitle"]</label><input type="text" @bind="_title" placeholder="@L["bmk.autoLink"]" /></div>
                 @if (contentField != null)
                 {
-                    <div class="fld"><label>@contentField.Label</label><textarea style="min-height:130px" value="@GetMeta(contentField.Key)" @oninput="e => SetMeta(contentField.Key, e.Value?.ToString() ?? string.Empty)"></textarea></div>
+                    <div class="fld"><label>@LocalizationService.MetaLabel(contentField.Key, L.Lang, contentField.Label)</label><textarea style="min-height:130px" value="@GetMeta(contentField.Key)" @oninput="e => SetMeta(contentField.Key, e.Value?.ToString() ?? string.Empty)"></textarea></div>
                 }
-                <div class="fld"><label>Card style — هذا العنصر هيظهر بالشكل ده في كل مكان</label>
+                <div class="fld"><label>@L["bmk.cardStyleHint"]</label>
                     <div class="tplStrip">
                         @foreach (var tid in BookmarkTypeSchema.TplOrder(_type))
                         {
                             <button type="button" class="tpTile @(_tpl == tid ? "on" : "")" @onclick="() => _tpl = tid" title="@tid">
-                                <span class="tpBox">@((MarkupString)BookmarkTemplates.Render(PreviewItem(), tid, State.Tags))</span>
+                                <span class="tpBox">@((MarkupString)BookmarkTemplates.Render(PreviewItem(), tid, State.Tags, L.Lang))</span>
                                 <span class="tpName"><span class="ck">@((MarkupString)BookmarkIcons.Svg("check", 11))</span><span>@tid</span></span>
                             </button>
                         }
                     </div>
                 </div>
                 <button type="button" class="advT @(_advOpen ? "open" : "")" @onclick="() => _advOpen = !_advOpen">
-                    @((MarkupString)BookmarkIcons.Svg("sliders", 14))<span>Advanced options</span>
-                    <span class="advn">@(rest.Count > 0 ? BookmarkQuery.TypeName(_type) + " fields, " : "")tags, folders, notes…</span>
+                    @((MarkupString)BookmarkIcons.Svg("sliders", 14))<span>@L["bmk.advOptions"]</span>
+                    <span class="advn">@(rest.Count > 0 ? BookmarkQuery.TypeName(_type, L.Lang) + L["bmk.fieldsSuffix"] : "")@L["bmk.advnRest"]</span>
                     @((MarkupString)BookmarkIcons.Svg("chevD", 13))
                 </button>
                 @if (_advOpen)
@@ -111,47 +113,47 @@
                     <div class="advB">
                         @if (urlField != null)
                         {
-                            <div class="fld"><label>@urlField.Label</label><BookmarkMetaField Field="urlField" Value="@GetMeta(urlField.Key)" ValueChanged="v => SetMeta(urlField.Key, v)" /></div>
+                            <div class="fld"><label>@LocalizationService.MetaLabel(urlField.Key, L.Lang, urlField.Label)</label><BookmarkMetaField Field="urlField" Value="@GetMeta(urlField.Key)" ValueChanged="v => SetMeta(urlField.Key, v)" /></div>
                         }
                         @if (simple.Count > 0)
                         {
                             <div class="f2">
                                 @foreach (var fd in simple)
                                 {
-                                    <div class="fld"><label>@fd.Label</label><BookmarkMetaField Field="fd" Value="@GetMeta(fd.Key)" ValueChanged="v => SetMeta(fd.Key, v)" /></div>
+                                    <div class="fld"><label>@LocalizationService.MetaLabel(fd.Key, L.Lang, fd.Label)</label><BookmarkMetaField Field="fd" Value="@GetMeta(fd.Key)" ValueChanged="v => SetMeta(fd.Key, v)" /></div>
                                 }
                             </div>
                         }
                         @foreach (var fd in big)
                         {
-                            <div class="fld"><label>@fd.Label</label><BookmarkMetaField Field="fd" Value="@GetMeta(fd.Key)" ValueChanged="v => SetMeta(fd.Key, v)" /></div>
+                            <div class="fld"><label>@LocalizationService.MetaLabel(fd.Key, L.Lang, fd.Label)</label><BookmarkMetaField Field="fd" Value="@GetMeta(fd.Key)" ValueChanged="v => SetMeta(fd.Key, v)" /></div>
                         }
                         @if (imgField == null)
                         {
-                            <div class="fld"><label>Thumbnail</label>
+                            <div class="fld"><label>@L["bmk.thumbnail"]</label>
                                 <div class="upl">
                                     @if (!string.IsNullOrEmpty(_thumbUrl)) { <img class="imgpv" src="@_thumbUrl" style="width:44px;height:34px" alt="" /> }
-                                    <input type="url" @bind="_thumbUrl" placeholder="Paste image URL…" style="flex:1;min-width:140px" />
-                                    <span class="hint" style="margin:0">paste a URL</span>
+                                    <input type="url" @bind="_thumbUrl" placeholder="@L["bmk.thumbPh"]" style="flex:1;min-width:140px" />
+                                    <span class="hint" style="margin:0">@L["bmk.pasteUrl"]</span>
                                 </div>
                             </div>
                         }
-                        <div class="fld"><label>Description</label><textarea style="min-height:60px" @bind="_desc"></textarea></div>
-                        <div class="fld"><label>Notes <span style="text-transform:none;letter-spacing:0;font-weight:500">(markdown)</span></label><textarea style="min-height:60px" @bind="_notes"></textarea></div>
-                        <div class="fld"><label>Tags</label>
+                        <div class="fld"><label>@L["bmk.description"]</label><textarea style="min-height:60px" @bind="_desc"></textarea></div>
+                        <div class="fld"><label>@L["com.notes"] <span style="text-transform:none;letter-spacing:0;font-weight:500">(markdown)</span></label><textarea style="min-height:60px" @bind="_notes"></textarea></div>
+                        <div class="fld"><label>@L["nav.tags"]</label>
                             <div class="tagadd">
                                 @foreach (var t in _tags)
                                 {
                                     <button type="button" class="chip x" @onclick="() => _tags.Remove(t)" @((MarkupString)BookmarkQuery.TagStyleAttr(t, State.Tags))>@t</button>
                                 }
-                                <input value="@_tagInput" @oninput="e => _tagInput = e.Value?.ToString() ?? string.Empty" @onkeydown="TagKey" list="tsugg" placeholder="type a tag, press Enter…" />
+                                <input value="@_tagInput" @oninput="e => _tagInput = e.Value?.ToString() ?? string.Empty" @onkeydown="TagKey" list="tsugg" placeholder="@L["bmk.tagPh"]" />
                                 <datalist id="tsugg">@foreach (var t in State.Tags) { <option value="@t.Name"></option> }</datalist>
                             </div>
                         </div>
-                        <div class="fld"><label>Folder</label>
+                        <div class="fld"><label>@L["bmk.folder"]</label>
                             <select @bind="_folderId">
-                                <option value="">— none —</option>
-                                <optgroup label="Standalone folders">@foreach (var f in StandaloneFolders()) { <option value="@f.Id">@(new string('—', Depth(f.Id) * 2))@f.Name</option> } </optgroup>
+                                <option value="">@L["bmk.noneOpt"]</option>
+                                <optgroup label="@L["nav.standalone"]">@foreach (var f in StandaloneFolders()) { <option value="@f.Id">@(new string('—', Depth(f.Id) * 2))@f.Name</option> } </optgroup>
                                 @foreach (var c in State.Collections)
                                 {
                                     var inner = State.Folders.Where(f => f.CollectionId == c.Id && string.IsNullOrEmpty(f.ParentId)).ToList();
@@ -163,16 +165,16 @@
                             </select>
                         </div>
                         @* ADDITIVE (new): file the item under a page *@
-                        <div class="fld"><label>Page</label>
+                        <div class="fld"><label>@L["bmk.page"]</label>
                             <select @bind="_pageId">
-                                <option value="">— none —</option>
+                                <option value="">@L["bmk.noneOpt"]</option>
                                 @foreach (var pg in State.Pages.Where(p => !p.IsArchived))
                                 {
                                     <option value="@pg.Id">@PageLabel(pg.Id)</option>
                                 }
                             </select>
                         </div>
-                        <div class="fld"><label>Collections</label>
+                        <div class="fld"><label>@L["bmk.collections"]</label>
                             <div class="tcheck">
                                 @foreach (var c in State.Collections)
                                 {
@@ -180,21 +182,21 @@
                                         @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(c.Icon) ? (BookmarkQuery.ParseSmart(c.SmartJson) != null ? "spark" : "layers") : c.Icon, "layers")) @c.Name
                                     </button>
                                 }
-                                @if (State.Collections.Count == 0) { <span class="hint">No collections yet.</span> }
+                                @if (State.Collections.Count == 0) { <span class="hint">@L["bmk.noCollections"]</span> }
                             </div>
                         </div>
-                        <div class="fld"><label>Flags</label>
+                        <div class="fld"><label>@L["bmk.flags"]</label>
                             <div class="ckrow">
-                                <label class="ck"><input type="checkbox" @bind="_fav" /> Favorite</label>
-                                <label class="ck"><input type="checkbox" @bind="_pin" /> Pinned</label>
+                                <label class="ck"><input type="checkbox" @bind="_fav" /> @L["bmk.fav"]</label>
+                                <label class="ck"><input type="checkbox" @bind="_pin" /> @L["bmk.pin"]</label>
                             </div>
                         </div>
                     </div>
                 }
             </div>
             <div class="m-f">
-                <button class="btn" @onclick="() => OnClose.InvokeAsync()">Cancel</button>
-                <button class="btn pri" @onclick="Save" disabled="@_saving">@(_editId == null ? "Add " + BookmarkQuery.TypeName(_type) : "Save changes")</button>
+                <button class="btn" @onclick="() => OnClose.InvokeAsync()">@L["com.cancel"]</button>
+                <button class="btn pri" @onclick="Save" disabled="@_saving">@(_editId == null ? L["bmk.addPrefix"] + BookmarkQuery.TypeName(_type, L.Lang) : L["bmk.saveChangesBtn"])</button>
             </div>
         }
     </div>
@@ -234,6 +236,7 @@
 
     protected override void OnInitialized()
     {
+        L.OnLanguageChanged += OnLang;
         _editId = EditId;
         if (!string.IsNullOrEmpty(PresetUrl)) _link = PresetUrl;
         var it = string.IsNullOrEmpty(_editId) ? null : State.Items.FirstOrDefault(i => i.Id == _editId);
@@ -266,7 +269,8 @@
     private bool MatchesTypeQuery(string id) =>
         string.IsNullOrWhiteSpace(_typeQuery) ||
         id.Contains(_typeQuery, StringComparison.OrdinalIgnoreCase) ||
-        BookmarkQuery.TypeName(id).Contains(_typeQuery, StringComparison.OrdinalIgnoreCase);
+        BookmarkQuery.TypeName(id, "en").Contains(_typeQuery, StringComparison.OrdinalIgnoreCase) ||
+        BookmarkQuery.TypeName(id, "ar").Contains(_typeQuery, StringComparison.OrdinalIgnoreCase);
 
     private string GetMeta(string key) => _meta.TryGetValue(key, out var v) ? v : string.Empty;
     private void SetMeta(string key, string v) => _meta[key] = v;
@@ -347,7 +351,7 @@
                 }
                 _fetchOk = false;
                 _fetchProvider = plat;
-                _fetchMsg = $"Couldn't fetch data from <b>{System.Net.WebUtility.HtmlEncode(plat)}</b> — it's behind a login wall. {(live ? "It will still <b>embed live</b> when you open the item. " : "")}Fill anything you like manually.";
+                _fetchMsg = L["bmk.fetchFail1"] + $" <b>{System.Net.WebUtility.HtmlEncode(plat)}</b> " + L["bmk.fetchFail2"] + (live ? " " + L["bmk.fetchFailLive"] + " " : " ") + L["bmk.fetchFail3"];
                 return;
             }
             if (!string.IsNullOrWhiteSpace(res.Title) && string.IsNullOrWhiteSpace(_title)) _title = res.Title;
@@ -369,7 +373,7 @@
             }
             _fetchOk = true;
             _fetchProvider = res.Provider;
-            _fetchMsg = $"Fetched from <b>{System.Net.WebUtility.HtmlEncode(res.Provider)}</b> — details filled automatically. Edit anything freely.";
+            _fetchMsg = L["bmk.fetchOk1"] + $" <b>{System.Net.WebUtility.HtmlEncode(res.Provider)}</b> " + L["bmk.fetchOk2"];
         }
         finally { _fetching = false; }
     }
@@ -380,7 +384,7 @@
             ? BookmarkEmbedService.AutoTitle(_link) : _title;
         return new BookmarkItem
         {
-            Id = "pv", Title = string.IsNullOrWhiteSpace(title) ? "Untitled" : title, Type = _type,
+            Id = "pv", Title = string.IsNullOrWhiteSpace(title) ? L["pomo.untitled"] : title, Type = _type,
             Url = _link, Description = _desc, Notes = _notes, Thumb = _thumbUrl,
             TagsJson = System.Text.Json.JsonSerializer.Serialize(_tags),
             MetadataJson = BuildMetadataJson(), Tpl = _tpl,
@@ -413,7 +417,7 @@
         {
             var title = _title.Trim();
             if (string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(_link)) title = BookmarkEmbedService.AutoTitle(_link);
-            if (string.IsNullOrEmpty(title)) title = "Untitled";
+            if (string.IsNullOrEmpty(title)) title = L["pomo.untitled"];
 
             var thumb = _thumbUrl;
             var imgKey = BookmarkTypeSchema.For(_type).FirstOrDefault(f => f.Type == "image")?.Key;
@@ -454,8 +458,15 @@
                     CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
                 });
             }
-            await OnSaved.InvokeAsync("Saved ✓");
+            await OnSaved.InvokeAsync(L["bmk.savedToast"]);
         }
         finally { _saving = false; }
+    }
+
+    private void OnLang() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        L.OnLanguageChanged -= OnLang;
     }
 }

@@ -1,27 +1,29 @@
 @using Jamrah.Application.Services
 @using Jamrah.Core.Entities
 @inject BookmarkStateService State
+@inject LocalizationService L
+@implements IDisposable
 
 <div class="toolbar">
     <div class="seg">
-        @foreach (var (icon, id, label) in Views)
+        @foreach (var (icon, id) in Views)
         {
-            <button class="@(View == id ? "on" : "")" @onclick="() => OnView.InvokeAsync(id)" title="@label view">
+            <button class="@(View == id ? "on" : "")" @onclick="() => OnView.InvokeAsync(id)" title="@LocalizationService.ViewName(id, L.Lang)">
                 @((MarkupString)BookmarkIcons.Svg(icon, 15))
             </button>
         }
     </div>
     <div style="position:relative">
         <button class="tbtn" @onclick="() => { _showSort = !_showSort; _showFilter = false; }">
-            @((MarkupString)BookmarkIcons.Svg("sliders", 14))<b>@BookmarkQuery.SortNames.GetValueOrDefault(Sort, "Recently added")</b>@((MarkupString)BookmarkIcons.Svg("chevD", 12))
+            @((MarkupString)BookmarkIcons.Svg("sliders", 14))<b>@L.SortName(Sort)</b>@((MarkupString)BookmarkIcons.Svg("chevD", 12))
         </button>
         @if (_showSort)
         {
             <div class="popover" style="position:absolute;top:38px;left:0">
-                <div class="po-l">Sort by</div>
-                @foreach (var kv in BookmarkQuery.SortNames)
+                <div class="po-l">@L["bmk.sortBy"]</div>
+                @foreach (var sid in SortIds)
                 {
-                    <button class="po-i @(Sort == kv.Key ? "on" : "")" @onclick="() => PickSort(kv.Key)">@kv.Value</button>
+                    <button class="po-i @(Sort == sid ? "on" : "")" @onclick="() => PickSort(sid)">@L.SortName(sid)</button>
                 }
             </div>
         }
@@ -29,37 +31,37 @@
     <div style="position:relative">
         <button class="tbtn @(State.Filters.ActiveCount > 0 ? "act" : "")" @onclick="() => { _showFilter = !_showFilter; _showSort = false; }">
             @((MarkupString)BookmarkIcons.Svg("sliders", 14))
-            @(State.Filters.ActiveCount > 0 ? (MarkupString)$"<b>Filters · {State.Filters.ActiveCount}</b>" : (MarkupString)"Filters")
+            @(State.Filters.ActiveCount > 0 ? (MarkupString)$"<b>{L["bmk.filters"]} · {State.Filters.ActiveCount}</b>" : (MarkupString)L["bmk.filters"])
         </button>
         @if (_showFilter)
         {
             <div class="popover" style="position:absolute;top:38px;left:0;width:360px">
-                <div class="fp-h">Filters<button class="fp-clear" @onclick="ClearFilters">Clear all</button></div>
-                <div class="fp-sec">Type</div>
+                <div class="fp-h">@L["bmk.filters"]<button class="fp-clear" @onclick="ClearFilters">@L["bmk.clearAll"]</button></div>
+                <div class="fp-sec">@L["bmk.type"]</div>
                 <div class="fp-chips">
                     @foreach (var t in BookmarkQuery.Types.Keys)
                     {
-                        <button class="fpc @(State.Filters.Types.Contains(t) ? "on" : "")" @onclick="() => ToggleList(State.Filters.Types, t)">@BookmarkQuery.TypeName(t)</button>
+                        <button class="fpc @(State.Filters.Types.Contains(t) ? "on" : "")" @onclick="() => ToggleList(State.Filters.Types, t)">@BookmarkQuery.TypeName(t, L.Lang)</button>
                     }
                 </div>
-                <div class="fp-sec">Tags</div>
+                <div class="fp-sec">@L["nav.tags"]</div>
                 <div class="fp-chips">
-                    @if (State.Tags.Count == 0) { <span class="fp-none">No tags yet.</span> }
+                    @if (State.Tags.Count == 0) { <span class="fp-none">@L["bmk.noTags"]</span> }
                     @foreach (var t in State.Tags)
                     {
                         <button class="fpc @(State.Filters.Tags.Contains(t.Name) ? "on" : "")" @onclick="() => ToggleList(State.Filters.Tags, t.Name)">#@t.Name</button>
                     }
                 </div>
-                <div class="fp-sec">Flags</div>
+                <div class="fp-sec">@L["bmk.flags"]</div>
                 <div class="fp-flags">
-                    <label class="fpf"><input type="checkbox" checked="@State.Filters.Fav" @onchange="e => { State.Filters.Fav = (bool)(e.Value ?? false); Notify(); }" /> Favorites</label>
-                    <label class="fpf"><input type="checkbox" checked="@State.Filters.Pin" @onchange="e => { State.Filters.Pin = (bool)(e.Value ?? false); Notify(); }" /> Pinned</label>
+                    <label class="fpf"><input type="checkbox" checked="@State.Filters.Fav" @onchange="e => { State.Filters.Fav = (bool)(e.Value ?? false); Notify(); }" /> @L["nav.favorites"]</label>
+                    <label class="fpf"><input type="checkbox" checked="@State.Filters.Pin" @onchange="e => { State.Filters.Pin = (bool)(e.Value ?? false); Notify(); }" /> @L["nav.pinned"]</label>
                 </div>
-                <div class="fp-sec">Min rating: @(State.Filters.Rating > 0 ? State.Filters.Rating.ToString() : "any")</div>
+                <div class="fp-sec">@L["bmk.minRating"]: @(State.Filters.Rating > 0 ? State.Filters.Rating.ToString() : L["bmk.any"])</div>
                 <div class="fp-chips">
                     @foreach (var r in new double[] { 0, 7, 8, 9 })
                     {
-                        <button class="fpc @(State.Filters.Rating == r ? "on" : "")" @onclick="() => { State.Filters.Rating = r; Notify(); }">@(r == 0 ? "Any" : "★ " + r)</button>
+                        <button class="fpc @(State.Filters.Rating == r ? "on" : "")" @onclick="() => { State.Filters.Rating = r; Notify(); }">@(r == 0 ? L["bmk.any"] : "★ " + r)</button>
                     }
                 </div>
             </div>
@@ -73,17 +75,17 @@
     <div class="fchips">
         @foreach (var t in State.Filters.Types)
         {
-            <span class="fchip">type: @BookmarkQuery.TypeName(t)<button @onclick="() => { State.Filters.Types.Remove(t); Notify(); }">×</button></span>
+            <span class="fchip">type: @BookmarkQuery.TypeName(t, L.Lang)<button @onclick="() => { State.Filters.Types.Remove(t); Notify(); }">×</button></span>
         }
         @foreach (var t in State.Filters.Tags)
         {
             <span class="fchip" @((MarkupString)BookmarkQuery.TagStyleAttr(t, State.Tags))>tag: @t<button @onclick="() => { State.Filters.Tags.Remove(t); Notify(); }">×</button></span>
         }
-        @if (State.Filters.Fav) { <span class="fchip">favorites only<button @onclick="() => { State.Filters.Fav = false; Notify(); }">×</button></span> }
-        @if (State.Filters.Pin) { <span class="fchip">pinned only<button @onclick="() => { State.Filters.Pin = false; Notify(); }">×</button></span> }
-        @if (State.Filters.Rating > 0) { <span class="fchip">rating ≥ @State.Filters.Rating<button @onclick="() => { State.Filters.Rating = 0; Notify(); }">×</button></span> }
-        @if (!string.IsNullOrEmpty(State.Filters.Status)) { <span class="fchip">status: @State.Filters.Status<button @onclick="() => { State.Filters.Status = string.Empty; Notify(); }">×</button></span> }
-        <button class="btn sm" @onclick="ClearFilters">Clear all</button>
+        @if (State.Filters.Fav) { <span class="fchip">@L["bmk.favOnly"]<button @onclick="() => { State.Filters.Fav = false; Notify(); }">×</button></span> }
+        @if (State.Filters.Pin) { <span class="fchip">@L["bmk.pinOnly"]<button @onclick="() => { State.Filters.Pin = false; Notify(); }">×</button></span> }
+        @if (State.Filters.Rating > 0) { <span class="fchip">@L["bmk.ratingChip"] ≥ @State.Filters.Rating<button @onclick="() => { State.Filters.Rating = 0; Notify(); }">×</button></span> }
+        @if (!string.IsNullOrEmpty(State.Filters.Status)) { <span class="fchip">@L["bmk.statusChip"]: @State.Filters.Status<button @onclick="() => { State.Filters.Status = string.Empty; Notify(); }">×</button></span> }
+        <button class="btn sm" @onclick="ClearFilters">@L["bmk.clearAll"]</button>
     </div>
 }
 
@@ -98,11 +100,27 @@
     private bool _showSort;
     private bool _showFilter;
 
-    private static readonly (string Icon, string Id, string Label)[] Views = new[]
+    private static readonly (string Icon, string Id)[] Views = new[]
     {
-        ("grid", "grid", "Grid"), ("list", "list", "List"), ("compact", "compact", "Compact list"),
-        ("table", "table", "Table"), ("columns", "masonry", "Masonry"), ("timeline", "timeline", "Timeline"),
+        ("grid", "grid"), ("list", "list"), ("compact", "compact"),
+        ("table", "table"), ("columns", "masonry"), ("timeline", "timeline"),
     };
+
+    private static readonly string[] SortIds = new[] { "added", "updated", "opened", "title", "rating", "progress" };
+
+    protected override void OnInitialized()
+    {
+        L.OnLanguageChanged += OnLang;
+        State.OnStateChanged += OnLang;
+    }
+
+    private void OnLang() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        L.OnLanguageChanged -= OnLang;
+        State.OnStateChanged -= OnLang;
+    }
 
     private async Task PickSort(string s)
     {

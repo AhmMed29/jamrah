@@ -1,5 +1,7 @@
 ﻿@namespace Jamrah.Presentation.Pomodoro
 @using System.Linq
+@using Jamrah.Application.Services
+@inject LocalizationService L
 @{
     var allSessions = Collect(Group);
     var totalSec = allSessions.Sum(s => s.ElapsedSeconds);
@@ -25,7 +27,7 @@
                 <span>@Group.Label</span>
                 @if (Group.IsToday)
                 {
-                    <span class="today-badge">اليوم</span>
+                    <span class="today-badge">@L["com.today"]</span>
                 }
             </div>
             <div class="day-histogram">
@@ -69,7 +71,7 @@
                     var capturedS = s;
                     var tagColor = capturedS.Tag?.Color ?? capturedS.TagColor ?? "#A8A29E";
                     if (string.IsNullOrWhiteSpace(tagColor)) tagColor = "#A8A29E";
-                    var tagName = capturedS.Tag?.Name ?? (!string.IsNullOrWhiteSpace(capturedS.TagName) ? capturedS.TagName : "بدون تاج");
+                    var tagName = capturedS.Tag?.Name ?? (!string.IsNullOrWhiteSpace(capturedS.TagName) ? capturedS.TagName : L["pomo.noTag"]);
                     var isNoTag = capturedS.Tag == null && string.IsNullOrWhiteSpace(capturedS.TagName);
                     if (isNoTag) tagColor = "#A8A29E";
                     var elapsedSec = capturedS.ElapsedSeconds;
@@ -93,7 +95,7 @@
                         <span class="session-progress"><span class="session-progress-fill" style="width:@(pct)%;background:@tagColor"></span></span>
                         <span class="session-time"><b>@timeBold</b>@timeRest</span>
                         <span class="session-range">@startClock – <b>@endClock</b></span>
-                        <button class="session-del" title="حذف" @onclick:stopPropagation="true" @onclick="() => OnSessionDelete.InvokeAsync(capturedS.Id)">
+                        <button class="session-del" title="@L["pomo.deleteTitle"]" @onclick:stopPropagation="true" @onclick="() => OnSessionDelete.InvokeAsync(capturedS.Id)">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                         </button>
                     </div>
@@ -133,16 +135,16 @@
 
     private sealed record Agg(string Name, string Color, int Seconds);
 
-    private static List<Agg> AggByTag(List<Session> sessions)
+    private List<Agg> AggByTag(List<Session> sessions)
     {
         var map = new Dictionary<string, Agg>();
         foreach (var s in sessions)
         {
-            var name = !string.IsNullOrWhiteSpace(s.Tag?.Name) ? s.Tag!.Name : (!string.IsNullOrWhiteSpace(s.TagName) ? s.TagName : "بدون تاج");
+            var name = !string.IsNullOrWhiteSpace(s.Tag?.Name) ? s.Tag!.Name : (!string.IsNullOrWhiteSpace(s.TagName) ? s.TagName : L["pomo.noTag"]);
             var color = !string.IsNullOrWhiteSpace(s.Tag?.Color) ? s.Tag!.Color : (!string.IsNullOrWhiteSpace(s.TagColor) ? s.TagColor : "#A8A29E");
             if (string.IsNullOrWhiteSpace(color)) color = "#A8A29E";
             // normalize empty tag
-            if (s.Tag == null && string.IsNullOrWhiteSpace(s.TagName)) { name = "بدون تاج"; color = "#A8A29E"; }
+            if (s.Tag == null && string.IsNullOrWhiteSpace(s.TagName)) { name = L["pomo.noTag"]; color = "#A8A29E"; }
             var key = name + "|" + color;
             if (map.TryGetValue(key, out var existing))
                 map[key] = existing with { Seconds = existing.Seconds + s.ElapsedSeconds };
@@ -152,32 +154,11 @@
         return map.Values.OrderByDescending(a => a.Seconds).ToList();
     }
 
-    private static string FmtDur(int secs)
-    {
-        var m = (int)Math.Round(secs / 60.0);
-        if (m >= 60) { var h = m / 60; var rm = m % 60; return rm != 0 ? $"{h}س {rm}د" : $"{h}س"; }
-        return $"{m}د";
-    }
+    private string FmtDur(int secs) => L.FmtSessDur(secs);
 
-    private static string CountLabel(int n)
-    {
-        if (n == 0) return "لا جلسات";
-        if (n == 1) return "جلسة واحدة";
-        if (n == 2) return "جلستان";
-        if (n <= 10) return $"{n} جلسات";
-        return $"{n} جلسة";
-    }
+    private string CountLabel(int n) => L.SessionCount(n);
 
-    private static string FmtClock(int totalMinutes)
-    {
-        // normalize to 0..1439
-        totalMinutes = ((totalMinutes % 1440) + 1440) % 1440;
-        var h = totalMinutes / 60;
-        var mm = totalMinutes % 60;
-        var ampm = h >= 12 ? "م" : "ص";
-        var h12 = h % 12; if (h12 == 0) h12 = 12;
-        return $"{h12}:{mm:D2} {ampm}";
-    }
+    private string FmtClock(int totalMinutes) => L.FmtClock(totalMinutes);
 
     private static int ParseTimeToMinutes(string time)
     {

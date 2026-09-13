@@ -27,7 +27,8 @@ namespace Jamrah.Presentation.Bookmarks
             ["project"] = ("Project", "layers"), ["reference"] = ("Reference", "info"),
         };
 
-        public static string TypeName(string id) => Types.TryGetValue(id, out var t) ? t.Name : id;
+        public static string TypeName(string id) => TypeName(id, LocalizationService.CurrentLang);
+        public static string TypeName(string id, string lang) => LocalizationService.TypeName(id, lang);
         public static string TypeIcon(string id) => Types.TryGetValue(id, out var t) ? t.Icon : "note";
 
         public static readonly Dictionary<string, string> TypeTpl = new()
@@ -234,7 +235,7 @@ namespace Jamrah.Presentation.Bookmarks
         public static bool MatchQuery(BookmarkItem it, ParsedQuery q, BookmarkCardData? g = null)
         {
             g ??= BookmarkCardData.From(it);
-            if (q.Type != null && !(it.Type == q.Type || TypeName(it.Type).ToLowerInvariant() == q.Type)) return false;
+            if (q.Type != null && !(it.Type == q.Type || TypeName(it.Type, "en").ToLowerInvariant() == q.Type || TypeName(it.Type, "ar").ToLowerInvariant() == q.Type)) return false;
             if (q.Tag != null && !TagsOf(it).Any(t => t.ToLowerInvariant() == q.Tag)) return false;
             if (q.Fav && !it.Favorite) return false;
             if (q.Pin && !it.Pinned) return false;
@@ -310,17 +311,17 @@ namespace Jamrah.Presentation.Bookmarks
                 : string.Empty;
         }
 
-        public static string TitleFor(BookmarkRoute r, BookmarkStateService s) => r.Ctx switch
+        public static string TitleFor(BookmarkRoute r, BookmarkStateService s) =>
+            TitleFor(r, s, LocalizationService.CurrentLang);
+
+        public static string TitleFor(BookmarkRoute r, BookmarkStateService s, string lang) => r.Ctx switch
         {
-            "home" => "Home", "all" => "All Items", "quran" => "Quran", "clipboard" => "Clipboard",
-            "favorites" => "Favorites", "pinned" => "Pinned", "recent" => "Recently Opened",
-            "archive" => "Archive", "trash" => "Trash", "tags" => "Tags", "templates" => "Templates",
-            "folder" => s.Folders.FirstOrDefault(f => f.Id == r.Id)?.Name ?? "Folder",
-            "collection" => s.Collections.FirstOrDefault(c => c.Id == r.Id)?.Name ?? "Collection",
+            "folder" => s.Folders.FirstOrDefault(f => f.Id == r.Id)?.Name ?? LocalizationService.MetaLabel("folder", lang, "Folder"),
+            "collection" => s.Collections.FirstOrDefault(c => c.Id == r.Id)?.Name ?? LocalizationService.MetaLabel("collection", lang, "Collection"),
             // ADDITIVE: page title.
-            "page" => s.Pages.FirstOrDefault(p => p.Id == r.Id)?.Name ?? "Page",
+            "page" => s.Pages.FirstOrDefault(p => p.Id == r.Id)?.Name ?? LocalizationService.MetaLabel("page", lang, "Page"),
             "tag" => "#" + r.Tag,
-            _ => "Library",
+            _ => LocalizationService.RouteTitle(r.Ctx, lang),
         };
 
         public static int CountFolder(string id, BookmarkStateService s) =>

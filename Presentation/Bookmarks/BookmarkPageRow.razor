@@ -2,6 +2,7 @@
 @using Jamrah.Application.Services
 @using Jamrah.Core.Entities
 @inject BookmarkStateService State
+@inject LocalizationService L
 
 @* ADDITIVE (new): sidebar row for a Page — mirrors BookmarkFolderRow.
    + button adds a nested sub-page, dots open the page menu (edit/archive). *@
@@ -14,7 +15,7 @@
         </span>
     }
     @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(Page.Icon) ? "note" : Page.Icon, "note"))<span class="n">@Page.Name</span>
-    <span class="sb-plus" title="New sub-page" @onclick:stopPropagation="true" @onclick="() => OnNewSubPage.InvokeAsync(Page.Id)">
+    <span class="sb-plus" title="@L["nav.newPage"]" @onclick:stopPropagation="true" @onclick="() => OnNewSubPage.InvokeAsync(Page.Id)">
         @((MarkupString)BookmarkIcons.Svg("plus", 13))
     </span>
     <span class="dots" @onclick:stopPropagation="true" @onclick="() => OnPageMenu.InvokeAsync(Page.Id)">

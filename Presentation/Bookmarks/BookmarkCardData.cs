@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Jamrah.Application.Services;
 using Jamrah.Core.Entities;
 
 namespace Jamrah.Presentation.Bookmarks
@@ -34,7 +35,9 @@ namespace Jamrah.Presentation.Bookmarks
         public string MetaLine => string.Join(" · ",
             new[] { Who, Year, Dur, Site }.Where(s => !string.IsNullOrEmpty(s)));
 
-        public static BookmarkCardData From(BookmarkItem it)
+        public static BookmarkCardData From(BookmarkItem it) => From(it, LocalizationService.CurrentLang);
+
+        public static BookmarkCardData From(BookmarkItem it, string lang)
         {
             JsonObject m;
             try { m = JsonNode.Parse(string.IsNullOrWhiteSpace(it.MetadataJson) ? "{}" : it.MetadataJson) as JsonObject ?? new JsonObject(); }
@@ -96,7 +99,7 @@ namespace Jamrah.Presentation.Bookmarks
                 Stars = double.IsNaN(starsNum) ? string.Empty : Kfmt(starsNum),
                 Pages = Str("pages"),
                 Fav = it.Favorite,
-                Type = BookmarkQuery.TypeName(it.Type),
+                Type = BookmarkQuery.TypeName(it.Type, lang),
                 Icon = BookmarkQuery.TypeIcon(it.Type),
             };
         }
@@ -118,21 +121,11 @@ namespace Jamrah.Presentation.Bookmarks
             catch { return string.Empty; }
         }
 
-        public static string FmtDate(DateTime t)
-        {
-            if (t == DateTime.MinValue) return string.Empty;
-            return t.ToString("MMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture);
-        }
+        public static string FmtDate(DateTime t) => LocalizationService.FmtCardDate(t, LocalizationService.CurrentLang);
+        public static string FmtDate(DateTime t, string lang) => LocalizationService.FmtCardDate(t, lang);
 
-        public static string FmtAgo(DateTime t)
-        {
-            if (t == DateTime.MinValue) return string.Empty;
-            var d = DateTime.UtcNow - t.ToUniversalTime();
-            if (d.TotalHours < 1) return Math.Max(1, (int)Math.Round(d.TotalMinutes)) + "m ago";
-            if (d.TotalDays < 1) return ((int)Math.Round(d.TotalHours)) + "h ago";
-            if (d.TotalDays < 30) return ((int)Math.Round(d.TotalDays)) + "d ago";
-            return FmtDate(t);
-        }
+        public static string FmtAgo(DateTime t) => LocalizationService.FmtAgo(t, LocalizationService.CurrentLang);
+        public static string FmtAgo(DateTime t, string lang) => LocalizationService.FmtAgo(t, lang);
 
         public static string FmtDur(string v)
         {

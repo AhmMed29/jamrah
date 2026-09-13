@@ -53,7 +53,7 @@ namespace Jamrah.Application.Services
         public async Task FetchMonthAsync(int year, int month)
         {
             var url = $"https://api.aladhan.com/v1/calendar/{year}/{month}" +
-                      $"?latitude={Location.Latitude}&longitude={Location.Longitude}" +
+                      FormattableString.Invariant($"?latitude={Location.Latitude}&longitude={Location.Longitude}") +
                       $"&method={Location.Method}";
             try
             {
@@ -116,21 +116,46 @@ namespace Jamrah.Application.Services
         // ── Persist location in Preferences ─────────────────────────────────
         private Task SaveLocationAsync()
         {
-            Preferences.Set("prayer_lat", Location.Latitude);
-            Preferences.Set("prayer_lon", Location.Longitude);
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            Preferences.Set("prayer_lat", Location.Latitude.ToString(inv));
+            Preferences.Set("prayer_lon", Location.Longitude.ToString(inv));
             Preferences.Set("prayer_method", Location.Method);
             return Task.CompletedTask;
         }
 
         private Task LoadLocationAsync()
         {
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            double Num(string key, double def)
+            {
+                var raw = Preferences.Get(key, string.Empty);
+                if (!string.IsNullOrWhiteSpace(raw) &&
+                    double.TryParse(NormalizeDigits(raw), System.Globalization.NumberStyles.Any, inv, out var v))
+                    return v;
+                try { return Preferences.Get(key, def); } catch { return def; }
+            }
             Location = new PrayerLocation
             {
-                Latitude  = Preferences.Get("prayer_lat",    30.0444),
-                Longitude = Preferences.Get("prayer_lon",    31.2357),
+                Latitude  = Num("prayer_lat", 30.0444),
+                Longitude = Num("prayer_lon", 31.2357),
                 Method    = Preferences.Get("prayer_method", 5),
             };
             return Task.CompletedTask;
+        }
+
+        internal static string NormalizeDigits(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return s;
+            var sb = new System.Text.StringBuilder(s.Length);
+            foreach (var ch in s)
+            {
+                if (ch >= '٠' && ch <= '٩') sb.Append((char)('0' + (ch - '٠')));
+                else if (ch >= '۰' && ch <= '۹') sb.Append((char)('0' + (ch - '۰')));
+                else if (ch == '٫' || ch == '،') sb.Append('.');
+                else if (ch == '٬') continue;
+                else sb.Append(ch);
+            }
+            return sb.ToString();
         }
     }
 }

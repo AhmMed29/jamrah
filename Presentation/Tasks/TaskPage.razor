@@ -5,9 +5,10 @@
 @inject TaskStateService TaskState
 @inject NavigationManager Nav
 @inject Microsoft.JSInterop.IJSRuntime JS
+@inject Jamrah.Application.Services.LocalizationService L
 @implements IDisposable
 
-<div class="app" dir="rtl">
+<div class="app">
     <main class="main @(_selectedTask!=null ? "details-open" : "")" id="main">
         <header class="topbar">
             <div class="topbar-title">
@@ -15,7 +16,7 @@
             </div>
             <div class="topbar-actions">
                 <div class="view-capsule">
-                    <button class="capsule-btn @(_view=="today" ? "active" : "")" @onclick='() => SetView("today")' title="اليوم">
+                    <button class="capsule-btn @(_view=="today" ? "active" : "")" @onclick='() => SetView("today")' title="@L["tasks.todayView"]">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <rect x="3" y="4" width="18" height="16" rx="2"></rect>
                             <path d="M16 2v4M8 2v4M3 10h18"></path>
@@ -23,14 +24,14 @@
                         </svg>
                         @if(_todayCount>0){<span class="capsule-count">@_todayCount</span>}
                     </button>
-                    <button class="capsule-btn @(_view=="completed" ? "active" : "")" @onclick='() => SetView("completed")' title="تم الإنجاز">
+                    <button class="capsule-btn @(_view=="completed" ? "active" : "")" @onclick='() => SetView("completed")' title="@L["tasks.doneView"]">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <circle cx="12" cy="12" r="9"></circle>
                             <path d="M8.5 12l2.3 2.3L15.5 9.5"></path>
                         </svg>
                         @if(_completedCount>0){<span class="capsule-count">@_completedCount</span>}
                     </button>
-                    <button class="capsule-btn @(_view=="archived" ? "active" : "")" @onclick='() => SetView("archived")' title="الأرشيف">
+                    <button class="capsule-btn @(_view=="archived" ? "active" : "")" @onclick='() => SetView("archived")' title="@L["tasks.archivedView"]">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <rect x="3" y="4" width="18" height="5" rx="1.2"></rect>
                             <path d="M5 9h14v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9z"></path>
@@ -38,7 +39,7 @@
                         </svg>
                         @if(_archivedCount>0){<span class="capsule-count">@_archivedCount</span>}
                     </button>
-                    <button class="capsule-btn @(_view=="upcoming" ? "active" : "")" @onclick='() => SetView("upcoming")' title="القادمة">
+                    <button class="capsule-btn @(_view=="upcoming" ? "active" : "")" @onclick='() => SetView("upcoming")' title="@L["tasks.upcomingView"]">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <rect x="3" y="4" width="18" height="16" rx="2"></rect>
                             <path d="M16 2v4M8 2v4M3 10h18"></path>
@@ -48,7 +49,7 @@
                         @if(_upcomingCount>0){<span class="capsule-count">@_upcomingCount</span>}
                     </button>
                 </div>
-                <button class="primary-btn" @onclick="OpenCreateModal"><span>+</span><span class="pb-label">مهمة جديدة</span></button>
+                <button class="primary-btn" @onclick="OpenCreateModal"><span>+</span><span class="pb-label">@L["tasks.new"]</span></button>
             </div>
         </header>
 
@@ -57,21 +58,21 @@
                 <div class="day-header">
                     <div class="day-info">
                         <div class="day-nav">
-                            <button class="day-nav-btn" @onclick="PrevDay" title="اليوم السابق">→</button>
-                            <button class="day-nav-btn" @onclick="NextDay" title="اليوم التالي">←</button>
+                            <button class="day-nav-btn" @onclick="PrevDay" title="@L["tasks.prevDay"]">@L.PrevArrow</button>
+                            <button class="day-nav-btn" @onclick="NextDay" title="@L["tasks.nextDay"]">@L.NextArrow</button>
                         </div>
                         <div class="date-block">
-                            <div class="date-title" style="cursor:pointer" title="اختيار تاريخ" @onclick="OpenDatePicker">@(_currentDate.Date==DateTime.Today ? "اليوم" : FormatDate(_currentDate))</div>
+                            <div class="date-title" style="cursor:pointer" title="@L["tasks.pickDate"]" @onclick="OpenDatePicker">@(_currentDate.Date==DateTime.Today ? L["com.today"] : FormatDate(_currentDate))</div>
                             <div class="date-subtitle">@FormatDate(_currentDate)</div>
                         </div>
                         @if (_currentDate.Date != DateTime.Today)
                         {
-                            <button class="today-btn" @onclick="GoToday">اليوم</button>
+                            <button class="today-btn" @onclick="GoToday">@L["com.today"]</button>
                         }
-                        <input type="date" id="taskDatePicker" class="date-picker" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px" value="@_currentDate.ToString("yyyy-MM-dd")" @onchange="OnDatePicked" title="اختيار تاريخ" />
+                        <input type="date" id="taskDatePicker" class="date-picker" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px" value="@_currentDate.ToString("yyyy-MM-dd")" @onchange="OnDatePicked" title="@L["tasks.pickDate"]" />
                     </div>
                     <div class="day-progress">
-                        <div class="progress-info"><span>إنجاز اليوم</span><strong>@_dayCompleted / @_dayTotal</strong></div>
+                        <div class="progress-info"><span>@L["tasks.todayProgress"]</span><strong>@_dayCompleted / @_dayTotal</strong></div>
                         <div class="progress-bar"><div class="progress-fill" style="width:@_dayPercent%"></div></div>
                     </div>
                 </div>
@@ -80,8 +81,8 @@
             @if(_view!="completed" && _view!="archived"){
                 <div class="quick-add">
                     <div class="quick-add-plus">+</div>
-                    <input type="text" placeholder="أضف مهمة بسرعة..." @bind="_quickTitle" @bind:event="oninput" @onkeydown="OnQuickKeyDown" />
-                    <div class="quick-add-hint">Enter للإضافة</div>
+                    <input type="text" placeholder="@L["tasks.quickAdd"]" @bind="_quickTitle" @bind:event="oninput" @onkeydown="OnQuickKeyDown" />
+                    <div class="quick-add-hint">@L["tasks.quickHint"]</div>
                 </div>
             }
 
@@ -105,82 +106,82 @@
 
     <aside class="details @(_selectedTask!=null ? "open" : "")" id="detailsPanel">
         <div class="details-header">
-            <div class="details-header-title">تفاصيل المهمة</div>
+            <div class="details-header-title">@L["tasks.details"]</div>
             <div class="details-header-actions">
-                <button class="icon-btn" @onclick="CloseDetails" title="إغلاق">×</button>
+                <button class="icon-btn" @onclick="CloseDetails" title="@L["com.close"]">×</button>
             </div>
         </div>
         <div class="details-body">
             @if(_selectedTask!=null){
                 <div class="details-title">@_selectedTask.Title</div>
                 <div class="field">
-                    <label class="field-label">اسم المهمة</label>
+                    <label class="field-label">@L["tasks.name"]</label>
                     <input class="field-input" @bind="_editTitle" />
                 </div>
                 <div class="details-grid">
                     <div class="field">
-                        <label class="field-label">التاريخ</label>
+                        <label class="field-label">@L["com.date"]</label>
                         <input class="field-input" type="date" value="@_editDate" @onchange="e => _editDate = e.Value?.ToString()" />
                     </div>
                     <div class="field">
-                        <label class="field-label">الوقت</label>
+                        <label class="field-label">@L["com.time"]</label>
                         <input class="field-input" type="time" value="@_editTime" @onchange="e => _editTime = e.Value?.ToString()" />
                     </div>
                 </div>
                 <div class="details-grid">
                     <div class="field">
-                        <label class="field-label">الأولوية</label>
+                        <label class="field-label">@L["tasks.priority"]</label>
                         <select class="field-select" @bind="_editPriority">
-                            <option value="low">منخفضة</option>
-                            <option value="medium">متوسطة</option>
-                            <option value="high">عالية</option>
+                            <option value="low">@L["tasks.priLow"]</option>
+                            <option value="medium">@L["tasks.priMed"]</option>
+                            <option value="high">@L["tasks.priHigh"]</option>
                         </select>
                     </div>
                     <div class="field">
-                        <label class="field-label">التكرار</label>
+                        <label class="field-label">@L["tasks.repeat"]</label>
                         <select class="field-select" @bind="_editRepeat">
-                            <option value="none">بدون تكرار</option>
-                            <option value="daily">يومي</option>
-                            <option value="weekly">أسبوعي</option>
-                            <option value="monthly">شهري</option>
+                            <option value="none">@L["tasks.repNone"]</option>
+                            <option value="daily">@L["tasks.repDaily"]</option>
+                            <option value="weekly">@L["tasks.repWeekly"]</option>
+                            <option value="monthly">@L["tasks.repMonthly"]</option>
                         </select>
                     </div>
                 </div>
                 <div class="field">
-                    <label class="field-label">Eisenhower</label>
+                    <label class="field-label">@L["tasks.pageMatrix"]</label>
                     <select class="field-select" @bind="_editQuadrant">
-                        <option value="1">مهم وعاجل</option>
-                        <option value="2">مهم وغير عاجل</option>
-                        <option value="3">غير مهم وعاجل</option>
-                        <option value="4">غير مهم وغير عاجل</option>
+                        <option value="1">@L["tasks.q1"]</option>
+                        <option value="2">@L["tasks.q2"]</option>
+                        <option value="3">@L["tasks.q3"]</option>
+                        <option value="4">@L["tasks.q4"]</option>
                     </select>
                 </div>
                 <div class="field">
-                    <label class="field-label">الحالة</label>
+                    <label class="field-label">@L["tasks.status"]</label>
                     <button class="status-btn @(_selectedTask.IsDone ? "completed" : "")" @onclick="()=>ToggleTask(_selectedTask)">
-                        @(_selectedTask.IsDone ? "✓ تم الإنجاز" : "○ قيد التنفيذ")
+                        @(_selectedTask.IsDone ? L["tasks.done"] : L["tasks.doing"])
                     </button>
                 </div>
                 <div class="field">
-                    <label class="field-label">ملاحظات</label>
-                    <textarea class="field-textarea" @bind="_editNotes" placeholder="أضف أي تفاصيل تحتاجها..."></textarea>
+                    <label class="field-label">@L["com.notes"]</label>
+                    <textarea class="field-textarea" @bind="_editNotes" placeholder="@L["tasks.notesPh"]"></textarea>
                 </div>
                 @if(_selectedTask.CompletedAt!=null){
-                    <div style="font-size:10px;color:var(--muted);padding-top:5px;">تم الإنجاز: @FormatDateTime(_selectedTask.CompletedAt.Value)</div>
+                    <div style="font-size:10px;color:var(--muted);padding-top:5px;">@L["tasks.doneAt"] @FormatDateTime(_selectedTask.CompletedAt.Value)</div>
                 }
                 @if(_selectedTask.ArchivedAt!=null){
-                    <div style="margin-top:12px;padding:10px;background:var(--surface-soft);border-radius:8px;font-size:10px;color:var(--muted);">هذه المهمة موجودة في الأرشيف.</div>
+                    <div style="margin-top:12px;padding:10px;background:var(--surface-soft);border-radius:8px;font-size:10px;color:var(--muted);">@L["tasks.inArchive"]</div>
                 }
             }
         </div>
         <div class="details-footer">
-            <button class="archive-btn" @onclick="ArchiveSelected" title="أرشفة">@(_selectedTask?.ArchivedAt!=null ? "↶" : "▱")</button>
-            <button class="delete-btn" @onclick="DeleteSelected" title="حذف اليوم فقط">×</button>
-            <button class="save-btn" @onclick="SaveSelected">حفظ التغييرات</button>
+            <button class="archive-btn" @onclick="ArchiveSelected" title="@L["tasks.archiveBtn"]">@(_selectedTask?.ArchivedAt!=null ? "↶" : "▱")</button>
+            <button class="delete-btn" @onclick="DeleteSelected" title="@L["tasks.deleteDay"]">×</button>
+            <button class="save-btn" @onclick="SaveSelected">@L["tasks.saveChanges"]</button>
         </div>
         @if(_selectedTask!=null && IsRecurring(_selectedTask)){
             <div style="padding:0 14px 14px;">
-                <button class="delete-btn" style="width:100%;border-color:var(--red);color:var(--red);" @onclick="DeleteSelectedSeries" title="حذف نهائي — لن تتكرر هذه المهمة خلال الأيام القادمة">⛔ حذف نهائياً (لن تتكرر بعد اليوم)</button>
+                <button class="delete-btn" style="width:100%;border-color:var(--red);color:var(--red);" @onclick="DeleteSelectedSeries" title="@L["tasks.deleteSeries"]">@L["tasks.deleteSeries"]</button>
             </div>
         }
     </aside>
@@ -190,56 +191,56 @@
 <div class="modal-overlay open" @onclick="CloseCreateModal">
     <div class="modal" @onclick:stopPropagation="true">
         <div class="modal-header">
-            <div class="modal-title">إضافة مهمة جديدة</div>
+            <div class="modal-title">@L["tasks.addTitle"]</div>
             <button class="icon-btn" @onclick="CloseCreateModal">×</button>
         </div>
         <div class="modal-body">
             <div class="field">
-                <label class="field-label">اسم المهمة</label>
-                <input class="field-input" @bind="_newTitle" placeholder="مثلاً: مراجعة LINQ" />
+                <label class="field-label">@L["tasks.name"]</label>
+                <input class="field-input" @bind="_newTitle" placeholder="@L["tasks.nameEx"]" />
             </div>
             <button type="button" class="secondary-btn" style="margin-bottom:12px; width:100%;" @onclick="()=> _showSchedule = !_showSchedule">
-                @(_showSchedule ? "إلغاء الجدولة" : "+ جدولة المهمة")
+                @(_showSchedule ? L["tasks.cancelSchedule"] : L["tasks.schedule"])
             </button>
             @if(_showSchedule){
             <div class="details-grid">
                 <div class="field">
-                    <label class="field-label">التاريخ</label>
+                    <label class="field-label">@L["com.date"]</label>
                     <input class="field-input" type="date" value="@_newDate" @onchange="e => _newDate = e.Value?.ToString()" />
                 </div>
                 <div class="field">
-                    <label class="field-label">الوقت</label>
+                    <label class="field-label">@L["com.time"]</label>
                     <input class="field-input" type="time" value="@_newTime" @onchange="e => _newTime = e.Value?.ToString()" />
                 </div>
             </div>
             }
             <div class="details-grid">
                 <div class="field">
-                    <label class="field-label">الأولوية</label>
+                    <label class="field-label">@L["tasks.priority"]</label>
                     <select class="field-select" @bind="_newPriority">
-                        <option value="low">منخفضة</option>
-                        <option value="medium">متوسطة</option>
-                        <option value="high">عالية</option>
+                        <option value="low">@L["tasks.priLow"]</option>
+                        <option value="medium">@L["tasks.priMed"]</option>
+                        <option value="high">@L["tasks.priHigh"]</option>
                     </select>
                 </div>
                 <div class="field">
-                    <label class="field-label">التكرار</label>
+                    <label class="field-label">@L["tasks.repeat"]</label>
                     <select class="field-select" @bind="_newRepeat">
-                        <option value="none">بدون تكرار</option>
-                        <option value="daily">يومي</option>
-                        <option value="weekly">أسبوعي</option>
-                        <option value="monthly">شهري</option>
+                        <option value="none">@L["tasks.repNone"]</option>
+                        <option value="daily">@L["tasks.repDaily"]</option>
+                        <option value="weekly">@L["tasks.repWeekly"]</option>
+                        <option value="monthly">@L["tasks.repMonthly"]</option>
                     </select>
                 </div>
             </div>
             <div class="field">
-                <label class="field-label">ملاحظات</label>
-                <textarea class="field-textarea" @bind="_newNotes" placeholder="اختياري..."></textarea>
+                <label class="field-label">@L["com.notes"]</label>
+                <textarea class="field-textarea" @bind="_newNotes" placeholder="@L["tasks.notesOpt"]"></textarea>
             </div>
         </div>
         <div class="modal-footer">
-            <button class="primary-btn" @onclick="CreateTask">إضافة المهمة</button>
-            <button class="secondary-btn" @onclick="CloseCreateModal">إلغاء</button>
+            <button class="primary-btn" @onclick="CreateTask">@L["tasks.addTask"]</button>
+            <button class="secondary-btn" @onclick="CloseCreateModal">@L["com.cancel"]</button>
         </div>
     </div>
 </div>
@@ -248,10 +249,10 @@
 @if(_contextTaskId!=null){
 <div class="context-backdrop" @onclick="CloseContext" style="position:fixed; inset:0; z-index:199;"></div>
 <div class="context-menu open" style="left:@(_contextX)px; top:@(_contextY)px; z-index:200;">
-    <button class="context-item" @onclick="ContextEdit">✎ تعديل</button>
-    <button class="context-item danger" @onclick="ContextDelete">× حذف اليوم فقط</button>
+    <button class="context-item" @onclick="ContextEdit">@L["tasks.ctxEdit"]</button>
+    <button class="context-item danger" @onclick="ContextDelete">@L["tasks.ctxDelete"]</button>
     @if(IsContextRecurring()){
-        <button class="context-item danger" @onclick="ContextDeleteSeries" title="حذف نهائي — لن تتكرر هذه المهمة خلال الأيام القادمة">⛔ حذف نهائياً (لن تتكرر)</button>
+        <button class="context-item danger" @onclick="ContextDeleteSeries" title="@L["tasks.deleteSeries"]">@L["tasks.ctxDeleteSeries"]</button>
     }
 </div>
 }
@@ -1837,24 +1838,27 @@
     private string _untimedSort = "priority"; // priority | oldest | newest
 
     private string PageTitle => _view switch {
-        "today" => "اليوم",
-        "upcoming" => "القادمة",
-        "completed" => "تم الإنجاز",
-        "archived" => "الأرشيف",
-        "board" => "Board",
-        "matrix" => "Eisenhower",
-        _ => "Tasks"
+        "today" => L["tasks.todayView"],
+        "upcoming" => L["tasks.upcomingView"],
+        "completed" => L["tasks.doneView"],
+        "archived" => L["tasks.archivedView"],
+        "board" => L["tasks.pageBoard"],
+        "matrix" => L["tasks.pageMatrix"],
+        _ => L["tasks.pageTasks"]
     };
 
     protected override async Task OnInitializedAsync()
     {
         await TaskState.InitAsync();
         TaskState.OnStateChanged += OnStateChanged;
+        L.OnLanguageChanged += OnLangChanged;
         _view = TaskState.CurrentView;
         _currentDate = TaskState.CurrentDate;
         LoadGroupPrefs();
         UpdateCounts();
     }
+
+    private void OnLangChanged() => InvokeAsync(StateHasChanged);
 
     private void OnStateChanged()
     {
@@ -2033,7 +2037,7 @@
         _untimedSort = _untimedSort switch { "priority" => "oldest", "oldest" => "newest", _ => "priority" };
         SaveGroupPrefs();
     }
-    private string UntimedSortLabel() => _untimedSort switch { "oldest" => "الأقدم", "newest" => "الأحدث", _ => "أولوية" };
+    private string UntimedSortLabel() => _untimedSort switch { "oldest" => L["tasks.sortOldest"], "newest" => L["tasks.sortNewest"], _ => L["tasks.sortPriority"] };
     private bool IsCurrentPeriod(bool isMorning)
     {
         if (_currentDate.Date != DateTime.Today) return false;
@@ -2178,15 +2182,15 @@
     private static bool IsRecurring(AppTask? t) => t!=null && ((!string.IsNullOrWhiteSpace(t.RecurrenceDays) && t.RecurrenceDays!="none") || !string.IsNullOrWhiteSpace(t.TemplateId) || t.IsRecurring);
     private bool IsContextRecurring(){ if(_contextTaskId==null) return false; return IsRecurring(TaskState.Tasks.FirstOrDefault(t=>t.Id==_contextTaskId)); }
     private async Task<bool> ConfirmSeriesDelete(){
-        try { return await JS.InvokeAsync<bool>("confirm", "حذف نهائي؟ سيتم حذف كل النسخ القادمة لهذه المهمة المتكررة، مع الاحتفاظ بالمنجز في الأرشيف."); }
+        try { return await JS.InvokeAsync<bool>("confirm", L["tasks.seriesConfirm"]); }
         catch { return true; }
     }
 
-    private string FormatDate(DateTime d) => d.ToString("dddd، d MMMM", new System.Globalization.CultureInfo("ar-EG"));
-    private string FormatShortDate(DateTime? d) => d==null?"": d.Value.ToString("d MMM", new System.Globalization.CultureInfo("ar-EG"));
-    private string FormatDateTime(DateTime d) => d.ToString("d MMM hh:mm tt", new System.Globalization.CultureInfo("ar-EG"));
-    private string PriorityLabel(string p) => p switch{ "low"=>"منخفضة","medium"=>"متوسطة","high"=>"عالية","urgent"=>"عاجلة", _=>"متوسطة"};
-    private string RepeatLabel(string r) => r switch{ "daily"=>"يومي","weekly"=>"أسبوعي","monthly"=>"شهري", _=>""};
+    private string FormatDate(DateTime d) => L.Lang == "ar" ? d.ToString("dddd، d MMMM", L.Culture) : d.ToString("dddd, d MMMM", L.Culture);
+    private string FormatShortDate(DateTime? d) => d==null?"": d.Value.ToString("d MMM", L.Culture);
+    private string FormatDateTime(DateTime d) => d.ToString("d MMM hh:mm tt", L.Culture);
+    private string PriorityLabel(string p) => p switch{ "low"=>L["tasks.priLow"],"medium"=>L["tasks.priMed"],"high"=>L["tasks.priHigh"],"urgent"=>L["tasks.priUrgent"], _=>L["tasks.priMed"]};
+    private string RepeatLabel(string r) => r switch{ "daily"=>L["tasks.repDaily"],"weekly"=>L["tasks.repWeekly"],"monthly"=>L["tasks.repMonthly"], _=>""};
 
     private RenderFragment DayListView => @<text>
         @{
@@ -2200,16 +2204,16 @@
             var totalDone = mornDone.Count + untimedDone.Count + evenDone.Count;
         }
         @if(totalPending==0 && totalDone==0){
-            <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">لا توجد مهام لهذا اليوم</div><div class="empty-text">ابدأ بإضافة أول مهمة ليومك.</div></div></div>
+            <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">@L["tasks.noToday"]</div><div class="empty-text">@L["tasks.emptyAdd"]</div></div></div>
         } else {
-            @TimeGroup("m", "☀️ مهام الصباح", morn, _morningOpen, true, "", true)
-            @TimeGroup("u", "مهام بدون وقت", untimed, _untimedOpen, false, "", null, true)
-            @TimeGroup("e", "🌙 مهام المساء", even, _eveningOpen, true, "", false)
+            @TimeGroup("m", L["tasks.dayMorning"], morn, _morningOpen, true, "", true)
+            @TimeGroup("u", L["tasks.dayUntimed"], untimed, _untimedOpen, false, "", null, true)
+            @TimeGroup("e", L["tasks.dayEvening"], even, _eveningOpen, true, "", false)
             @if(totalDone>0){
                 <div style="margin-top:8px;"></div>
-                @TimeGroup("md", "تم الإنجاز — الصباح", mornDone, _morningDoneOpen, true, "", true, false, true)
-                @TimeGroup("ud", "تم الإنجاز — بدون وقت", untimedDone, _untimedDoneOpen, false, "", null, false, true)
-                @TimeGroup("ed", "تم الإنجاز — المساء", evenDone, _eveningDoneOpen, true, "", false, false, true)
+                @TimeGroup("md", $"{L["tasks.doneShort"]} — {L["tasks.morning"]}", mornDone, _morningDoneOpen, true, "", true, false, true)
+                @TimeGroup("ud", $"{L["tasks.doneShort"]} — {L["tasks.untimed"]}", untimedDone, _untimedDoneOpen, false, "", null, false, true)
+                @TimeGroup("ed", $"{L["tasks.doneShort"]} — {L["tasks.evening"]}", evenDone, _eveningDoneOpen, true, "", false, false, true)
             }
         }
     </text>;
@@ -2226,7 +2230,7 @@
                 </div>
                 <div class="section-actions">
                     @if(showSortBtn){
-                        <button class="sort-btn" @onclick="()=>CycleUntimedSort()" @onclick:stopPropagation="true" title="تغيير الترتيب">ترتيب: @UntimedSortLabel() ⇅</button>
+                        <button class="sort-btn" @onclick="()=>CycleUntimedSort()" @onclick:stopPropagation="true" title="@L["tasks.changeSort"]">@L["tasks.sort"] @UntimedSortLabel() ⇅</button>
                     }
                 </div>
             </div>
@@ -2235,7 +2239,7 @@
                     @if(tasks.Any()){
                         @foreach(var task in tasks){ @TaskRow(task) }
                     } else {
-                        <div class="group-empty">@(isDoneGroup ? "لا توجد مهام منجزة هنا" : isTimed ? "لا توجد مهام موقوتة هنا" : "لا توجد مهام بدون وقت — أضف من فوق ⬆")
+                        <div class="group-empty">@(isDoneGroup ? L["tasks.noDoneHere"] : isTimed ? L["tasks.noTimedHere"] : L["tasks.noUntimedHere"])
                         </div>
                     }
                 </div>
@@ -2245,7 +2249,7 @@
 
     private RenderFragment TaskRow(AppTask task) => @<text>
         <div class="task-row @(task.IsDone?"completed":"") @(_selectedTask?.Id==task.Id?"selected":"")" @onclick="()=>OpenDetails(task.Id)" @oncontextmenu="(e)=>ShowContext(e, task.Id)" @oncontextmenu:preventDefault="true">
-            <button class="task-check" @onclick="async (e)=>{ await ToggleTask(task); }" @onclick:stopPropagation="true" title="تغيير الحالة">
+            <button class="task-check" @onclick="async (e)=>{ await ToggleTask(task); }" @onclick:stopPropagation="true" title="@L["tasks.toggleState"]">
                 @if(task.IsDone){<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>}
             </button>
             <span class="priority-dot priority-@(task.Priority ?? "low")"></span>
@@ -2255,7 +2259,7 @@
                     @if(task.ScheduledTime!=null){<span class="task-meta-item">◷ @task.ScheduledTime?.ToString(@"hh\:mm")</span>}
                     @if(task.DueDate!=null && task.DueDate?.Date != _currentDate.Date){<span class="task-meta-item">▣ @FormatShortDate(task.DueDate)</span>}
                     @if(!string.IsNullOrWhiteSpace(task.RecurrenceDays) && task.RecurrenceDays!="none"){<span class="task-meta-item">↻ @RepeatLabel(task.RecurrenceDays)</span>}
-                    @if(!string.IsNullOrWhiteSpace(task.Notes)){<span class="task-meta-item">▤ ملاحظات</span>}
+                    @if(!string.IsNullOrWhiteSpace(task.Notes)){<span class="task-meta-item">▤ @L["tasks.notesMeta"]</span>}
                 </div>
             </div>
             <button class="task-more" @onclick="(e)=>ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button>
@@ -2269,11 +2273,11 @@
             var groups=tasks.GroupBy(t=>(t.DueDate??t.ScheduledDate)!.Value.Date).OrderBy(g=>g.Key).ToList();
         }
         @if(!tasks.Any()){
-            <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">مفيش مهام قادمة</div><div class="empty-text">أي مهمة تضيف لها تاريخ مستقبلي هتظهر هنا.</div></div></div>
+            <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">@L["tasks.noUpcoming"]</div><div class="empty-text">@L["tasks.upcomingEmpty"]</div></div></div>
         } else {
             @foreach(var g in groups){
                 <section class="date-group">
-                    <div class="date-group-header"><div class="date-group-title">@FormatDate(g.Key) <span>@(g.Key==today.AddDays(1)?"غدًا":"")</span></div><div class="date-group-count">@g.Count() مهام</div></div>
+                    <div class="date-group-header"><div class="date-group-title">@FormatDate(g.Key) <span>@(g.Key==today.AddDays(1)?L["tasks.tomorrow"]:"")</span></div><div class="date-group-count">@g.Count() @L["tasks.tasksCount"]</div></div>
                     <div class="task-list">@foreach(var task in g){ @TaskRow(task) }</div>
                 </section>
             }
@@ -2286,10 +2290,10 @@
             var tasks=ActiveTasks().Where(t=>t.IsDone && ((t.DueDate?.Date==today) || (t.ScheduledDate?.Date==today) || (t.DueDate==null && t.ScheduledDate==null && t.CompletedAt?.Date==today))).OrderByDescending(t=>t.CompletedAt ?? t.UpdatedAt).ToList();
         }
         @if(!tasks.Any()){
-            <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">لسه مفيش إنجازات</div><div class="empty-text">المهام اللي هتخلصها هتظهر هنا كـ History.</div></div></div>
+            <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">@L["tasks.noDone"]</div><div class="empty-text">@L["tasks.historyHint"]</div></div></div>
         } else {
             <section class="task-section">
-                <div class="section-header"><div class="section-title"><span class="section-dot" style="background:var(--text)"></span>كل الإنجازات<span class="section-count">@tasks.Count</span></div></div>
+                <div class="section-header"><div class="section-title"><span class="section-dot" style="background:var(--text)"></span>@L["tasks.allDone"]<span class="section-count">@tasks.Count</span></div></div>
                 <div class="task-list">@foreach(var task in tasks){ @TaskRow(task) }</div>
             </section>
         }
@@ -2300,20 +2304,20 @@
             var filtered = GetFilteredArchived().ToList();
         }
         <div class="archive-toggles">
-            <button class="archive-toggle @(_archKind=="done"?"active":"")" @onclick='()=> _archKind="done"'>✓ منجز (@_archDoneCount)</button>
-            <button class="archive-toggle @(_archKind=="deleted"?"active":"")" @onclick='()=> _archKind="deleted"'>🗑 محذوف (@_archDeletedCount)</button>
+            <button class="archive-toggle @(_archKind=="done"?"active":"")" @onclick='()=> _archKind="done"'>@L["tasks.doneFilter"] (@_archDoneCount)</button>
+            <button class="archive-toggle @(_archKind=="deleted"?"active":"")" @onclick='()=> _archKind="deleted"'>@L["tasks.deletedFilter"] (@_archDeletedCount)</button>
         </div>
         <div class="archive-toggles">
-            <button class="archive-toggle @(_archDay?"active":"")" @onclick='()=>ToggleArch("day")'>يوم</button>
-            <button class="archive-toggle @(_archWeek?"active":"")" @onclick='()=>ToggleArch("week")'>أسبوع</button>
-            <button class="archive-toggle @(_archMonth?"active":"")" @onclick='()=>ToggleArch("month")'>شهر</button>
-            <button class="archive-toggle @(_archYear?"active":"")" @onclick='()=>ToggleArch("year")'>سنة</button>
+            <button class="archive-toggle @(_archDay?"active":"")" @onclick='()=>ToggleArch("day")'>@L["tasks.dayUnit"]</button>
+            <button class="archive-toggle @(_archWeek?"active":"")" @onclick='()=>ToggleArch("week")'>@L["tasks.weekUnit"]</button>
+            <button class="archive-toggle @(_archMonth?"active":"")" @onclick='()=>ToggleArch("month")'>@L["tasks.monthUnit"]</button>
+            <button class="archive-toggle @(_archYear?"active":"")" @onclick='()=>ToggleArch("year")'>@L["tasks.yearUnit"]</button>
         </div>
         @if(!filtered.Any()){
-            <div class="task-list"><div class="empty"><div class="empty-icon">@(_archKind=="deleted" ? "🗑" : "✓")</div><div class="empty-title">@(_archKind=="deleted" ? "لا توجد مهام محذوفة" : "لا توجد مهام منجزة")</div><div class="empty-text">@(_archKind=="deleted" ? "المهام المحذوفة ستظهر هنا." : "المهام التي تنجزها ستظهر هنا.")</div></div></div>
+            <div class="task-list"><div class="empty"><div class="empty-icon">@(_archKind=="deleted" ? "🗑" : "✓")</div><div class="empty-title">@(_archKind=="deleted" ? L["tasks.noDeleted"] : L["tasks.noDoneArch"])</div><div class="empty-text">@(_archKind=="deleted" ? L["tasks.deletedHere"] : L["tasks.doneHere"])</div></div></div>
         } else {
             <section class="task-section">
-                <div class="section-header"><div class="section-title"><span class="section-dot" style="background:var(--muted)"></span>@(_archKind=="deleted" ? "محذوف" : "منجز")<span class="section-count">@filtered.Count</span></div><button class="section-action" @onclick="async ()=>{ foreach(var t in filtered) await TaskState.RestoreTaskAsync(t.Id); UpdateCounts(); }">استرجاع الكل</button></div>
+                <div class="section-header"><div class="section-title"><span class="section-dot" style="background:var(--muted)"></span>@(_archKind=="deleted" ? L["tasks.deletedOne"] : L["tasks.doneOne"])<span class="section-count">@filtered.Count</span></div><button class="section-action" @onclick="async ()=>{ foreach(var t in filtered) await TaskState.RestoreTaskAsync(t.Id); UpdateCounts(); }">@L["tasks.restoreAll"]</button></div>
                 <div class="task-list">
                     @foreach(var task in filtered){
                         <div class="task-row @(task.IsDone?"completed":"")" @onclick="()=>OpenDetails(task.Id)" @oncontextmenu="(e)=>ShowContext(e, task.Id)" @oncontextmenu:preventDefault="true" style="@(!task.IsDone ? "color:var(--red)" : "")">
@@ -2346,21 +2350,21 @@
         }
         <div class="board">
             <div class="board-column">
-                <div class="board-column-header"><div class="board-column-title">قيد التنفيذ</div><div class="board-column-count">@todo.Count</div></div>
+                <div class="board-column-header"><div class="board-column-title">@L["tasks.inprogress"]</div><div class="board-column-count">@todo.Count</div></div>
                 <div class="board-list">
-                    @if(todo.Any()){ @foreach(var task in todo){ <div class="board-card" @onclick="()=>OpenDetails(task.Id)"><button class="board-delete" @onclick="async ()=> await DeleteBoardTask(task.Id)" @onclick:stopPropagation="true" title="حذف"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/><path d="M10 11v6M14 11v6"/></svg></button><button class="board-more" @onclick="(e)=> ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button><div class="board-card-title">@task.Title</div><div class="board-card-footer"><span>@(task.DueDate!=null?FormatShortDate(task.DueDate):"بدون تاريخ")</span><span>@PriorityLabel(task.Priority)</span></div></div> } } else { <div style="padding:30px 10px;text-align:center;color:var(--muted);font-size:10px;">فاضي</div> }
+                    @if(todo.Any()){ @foreach(var task in todo){ <div class="board-card" @onclick="()=>OpenDetails(task.Id)"><button class="board-delete" @onclick="async ()=> await DeleteBoardTask(task.Id)" @onclick:stopPropagation="true" title="@L["com.delete"]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/><path d="M10 11v6M14 11v6"/></svg></button><button class="board-more" @onclick="(e)=> ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button><div class="board-card-title">@task.Title</div><div class="board-card-footer"><span>@(task.DueDate!=null?FormatShortDate(task.DueDate):L["tasks.boardNoDate"])</span><span>@PriorityLabel(task.Priority)</span></div></div> } } else { <div style="padding:30px 10px;text-align:center;color:var(--muted);font-size:10px;">@L["tasks.boardEmpty"]</div> }
                 </div>
             </div>
             <div class="board-column">
-                <div class="board-column-header"><div class="board-column-title">بدون تاريخ</div><div class="board-column-count">@noDate.Count</div></div>
+                <div class="board-column-header"><div class="board-column-title">@L["tasks.boardNoDate"]</div><div class="board-column-count">@noDate.Count</div></div>
                 <div class="board-list">
-                    @if(noDate.Any()){ @foreach(var task in noDate){ <div class="board-card" @onclick="()=>OpenDetails(task.Id)"><button class="board-delete" @onclick="async ()=> await DeleteBoardTask(task.Id)" @onclick:stopPropagation="true" title="حذف"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/><path d="M10 11v6M14 11v6"/></svg></button><button class="board-more" @onclick="(e)=> ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button><div class="board-card-title">@task.Title</div><div class="board-card-footer"><span>بدون تاريخ</span><span>@PriorityLabel(task.Priority)</span></div></div> } } else { <div style="padding:30px 10px;text-align:center;color:var(--muted);font-size:10px;">فاضي</div> }
+                    @if(noDate.Any()){ @foreach(var task in noDate){ <div class="board-card" @onclick="()=>OpenDetails(task.Id)"><button class="board-delete" @onclick="async ()=> await DeleteBoardTask(task.Id)" @onclick:stopPropagation="true" title="@L["com.delete"]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/><path d="M10 11v6M14 11v6"/></svg></button><button class="board-more" @onclick="(e)=> ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button><div class="board-card-title">@task.Title</div><div class="board-card-footer"><span>@L["tasks.boardNoDate"]</span><span>@PriorityLabel(task.Priority)</span></div></div> } } else { <div style="padding:30px 10px;text-align:center;color:var(--muted);font-size:10px;">@L["tasks.boardEmpty"]</div> }
                 </div>
             </div>
             <div class="board-column">
-                <div class="board-column-header"><div class="board-column-title">تم الإنجاز</div><div class="board-column-count">@done.Count</div></div>
+                <div class="board-column-header"><div class="board-column-title">@L["tasks.doneView"]</div><div class="board-column-count">@done.Count</div></div>
                 <div class="board-list">
-                    @if(done.Any()){ @foreach(var task in done){ <div class="board-card" @onclick="()=>OpenDetails(task.Id)"><button class="board-delete" @onclick="async ()=> await DeleteBoardTask(task.Id)" @onclick:stopPropagation="true" title="حذف"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/><path d="M10 11v6M14 11v6"/></svg></button><button class="board-more" @onclick="(e)=> ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button><div class="board-card-title">@task.Title</div><div class="board-card-footer"><span>@(task.DueDate!=null?FormatShortDate(task.DueDate):"بدون تاريخ")</span><span>@PriorityLabel(task.Priority)</span></div></div> } } else { <div style="padding:30px 10px;text-align:center;color:var(--muted);font-size:10px;">فاضي</div> }
+                    @if(done.Any()){ @foreach(var task in done){ <div class="board-card" @onclick="()=>OpenDetails(task.Id)"><button class="board-delete" @onclick="async ()=> await DeleteBoardTask(task.Id)" @onclick:stopPropagation="true" title="@L["com.delete"]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/><path d="M10 11v6M14 11v6"/></svg></button><button class="board-more" @onclick="(e)=> ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button><div class="board-card-title">@task.Title</div><div class="board-card-footer"><span>@(task.DueDate!=null?FormatShortDate(task.DueDate):L["tasks.boardNoDate"])</span><span>@PriorityLabel(task.Priority)</span></div></div> } } else { <div style="padding:30px 10px;text-align:center;color:var(--muted);font-size:10px;">@L["tasks.boardEmpty"]</div> }
                 </div>
             </div>
         </div>
@@ -2370,10 +2374,10 @@
         @{
             var tasks=ActiveTasks().Where(t=>!t.IsDone).ToList();
             var quadrants = new[] {
-                new { id=1, title="مهم وعاجل", sub="اعمله الآن", dot="var(--text)"},
-                new { id=2, title="مهم وغير عاجل", sub="خطط له", dot="var(--text-soft)"},
-                new { id=3, title="غير مهم وعاجل", sub="فوّضه", dot="var(--muted)"},
-                new { id=4, title="غير مهم وغير عاجل", sub="احذفه أو أجّله", dot="var(--border2)"}
+                new { id=1, title=L["tasks.q1"], sub=L["tasks.q1sub"], dot="var(--text)"},
+                new { id=2, title=L["tasks.q2"], sub=L["tasks.q2sub"], dot="var(--text-soft)"},
+                new { id=3, title=L["tasks.q3"], sub=L["tasks.q3sub"], dot="var(--muted)"},
+                new { id=4, title=L["tasks.q4"], sub=L["tasks.q4sub"], dot="var(--border2)"}
             };
         }
         <div class="matrix">
@@ -2385,7 +2389,7 @@
                         @if(qTasks.Any()){
                             @foreach(var task in qTasks){ <div class="matrix-task" @onclick="()=>OpenDetails(task.Id)">@task.Title</div> }
                         } else {
-                            <div style="color:var(--muted);font-size:10px;padding:20px 5px;text-align:center;">لا توجد مهام</div>
+                            <div style="color:var(--muted);font-size:10px;padding:20px 5px;text-align:center;">@L["tasks.noTasks"]</div>
                         }
                     </div>
                 </div>
@@ -2396,5 +2400,6 @@
     public void Dispose()
     {
         TaskState.OnStateChanged -= OnStateChanged;
+        L.OnLanguageChanged -= OnLangChanged;
     }
 }

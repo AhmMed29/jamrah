@@ -2,41 +2,43 @@
 @using Markdig
 @using Microsoft.JSInterop
 @inject Jamrah.Core.Interfaces.IPlanningRepository PlanningRepo
+@inject Jamrah.Application.Services.LocalizationService L
 @inject IJSRuntime JS
+@implements IDisposable
 
-<div class="planning-app" dir="rtl">
+<div class="planning-app">
     <div class="planning-header">
-        <div class="planning-title">التخطيط</div>
+        <div class="planning-title">@L["plan.title"]</div>
         <div class="planning-header-actions">
             <button class="planning-toggle" @onclick="()=> _isEdit = !_isEdit">
-                @(_isEdit ? "👁 معاينة" : "✎ تعديل")
+                @(_isEdit ? L["plan.preview"] : L["plan.edit"])
             </button>
             <button class="planning-save" @onclick="SaveAsync">
-                @if(_saved){ <span>✓ تم الحفظ</span> } else { <span>💾 حفظ</span> }
+                @if(_saved){ <span>@L["plan.saved"]</span> } else { <span>@L["plan.save"]</span> }
             </button>
         </div>
     </div>
 
     <div class="planning-toolbar">
-        <button class="tb-btn" @onclick='()=> InsertAsync("# ", "", "عنوان")' title="H1">H1</button>
-        <button class="tb-btn" @onclick='()=> InsertAsync("## ", "", "عنوان")' title="H2">H2</button>
-        <button class="tb-btn" @onclick='()=> InsertAsync("### ", "", "عنوان")' title="H3">H3</button>
+        <button class="tb-btn" @onclick='()=> InsertAsync("# ", "", L["plan.phHeading"])' title="H1">H1</button>
+        <button class="tb-btn" @onclick='()=> InsertAsync("## ", "", L["plan.phHeading"])' title="H2">H2</button>
+        <button class="tb-btn" @onclick='()=> InsertAsync("### ", "", L["plan.phHeading"])' title="H3">H3</button>
         <span class="tb-sep"></span>
-        <button class="tb-btn tb-bold" @onclick='()=> InsertAsync("**", "**", "نص عريض")' title="عريض"><b>B</b></button>
-        <button class="tb-btn tb-italic" @onclick='()=> InsertAsync("*", "*", "نص مائل")' title="مائل"><i>I</i></button>
-        <button class="tb-btn" @onclick='()=> InsertAsync("~~", "~~", "مشطوب")' title="مشطوب"><s>S</s></button>
-        <button class="tb-btn" @onclick='()=> InsertAsync("`", "`", "كود")' title="كود">`</button>
+        <button class="tb-btn tb-bold" @onclick='()=> InsertAsync("**", "**", L["plan.phBold"])' title="@L["plan.bold"]"><b>B</b></button>
+        <button class="tb-btn tb-italic" @onclick='()=> InsertAsync("*", "*", L["plan.phItalic"])' title="@L["plan.italic"]"><i>I</i></button>
+        <button class="tb-btn" @onclick='()=> InsertAsync("~~", "~~", L["plan.phStrike"])' title="@L["plan.strike"]"><s>S</s></button>
+        <button class="tb-btn" @onclick='()=> InsertAsync("`", "`", L["plan.phCode"])' title="@L["plan.code"]">`</button>
         <span class="tb-sep"></span>
-        <button class="tb-btn" @onclick='()=> InsertAsync("- [ ] ", "", "مهمة")' title="توجل">☐</button>
-        <button class="tb-btn" @onclick='()=> InsertAsync("- ", "", "عنصر")' title="قائمة نقطية">•</button>
-        <button class="tb-btn" @onclick='()=> InsertAsync("1. ", "", "عنصر")' title="قائمة رقمية">1.</button>
-        <button class="tb-btn" @onclick='()=> InsertAsync("> ", "", "اقتباس")' title="اقتباس">❞</button>
-        <button class="tb-btn" @onclick='()=> InsertAsync("---\n", "", "")' title="فاصل">—</button>
+        <button class="tb-btn" @onclick='()=> InsertAsync("- [ ] ", "", L["plan.phTask"])' title="@L["plan.toggle"]">☐</button>
+        <button class="tb-btn" @onclick='()=> InsertAsync("- ", "", L["plan.phItem"])' title="@L["plan.bullets"]">•</button>
+        <button class="tb-btn" @onclick='()=> InsertAsync("1. ", "", L["plan.phItem"])' title="@L["plan.numbers"]">1.</button>
+        <button class="tb-btn" @onclick='()=> InsertAsync("> ", "", L["plan.phQuote"])' title="@L["plan.quote"]">❞</button>
+        <button class="tb-btn" @onclick='()=> InsertAsync("---\n", "", "")' title="@L["plan.hr"]">—</button>
     </div>
 
     <div class="planning-body">
         @if(_isEdit){
-            <textarea id="planning-textarea" class="planning-editor" @bind="ContentProxy" @bind:event="oninput" placeholder="ابدأ الكتابة هنا... # عنوان, **عريض**, - [ ] توجل"></textarea>
+            <textarea id="planning-textarea" class="planning-editor" @bind="ContentProxy" @bind:event="oninput" placeholder="@L["plan.editorPh"]"></textarea>
         } else {
             <div class="planning-preview markdown-body">
                 @((MarkupString)PreviewHtml)
@@ -46,7 +48,7 @@
 
     <div class="planning-footer">
         <span class="planning-path">@_filePath</span>
-        <span class="planning-status">@(_saved ? "محفوظ" : "غير محفوظ") • @_content.Length حرف</span>
+        <span class="planning-status">@(_saved ? L["plan.savedSt"] : L["plan.unsavedSt"]) • @_content.Length @L["plan.chars"]</span>
     </div>
 </div>
 
@@ -72,9 +74,9 @@
     .planning-preview h3{ font-size:15px; font-weight:700; margin:12px 0 6px; }
     .planning-preview p{ margin:8px 0; }
     .planning-preview ul, .planning-preview ol{ margin:8px 18px; }
-    .planning-preview blockquote{ border-right:3px solid #E7E5E4; margin:8px 0; padding:4px 12px; color:#78716C; background:#FAFAF9; }
+    .planning-preview blockquote{ border-inline-start:3px solid #E7E5E4; margin:8px 0; padding:4px 12px; color:#78716C; background:#FAFAF9; }
     .planning-preview code{ background:#F5F5F4; padding:2px 6px; border-radius:6px; font-size:13px; }
-    .planning-preview input[type="checkbox"]{ margin-left:6px; }
+    .planning-preview input[type="checkbox"]{ margin-inline-end:6px; }
     .planning-footer{ height:32px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border-top:1px solid #E7E5E4; background:#FAFAF9; font-size:11px; color:#78716C; flex-shrink:0; }
     .planning-path{ font-family:monospace; direction:ltr; }
 </style>
@@ -84,13 +86,21 @@
     private bool _isEdit = true;
     private bool _saved = true;
     private string _filePath = "";
-    private string PreviewHtml => string.IsNullOrWhiteSpace(_content) ? "<p style='color:#78716C'>لا يوجد محتوى للمعاينة</p>" : Markdig.Markdown.ToHtml(_content, new MarkdownPipelineBuilder().UseAdvancedExtensions().UseTaskLists().Build());
+    private string PreviewHtml => string.IsNullOrWhiteSpace(_content) ? $"<p style='color:#78716C'>{L["plan.emptyPreview"]}</p>" : Markdig.Markdown.ToHtml(_content, new MarkdownPipelineBuilder().UseAdvancedExtensions().UseTaskLists().Build());
 
     protected override async Task OnInitializedAsync()
     {
+        L.OnLanguageChanged += OnLang;
         _filePath = PlanningRepo.GetFilePath();
         _content = await PlanningRepo.LoadAsync();
         _saved = true;
+    }
+
+    private void OnLang() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        L.OnLanguageChanged -= OnLang;
     }
 
     private async Task InsertAsync(string before, string after, string placeholder)

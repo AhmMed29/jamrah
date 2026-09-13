@@ -72,9 +72,10 @@ namespace Jamrah.Application.Services
         }
 
         /// <summary>Scans wwwroot/sounds on every call so new files appear automatically.</summary>
-        public List<(string File, string Label)> GetAvailableSounds()
+        public List<(string File, string Label)> GetAvailableSounds(string? lang = null)
         {
-            var list = new List<(string File, string Label)> { ("none", "بدون صوت") };
+            lang = lang == "en" ? "en" : "ar";
+            var list = new List<(string File, string Label)> { ("none", LocalizationService.SoundLabel("none", lang)) };
             var seen = new HashSet<string> { "none" };
             try
             {
@@ -85,7 +86,7 @@ namespace Jamrah.Application.Services
                         var name = Path.GetFileName(path);
                         var ext = Path.GetExtension(name).ToLowerInvariant();
                         if (ext != ".mp3" && ext != ".wav" && ext != ".ogg") continue;
-                        if (seen.Add(name)) list.Add((name, LabelFor(name)));
+                        if (seen.Add(name)) list.Add((name, LocalizationService.SoundLabel(name, lang)));
                     }
                 }
             }
@@ -100,27 +101,13 @@ namespace Jamrah.Application.Services
                 Settings.BreakComplete.SoundFile,
             })
             {
-                if (!string.IsNullOrEmpty(f) && seen.Add(f)) list.Add((f, LabelFor(f)));
+                if (!string.IsNullOrEmpty(f) && seen.Add(f)) list.Add((f, LocalizationService.SoundLabel(f, lang)));
             }
             return list;
         }
 
         public bool SoundExists(string file)
             => string.IsNullOrEmpty(file) || file == "none" || File.Exists(Path.Combine(_soundsDir, file));
-
-        private static string LabelFor(string file) => file switch
-        {
-            "none" => "بدون صوت",
-            "pomo-start.mp3" => "بداية (1)",
-            "start-pomo.wav" => "بداية (2)",
-            "pomo-end.mp3" => "نهاية (1)",
-            "pomo-end.wav" => "نهاية (2)",
-            "checkbox-check.mp3" => "تأكيد",
-            "checkbox-uncheck.mp3" => "إلغاء تأكيد",
-            "tab-swipping.mp3" => "سحب",
-            "before-pomo-end.wav" => "وقالوا الحمدلله",
-            _ => Path.GetFileNameWithoutExtension(file),
-        };
 
         private EventSoundSetting? SettingFor(PomodoroSoundEvent evt) => evt switch
         {

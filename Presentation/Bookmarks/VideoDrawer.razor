@@ -3,6 +3,8 @@
 @using Jamrah.Core.Entities
 @inject BookmarkStateService State
 @inject Microsoft.JSInterop.IJSRuntime Js
+@inject LocalizationService L
+@implements IDisposable
 
 <style>
 .vd-wrap{position:fixed;inset:0;z-index:50}
@@ -79,7 +81,7 @@
 
 @if (Item != null)
 {
-    var g = BookmarkCardData.From(Item);
+    var g = BookmarkCardData.From(Item, L.Lang);
     var tags = BookmarkQuery.TagsOf(Item);
     var folders = BookmarkQuery.FoldersOf(Item);
     var cols = BookmarkQuery.CollectionsOf(Item);
@@ -114,7 +116,7 @@
                         <img src="@g.Img" alt="" />
                         @if (!string.IsNullOrEmpty(Item.Url))
                         {
-                            <button class="vd-play" @onclick="OpenUrl" title="Open video">@((MarkupString)BookmarkIcons.Svg("play", 20))</button>
+                            <button class="vd-play" @onclick="OpenUrl" title="@L["bmk.openVideo"]">@((MarkupString)BookmarkIcons.Svg("play", 20))</button>
                         }
                         @if (!string.IsNullOrEmpty(g.Dur)) { <span class="vd-time">@g.Dur</span> }
                     </div>
@@ -125,7 +127,7 @@
                     <span class="vd-mic">@((MarkupString)BookmarkIcons.Svg("play", 8))</span>
                     <span>@g.Type</span>
                     @{
-                        var created = BookmarkCardData.FmtDate(Item.CreatedAt);
+                        var created = BookmarkCardData.FmtDate(Item.CreatedAt, L.Lang);
                     }
                     @if (!string.IsNullOrEmpty(created)) { <span class="vd-dot"></span><span>@created</span> }
                     @if (!string.IsNullOrEmpty(g.Dur)) { <span class="vd-dot"></span><span>@g.Dur</span> }
@@ -134,27 +136,27 @@
                 </div>
                 <div class="vd-tags">
                     @foreach (var t in tags) { <span class="vd-tag">@t</span> }
-                    <button class="vd-tagadd" @onclick="AddTag" title="Add tag">@((MarkupString)BookmarkIcons.Svg("plus", 13))</button>
+                    <button class="vd-tagadd" @onclick="AddTag" title="@L["bmk.addTagPh"]">@((MarkupString)BookmarkIcons.Svg("plus", 13))</button>
                     <input class="vd-tagin" value="@_newTag" @oninput="e => _newTag = e.Value?.ToString() ?? string.Empty" @onkeydown="TagKey" placeholder="tag…" />
                 </div>
                 <div class="vd-rows">
                     @foreach (var fd in BookmarkTypeSchema.For(Item.Type))
                     {
-                        var val = BookmarkTemplates.MetaValue(Item.Type, fd.Key, g.Meta[fd.Key]);
+                        var val = BookmarkTemplates.MetaValue(Item.Type, fd.Key, g.Meta[fd.Key], L.Lang);
                         @if (val != null)
                         {
-                            <div class="vd-row"><div class="vd-ic">@((MarkupString)BookmarkIcons.Svg(RowIcon(fd.Key), 14))</div><div class="vd-k">@fd.Label</div><div class="vd-v">@((MarkupString)val)</div></div>
+                            <div class="vd-row"><div class="vd-ic">@((MarkupString)BookmarkIcons.Svg(RowIcon(fd.Key), 14))</div><div class="vd-k">@LocalizationService.MetaLabel(fd.Key, L.Lang, fd.Label)</div><div class="vd-v">@((MarkupString)val)</div></div>
                         }
                     }
-                    <div class="vd-row"><div class="vd-ic">@((MarkupString)BookmarkIcons.Svg(g.Icon, 14))</div><div class="vd-k">Type</div><div class="vd-v">@g.Type</div></div>
+                    <div class="vd-row"><div class="vd-ic">@((MarkupString)BookmarkIcons.Svg(g.Icon, 14))</div><div class="vd-k">@L["bmk.type"]</div><div class="vd-v">@g.Type</div></div>
                     @if (!string.IsNullOrEmpty(Item.Url))
                     {
                         <div class="vd-row"><div class="vd-ic">@((MarkupString)BookmarkIcons.Svg("link", 14))</div><div class="vd-k">URL</div>
                             <div class="vd-v link"><span class="vd-url">@Item.Url</span><span class="vd-mi" @onclick="CopyUrl" title="Copy">@((MarkupString)BookmarkIcons.Svg("copy", 13))</span><span class="vd-mi" @onclick="OpenUrl" title="Open">@((MarkupString)BookmarkIcons.Svg("external", 13))</span></div>
                         </div>
                     }
-                    <div class="vd-row"><div class="vd-ic">@((MarkupString)BookmarkIcons.Svg("plus", 14))</div><div class="vd-k">Added</div><div class="vd-v">@BookmarkCardData.FmtDate(Item.CreatedAt)</div></div>
-                    <div class="vd-row"><div class="vd-ic">@((MarkupString)BookmarkIcons.Svg("edit", 14))</div><div class="vd-k">Updated</div><div class="vd-v">@BookmarkCardData.FmtAgo(Item.UpdatedAt)</div></div>
+                    <div class="vd-row"><div class="vd-ic">@((MarkupString)BookmarkIcons.Svg("plus", 14))</div><div class="vd-k">@L["bmk.added"]</div><div class="vd-v">@BookmarkCardData.FmtDate(Item.CreatedAt, L.Lang)</div></div>
+                    <div class="vd-row"><div class="vd-ic">@((MarkupString)BookmarkIcons.Svg("edit", 14))</div><div class="vd-k">@L["bmk.updated"]</div><div class="vd-v">@BookmarkCardData.FmtAgo(Item.UpdatedAt, L.Lang)</div></div>
                 </div>
                 @if (folders.Count + cols.Count > 0)
                 {
@@ -177,7 +179,7 @@
                         }
                     </div>
                 }
-                <div class="vd-sech">🗒 Notes
+                <div class="vd-sech">🗒 @L["com.notes"]
                     @if (!string.IsNullOrEmpty(Item.Notes) && !_noteEdit) { <span class="vd-edit" @onclick="StartNoteEdit">✎</span> }
                 </div>
                 @if (_noteEdit)
@@ -185,8 +187,8 @@
                     <div class="vd-notes">
                         <textarea @bind="_noteText"></textarea>
                         <div class="vd-nbtns">
-                            <button class="vd-btn pri" @onclick="SaveNote">Save note</button>
-                            <button class="vd-btn" @onclick="() => _noteEdit = false">Cancel</button>
+                            <button class="vd-btn pri" @onclick="SaveNote">@L["bmk.saveNote"]</button>
+                            <button class="vd-btn" @onclick="() => _noteEdit = false">@L["com.cancel"]</button>
                         </div>
                     </div>
                 }
@@ -196,16 +198,16 @@
                 }
                 else
                 {
-                    <p class="vd-empty">No notes yet. <span class="vd-edit" @onclick="StartNoteEdit">Write one →</span></p>
+                    <p class="vd-empty">@L["bmk.noNotes"] <span class="vd-edit" @onclick="StartNoteEdit">@L["bmk.writeOne"]</span></p>
                 }
-                <div class="vd-sech">▦ Related items <a @onclick='() => OnNavigate.InvokeAsync(("all", null, null))'>View all →</a></div>
+                <div class="vd-sech">▦ @L["bmk.related"] <a @onclick='() => OnNavigate.InvokeAsync(("all", null, null))'>@L["bmk.viewAll"]</a></div>
                 <div class="vd-relgrid">
                     @foreach (var rid in rels)
                     {
                         var r = State.Items.FirstOrDefault(x => x.Id == rid);
                         @if (r != null)
                         {
-                            var rg = BookmarkCardData.From(r);
+                            var rg = BookmarkCardData.From(r, L.Lang);
                             var initial = string.IsNullOrEmpty(r.Title) ? "?" : r.Title.Trim().Substring(0, 1).ToUpperInvariant();
                             <div class="vd-relcard" @onclick="() => OnOpen.InvokeAsync(r.Id)">
                                 <span class="vd-relic" style="background:@RelColor(r.Title)">@initial</span>
@@ -219,36 +221,36 @@
                 </div>
                 @if (rels.Count == 0)
                 {
-                    <p class="vd-empty">Connect courses to their repos, books to their videos…</p>
+                    <p class="vd-empty">@L["bmk.relateHint"]</p>
                 }
                 <div class="vd-reladd">
                     <select @bind="_relateId">
-                        <option value="">Relate to…</option>
+                        <option value="">@L["bmk.relateTo"]</option>
                         @foreach (var it in State.Items.Where(i => !i.Deleted && i.Id != Item.Id).OrderBy(i => i.Title).Take(200))
                         {
                             <option value="@it.Id">@it.Title</option>
                         }
                     </select>
-                    <button class="vd-btn" @onclick="AddRelation">+ Relate</button>
+                    <button class="vd-btn" @onclick="AddRelation">@L["bmk.relateBtn"]</button>
                 </div>
             </div>
             <div class="vd-foot">
                 @if (!string.IsNullOrEmpty(Item.Url))
                 {
-                    <button class="vd-btn pri" @onclick="OpenUrl">@((MarkupString)BookmarkIcons.Svg("external", 14)) Open</button>
+                    <button class="vd-btn pri" @onclick="OpenUrl">@((MarkupString)BookmarkIcons.Svg("external", 14)) @L["bmk.open"]</button>
                 }
-                <button class="vd-btn" @onclick="() => OnEdit.InvokeAsync(Item.Id)">@((MarkupString)BookmarkIcons.Svg("edit", 14)) Edit</button>
-                <button class="vd-btn" @onclick="() => DoAsync(() => State.ToggleFavoriteAsync(Item.Id))">@((MarkupString)BookmarkIcons.Svg("star", 14)) @(Item.Favorite ? "Unfavorite" : "Favorite")</button>
-                <button class="vd-btn" @onclick="() => DoAsync(() => State.TogglePinAsync(Item.Id))">@((MarkupString)BookmarkIcons.Svg("pin", 14)) @(Item.Pinned ? "Unpin" : "Pin")</button>
+                <button class="vd-btn" @onclick="() => OnEdit.InvokeAsync(Item.Id)">@((MarkupString)BookmarkIcons.Svg("edit", 14)) @L["com.edit"]</button>
+                <button class="vd-btn" @onclick="() => DoAsync(() => State.ToggleFavoriteAsync(Item.Id))">@((MarkupString)BookmarkIcons.Svg("star", 14)) @(Item.Favorite ? L["bmk.unfav"] : L["bmk.fav"])</button>
+                <button class="vd-btn" @onclick="() => DoAsync(() => State.TogglePinAsync(Item.Id))">@((MarkupString)BookmarkIcons.Svg("pin", 14)) @(Item.Pinned ? L["bmk.unpin"] : L["bmk.pin"])</button>
                 @if (Item.Deleted)
                 {
-                    <button class="vd-btn" @onclick="() => DoAsync(() => State.RestoreItemAsync(Item.Id))">@((MarkupString)BookmarkIcons.Svg("archive", 14)) Restore</button>
-                    <button class="vd-btn dgr" @onclick="() => DoAsync(() => State.DeleteItemAsync(Item.Id, true), true)">@((MarkupString)BookmarkIcons.Svg("trash", 14)) Delete forever</button>
+                    <button class="vd-btn" @onclick="() => DoAsync(() => State.RestoreItemAsync(Item.Id))">@((MarkupString)BookmarkIcons.Svg("archive", 14)) @L["bmk.restore"]</button>
+                    <button class="vd-btn dgr" @onclick="() => DoAsync(() => State.DeleteItemAsync(Item.Id, true), true)">@((MarkupString)BookmarkIcons.Svg("trash", 14)) @L["bmk.deleteForever"]</button>
                 }
                 else
                 {
-                    <button class="vd-btn" @onclick="ToggleArchive">@((MarkupString)BookmarkIcons.Svg("archive", 14)) @(Item.Archived ? "Unarchive" : "Archive")</button>
-                    <button class="vd-btn dgr" @onclick="() => DoAsync(() => State.DeleteItemAsync(Item.Id, false), true)">@((MarkupString)BookmarkIcons.Svg("trash", 14)) Trash</button>
+                    <button class="vd-btn" @onclick="ToggleArchive">@((MarkupString)BookmarkIcons.Svg("archive", 14)) @(Item.Archived ? L["bmk.unarchive"] : L["bmk.archiveBtn"])</button>
+                    <button class="vd-btn dgr" @onclick="() => DoAsync(() => State.DeleteItemAsync(Item.Id, false), true)">@((MarkupString)BookmarkIcons.Svg("trash", 14)) @L["nav.trash"]</button>
                 }
             </div>
         </aside>
@@ -295,6 +297,18 @@
         "isbn" => "filetext",
         _ => "info",
     };
+
+    protected override void OnInitialized()
+    {
+        L.OnLanguageChanged += OnLang;
+    }
+
+    private void OnLang() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        L.OnLanguageChanged -= OnLang;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

@@ -44,7 +44,16 @@ public partial class MainPage : ContentPage
         Loaded -= OnPageLoaded;
         if (_warmupStarted) return;
         _warmupStarted = true;
+#if ANDROID
+        // Mobile only: skip splash preloading (triple hidden WebViews suspected in startup kill).
+        // Go straight to Tasks; other pages build lazily on first navigation.
+        SplashLayer.IsVisible = false;
+        ShowTasksPage();
+        await Task.CompletedTask;
+        return;
+#else
         await RunWarmupAsync();
+#endif
     }
 
     // ─── Blazor → native page switching (app sidebar nav buttons) ────────────

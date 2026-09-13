@@ -2146,6 +2146,7 @@
     private async Task ToggleTask(AppTask task){ await TaskState.ToggleTaskAsync(task); UpdateCounts(); }
     private async Task ArchiveSelected(){ if(_selectedTask==null) return; await TaskState.ArchiveTaskAsync(_selectedTask.Id); CloseDetails(); UpdateCounts(); }
     private async Task DeleteSelected(){ if(_selectedTask==null) return; await TaskState.DeleteTaskAsync(_selectedTask.Id); CloseDetails(); UpdateCounts(); }
+    private async Task DeleteSelectedSeries(){ if(_selectedTask==null) return; if(!await ConfirmSeriesDelete()) return; var id=_selectedTask.Id; await TaskState.DeleteSeriesAsync(id); CloseDetails(); UpdateCounts(); }
     private async Task DeleteBoardTask(string id){ await TaskState.DeleteTaskAsync(id); if(_selectedTask?.Id==id) CloseDetails(); UpdateCounts(); }
     private async Task CompleteAllVisible(){
         var tasks=TasksForDate(_currentDate).Where(t=>!t.IsDone).ToList();
@@ -2167,6 +2168,13 @@
     private void ContextEdit(){ if(_contextTaskId==null) return; var id=_contextTaskId; CloseContext(); OpenDetails(id); }
     private async Task ContextArchive(){ if(_contextTaskId==null) return; var id=_contextTaskId; CloseContext(); await TaskState.ArchiveTaskAsync(id); UpdateCounts(); }
     private async Task ContextDelete(){ if(_contextTaskId==null) return; var id=_contextTaskId; CloseContext(); await TaskState.DeleteTaskAsync(id); if(_selectedTask?.Id==id) CloseDetails(); UpdateCounts(); }
+    private async Task ContextDeleteSeries(){ if(_contextTaskId==null) return; var id=_contextTaskId; if(!await ConfirmSeriesDelete()) return; CloseContext(); await TaskState.DeleteSeriesAsync(id); if(_selectedTask?.Id==id) CloseDetails(); UpdateCounts(); }
+    private static bool IsRecurring(AppTask? t) => t!=null && ((!string.IsNullOrWhiteSpace(t.RecurrenceDays) && t.RecurrenceDays!="none") || !string.IsNullOrWhiteSpace(t.TemplateId) || t.IsRecurring);
+    private bool IsContextRecurring(){ if(_contextTaskId==null) return false; return IsRecurring(TaskState.Tasks.FirstOrDefault(t=>t.Id==_contextTaskId)); }
+    private async Task<bool> ConfirmSeriesDelete(){
+        try { return await JS.InvokeAsync<bool>("confirm", "حذف نهائي؟ سيتم حذف كل النسخ القادمة لهذه المهمة المتكررة، مع الاحتفاظ بالمنجز في الأرشيف."); }
+        catch { return true; }
+    }
 
     private string FormatDate(DateTime d) => d.ToString("dddd، d MMMM", new System.Globalization.CultureInfo("ar-EG"));
     private string FormatShortDate(DateTime? d) => d==null?"": d.Value.ToString("d MMM", new System.Globalization.CultureInfo("ar-EG"));

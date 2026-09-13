@@ -29,6 +29,7 @@ namespace Jamrah.Core.Interfaces
         Task UpdateTaskAsync(AppTask task);
         Task ToggleTaskAsync(AppTask task);
         Task DeleteTaskAsync(string id);
+        Task DeleteSeriesAsync(string id);
         Task MoveTaskAsync(string taskId, string newColumnId);
         Task CarryForwardTaskAsync(AppTask task);
     }

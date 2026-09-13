@@ -135,7 +135,8 @@ namespace Jamrah.Application.Services
                 var start = tplStart > monthStart ? tplStart : monthStart;
                 for (var d = start; d <= monthEnd; d = d.AddDays(1))
                 {
-                    bool has = Tasks.Any(x => x.ArchivedAt==null && x.TemplateId==tpl.TemplateId && x.DueDate?.Date==d);
+                    // يتضمن المؤرشف/المنجز لنفس اليوم حتى لا يعيد توليد نسخة بعد الإنجاز أو الحذف
+                    bool has = Tasks.Any(x => x.TemplateId==tpl.TemplateId && x.DueDate?.Date==d);
                     if (has) continue;
                     var inst = new AppTask {
                         Id = Guid.NewGuid().ToString(),
@@ -158,6 +159,7 @@ namespace Jamrah.Application.Services
                         CompletedAt = null
                     };
                     await _repository.SaveTaskAsync(inst);
+                    Tasks.Add(inst);
                     changed = true;
                 }
             }
@@ -171,7 +173,7 @@ namespace Jamrah.Application.Services
                 {
                     if (d.DayOfWeek != tplDate.DayOfWeek) continue;
                     if (d < tplDate) continue;
-                    bool has = Tasks.Any(x => x.ArchivedAt==null && x.TemplateId==tpl.TemplateId && x.DueDate?.Date==d);
+                    bool has = Tasks.Any(x => x.TemplateId==tpl.TemplateId && x.DueDate?.Date==d);
                     if (has) continue;
                     var inst = new AppTask {
                         Id = Guid.NewGuid().ToString(),
@@ -192,6 +194,7 @@ namespace Jamrah.Application.Services
                         UpdatedAt = DateTime.UtcNow
                     };
                     await _repository.SaveTaskAsync(inst);
+                    Tasks.Add(inst);
                     changed = true;
                 }
             }
@@ -205,7 +208,7 @@ namespace Jamrah.Application.Services
                 var targetDay = Math.Min(tplDate.Day, DateTime.DaysInMonth(now.Year, now.Month));
                 var d = new DateTime(now.Year, now.Month, targetDay);
                 if (d < tplDate) continue;
-                bool has = Tasks.Any(x => x.ArchivedAt==null && x.TemplateId==tpl.TemplateId && x.DueDate?.Date==d);
+                bool has = Tasks.Any(x => x.TemplateId==tpl.TemplateId && x.DueDate?.Date==d);
                 if (has) continue;
                 var inst = new AppTask {
                     Id = Guid.NewGuid().ToString(),
@@ -226,6 +229,7 @@ namespace Jamrah.Application.Services
                     UpdatedAt = DateTime.UtcNow
                 };
                 await _repository.SaveTaskAsync(inst);
+                Tasks.Add(inst);
                 changed = true;
             }
 
@@ -354,6 +358,23 @@ namespace Jamrah.Application.Services
             {
                 // حذف من داخل الأرشيف → حذف نهائي
                 await _repository.DeleteTaskAsync(id);
+            }
+            await RefreshDataAsync();
+        }
+
+        public async Task DeleteSeriesAsync(string id)
+        {
+            var task = Tasks.FirstOrDefault(t => t.Id == id);
+            if (task == null) return;
+            // سلسلة = نفس TemplateId (أو نفس Id لو هو القالب نفسه)
+            var templateId = !string.IsNullOrWhiteSpace(task.TemplateId) ? task.TemplateId : task.Id;
+            var activeSeries = Tasks
+                .Where(t => t.ArchivedAt == null && (t.TemplateId == templateId || t.Id == templateId))
+                .ToList();
+            // حذف نهائي للنشط فقط — المنجز/المؤرشف القديم يفضل كما هو
+            foreach (var s in activeSeries)
+            {
+                await _repository.DeleteTaskAsync(s.Id);
             }
             await RefreshDataAsync();
         }

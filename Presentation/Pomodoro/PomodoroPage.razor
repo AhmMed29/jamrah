@@ -282,7 +282,7 @@
     body { background:var(--bg); color:var(--text); height:100vh; overflow:hidden; font-size:13px; }
 
 
-    .app-container { display:flex; height:100vh; gap:16px; padding:16px; background:var(--bg); }
+    .app-container { display:flex; height:100vh; min-height:0; overflow:hidden; gap:16px; padding:16px; background:var(--bg); }
 
     .left-panel { width:360px; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; overflow-y:auto; flex-shrink:0; scrollbar-width:thin; -ms-overflow-style:auto; min-height:0; }
     .pomo-controls, .pomo-extra { display:flex; flex-direction:column; gap:12px; min-width:0; }
@@ -323,8 +323,8 @@
     .prayer-table{ width:100%; border-collapse:collapse; font-size:11px; } .prayer-table td,.prayer-table th{ border:1px solid var(--border); padding:6px; text-align:center; }
     .prayer-table th{ background:var(--card); font-weight:700; } .prayer-table .next-prayer td{ background:var(--text); color:#fff; } .prayer-table tr:hover td:not(.next-prayer td){ background:var(--card2); }
 
-    .right-panel{ flex:1; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-md); display:flex; flex-direction:column; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; min-height:0; }
-    .right-panel::-webkit-scrollbar{ display:none; width:0; height:0; } .right-panel::-webkit-scrollbar-thumb{ background:transparent; }
+    .right-panel{ flex:1; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-md); display:flex; flex-direction:column; overflow-y:auto; scrollbar-width:thin; -ms-overflow-style:auto; min-height:0; }
+    .right-panel::-webkit-scrollbar{ display:block; width:6px; height:6px; } .right-panel::-webkit-scrollbar-thumb{ background:var(--border2); border-radius:99px; }
 
     /* ===== أزرار العرض ===== */
     .view-modes{ display:flex; gap:4px; padding:10px 12px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--card); z-index:2; border-radius:16px 16px 0 0; }

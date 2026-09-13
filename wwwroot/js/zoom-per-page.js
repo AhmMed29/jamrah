@@ -1,7 +1,7 @@
 window.jamrahZoom = (function(){
     let currentPage = null;
     let currentZoom = 1;
-    const pageDefaults = { tasks: 1.5, pomodoro: 1.7 };
+    const pageDefaults = { tasks: 1.25, pomodoro: 1.25 };
     function defaultFor(pageKey){ return pageDefaults[pageKey] || 1; }
     function apply(z){
         currentZoom = Math.max(0.5, Math.min(2.5, z));
@@ -13,8 +13,7 @@ window.jamrahZoom = (function(){
     return {
         init: function(pageKey, zoom){
             currentPage = pageKey;
-            // TEMP-1.7: fixed zoom until pill issue resolved (revert to: zoom || defaultFor(pageKey))
-            currentZoom = 1.7;
+            currentZoom = zoom || defaultFor(pageKey);
             function doApply(){
                 try { document.documentElement.style.zoom = currentZoom; } catch(e){}
                 try { document.documentElement.style.setProperty('--z', currentZoom); } catch(e){}

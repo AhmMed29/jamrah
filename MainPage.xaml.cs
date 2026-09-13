@@ -426,8 +426,7 @@ public partial class MainPage : ContentPage
             {
                 try
                 {
-                    // TEMP-1.7: fixed zoom until pill issue resolved (revert to: await _settingsRepository.GetZoomAsync(pageKey))
-                    var z = 1.7;
+                    var z = await _settingsRepository.GetZoomAsync(pageKey);
                     _pinnedZooms[pageKey] = z;
                     // DIAG-TEMP: remove after diagnosis
                     System.Diagnostics.Debug.WriteLine($"[ZOOM-DIAG] ApplyZoom {pageKey} z={z}");
@@ -455,7 +454,9 @@ public partial class MainPage : ContentPage
                     if (!doc.RootElement.TryGetProperty("type", out var t) || t.GetString() != "zoom") return;
                     if (!doc.RootElement.TryGetProperty("page", out var p) || p.GetString() != pageKey) return;
                     if (!doc.RootElement.TryGetProperty("zoom", out var z)) return;
-                    UpdatePillFromMessage(pageKey, z.GetDouble());
+                    var zoomVal = z.GetDouble();
+                    UpdatePillFromMessage(pageKey, zoomVal);
+                    _ = _settingsRepository.SetZoomAsync(pageKey, zoomVal);
                 }
                 catch { }
             };
@@ -587,17 +588,22 @@ public partial class MainPage : ContentPage
 
     private async Task OnPillZoomDeltaAsync(double delta)
     {
-        if (_pillPageKey == null) return;
+        var pageKey = _pillPageKey;
+        if (pageKey == null) return;
         var target = Math.Clamp(_pillZoom + delta, 0.5, 2.5);
+        _pillZoom = target;
+        _pinnedZooms[pageKey] = target;
+        UpdatePinVisual();
         PokePill();
         var t = target.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var js = $"if(window.jamrahZoom) window.jamrahZoom.set({t}); else document.documentElement.style.zoom='{t}';";
 #if WINDOWS
-        if (WebViewFor(_pillPageKey)?.Handler?.PlatformView is WebView2 platformView && platformView.CoreWebView2 != null)
+        if (WebViewFor(pageKey)?.Handler?.PlatformView is WebView2 platformView && platformView.CoreWebView2 != null)
             await platformView.CoreWebView2.ExecuteScriptAsync(js);
 #else
         await Task.CompletedTask;
 #endif
+        try { await _settingsRepository.SetZoomAsync(pageKey, target); } catch { }
     }
 
     private async Task OnPinClickedAsync()

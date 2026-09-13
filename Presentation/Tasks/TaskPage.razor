@@ -339,7 +339,9 @@
 
         .app {
             display: flex;
-            min-height: 100vh;
+            height: 100%;
+            min-height: 0;
+            overflow: hidden;
         }
 
                 .archive-toggles{
@@ -368,6 +370,10 @@
             flex: 1;
             width: 100%;
             min-width: 0;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
 
             transition: .2s ease;
         }

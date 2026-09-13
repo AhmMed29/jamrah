@@ -5,13 +5,13 @@
     --bg:#f7f6f3; --surface:#fff; --ink:#181715; --ink2:#59554e; --ink3:#a5a199;
     --line:#e9e6e0; --line2:#d8d4cb; --hover:#f1efe9;
     --sans:'Tajawal','Segoe UI',system-ui,sans-serif;
-    display:grid;grid-template-columns:auto 1fr;height:100vh;overflow:hidden;background:var(--bg);
+    display:grid;grid-template-columns:auto 1fr;grid-template-rows:1fr;overflow:hidden;background:var(--bg);
     /* FIX: pin the shell to the viewport so the document itself can never scroll
        (root zoom inflates vh boxes → body scroll moved both panels together).
        Panels keep their own independent scroll. */
     position:fixed;inset:0;
 }
-.page-shell-frame{min-width:0;height:100%;overflow:hidden}
+.page-shell-frame{min-width:0;min-height:0;height:100%;overflow:hidden}
 
 /* Reset + base — scoped to the sidebar only so page styles stay untouched */
 .page-shell .app-sb,.page-shell .app-sb *{margin:0;padding:0;box-sizing:border-box}

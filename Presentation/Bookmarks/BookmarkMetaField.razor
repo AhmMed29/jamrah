@@ -1,0 +1,66 @@
+@if (Field.Type == "longtext")
+{
+    <textarea value="@Value" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"></textarea>
+}
+else if (Field.Type == "number")
+{
+    <input type="number" step="any" value="@Value" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" />
+}
+else if (Field.Type == "url")
+{
+    <input type="url" value="@Value" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" placeholder="https://…" />
+}
+else if (Field.Type == "date")
+{
+    <input type="date" value="@Value" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" />
+}
+else if (Field.Type == "select")
+{
+    <select value="@Value" @onchange="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)">
+        <option value=""></option>
+        @foreach (var o in Field.Opts ?? Array.Empty<string>()) { <option value="@o">@o</option> }
+    </select>
+}
+else if (Field.Type == "rating")
+{
+    <div class="rate-w"><input type="number" min="0" max="10" step="0.1" value="@Value" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" placeholder="e.g. 8.5" /></div>
+}
+else if (Field.Type == "progress")
+{
+    <div class="prog-w">
+        <input type="range" min="0" max="100" value="@(string.IsNullOrEmpty(Value) ? "0" : Value)" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" /><b>@(string.IsNullOrEmpty(Value) ? "0" : Value)%</b>
+    </div>
+}
+else if (Field.Type == "boolean")
+{
+    <label class="ck"><input type="checkbox" checked="@(Value == "true" || Value == "True")" @onchange="e => ValueChanged.InvokeAsync(((bool)(e.Value ?? false)).ToString())" /> @Field.Label</label>
+}
+else if (Field.Type == "color")
+{
+    <input type="color" value="@(string.IsNullOrEmpty(Value) ? "#cccccc" : Value)" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" style="height:36px;padding:3px" />
+}
+else if (Field.Type == "image")
+{
+    <div class="upl">
+        @if (!string.IsNullOrEmpty(Value) && (Value.StartsWith("http") || Value.StartsWith("data:"))) { <img class="imgpv" src="@Value" alt="" /> }
+        <input type="url" value="@(Value.StartsWith("data:") ? "" : Value)" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" placeholder="https://…" style="flex:1;min-width:140px" />
+        <span class="hint" style="margin:0">paste a URL</span>
+    </div>
+}
+else if (Field.Type == "file")
+{
+    <div class="upl">
+        <input type="text" value="@Value" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" placeholder="file reference…" style="flex:1;min-width:140px" />
+        <span class="hint" style="margin:0">stored as a reference</span>
+    </div>
+}
+else
+{
+    <input type="text" value="@Value" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" />
+}
+
+@code {
+    [Parameter] public BookmarkFieldDef Field { get; set; } = null!;
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+}

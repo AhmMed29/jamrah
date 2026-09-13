@@ -4,6 +4,7 @@
 @inject Jamrah.Application.Services.PrayerTimesService PrayerService
 @inject Jamrah.Application.Services.PomodoroSoundService Sound
 @inject IJSRuntime JS
+@inject IAppNavService Nav
 
 <div class="app-container" dir="rtl" style="flex-direction:row-reverse;">
 
@@ -21,6 +22,13 @@
     </div>
 
     <div class="left-panel">
+        <div class="pomo-controls">
+        <div class="today-card">
+            <div class="today-card-date">@_currentDateStr</div>
+            <div class="today-card-time">@_currentTimeStr</div>
+            <div class="today-card-sub">@_currentSubStr</div>
+        </div>
+
         <div class="timer-box @(_currentSession != null ? "has-session" : "")" @onclick="OnTimerBoxClick">
             <div class="timer-adjust timer-adjust--left">
                 <button class="adj-btn adj-btn--large" @onclick:stopPropagation="true" @onclick="() => AdjustPlannedMinutes(-5)" title="-5 دقائق">−5</button>
@@ -67,7 +75,9 @@
             <div class="info-row"><span>وقت النهاية</span><span>@FinalTimeText</span></div>
             <div class="info-row"><span>المدة</span><span>@DurationText</span></div>
         </div>
+        </div>
 
+        <div class="pomo-extra">
         <button class="dur-btn" style="width:100%; margin-top:2px;" @onclick="() => _soundModalOpen = true">اعدادات الصوت</button>
 
         @if (_soundModalOpen)
@@ -108,6 +118,7 @@
                 تغيير المنطقة
             </button>
 
+        </div>
         </div>
     </div></div>
 
@@ -268,13 +279,20 @@
     *{ font-family:'Tajawal',sans-serif !important; }
     :root { --bg:#FAFAF9; --card:#FFFFFF; --card2:#F5F5F4; --border:#E7E5E4; --border2:#D6D3D1; --text:#1C1917; --muted:#78716C; --gray-tag:#A8A29E; --accent:#FF6B35; --shadow-sm:0 1px 2px rgba(0,0,0,.04); --shadow-md:0 1px 3px rgba(0,0,0,.05),0 6px 16px rgba(0,0,0,.05); }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background:var(--bg); color:var(--text); height:100vh; overflow:hidden; font-size:13px; }
+    body { background:var(--bg); color:var(--text); height:100%; overflow:hidden; font-size:13px; }
 
 
-    .app-container { display:flex; height:100vh; gap:16px; padding:16px; background:var(--bg); }
+    .app-container { display:flex; height:100%; min-height:0; overflow:hidden; gap:16px; padding:16px; background:var(--bg); }
 
-    .left-panel { width:360px; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; overflow-y:auto; flex-shrink:0; scrollbar-width:none; -ms-overflow-style:none; min-height:0; }
-    .left-panel::-webkit-scrollbar { display:none; width:0; height:0; } .left-panel::-webkit-scrollbar-thumb{ background:transparent; }
+    .left-panel { width:360px; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; flex-shrink:0; scrollbar-width:none; -ms-overflow-style:none; min-height:0; }
+    .pomo-controls, .pomo-extra { display:flex; flex-direction:column; gap:12px; min-width:0; }
+
+    .today-card { background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:14px 12px; }
+    .today-card-label { font-size:10px; font-weight:700; color:var(--muted); letter-spacing:.04em; margin-bottom:6px; }
+    .today-card-date { font-size:13px; font-weight:700; color:var(--text); line-height:1.4; margin-bottom:6px; }
+    .today-card-time { font-size:22px; font-weight:800; color:var(--text); line-height:1; letter-spacing:.02em; direction:ltr; text-align:right; }
+    .today-card-sub { margin-top:6px; font-size:11px; color:var(--muted); }
+    .left-panel::-webkit-scrollbar { display:none; width:0; height:0; } .left-panel::-webkit-scrollbar-thumb{ background:transparent; border-radius:99px; }
 
     .timer-box { background:var(--card2); border:1px solid var(--border); border-radius:14px; padding:16px; text-align:center; cursor:pointer; position:relative; display:flex; align-items:center; justify-content:center; gap:12px; }
     .timer-box:hover{ border-color:var(--border2); }
@@ -305,8 +323,8 @@
     .prayer-table{ width:100%; border-collapse:collapse; font-size:11px; } .prayer-table td,.prayer-table th{ border:1px solid var(--border); padding:6px; text-align:center; }
     .prayer-table th{ background:var(--card); font-weight:700; } .prayer-table .next-prayer td{ background:var(--text); color:#fff; } .prayer-table tr:hover td:not(.next-prayer td){ background:var(--card2); }
 
-    .right-panel{ flex:1; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-md); display:flex; flex-direction:column; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; min-height:0; }
-    .right-panel::-webkit-scrollbar{ display:none; width:0; height:0; } .right-panel::-webkit-scrollbar-thumb{ background:transparent; }
+    .right-panel{ flex:1; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-md); display:flex; flex-direction:column; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; scrollbar-width:none; -ms-overflow-style:none; min-height:0; }
+    .right-panel::-webkit-scrollbar{ display:none; width:0; height:0; } .right-panel::-webkit-scrollbar-thumb{ background:transparent; border-radius:99px; }
 
     /* ===== أزرار العرض ===== */
     .view-modes{ display:flex; gap:4px; padding:10px 12px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--card); z-index:2; border-radius:16px 16px 0 0; }
@@ -570,15 +588,65 @@
             await PrayerService.InitAsync();
             _todayPrayers = await PrayerService.GetTodayAsync();
             UpdateNextPrayer();
-            _prayerTimer = new System.Threading.Timer(_ =>
-                    InvokeAsync(() => { UpdateNextPrayer(); StateHasChanged(); }),
-                null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+            Nav.CurrentChanged += OnVisibilityChanged;
             await LoadFromDbAsync();
             RebuildToggles();
+            if (Nav.CurrentPage == "pomodoro")
+                StartUiTimers();
         }catch(Exception ex){
             Console.Error.WriteLine($"Pomodoro INIT FAIL: {ex}");
             await JS.InvokeVoidAsync("eval", $"document.getElementById('blazor-error-msg').textContent='{ex.Message.Replace("'","\\'")}';document.getElementById('blazor-error-ui').style.display='block'");
         }
+    }
+
+    // ─── Clock (moved from Tasks sidebar today-card) ───
+
+    private System.Threading.Timer? _clockTimer;
+    private string _currentDateStr = "";
+    private string _currentTimeStr = "";
+    private string _currentSubStr = "";
+
+    // ─── UI timers pause while this page is hidden (session timer + sounds untouched) ───
+
+    private void OnVisibilityChanged(string page)
+    {
+        if (page == "pomodoro") StartUiTimers();
+        else StopUiTimers();
+    }
+
+    private void StartUiTimers()
+    {
+        if (_prayerTimer == null)
+            _prayerTimer = new System.Threading.Timer(_ =>
+                    InvokeAsync(() => { UpdateNextPrayer(); StateHasChanged(); }),
+                null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+        StartClock();
+    }
+
+    private void StopUiTimers()
+    {
+        _prayerTimer?.Dispose();
+        _prayerTimer = null;
+        _clockTimer?.Dispose();
+        _clockTimer = null;
+    }
+
+    private void StartClock()
+    {
+        if (_clockTimer != null) return;
+        UpdateClock();
+        _clockTimer = new System.Threading.Timer(_ => {
+            InvokeAsync(() => { UpdateClock(); StateHasChanged(); });
+        }, null, 0, 1000);
+    }
+
+    private void UpdateClock()
+    {
+        var now = DateTime.Now;
+        var ar = new System.Globalization.CultureInfo("ar-EG");
+        _currentDateStr = now.ToString("dddd، d MMMM yyyy", ar);
+        _currentTimeStr = now.ToString("hh:mm:ss tt", ar);
+        _currentSubStr = now.ToString("ddd", ar) + " • " + now.ToString("dd-MM-yyyy");
     }
 
     private void UpdateNextPrayer()
@@ -1152,10 +1220,12 @@
 
     public void Dispose()
     {
+        Nav.CurrentChanged -= OnVisibilityChanged;
         _timer.Tick -= OnTimerEvent;
         _timer.Completed -= OnTimerEvent;
         _timer.Dispose();
         _prayerTimer?.Dispose();
+        _clockTimer?.Dispose();
     }
 }
 

@@ -1,0 +1,22 @@
+@if (IsLibraryEmpty)
+{
+    <div class="empty"><h3>Your library is empty.</h3><p>Paste any link in “Add item” and press Fetch — the sample library is already loaded below.</p>
+        <button class="btn pri" @onclick="() => OnAdd.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("plus", 14)) Add your first item</button></div>
+}
+else if (!string.IsNullOrEmpty(Search))
+{
+    <div class="empty"><h3>No results.</h3><p>Nothing matches “@Search”. Try different words or operators like <span class="mono">type:</span> <span class="mono">tag:</span></p>
+        <button class="btn" @onclick="() => OnClearSearch.InvokeAsync()">Clear search</button></div>
+}
+else
+{
+    <div class="empty"><h3>Nothing here yet.</h3><p>Try different filters, or add something new.</p>
+        <button class="btn pri" @onclick="() => OnAdd.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("plus", 14)) Add item</button></div>
+}
+
+@code {
+    [Parameter] public bool IsLibraryEmpty { get; set; }
+    [Parameter] public string Search { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnAdd { get; set; }
+    [Parameter] public EventCallback OnClearSearch { get; set; }
+}

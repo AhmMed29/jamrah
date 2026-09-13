@@ -1,0 +1,268 @@
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@inject BookmarkStateService State
+
+@if (Item != null)
+{
+    var g = BookmarkCardData.From(Item);
+    var tags = BookmarkQuery.TagsOf(Item);
+    var folders = BookmarkQuery.FoldersOf(Item);
+    var cols = BookmarkQuery.CollectionsOf(Item);
+    var rels = BookmarkQuery.RelationsOf(Item);
+    var embed = BookmarkTemplates.EmbedHtml(Item.Url, g.Domain);
+
+    <div class="dwrap open">
+        <div class="dscrim" @onclick="() => OnClose.InvokeAsync()"></div>
+        <aside class="drawer">
+            <div class="d-h">
+                @((MarkupString)BookmarkIcons.Svg(g.Icon, 16))
+                <span class="st">@g.Type@(string.IsNullOrEmpty(g.Site) ? "" : " · " + g.Site)</span>
+                <button class="d-x" @onclick="() => OnClose.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("x", 17))</button>
+            </div>
+            <div class="d-b">
+                @if (embed != null)
+                {
+                    <div class="d-embed">@((MarkupString)embed)</div>
+                }
+                else if (Item.Type == "video")
+                {
+                    <div class="d-media">
+                        @if (!string.IsNullOrEmpty(g.Img)) { <img src="@g.Img" alt="" /> }
+                        else { <div class="d-mfb">@((MarkupString)BookmarkIcons.Svg("play", 34))</div> }
+                        @if (!string.IsNullOrEmpty(Item.Url))
+                        {
+                            <button class="dplay" @onclick="OpenUrl" title="Open video">@((MarkupString)BookmarkIcons.Svg("play", 18))</button>
+                        }
+                        @if (!string.IsNullOrEmpty(g.Dur)) { <span class="ls-d">@g.Dur</span> }
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(g.Img))
+                {
+                    <div class="d-img"><img src="@g.Img" alt="" /></div>
+                }
+
+                <div class="d-t">@Item.Title</div>
+                <div class="d-k">
+                    @g.MetaLine @((MarkupString)BookmarkTemplates.RatingH(g))
+                    @if (!string.IsNullOrEmpty(g.Status)) { @((MarkupString)BookmarkTemplates.StChip(g.Status)) }
+                </div>
+                @if (!string.IsNullOrEmpty(Item.Description)) { <div class="d-desc">@Item.Description</div> }
+
+                <div class="d-sec"><h4>Metadata</h4><div class="mgrid">
+                    @foreach (var fd in BookmarkTypeSchema.For(Item.Type))
+                    {
+                        var val = BookmarkTemplates.MetaValue(Item.Type, fd.Key, g.Meta[fd.Key]);
+                        @if (val != null)
+                        {
+                            <div class="mrow"><span class="mk">@fd.Label</span><span class="mv">@((MarkupString)val)</span></div>
+                        }
+                    }
+                    <div class="mrow"><span class="mk">Type</span><span class="mv"><span class="st">@((MarkupString)BookmarkIcons.Svg(g.Icon, 13)) @g.Type</span></span></div>
+                    @if (!string.IsNullOrEmpty(Item.Url))
+                    {
+                        <div class="mrow"><span class="mk">Link</span><span class="mv"><a class="dlink" href="@Item.Url" @onclick:preventDefault="true" @onclick="OpenUrl">@Item.Url</a></span></div>
+                    }
+                    <div class="mrow"><span class="mk">Added</span><span class="mv">@BookmarkCardData.FmtDate(Item.CreatedAt)</span></div>
+                    <div class="mrow"><span class="mk">Updated</span><span class="mv">@BookmarkCardData.FmtAgo(Item.UpdatedAt)</span></div>
+                </div></div>
+
+                <div class="d-sec"><h4>Tags &amp; organization</h4>
+                    @((MarkupString)BookmarkTemplates.Chips(tags, 99, State.Tags))
+                    <div class="tags" style="margin-top:10px">
+                        @foreach (var fid in folders)
+                        {
+                            var fd = State.Folders.FirstOrDefault(x => x.Id == fid);
+                            @if (fd != null)
+                            {
+                                <button class="chip" @onclick='() => OnNavigate.InvokeAsync(("folder", fid, null))'>
+                                    @((MarkupString)BookmarkIcons.FdIcon(fd.Icon, "folder")) @fd.Name
+                                </button>
+                            }
+                        }
+                        @foreach (var cid in cols)
+                        {
+                            var c = State.Collections.FirstOrDefault(x => x.Id == cid);
+                            @if (c != null)
+                            {
+                                <button class="chip" @onclick='() => OnNavigate.InvokeAsync(("collection", cid, null))'>
+                                    @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(c.Icon) ? (BookmarkQuery.ParseSmart(c.SmartJson) != null ? "spark" : "layers") : c.Icon, "layers")) @c.Name
+                                </button>
+                            }
+                        }
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:12px">
+                        <input value="@_newTag" @oninput="e => _newTag = e.Value?.ToString() ?? string.Empty" @onkeydown="TagKey"
+                               placeholder="Add a tag and press Enter…" style="flex:1;border:1px solid var(--line2);border-radius:8px;padding:7px 10px;outline:none;font-size:13px" />
+                    </div>
+                </div>
+
+                <div class="d-sec"><h4>Notes
+                    @if (!string.IsNullOrEmpty(Item.Notes) && !_noteEdit) { <span class="hact" @onclick="StartNoteEdit">edit</span> }
+                </h4>
+                    @if (_noteEdit)
+                    {
+                        <div class="notes-r">
+                            <textarea @bind="_noteText"></textarea>
+                            <div style="display:flex;gap:8px;margin-top:10px">
+                                <button class="btn sm pri" @onclick="SaveNote">Save note</button>
+                                <button class="btn sm" @onclick="() => _noteEdit = false">Cancel</button>
+                            </div>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(Item.Notes))
+                    {
+                        <div class="notes-r">@((MarkupString)BookmarkTemplates.Md(Item.Notes))</div>
+                    }
+                    else
+                    {
+                        <p style="color:var(--ink3);font-size:13px">No notes yet. <span class="hact" style="color:var(--ink2);cursor:pointer" @onclick="StartNoteEdit">Write one →</span></p>
+                    }
+                </div>
+
+                <div class="d-sec"><h4>Related items</h4>
+                    @foreach (var rid in rels)
+                    {
+                        var r = State.Items.FirstOrDefault(x => x.Id == rid);
+                        @if (r != null)
+                        {
+                            var rg = BookmarkCardData.From(r);
+                            <div class="rel" @onclick="() => OnOpen.InvokeAsync(r.Id)">
+                                @if (!string.IsNullOrEmpty(rg.Img)) { <img src="@rg.Img" alt="" /> }
+                                else { <span class="ri">@((MarkupString)BookmarkIcons.Svg(rg.Icon, 14))</span> }
+                                <span style="min-width:0"><b>@r.Title</b><br /><span>@rg.Type</span></span>
+                                <span class="rm" @onclick:stopPropagation="true" @onclick="() => RemoveRelation(rid)">@((MarkupString)BookmarkIcons.Svg("x", 13))</span>
+                            </div>
+                        }
+                    }
+                    @if (rels.Count == 0)
+                    {
+                        <p style="color:var(--ink3);font-size:13px">Connect courses to their repos, books to their videos…</p>
+                    }
+                    <div style="display:flex;gap:8px;margin-top:10px">
+                        <select @bind="_relateId" style="flex:1;border:1px solid var(--line2);border-radius:8px;padding:7px 9px;outline:none">
+                            <option value="">Relate to…</option>
+                            @foreach (var it in State.Items.Where(i => !i.Deleted && i.Id != Item.Id).OrderBy(i => i.Title).Take(200))
+                            {
+                                <option value="@it.Id">@it.Title</option>
+                            }
+                        </select>
+                        <button class="btn sm" @onclick="AddRelation">+ Relate</button>
+                    </div>
+                </div>
+            </div>
+            <div class="d-f">
+                @if (!string.IsNullOrEmpty(Item.Url))
+                {
+                    <button class="btn pri" @onclick="OpenUrl">@((MarkupString)BookmarkIcons.Svg("external", 14)) Open</button>
+                }
+                <button class="btn" @onclick="() => OnEdit.InvokeAsync(Item.Id)">@((MarkupString)BookmarkIcons.Svg("edit", 14)) Edit</button>
+                <button class="btn" @onclick="() => DoAsync(() => State.ToggleFavoriteAsync(Item.Id))">@((MarkupString)BookmarkIcons.Svg("star", 14)) @(Item.Favorite ? "Unfavorite" : "Favorite")</button>
+                <button class="btn" @onclick="() => DoAsync(() => State.TogglePinAsync(Item.Id))">@((MarkupString)BookmarkIcons.Svg("pin", 14)) @(Item.Pinned ? "Unpin" : "Pin")</button>
+                @if (Item.Deleted)
+                {
+                    <button class="btn" @onclick="() => DoAsync(() => State.RestoreItemAsync(Item.Id))">@((MarkupString)BookmarkIcons.Svg("archive", 14)) Restore</button>
+                    <button class="btn dgr" @onclick="() => DoAsync(() => State.DeleteItemAsync(Item.Id, true), true)">@((MarkupString)BookmarkIcons.Svg("trash", 14)) Delete forever</button>
+                }
+                else
+                {
+                    <button class="btn" @onclick="ToggleArchive">@((MarkupString)BookmarkIcons.Svg("archive", 14)) @(Item.Archived ? "Unarchive" : "Archive")</button>
+                    <button class="btn dgr" @onclick="() => DoAsync(() => State.DeleteItemAsync(Item.Id, false), true)">@((MarkupString)BookmarkIcons.Svg("trash", 14)) Trash</button>
+                }
+            </div>
+        </aside>
+    </div>
+}
+
+@code {
+    [Parameter] public string? ItemId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<(string Ctx, string? Id, string? Tag)> OnNavigate { get; set; }
+    [Parameter] public EventCallback<string> OnEdit { get; set; }
+    [Parameter] public EventCallback<string> OnOpen { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private BookmarkItem? Item => string.IsNullOrEmpty(ItemId) ? null : State.Items.FirstOrDefault(i => i.Id == ItemId);
+    private bool _noteEdit;
+    private string _noteText = string.Empty;
+    private string _newTag = string.Empty;
+    private string _relateId = string.Empty;
+
+    private async Task DoAsync(Func<Task> op, bool close = false)
+    {
+        await op();
+        await OnChanged.InvokeAsync();
+        if (close) await OnClose.InvokeAsync();
+    }
+
+    private async Task ToggleArchive()
+    {
+        if (Item == null) return;
+        Item.Archived = !Item.Archived;
+        await State.SaveItemAsync(Item);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task OpenUrl()
+    {
+        if (Item == null || string.IsNullOrWhiteSpace(Item.Url)) return;
+        try { await Microsoft.Maui.ApplicationModel.Launcher.OpenAsync(Item.Url); } catch { }
+    }
+
+    private void StartNoteEdit()
+    {
+        _noteText = Item?.Notes ?? string.Empty;
+        _noteEdit = true;
+    }
+
+    private async Task SaveNote()
+    {
+        if (Item == null) return;
+        Item.Notes = _noteText;
+        _noteEdit = false;
+        await State.SaveItemAsync(Item);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task TagKey(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && Item != null && !string.IsNullOrWhiteSpace(_newTag))
+        {
+            var tags = BookmarkQuery.TagsOf(Item);
+            var t = _newTag.Trim();
+            if (!tags.Contains(t))
+            {
+                tags.Add(t);
+                Item.TagsJson = System.Text.Json.JsonSerializer.Serialize(tags);
+                if (!State.Tags.Any(x => x.Name == t))
+                    await State.SaveTagAsync(new BookmarkTag { Name = t });
+                await State.SaveItemAsync(Item);
+                await OnChanged.InvokeAsync();
+            }
+            _newTag = string.Empty;
+        }
+    }
+
+    private async Task RemoveRelation(string rid)
+    {
+        if (Item == null) return;
+        var rels = BookmarkQuery.RelationsOf(Item);
+        rels.Remove(rid);
+        Item.RelationsJson = System.Text.Json.JsonSerializer.Serialize(rels);
+        await State.SaveItemAsync(Item);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task AddRelation()
+    {
+        if (Item == null || string.IsNullOrEmpty(_relateId)) return;
+        var rels = BookmarkQuery.RelationsOf(Item);
+        if (!rels.Contains(_relateId))
+        {
+            rels.Add(_relateId);
+            Item.RelationsJson = System.Text.Json.JsonSerializer.Serialize(rels);
+            await State.SaveItemAsync(Item);
+            await OnChanged.InvokeAsync();
+        }
+        _relateId = string.Empty;
+    }
+}

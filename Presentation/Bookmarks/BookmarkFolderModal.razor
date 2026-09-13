@@ -1,0 +1,185 @@
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@inject BookmarkStateService State
+
+<div class="modal-wrap">
+    <div class="modal">
+        <div class="m-h">
+            <span class="m-t">@Title</span>
+            <button class="m-x" @onclick="() => OnClose.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("x", 16))</button>
+        </div>
+        <div class="m-b">
+            <div class="fld"><label>Name <i>*</i></label><input type="text" @bind="_name" placeholder="@(IsSmart ? "e.g. Backend essentials" : "e.g. Programming")" /></div>
+            <div class="fld"><label>Icon (emoji or icon name)</label>
+                <div class="icpick">
+                    <div class="icp-row">
+                        @foreach (var ic in IconPresets)
+                        {
+                            <button type="button" class="icp @(_icon == ic ? "on" : "")" @onclick="() => _icon = ic">
+                                @((MarkupString)BookmarkIcons.FdIcon(ic, "folder"))
+                            </button>
+                        }
+                    </div>
+                    <input @bind="_icon" placeholder="emoji or Svg name…" />
+                </div>
+            </div>
+            @if (Mode == "folder")
+            {
+                <div class="f2">
+                    <div class="fld"><label>Parent folder</label>
+                        <select @bind="_parentId">
+                            <option value="">— top level —</option>
+                            @foreach (var f in State.Folders.Where(f => f.Id != FolderId && !IsDescendant(f.Id, FolderId)))
+                            {
+                                <option value="@f.Id">@f.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="fld"><label>Collection</label>
+                        <select @bind="_collectionId">
+                            <option value="">— standalone —</option>
+                            @foreach (var c in State.Collections.Where(c => BookmarkQuery.ParseSmart(c.SmartJson) == null))
+                            {
+                                <option value="@c.Id">@c.Name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            }
+            @if (IsSmart)
+            {
+                <div class="fld"><label>Include types</label>
+                    <div class="tcheck">
+                        @foreach (var t in BookmarkQuery.Types.Keys)
+                        {
+                            <button type="button" class="chip @(_types.Contains(t) ? "on" : "")" @onclick="() => ToggleType(t)">@BookmarkQuery.TypeName(t)</button>
+                        }
+                    </div>
+                </div>
+                <div class="fld"><label>Must have all these tags (comma separated)</label>
+                    <input type="text" @bind="_tagsText" placeholder="backend, reference" />
+                </div>
+                <div class="fld"><label class="ck"><input type="checkbox" @bind="_favOnly" /> Favorites only</label></div>
+            }
+        </div>
+        <div class="m-f">
+            @if (IsEdit)
+            {
+                <button class="btn @(_confirmDelete ? "dgr" : "")" style="margin-right:auto" @onclick="Delete">
+                    @(_confirmDelete ? "Click again to confirm" : "Delete")
+                </button>
+            }
+            <button class="btn" @onclick="() => OnClose.InvokeAsync()">Cancel</button>
+            <button class="btn pri" @onclick="Save" disabled="@(string.IsNullOrWhiteSpace(_name))">Save</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Mode { get; set; } = "folder"; // folder | collection | smart
+    [Parameter] public string? FolderId { get; set; }
+    [Parameter] public string? CollectionId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<string> OnSaved { get; set; }
+
+    private string _name = string.Empty;
+    private string _icon = string.Empty;
+    private string _parentId = string.Empty;
+    private string _collectionId = string.Empty;
+    private List<string> _types = new();
+    private string _tagsText = string.Empty;
+    private bool _favOnly;
+    private bool _confirmDelete;
+
+    private static readonly string[] IconPresets = new[]
+        { "code", "layers", "folder", "globe", "📚", "🎬", "🚀", "📖", "📘", "💻", "👤", "star", "spark" };
+
+    private bool IsSmart => Mode == "smart" || (Mode == "collection" && CollectionId != null && BookmarkQuery.ParseSmart(State.Collections.FirstOrDefault(c => c.Id == CollectionId)?.SmartJson) != null);
+    private bool IsEdit => FolderId != null || CollectionId != null;
+    private string Title => Mode == "folder" ? (FolderId == null ? "New folder" : "Edit folder")
+        : IsSmart ? (CollectionId == null ? "New smart collection" : "Edit smart collection")
+        : (CollectionId == null ? "New collection" : "Edit collection");
+
+    protected override void OnInitialized()
+    {
+        if (FolderId != null)
+        {
+            var f = State.Folders.FirstOrDefault(x => x.Id == FolderId);
+            if (f != null) { _name = f.Name; _icon = f.Icon; _parentId = f.ParentId ?? string.Empty; _collectionId = f.CollectionId ?? string.Empty; }
+        }
+        else if (CollectionId != null)
+        {
+            var c = State.Collections.FirstOrDefault(x => x.Id == CollectionId);
+            if (c != null)
+            {
+                _name = c.Name; _icon = c.Icon;
+                var s = BookmarkQuery.ParseSmart(c.SmartJson);
+                if (s != null)
+                {
+                    _types = s["types"]?.AsArray().Select(x => x?.ToString() ?? string.Empty).Where(x => x != string.Empty).ToList() ?? new();
+                    _tagsText = string.Join(", ", s["tags"]?.AsArray().Select(x => x?.ToString() ?? string.Empty) ?? Enumerable.Empty<string>());
+                    _favOnly = s["favorite"]?.GetValue<bool>() ?? false;
+                }
+            }
+        }
+    }
+
+    private bool IsDescendant(string candidateId, string? ancestorId)
+    {
+        if (ancestorId == null || candidateId == ancestorId) return true;
+        var p = State.Folders.FirstOrDefault(x => x.Id == candidateId)?.ParentId;
+        var n = 0;
+        while (!string.IsNullOrEmpty(p) && n++ < 50)
+        {
+            if (p == ancestorId) return true;
+            p = State.Folders.FirstOrDefault(x => x.Id == p)?.ParentId;
+        }
+        return false;
+    }
+
+    private void ToggleType(string t)
+    {
+        if (!_types.Remove(t)) _types.Add(t);
+    }
+
+    private async Task Save()
+    {
+        if (Mode == "folder")
+        {
+            var f = FolderId != null
+                ? State.Folders.FirstOrDefault(x => x.Id == FolderId) ?? new BookmarkFolder { Id = FolderId }
+                : new BookmarkFolder();
+            f.Name = _name.Trim(); f.Icon = _icon.Trim();
+            f.ParentId = string.IsNullOrEmpty(_parentId) ? null : _parentId;
+            f.CollectionId = string.IsNullOrEmpty(_collectionId) ? null : _collectionId;
+            await State.SaveFolderAsync(f);
+        }
+        else
+        {
+            var c = CollectionId != null
+                ? State.Collections.FirstOrDefault(x => x.Id == CollectionId) ?? new BookmarkCollection { Id = CollectionId }
+                : new BookmarkCollection();
+            c.Name = _name.Trim(); c.Icon = _icon.Trim();
+            c.SmartJson = IsSmart
+                ? new System.Text.Json.Nodes.JsonObject
+                {
+                    ["types"] = new System.Text.Json.Nodes.JsonArray(_types.Select(t => System.Text.Json.Nodes.JsonValue.Create(t)).ToArray()),
+                    ["tags"] = new System.Text.Json.Nodes.JsonArray(_tagsText.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(t => System.Text.Json.Nodes.JsonValue.Create(t)).ToArray()),
+                    ["favorite"] = _favOnly,
+                }.ToJsonString()
+                : null;
+            await State.SaveCollectionAsync(c);
+        }
+        await OnSaved.InvokeAsync("Saved ✓");
+    }
+
+    private async Task Delete()
+    {
+        if (!_confirmDelete) { _confirmDelete = true; return; }
+        // NOTE: delete moves the container to the Archive page (soft flag);
+        // permanent removal happens from the Archive page itself.
+        if (FolderId != null) await State.ArchiveFolderAsync(FolderId);
+        else if (CollectionId != null) await State.ArchiveCollectionAsync(CollectionId);
+        await OnSaved.InvokeAsync("Moved to Archive");
+    }
+}

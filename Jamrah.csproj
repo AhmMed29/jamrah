@@ -32,7 +32,7 @@
 
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
 		<WindowsPackageType>None</WindowsPackageType>
-		<DefaultItemExcludes>$(DefaultItemExcludes);.worktrees\**</DefaultItemExcludes>
+		<DefaultItemExcludes>$(DefaultItemExcludes);.worktrees\**;ClipAgent\**</DefaultItemExcludes>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
@@ -44,11 +44,10 @@
 
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="assets\jamrah.svg" />
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" Color="#FAFAF9" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+		<MauiSplashScreen Include="Resources\AppIcon\appicon.svg" Color="#FAFAF9" BaseSize="128,128" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
@@ -69,5 +68,25 @@
 		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.10" />
 		<PackageReference Include="Markdig" Version="0.37.0" />
 	</ItemGroup>
+
+	<Target Name="BuildClipAgent" BeforeTargets="BeforeBuild" Condition="$([System.String]::Copy('$(TargetFramework)').Contains('windows')) And '$(DesignTimeBuild)' != 'true'">
+		<Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\ClipAgent\ClipAgent.csproj&quot; -c $(Configuration) --nologo -v:q" />
+	</Target>
+
+	<!-- Dev-loop helper (revert: delete this Target): kill the running ClipAgent before copy,
+	     otherwise the copy below fails with MSB3021/3027 file-lock errors on every build.
+	     The agent auto-restarts on next app launch. ContinueOnError covers "not running". -->
+	<Target Name="KillClipAgentBeforeCopy" BeforeTargets="CopyClipAgent" Condition="$([System.String]::Copy('$(TargetFramework)').Contains('windows'))">
+		<Exec Command="taskkill /F /IM ClipAgent.exe" ContinueOnError="true" />
+	</Target>
+
+	<Target Name="CopyClipAgent" AfterTargets="Build" Condition="$([System.String]::Copy('$(TargetFramework)').Contains('windows'))">
+		<ItemGroup>
+			<ClipAgentBin Include="ClipAgent\bin\$(Configuration)\net9.0-windows10.0.19041.0\ClipAgent.exe;ClipAgent\bin\$(Configuration)\net9.0-windows10.0.19041.0\ClipAgent.runtimeconfig.json;ClipAgent\bin\$(Configuration)\net9.0-windows10.0.19041.0\*.dll" />
+			<ClipAgentNative Include="ClipAgent\bin\$(Configuration)\net9.0-windows10.0.19041.0\runtimes\win-x64\native\*" />
+		</ItemGroup>
+		<Copy SourceFiles="@(ClipAgentBin)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(ClipAgentNative)" DestinationFolder="$(OutputPath)runtimes\win-x64\native\" SkipUnchangedFiles="true" />
+	</Target>
 
 </Project>

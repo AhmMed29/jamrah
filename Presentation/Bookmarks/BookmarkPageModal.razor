@@ -1,0 +1,143 @@
+@namespace Jamrah.Presentation.Bookmarks
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@inject BookmarkStateService State
+
+@* ADDITIVE (new): create/edit modal for a Page (name + icon).
+   Delete here = move to Archive (soft flag), restore happens in the Archive page. *@
+<div class="modal-wrap">
+    <div class="modal">
+        <div class="m-h">
+            <span class="m-t">@(PageId == null ? "New page" : "Edit page")</span>
+            <button class="m-x" @onclick="() => OnClose.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("x", 16))</button>
+        </div>
+        <div class="m-b">
+            <div class="fld"><label>Name <i>*</i></label><input type="text" @bind="_name" placeholder="e.g. Backend notes" /></div>
+            <div class="fld"><label>Icon (emoji or icon name)</label>
+                <div class="icpick">
+                    <div class="icp-row">
+                        @foreach (var ic in IconPresets)
+                        {
+                            <button type="button" class="icp @(_icon == ic ? "on" : "")" @onclick="() => _icon = ic">
+                                @((MarkupString)BookmarkIcons.FdIcon(ic, "note"))
+                            </button>
+                        }
+                    </div>
+                    <input @bind="_icon" placeholder="emoji or Svg name…" />
+                </div>
+            </div>
+            <div class="f2">
+                <div class="fld"><label>Collection</label>
+                    <select @bind="_collectionId">
+                        <option value="">— standalone —</option>
+                        @foreach (var c in State.Collections.Where(c => !c.IsArchived && BookmarkQuery.ParseSmart(c.SmartJson) == null))
+                        {
+                            <option value="@c.Id">@c.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="fld"><label>Folder</label>
+                    <select @bind="_folderId">
+                        <option value="">— none —</option>
+                        @foreach (var f in State.Folders.Where(f => !f.IsArchived))
+                        {
+                            <option value="@f.Id">@f.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="fld"><label>Parent page (nested under)</label>
+                <select @bind="_parentPageId">
+                    <option value="">— top level —</option>
+                    @foreach (var p in State.Pages.Where(p => !p.IsArchived && p.Id != PageId && !IsDescendant(p.Id, PageId)))
+                    {
+                        <option value="@p.Id">@p.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="m-f">
+            @if (PageId != null)
+            {
+                <button class="btn @(_confirmArchive ? "dgr" : "")" style="margin-right:auto" @onclick="Archive">
+                    @(_confirmArchive ? "Click again to confirm" : "Delete")
+                </button>
+            }
+            <button class="btn" @onclick="() => OnClose.InvokeAsync()">Cancel</button>
+            <button class="btn pri" @onclick="Save" disabled="@(string.IsNullOrWhiteSpace(_name))">Save</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? PageId { get; set; }
+    [Parameter] public string? CollectionId { get; set; }
+    [Parameter] public string? FolderId { get; set; }
+    [Parameter] public string? ParentPageId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<string> OnSaved { get; set; }
+
+    private string _name = string.Empty;
+    private string _icon = string.Empty;
+    private string _collectionId = string.Empty;
+    private string _folderId = string.Empty;
+    private string _parentPageId = string.Empty;
+    private bool _confirmArchive;
+
+    private static readonly string[] IconPresets = new[]
+        { "note", "bulb", "bookopen", "filetext", "layers", "folder", "globe", "📚", "📖", "💡", "🚀", "💻", "star", "spark" };
+
+    protected override void OnInitialized()
+    {
+        if (PageId != null)
+        {
+            var p = State.Pages.FirstOrDefault(x => x.Id == PageId);
+            if (p != null)
+            {
+                _name = p.Name; _icon = p.Icon;
+                _collectionId = p.CollectionId ?? string.Empty;
+                _folderId = p.FolderId ?? string.Empty;
+                _parentPageId = p.ParentPageId ?? string.Empty;
+            }
+        }
+        else
+        {
+            _collectionId = CollectionId ?? string.Empty;
+            _folderId = FolderId ?? string.Empty;
+            _parentPageId = ParentPageId ?? string.Empty;
+        }
+    }
+
+    private bool IsDescendant(string candidateId, string? ancestorId)
+    {
+        if (ancestorId == null || candidateId == ancestorId) return true;
+        var p = State.Pages.FirstOrDefault(x => x.Id == candidateId)?.ParentPageId;
+        var n = 0;
+        while (!string.IsNullOrEmpty(p) && n++ < 50)
+        {
+            if (p == ancestorId) return true;
+            p = State.Pages.FirstOrDefault(x => x.Id == p)?.ParentPageId;
+        }
+        return false;
+    }
+
+    private async Task Save()
+    {
+        var p = PageId != null
+            ? State.Pages.FirstOrDefault(x => x.Id == PageId) ?? new LibraryPage { Id = PageId }
+            : new LibraryPage();
+        p.Name = _name.Trim(); p.Icon = _icon.Trim();
+        p.CollectionId = string.IsNullOrEmpty(_collectionId) ? null : _collectionId;
+        p.FolderId = string.IsNullOrEmpty(_folderId) ? null : _folderId;
+        p.ParentPageId = string.IsNullOrEmpty(_parentPageId) ? null : _parentPageId;
+        await State.SavePageAsync(p);
+        await OnSaved.InvokeAsync("Saved ✓");
+    }
+
+    private async Task Archive()
+    {
+        if (!_confirmArchive) { _confirmArchive = true; return; }
+        if (PageId != null) await State.ArchivePageAsync(PageId);
+        await OnSaved.InvokeAsync("Moved to Archive");
+    }
+}

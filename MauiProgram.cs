@@ -1,7 +1,10 @@
 using Jamrah.Core.Interfaces;
 using Jamrah.Infrastructure.Repositories;
 using Jamrah.Application.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Maui.Controls.Hosting;
+using Microsoft.Maui.Hosting;
 
 namespace Jamrah
 {
@@ -26,6 +29,8 @@ namespace Jamrah
             builder.Services.AddSingleton<ITaskRepository, TaskRepository>();
             builder.Services.AddSingleton<ISettingsRepository, SettingsRepository>();
             builder.Services.AddSingleton<IPlanningRepository, PlanningRepository>();
+            builder.Services.AddSingleton<IBookmarkRepository, BookmarkRepository>();
+            builder.Services.AddSingleton<IClipAgentService, ClipAgentService>();
             
             // Register Calendar State & Layout Engine Services
             builder.Services.AddSingleton<CalendarStateService>();
@@ -33,6 +38,9 @@ namespace Jamrah
             builder.Services.AddSingleton<CalendarLayoutEngine>();
             builder.Services.AddSingleton<TaskStateService>();
             builder.Services.AddSingleton<ITaskStateService>(sp => sp.GetRequiredService<TaskStateService>());
+            builder.Services.AddSingleton<BookmarkStateService>();
+            builder.Services.AddSingleton<BookmarkEmbedService>();
+            builder.Services.AddSingleton<IAppNavService, AppNavService>();
 
             // Register MAUI Blazor Services
             builder.Services.AddMauiBlazorWebView();

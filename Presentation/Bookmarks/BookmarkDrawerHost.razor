@@ -1,0 +1,28 @@
+@namespace Jamrah.Presentation.Bookmarks
+@using Jamrah.Application.Services
+@inject BookmarkStateService State
+
+@if (IsVideoType(ItemId))
+{
+    <VideoDrawer ItemId="@ItemId" OnClose="OnClose" OnNavigate="OnNavigate" OnEdit="OnEdit" OnOpen="OnOpen" OnChanged="OnChanged" />
+}
+else
+{
+    <BookmarkDrawer ItemId="@ItemId" OnClose="OnClose" OnNavigate="OnNavigate" OnEdit="OnEdit" OnOpen="OnOpen" OnChanged="OnChanged" />
+}
+
+@code {
+    [Parameter] public string? ItemId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<(string Ctx, string? Id, string? Tag)> OnNavigate { get; set; }
+    [Parameter] public EventCallback<string> OnEdit { get; set; }
+    [Parameter] public EventCallback<string> OnOpen { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool IsVideoType(string? id)
+    {
+        if (string.IsNullOrEmpty(id)) return false;
+        var it = State.Items.FirstOrDefault(i => i.Id == id);
+        return it != null && it.Type == "video";
+    }
+}

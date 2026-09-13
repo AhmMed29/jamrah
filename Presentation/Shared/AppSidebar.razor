@@ -1,0 +1,263 @@
+@namespace Jamrah.Presentation.Shared
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@using Jamrah.Presentation.Bookmarks
+@inject BookmarkStateService State
+@inject IAppNavService Nav
+@implements IDisposable
+
+<aside class="app-sb">
+    <div class="sb-brand">
+        <span class="sb-mark">J</span><span class="sb-name">Jamrah</span>
+        <button class="sb-coll" @onclick="() => OnToggleSidebar.InvokeAsync()" title="Collapse sidebar">
+            @((MarkupString)BookmarkIcons.Svg("chevL", 14))
+        </button>
+    </div>
+
+    @foreach (var n in NavItems)
+    {
+        var id = n.Id;
+        <div class="sb-i sb-navi nav-@id @(Nav.CurrentPage == id ? "on" : "")" @onclick='() => Nav.Request(id)'>
+            @((MarkupString)NavIcon(n.Path))<span class="n">@n.Label</span>
+        </div>
+    }
+
+    @* Bookmarks — parent of the whole library group *@
+    <div class="sb-i sb-navi @(Nav.CurrentPage == "bookmarks" ? "on" : "") @(Nav.BookmarksExpanded ? "" : "closed")" @onclick="OnBookmarksClick">
+        @((MarkupString)NavIcon(BookmarkIconPath))<span class="n">Bookmarks</span>
+        <span class="chev">@((MarkupString)BookmarkIcons.Svg("chevD", 13))</span>
+    </div>
+    @if (Nav.BookmarksExpanded)
+    {
+        <div class="bm-nest">
+            <div class="sb-sec @(!LibOpen ? "closed" : "")" @onclick='() => LibOpen = !LibOpen'>
+                <span>Library</span><span class="chev">@((MarkupString)BookmarkIcons.Svg("chevD", 12))</span>
+            </div>
+            @if (LibOpen)
+            {
+                <div class="sb-i @(IsOn("home", null, null) ? "on" : "")" @onclick='() => NavTo("home", null, null)'>
+                    @((MarkupString)BookmarkIcons.FdIcon("home", "folder"))<span class="n">Home</span>
+                </div>
+                <div class="sb-i @(IsOn("all", null, null) ? "on" : "")" @onclick='() => NavTo("all", null, null)'>
+                    @((MarkupString)BookmarkIcons.FdIcon("grid", "folder"))<span class="n">All Items</span>
+                    <span class="c">@State.Items.Count(i => !i.Deleted)</span>
+                </div>
+                <div class="sb-i @(IsOn("quran", null, null) ? "on" : "")" @onclick='() => NavTo("quran", null, null)'>
+                    @((MarkupString)BookmarkIcons.FdIcon("moon", "folder"))<span class="n">Quran · الختمة</span>
+                </div>
+                <div class="sb-i @(IsOn("clipboard", null, null) ? "on" : "")" @onclick='() => NavTo("clipboard", null, null)'>
+                    @((MarkupString)BookmarkIcons.FdIcon("clipboard", "folder"))<span class="n">Clipboard</span>
+                    <span class="c">@State.Clips.Count</span>
+                </div>
+                <div class="sb-i @(IsOn("favorites", null, null) ? "on" : "")" @onclick='() => NavTo("favorites", null, null)'>
+                    @((MarkupString)BookmarkIcons.FdIcon("star", "folder"))<span class="n">Favorites</span>
+                    <span class="c">@State.Items.Count(i => !i.Deleted && !i.Archived && i.Favorite)</span>
+                </div>
+                <div class="sb-i @(IsOn("pinned", null, null) ? "on" : "")" @onclick='() => NavTo("pinned", null, null)'>
+                    @((MarkupString)BookmarkIcons.FdIcon("pin", "folder"))<span class="n">Pinned</span>
+                    <span class="c">@State.Items.Count(i => !i.Deleted && !i.Archived && i.Pinned)</span>
+                </div>
+                <div class="sb-i @(IsOn("recent", null, null) ? "on" : "")" @onclick='() => NavTo("recent", null, null)'>
+                    @((MarkupString)BookmarkIcons.FdIcon("clock", "folder"))<span class="n">Recent</span>
+                </div>
+            }
+
+            <div class="sb-sec @(!ColOpen ? "closed" : "")" @onclick="() => ColOpen = !ColOpen">
+                <span>Collections — contain folders</span>
+                @* ADDITIVE: + button to add a collection *@
+                <span class="sb-sec-plus" title="New collection" @onclick:stopPropagation="true" @onclick="() => OnNewCollection.InvokeAsync()">
+                    @((MarkupString)BookmarkIcons.Svg("plus", 13))
+                </span>
+                <span class="chev">@((MarkupString)BookmarkIcons.Svg("chevD", 12))</span>
+            </div>
+            @if (ColOpen)
+            {
+                @foreach (var c in State.Collections.Where(c => !c.IsArchived))
+                {
+                    var cid = c.Id;
+                    var cicon = string.IsNullOrEmpty(c.Icon) ? (BookmarkQuery.ParseSmart(c.SmartJson) != null ? "spark" : "layers") : c.Icon;
+                    <div class="sb-i has-dots has-pop @(IsOn("collection", cid, null) ? "on" : "")" @onclick='() => NavTo("collection", cid, null)'>
+                        @((MarkupString)BookmarkIcons.FdIcon(cicon, "folder"))<span class="n">@c.Name</span>
+                        @* ADDITIVE: + button opens a small box at the click position: new folder / new page *@
+                        <span class="sb-plus" title="Add folder or page" @onclick:stopPropagation="true" @onclick="() => TogglePop(cid)">
+                            @((MarkupString)BookmarkIcons.Svg("plus", 13))
+                        </span>
+                        <span class="dots" @onclick:stopPropagation="true" @onclick="() => OnCollectionMenu.InvokeAsync(cid)">
+                            @((MarkupString)BookmarkIcons.Svg("dots", 14))
+                        </span>
+                        <span class="c">@BookmarkQuery.CountCollection(c, State)</span>
+                        @if (_popColId == cid)
+                        {
+                            <div class="sb-pop" @onclick:stopPropagation="true">
+                                <button @onclick="() => AddFolderTo(cid)">
+                                    @((MarkupString)BookmarkIcons.Svg("folder", 14)) New folder
+                                </button>
+                                <button @onclick="() => AddPageTo(cid)">
+                                    @((MarkupString)BookmarkIcons.Svg("note", 14)) New page
+                                </button>
+                            </div>
+                        }
+                    </div>
+                    @foreach (var f in State.Folders.Where(f => !f.IsArchived && f.CollectionId == cid && string.IsNullOrEmpty(f.ParentId)))
+                    {
+                        <div class="sb-sub">
+                            <BookmarkFolderRow Folder="f" OnNavigate="Fwd" OnFolderMenu="OnFolderMenu" />
+                        </div>
+                    }
+                    @* ADDITIVE: top-level pages of this collection (each with + for nested pages) *@
+                    @foreach (var p in State.Pages.Where(p => !p.IsArchived && p.CollectionId == cid && string.IsNullOrEmpty(p.FolderId) && string.IsNullOrEmpty(p.ParentPageId)).OrderBy(p => p.SortOrder).ThenBy(p => p.Name))
+                    {
+                        <div class="sb-sub">
+                            <BookmarkPageRow Page="p" OnNavigate="Fwd" OnPageMenu="FwdPageMenu" OnNewSubPage="FwdNewSubPage" />
+                        </div>
+                    }
+                }
+                <div class="sb-add" @onclick="() => OnNewCollection.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("plus", 13)) New collection</div>
+                <div class="sb-add" @onclick="() => OnNewSmart.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("spark", 13)) New smart collection</div>
+            }
+
+            <div class="sb-sec @(!FoldOpen ? "closed" : "")" @onclick="() => FoldOpen = !FoldOpen">
+                <span>Standalone folders</span><span class="chev">@((MarkupString)BookmarkIcons.Svg("chevD", 12))</span>
+            </div>
+            @if (FoldOpen)
+            {
+                @foreach (var f in State.Folders.Where(f => !f.IsArchived && string.IsNullOrEmpty(f.CollectionId) && string.IsNullOrEmpty(f.ParentId)))
+                {
+                    <BookmarkFolderRow Folder="f" OnNavigate="Fwd" OnFolderMenu="OnFolderMenu" />
+                }
+                @* ADDITIVE: standalone top-level pages (no collection/folder/parent) *@
+                @foreach (var p in State.Pages.Where(p => !p.IsArchived && string.IsNullOrEmpty(p.CollectionId) && string.IsNullOrEmpty(p.FolderId) && string.IsNullOrEmpty(p.ParentPageId)).OrderBy(p => p.SortOrder).ThenBy(p => p.Name))
+                {
+                    <BookmarkPageRow Page="p" OnNavigate="Fwd" OnPageMenu="FwdPageMenu" OnNewSubPage="FwdNewSubPage" />
+                }
+                <div class="sb-add" @onclick="() => OnNewFolder.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("plus", 13)) New folder</div>
+            }
+
+            <div class="sb-sec @(!SysOpen ? "closed" : "")" @onclick="() => SysOpen = !SysOpen">
+                <span>System</span><span class="chev">@((MarkupString)BookmarkIcons.Svg("chevD", 12))</span>
+            </div>
+            @if (SysOpen)
+            {
+                <div class="sb-i @(IsOn("archive", null, null) ? "on" : "")" @onclick='() => NavTo("archive", null, null)'>
+                    @((MarkupString)BookmarkIcons.FdIcon("archive", "folder"))<span class="n">Archive</span>
+                    <span class="c">@State.Items.Count(i => i.Archived && !i.Deleted)</span>
+                </div>
+                <div class="sb-i @(IsOn("trash", null, null) ? "on" : "")" @onclick='() => NavTo("trash", null, null)'>
+                    @((MarkupString)BookmarkIcons.FdIcon("trash", "folder"))<span class="n">Trash</span>
+                    <span class="c">@State.Items.Count(i => i.Deleted)</span>
+                </div>
+                <div class="sb-i @(IsOn("tags", null, null) ? "on" : "")" @onclick='() => NavTo("tags", null, null)'>
+                    @((MarkupString)BookmarkIcons.FdIcon("tag", "folder"))<span class="n">Tags</span>
+                    <span class="c">@State.Tags.Count</span>
+                </div>
+                <div class="sb-i @(IsOn("templates", null, null) ? "on" : "")" @onclick='() => NavTo("templates", null, null)'>
+                    @((MarkupString)BookmarkIcons.FdIcon("layout", "folder"))<span class="n">Templates</span>
+                    <span class="c">@(22 + State.CustomTemplates.Count)</span>
+                </div>
+                <div class="sb-i @(IsOn("settings", null, null) ? "on" : "")" @onclick='() => NavTo("settings", null, null)'>
+                    @((MarkupString)BookmarkIcons.FdIcon("sliders", "folder"))<span class="n">Settings</span>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="sb-foot">@State.Items.Count(i => !i.Deleted) items · stored locally,<br />on this machine only.</div>
+    @* ADDITIVE: transparent layer — clicking anywhere outside the small popup closes it *@
+    @if (_popColId != null)
+    {
+        <div class="sb-pop-overlay" @onclick="ClosePop"></div>
+    }
+</aside>
+
+@code {
+    [Parameter] public EventCallback OnToggleSidebar { get; set; }
+    [Parameter] public EventCallback<(string Ctx, string? Id, string? Tag)> OnNavigate { get; set; }
+    [Parameter] public EventCallback OnNewFolder { get; set; }
+    [Parameter] public EventCallback OnNewCollection { get; set; }
+    [Parameter] public EventCallback OnNewSmart { get; set; }
+    [Parameter] public EventCallback<string> OnFolderMenu { get; set; }
+    [Parameter] public EventCallback<string> OnCollectionMenu { get; set; }
+    // ADDITIVE (new): page management + targeted add actions (old callbacks untouched).
+    [Parameter] public EventCallback<string> OnNewFolderInCollection { get; set; }
+    [Parameter] public EventCallback<string> OnNewPageInCollection { get; set; }
+    [Parameter] public EventCallback<string> OnNewSubPage { get; set; }
+    [Parameter] public EventCallback<string> OnPageMenu { get; set; }
+
+    private static readonly (string Id, string Label, string Path)[] NavItems = new[]
+    {
+        ("tasks", "Tasks",
+            "M3,13 L5,13 L5,11 L3,11 L3,13 Z M3,17 L5,17 L5,15 L3,15 L3,17 Z M3,9 L5,9 L5,7 L3,7 L3,9 Z M7,13 L21,13 L21,11 L7,11 L7,13 Z M7,17 L21,17 L21,15 L7,15 L7,17 Z M7,7 L7,9 L21,9 L21,7 L7,7 Z"),
+        ("pomodoro", "Pomodoro",
+            "M15,1 L9,1 L9,3 L15,3 L15,1 Z M11,14 L13,14 L13,8 L11,8 L11,14 Z M19.03,7.39 L20.45,5.97 C20.02,5.46 19.55,4.98 19.04,4.56 L17.62,5.98 C16.07,4.74 14.12,4 12,4 C7.03,4 3,8.03 3,13 C3,17.97 7.02,22 12,22 C16.98,22 21,17.97 21,13 C21,10.88 20.26,8.93 19.03,7.39 Z M12,20 C8.13,20 5,16.87 5,13 C5,9.13 8.13,6 12,6 C15.87,6 19,9.13 19,13 C19,16.87 16.87,20 12,20 Z"),
+        ("calendar", "Calendar",
+            "M20,3 L19,3 L19,1 L17,1 L17,3 L7,3 L7,1 L5,1 L5,3 L4,3 C2.9,3 2,3.9 2,5 L2,21 C2,22.1 2.9,23 4,23 L20,23 C21.1,23 22,22.1 22,21 L22,5 C22,3.9 21.1,3 20,3 Z M20,21 L4,21 L4,8 L20,8 L20,21 Z"),
+        ("planning", "Planning",
+            "M14,2 H6 C4.9,2 4,2.9 4,4 V20 C4,21.1 4.9,22 6,22 H18 C19.1,22 20,21.1 20,20 V8 L14,2 Z M14,2 V8 H20 M8,13 H16 M8,17 H16 M8,9 H10"),
+    };
+
+    private const string BookmarkIconPath =
+        "M17,3 L7,3 C5.9,3 5,3.9 5,5 L5,21 L12,16 L19,21 L19,5 C19,3.9 18.1,3 17,3 Z";
+
+    private bool LibOpen = true;
+    private bool ColOpen = true;
+    private bool FoldOpen = true;
+    private bool SysOpen = true;
+    // ADDITIVE: which collection's small popup (+ → new folder / new page) is open.
+    private string? _popColId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        State.OnStateChanged += OnState;
+        Nav.Changed += OnNavChanged;
+        await State.InitAsync();
+    }
+
+    private void OnState() => InvokeAsync(StateHasChanged);
+    private void OnNavChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        State.OnStateChanged -= OnState;
+        Nav.Changed -= OnNavChanged;
+    }
+
+    private static string NavIcon(string d) =>
+        $"<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"{d}\"/></svg>";
+
+    private void OnBookmarksClick()
+    {
+        if (Nav.CurrentPage != "bookmarks")
+        {
+            State.SetRoute("home");
+            Nav.SetBookmarksExpanded(true);
+            Nav.Request("bookmarks");
+        }
+        else
+        {
+            Nav.SetBookmarksExpanded(!Nav.BookmarksExpanded);
+        }
+    }
+
+    // Library rows live on the Bookmarks page; from any other page they open it.
+    private Task NavTo(string ctx, string? id, string? tag)
+    {
+        if (Nav.CurrentPage == "bookmarks") return OnNavigate.InvokeAsync((ctx, id, tag));
+        Nav.Request("bookmarks");
+        return Task.CompletedTask;
+    }
+
+    private Task Fwd((string Ctx, string? Id, string? Tag) t) => OnNavigate.InvokeAsync(t);
+
+    // ADDITIVE: popup + page forwarding (old helpers untouched).
+    private void TogglePop(string cid) => _popColId = _popColId == cid ? null : cid;
+    private void ClosePop() => _popColId = null;
+    private Task AddFolderTo(string cid) { _popColId = null; return OnNewFolderInCollection.InvokeAsync(cid); }
+    private Task AddPageTo(string cid) { _popColId = null; return OnNewPageInCollection.InvokeAsync(cid); }
+    private Task FwdPageMenu(string id) => OnPageMenu.InvokeAsync(id);
+    private Task FwdNewSubPage(string id) => OnNewSubPage.InvokeAsync(id);
+
+    private bool IsOn(string ctx, string? id, string? tag) =>
+        Nav.CurrentPage == "bookmarks" && State.Route.Ctx == ctx && (State.Route.Id ?? null) == (id ?? null) && (State.Route.Tag ?? null) == (tag ?? null);
+
+    private Task Navigate((string Ctx, string? Id, string? Tag) nav) => OnNavigate.InvokeAsync(nav);
+}

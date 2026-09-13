@@ -1,0 +1,76 @@
+/* App shell — the fixed library sidebar shown on every page.
+   Geometry mirrors the removed native MainPage sidebar:
+   250px, flush left, #f7f6f3 bg, 1px #e9e6e0 right border. */
+.page-shell{
+    --bg:#f7f6f3; --surface:#fff; --ink:#181715; --ink2:#59554e; --ink3:#a5a199;
+    --line:#e9e6e0; --line2:#d8d4cb; --hover:#f1efe9;
+    --sans:'Tajawal','Segoe UI',system-ui,sans-serif;
+    display:grid;grid-template-columns:auto 1fr;grid-template-rows:1fr;overflow:hidden;background:var(--bg);
+    /* FIX: pin the shell to the viewport so the document itself can never scroll
+       (root zoom inflates vh boxes → body scroll moved both panels together).
+       Panels keep their own independent scroll. */
+    position:fixed;inset:0;
+}
+.page-shell-frame{min-width:0;min-height:0;height:100%;overflow:hidden}
+
+/* Reset + base — scoped to the sidebar only so page styles stay untouched */
+.page-shell .app-sb,.page-shell .app-sb *{margin:0;padding:0;box-sizing:border-box}
+.page-shell .app-sb{font-family:var(--sans);color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased;scrollbar-width:none;
+    overflow-y:auto;overflow-x:hidden;border-right:1px solid var(--line);background:var(--bg);white-space:nowrap;height:100%;width:250px;
+    /* FIX: independent sidebar scroll — % of the pinned shell (zoom-proof),
+       never chains into the page scroll. */
+    min-height:0;overscroll-behavior:contain;
+    transition:margin-left .28s cubic-bezier(.25,.9,.3,1),opacity .25s ease}
+.page-shell.slim .app-sb{margin-left:-250px;opacity:0;pointer-events:none}
+.page-shell .app-sb button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.page-shell .app-sb svg{flex:none;vertical-align:-3px}
+.page-shell .app-sb ::-webkit-scrollbar{display:none}
+
+/* Brand */
+.page-shell .sb-brand{display:flex;align-items:center;gap:10px;padding:18px 16px 12px}
+.page-shell .sb-mark{width:25px;height:25px;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px;border-radius:7px;flex:none}
+.page-shell .sb-name{font-weight:800;font-size:17px}
+.page-shell .sb-coll{width:26px;height:26px;margin-left:auto;display:grid;place-items:center;border-radius:6px;color:var(--ink3)}
+.page-shell .sb-coll:hover{background:var(--hover);color:var(--ink)}
+
+/* Sections */
+.page-shell .sb-sec{display:flex;align-items:center;gap:6px;padding:15px 17px 5px;font-size:10.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--ink3);cursor:pointer;user-select:none}
+.page-shell .sb-sec:hover{color:var(--ink)}
+.page-shell .sb-sec .chev{margin-left:auto;display:grid;place-items:center;transition:transform .18s}
+.page-shell .sb-sec.closed .chev{transform:rotate(-90deg)}
+
+/* Items */
+.page-shell .sb-i{display:flex;align-items:center;gap:9px;padding:6px 10px;margin:1px 8px;border-radius:8px;color:var(--ink2);cursor:pointer;font-weight:500;font-size:13.5px;user-select:none}
+.page-shell .sb-i:hover{background:var(--hover);color:var(--ink)}
+.page-shell .sb-i.on{background:var(--ink);color:#fff}
+.page-shell .sb-i .n{overflow:hidden;text-overflow:ellipsis}
+.page-shell .sb-i .c{margin-left:auto;font-size:11px;color:var(--ink3);font-weight:700}
+.page-shell .sb-i.on .c{color:#ffffff99}
+.page-shell .sb-i .dots{margin-left:auto;opacity:0;color:var(--ink3);display:grid;place-items:center;width:20px;height:20px;border-radius:5px;flex:none}
+.page-shell .sb-i .dots:hover{background:var(--line2);color:var(--ink)}
+.page-shell .sb-i:hover .dots{opacity:1}
+.page-shell .sb-i.has-dots:hover .c{display:none}
+.page-shell .sb-i .chev{width:17px;height:17px;flex:none;display:grid;place-items:center;color:var(--ink3);transition:transform .18s;border-radius:4px}
+.page-shell .sb-folder.closed>.chev{transform:rotate(-90deg)}
+.page-shell .sb-navi{font-weight:700}
+
+/* Library group nested under the Bookmarks nav button */
+.page-shell .bm-nest{margin-left:14px;border-left:1px solid var(--line);padding-left:4px}
+.page-shell .sb-navi .chev{margin-left:auto;display:grid;place-items:center;color:var(--ink3);transition:transform .18s}
+.page-shell .sb-navi.closed .chev{transform:rotate(-90deg)}
+.page-shell .sb-navi.on .chev{color:#ffffff99}
+
+/* Tree + misc */
+.page-shell .sb-sub{margin-left:15px;border-left:1px solid var(--line);padding-left:2px}
+.page-shell .sb-add{display:flex;align-items:center;gap:8px;padding:5px 10px;margin:2px 8px;border-radius:8px;color:var(--ink3);font-size:12.5px;font-weight:500;cursor:pointer}
+.page-shell .sb-add:hover{color:var(--ink);background:var(--hover)}
+.page-shell .sb-foot{padding:16px;font-size:11.5px;color:var(--ink3);border-top:1px solid var(--line);margin-top:14px;white-space:normal}
+.page-shell .sb-emoji{font-size:15px;line-height:1;flex:none;width:16px;text-align:center}
+
+/* Floating expand button (sidebar collapsed) — sits in the topbar row,
+   left of the page's action buttons (e.g. "مهمة جديدة") */
+.page-shell-expand{position:fixed;top:9px;left:16px;z-index:40;width:34px;height:34px;display:grid;place-items:center;
+    border:1px solid #e9e6e0;border-radius:8px;color:#59554e;background:rgba(247,246,243,.92);transition:.15s;font:inherit;cursor:pointer}
+.page-shell-expand:hover{background:#fff;border-color:#d8d4cb;color:#181715}
+/* Make room for the floating ☰ inside the page's topbar actions row while collapsed */
+.page-shell.slim .topbar-actions{padding-left:42px}

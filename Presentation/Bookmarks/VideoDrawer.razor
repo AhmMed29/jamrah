@@ -1,0 +1,399 @@
+@namespace Jamrah.Presentation.Bookmarks
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@inject BookmarkStateService State
+@inject Microsoft.JSInterop.IJSRuntime Js
+
+<style>
+.vd-wrap{position:fixed;inset:0;z-index:50}
+.vd-scrim{position:absolute;inset:0;background:rgba(24,22,20,.18)}
+.vd-drawer{width:min(392px,calc(94vw / var(--z,1)));max-width:94vw;height:calc(100vh / var(--z,1));background:#fff;border-left:1px solid #e9e6e0;box-shadow:-18px 0 60px rgba(0,0,0,.1);position:absolute;top:0;right:0;display:flex;flex-direction:column;direction:ltr;text-align:left;outline:none}
+.vd-head{display:flex;align-items:center;gap:8px;padding:14px 18px 10px;flex:none}
+.vd-logo{width:20px;height:14px;background:#181715;border-radius:3px;display:grid;place-items:center;color:#fff;flex:none}
+.vd-logo.yt{background:#ff0000}
+.vd-head span{font-size:12.5px;color:#59554e;font-weight:600}
+.vd-close{margin-left:auto;width:30px;height:30px;display:grid;place-items:center;border-radius:8px;color:#59554e;font-size:18px;cursor:pointer;border:0;background:none}
+.vd-close:hover{background:#f1efe9;color:#181715}
+.vd-body{flex:1;overflow-y:auto;padding:2px 18px 24px;min-height:0}
+.vd-embed{border-radius:10px;overflow:hidden;background:#0f172a;margin-bottom:4px}
+.vd-embed iframe{width:100%;border:0;display:block}
+.vd-thumb{position:relative;border-radius:10px;overflow:hidden;aspect-ratio:16/9;background:#0f172a;margin-bottom:4px}
+.vd-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.vd-play{position:absolute;inset:0;margin:auto;width:52px;height:52px;border-radius:50%;background:rgba(20,20,20,.72);display:grid;place-items:center;color:#fff;cursor:pointer;border:0;transition:transform .15s}
+.vd-play:hover{transform:scale(1.06)}
+.vd-time{position:absolute;right:10px;bottom:10px;background:rgba(0,0,0,.85);color:#fff;font-size:11px;font-weight:700;padding:3px 7px;border-radius:5px;font-family:monospace}
+.vd-title{font-size:16.5px;font-weight:800;line-height:1.25;margin-top:14px;letter-spacing:-.01em;color:#181715;direction:auto}
+.vd-sub{font-size:13px;color:#59554e;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;direction:auto}
+.vd-meta{display:flex;align-items:center;gap:7px;margin-top:10px;font-size:12px;color:#a5a199;font-weight:500;flex-wrap:wrap}
+.vd-mic{width:16px;height:11px;background:#181715;border-radius:2px;display:inline-grid;place-items:center;color:#fff;flex:none}
+.vd-dot{width:3px;height:3px;background:#d8d4cb;border-radius:50%;flex:none}
+.vd-tags{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap;align-items:center}
+.vd-tag{background:#f1efe9;color:#59554e;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px}
+.vd-tagadd{width:26px;height:26px;border-radius:50%;border:1px solid #d8d4cb;display:grid;place-items:center;color:#59554e;background:#fff;cursor:pointer;line-height:1;padding:0}
+.vd-tagadd:hover{border-color:#59554e;color:#181715}
+.vd-tagin{border:1px solid #e9e6e0;border-radius:999px;padding:4px 10px;outline:none;font-size:12px;width:110px;color:#181715}
+.vd-rows{margin-top:16px;border-top:1px solid #f0eee9;border-bottom:1px solid #f0eee9;padding:4px 0}
+.vd-row{display:grid;grid-template-columns:26px 96px 1fr;align-items:center;padding:7px 0;font-size:13px;min-width:0}
+.vd-ic{color:#8a8680;display:grid;place-items:center}
+.vd-k{color:#8a8680;font-weight:500}
+.vd-v{font-weight:500;color:#181715;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;direction:auto}
+.vd-v.link{color:#2563eb;font-family:monospace;font-size:12px;display:flex;align-items:center;gap:6px}
+.vd-url{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.vd-mi{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;color:#a5a199;cursor:pointer;vertical-align:middle;flex:none}
+.vd-mi:hover{background:#f1efe9;color:#181715}
+.vd-org{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;color:#a5a199}
+.vd-orgc{background:#f1efe9;color:#59554e;font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:999px;cursor:pointer;border:0}
+.vd-orgc:hover{color:#181715}
+.vd-sech{display:flex;align-items:center;gap:8px;margin:20px 0 10px;font-size:13px;font-weight:700;color:#181715}
+.vd-edit{margin-left:auto;color:#a5a199;cursor:pointer;font-size:14px;font-weight:400}
+.vd-edit:hover{color:#181715}
+.vd-sech a{margin-left:auto;font-size:12px;color:#a5a199;text-decoration:none;font-weight:600;cursor:pointer}
+.vd-sech a:hover{color:#181715}
+.vd-notes{background:#fdfcf8;border:1px solid #efebe3;border-radius:10px;padding:13px 15px;font-size:12.8px;line-height:1.65;color:#59554e;direction:auto}
+.vd-notes b,.vd-notes strong{color:#181715}
+.vd-notes ul{list-style:none;margin-top:2px;padding:0}
+.vd-notes ul li{position:relative;padding-left:14px;margin:2px 0}
+.vd-notes ul li::before{content:'-';position:absolute;left:2px;color:#a5a199}
+.vd-notes h5{font-weight:800;font-size:14px;margin:10px 0 4px;color:#181715}
+.vd-notes pre{font-family:monospace;font-size:12px;background:#f4f2ec;border:1px solid #e9e6e0;border-radius:8px;padding:10px;overflow-x:auto;line-height:1.6;margin:6px 0}
+.vd-notes textarea{width:100%;min-height:140px;border:1px solid #d8d4cb;border-radius:8px;padding:10px 12px;line-height:1.6;outline:none;font-size:13px;color:#181715;direction:auto}
+.vd-nbtns{display:flex;gap:8px;margin-top:10px}
+.vd-btn{border:1px solid #d8d4cb;background:#fff;color:#181715;font-size:12.5px;font-weight:700;padding:6px 14px;border-radius:8px;cursor:pointer}
+.vd-btn.pri{background:#181715;color:#fff;border-color:#181715}
+.vd-btn.dgr{color:#b3261e;border-color:#e5c4c0}
+.vd-relgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vd-relcard{border:1px solid #e9e6e0;border-radius:10px;padding:10px;display:flex;gap:9px;align-items:flex-start;background:#fff;cursor:pointer;min-width:0}
+.vd-relcard:hover{border-color:#d8d4cb}
+.vd-relic{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;flex:none}
+.vd-relcard b{display:block;font-size:12px;line-height:1.3;color:#181715}
+.vd-relcard small{display:block;font-size:10.5px;color:#a5a199;margin-top:2px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vd-relpills{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.vd-relpills i{font-style:normal;font-size:10px;background:#f1efe9;color:#59554e;padding:2px 7px;border-radius:5px;font-weight:600}
+.vd-relx{margin-left:auto;color:#a5a199;width:22px;height:22px;display:grid;place-items:center;border-radius:6px;flex:none}
+.vd-relx:hover{background:#f1efe9;color:#b3261e}
+.vd-reladd{display:flex;gap:8px;margin-top:10px}
+.vd-reladd select{flex:1;border:1px solid #d8d4cb;border-radius:8px;padding:7px 9px;outline:none;font-size:12.5px;min-width:0;color:#181715}
+.vd-empty{color:#a5a199;font-size:13px}
+.vd-foot{display:flex;gap:8px;padding:13px 18px;border-top:1px solid #e9e6e0;flex:none;flex-wrap:wrap;background:#fff}
+</style>
+
+@if (Item != null)
+{
+    var g = BookmarkCardData.From(Item);
+    var tags = BookmarkQuery.TagsOf(Item);
+    var folders = BookmarkQuery.FoldersOf(Item);
+    var cols = BookmarkQuery.CollectionsOf(Item);
+    var rels = BookmarkQuery.RelationsOf(Item);
+    var embed = BookmarkTemplates.EmbedHtml(Item.Url, g.Domain);
+    var dom = (g.Domain ?? string.Empty).ToLowerInvariant();
+    var isYt = dom.Contains("youtu");
+
+    <div class="vd-wrap">
+        <div class="vd-scrim" @onclick="() => OnClose.InvokeAsync()"></div>
+        <aside class="vd-drawer" tabindex="-1" @ref="_drawerRef" @onkeydown="DrawerKey">
+            <div class="vd-head">
+                @if (isYt)
+                {
+                    <span class="vd-logo yt">@((MarkupString)BookmarkIcons.Svg("play", 9))</span>
+                }
+                else
+                {
+                    <span class="vd-logo">@((MarkupString)BookmarkIcons.Svg(g.Icon, 10))</span>
+                }
+                <span>@(string.IsNullOrEmpty(g.Site) ? g.Type : g.Site)</span>
+                <button class="vd-close" @onclick="() => OnClose.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("x", 17))</button>
+            </div>
+            <div class="vd-body">
+                @if (embed != null)
+                {
+                    <div class="vd-embed">@((MarkupString)embed)</div>
+                }
+                else if (!string.IsNullOrEmpty(g.Img))
+                {
+                    <div class="vd-thumb">
+                        <img src="@g.Img" alt="" />
+                        @if (!string.IsNullOrEmpty(Item.Url))
+                        {
+                            <button class="vd-play" @onclick="OpenUrl" title="Open video">@((MarkupString)BookmarkIcons.Svg("play", 20))</button>
+                        }
+                        @if (!string.IsNullOrEmpty(g.Dur)) { <span class="vd-time">@g.Dur</span> }
+                    </div>
+                }
+                <div class="vd-title">@Item.Title</div>
+                @if (!string.IsNullOrEmpty(Item.Description)) { <div class="vd-sub">@Item.Description</div> }
+                <div class="vd-meta">
+                    <span class="vd-mic">@((MarkupString)BookmarkIcons.Svg("play", 8))</span>
+                    <span>@g.Type</span>
+                    @{
+                        var created = BookmarkCardData.FmtDate(Item.CreatedAt);
+                    }
+                    @if (!string.IsNullOrEmpty(created)) { <span class="vd-dot"></span><span>@created</span> }
+                    @if (!string.IsNullOrEmpty(g.Dur)) { <span class="vd-dot"></span><span>@g.Dur</span> }
+                    @((MarkupString)BookmarkTemplates.RatingH(g))
+                    @if (!string.IsNullOrEmpty(g.Status)) { @((MarkupString)BookmarkTemplates.StChip(g.Status)) }
+                </div>
+                <div class="vd-tags">
+                    @foreach (var t in tags) { <span class="vd-tag">@t</span> }
+                    <button class="vd-tagadd" @onclick="AddTag" title="Add tag">@((MarkupString)BookmarkIcons.Svg("plus", 13))</button>
+                    <input class="vd-tagin" value="@_newTag" @oninput="e => _newTag = e.Value?.ToString() ?? string.Empty" @onkeydown="TagKey" placeholder="tag…" />
+                </div>
+                <div class="vd-rows">
+                    @foreach (var fd in BookmarkTypeSchema.For(Item.Type))
+                    {
+                        var val = BookmarkTemplates.MetaValue(Item.Type, fd.Key, g.Meta[fd.Key]);
+                        @if (val != null)
+                        {
+                            <div class="vd-row"><div class="vd-ic">@((MarkupString)BookmarkIcons.Svg(RowIcon(fd.Key), 14))</div><div class="vd-k">@fd.Label</div><div class="vd-v">@((MarkupString)val)</div></div>
+                        }
+                    }
+                    <div class="vd-row"><div class="vd-ic">@((MarkupString)BookmarkIcons.Svg(g.Icon, 14))</div><div class="vd-k">Type</div><div class="vd-v">@g.Type</div></div>
+                    @if (!string.IsNullOrEmpty(Item.Url))
+                    {
+                        <div class="vd-row"><div class="vd-ic">@((MarkupString)BookmarkIcons.Svg("link", 14))</div><div class="vd-k">URL</div>
+                            <div class="vd-v link"><span class="vd-url">@Item.Url</span><span class="vd-mi" @onclick="CopyUrl" title="Copy">@((MarkupString)BookmarkIcons.Svg("copy", 13))</span><span class="vd-mi" @onclick="OpenUrl" title="Open">@((MarkupString)BookmarkIcons.Svg("external", 13))</span></div>
+                        </div>
+                    }
+                    <div class="vd-row"><div class="vd-ic">@((MarkupString)BookmarkIcons.Svg("plus", 14))</div><div class="vd-k">Added</div><div class="vd-v">@BookmarkCardData.FmtDate(Item.CreatedAt)</div></div>
+                    <div class="vd-row"><div class="vd-ic">@((MarkupString)BookmarkIcons.Svg("edit", 14))</div><div class="vd-k">Updated</div><div class="vd-v">@BookmarkCardData.FmtAgo(Item.UpdatedAt)</div></div>
+                </div>
+                @if (folders.Count + cols.Count > 0)
+                {
+                    <div class="vd-org">
+                        @foreach (var fid in folders)
+                        {
+                            var fd = State.Folders.FirstOrDefault(x => x.Id == fid);
+                            @if (fd != null)
+                            {
+                                <button class="vd-orgc" @onclick='() => OnNavigate.InvokeAsync(("folder", fid, null))'>@fd.Name</button>
+                            }
+                        }
+                        @foreach (var cid in cols)
+                        {
+                            var c = State.Collections.FirstOrDefault(x => x.Id == cid);
+                            @if (c != null)
+                            {
+                                <button class="vd-orgc" @onclick='() => OnNavigate.InvokeAsync(("collection", cid, null))'>@c.Name</button>
+                            }
+                        }
+                    </div>
+                }
+                <div class="vd-sech">🗒 Notes
+                    @if (!string.IsNullOrEmpty(Item.Notes) && !_noteEdit) { <span class="vd-edit" @onclick="StartNoteEdit">✎</span> }
+                </div>
+                @if (_noteEdit)
+                {
+                    <div class="vd-notes">
+                        <textarea @bind="_noteText"></textarea>
+                        <div class="vd-nbtns">
+                            <button class="vd-btn pri" @onclick="SaveNote">Save note</button>
+                            <button class="vd-btn" @onclick="() => _noteEdit = false">Cancel</button>
+                        </div>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(Item.Notes))
+                {
+                    <div class="vd-notes">@((MarkupString)BookmarkTemplates.Md(Item.Notes))</div>
+                }
+                else
+                {
+                    <p class="vd-empty">No notes yet. <span class="vd-edit" @onclick="StartNoteEdit">Write one →</span></p>
+                }
+                <div class="vd-sech">▦ Related items <a @onclick='() => OnNavigate.InvokeAsync(("all", null, null))'>View all →</a></div>
+                <div class="vd-relgrid">
+                    @foreach (var rid in rels)
+                    {
+                        var r = State.Items.FirstOrDefault(x => x.Id == rid);
+                        @if (r != null)
+                        {
+                            var rg = BookmarkCardData.From(r);
+                            var initial = string.IsNullOrEmpty(r.Title) ? "?" : r.Title.Trim().Substring(0, 1).ToUpperInvariant();
+                            <div class="vd-relcard" @onclick="() => OnOpen.InvokeAsync(r.Id)">
+                                <span class="vd-relic" style="background:@RelColor(r.Title)">@initial</span>
+                                <span style="min-width:0;flex:1"><b>@r.Title</b><small>@(string.IsNullOrEmpty(rg.Domain) ? rg.Type : rg.Domain)</small>
+                                    <span class="vd-relpills"><i>@rg.Type</i>@foreach (var t in rg.Tags.Take(2)) { <i>@t</i> }</span>
+                                </span>
+                                <span class="vd-relx" @onclick:stopPropagation="true" @onclick="() => RemoveRelation(rid)">@((MarkupString)BookmarkIcons.Svg("x", 12))</span>
+                            </div>
+                        }
+                    }
+                </div>
+                @if (rels.Count == 0)
+                {
+                    <p class="vd-empty">Connect courses to their repos, books to their videos…</p>
+                }
+                <div class="vd-reladd">
+                    <select @bind="_relateId">
+                        <option value="">Relate to…</option>
+                        @foreach (var it in State.Items.Where(i => !i.Deleted && i.Id != Item.Id).OrderBy(i => i.Title).Take(200))
+                        {
+                            <option value="@it.Id">@it.Title</option>
+                        }
+                    </select>
+                    <button class="vd-btn" @onclick="AddRelation">+ Relate</button>
+                </div>
+            </div>
+            <div class="vd-foot">
+                @if (!string.IsNullOrEmpty(Item.Url))
+                {
+                    <button class="vd-btn pri" @onclick="OpenUrl">@((MarkupString)BookmarkIcons.Svg("external", 14)) Open</button>
+                }
+                <button class="vd-btn" @onclick="() => OnEdit.InvokeAsync(Item.Id)">@((MarkupString)BookmarkIcons.Svg("edit", 14)) Edit</button>
+                <button class="vd-btn" @onclick="() => DoAsync(() => State.ToggleFavoriteAsync(Item.Id))">@((MarkupString)BookmarkIcons.Svg("star", 14)) @(Item.Favorite ? "Unfavorite" : "Favorite")</button>
+                <button class="vd-btn" @onclick="() => DoAsync(() => State.TogglePinAsync(Item.Id))">@((MarkupString)BookmarkIcons.Svg("pin", 14)) @(Item.Pinned ? "Unpin" : "Pin")</button>
+                @if (Item.Deleted)
+                {
+                    <button class="vd-btn" @onclick="() => DoAsync(() => State.RestoreItemAsync(Item.Id))">@((MarkupString)BookmarkIcons.Svg("archive", 14)) Restore</button>
+                    <button class="vd-btn dgr" @onclick="() => DoAsync(() => State.DeleteItemAsync(Item.Id, true), true)">@((MarkupString)BookmarkIcons.Svg("trash", 14)) Delete forever</button>
+                }
+                else
+                {
+                    <button class="vd-btn" @onclick="ToggleArchive">@((MarkupString)BookmarkIcons.Svg("archive", 14)) @(Item.Archived ? "Unarchive" : "Archive")</button>
+                    <button class="vd-btn dgr" @onclick="() => DoAsync(() => State.DeleteItemAsync(Item.Id, false), true)">@((MarkupString)BookmarkIcons.Svg("trash", 14)) Trash</button>
+                }
+            </div>
+        </aside>
+    </div>
+}
+
+@code {
+    [Parameter] public string? ItemId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<(string Ctx, string? Id, string? Tag)> OnNavigate { get; set; }
+    [Parameter] public EventCallback<string> OnEdit { get; set; }
+    [Parameter] public EventCallback<string> OnOpen { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private BookmarkItem? Item => string.IsNullOrEmpty(ItemId) ? null : State.Items.FirstOrDefault(i => i.Id == ItemId);
+    private bool _noteEdit;
+    private string _noteText = string.Empty;
+    private string _newTag = string.Empty;
+    private string _relateId = string.Empty;
+    private ElementReference _drawerRef;
+
+    private static readonly string[] RelColors = new[] { "#7c3aed", "#0a66c2", "#181715", "#0f766e", "#b45309", "#be185d", "#4338ca", "#15803d" };
+
+    private static string RelColor(string? s)
+    {
+        if (string.IsNullOrEmpty(s)) return RelColors[2];
+        var h = 0;
+        foreach (var c in s) h = (h * 31 + c) % 997;
+        return RelColors[h % RelColors.Length];
+    }
+
+    private static string RowIcon(string key) => (key ?? string.Empty).ToLowerInvariant() switch
+    {
+        "channel" or "host" or "creator" or "instructor" or "owner" or "artist" => "play",
+        "author" or "authors" => "edit",
+        "director" => "film",
+        "duration" => "clock",
+        "language" => "code",
+        "rating" or "stars" => "star",
+        "status" or "progress" => "check",
+        "genres" or "genre" => "tag",
+        "poster" or "cover" or "image" or "photo" or "file" => "image",
+        "url" or "link" or "site" or "source" or "platform" or "venue" or "maintainer" or "publisher" => "globe",
+        "isbn" => "filetext",
+        _ => "info",
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try { await _drawerRef.FocusAsync(); } catch { }
+        }
+    }
+
+    private async Task DrawerKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") await OnClose.InvokeAsync();
+    }
+
+    private async Task DoAsync(Func<Task> op, bool close = false)
+    {
+        await op();
+        await OnChanged.InvokeAsync();
+        if (close) await OnClose.InvokeAsync();
+    }
+
+    private async Task ToggleArchive()
+    {
+        if (Item == null) return;
+        Item.Archived = !Item.Archived;
+        await State.SaveItemAsync(Item);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task OpenUrl()
+    {
+        if (Item == null || string.IsNullOrWhiteSpace(Item.Url)) return;
+        try { await Microsoft.Maui.ApplicationModel.Launcher.OpenAsync(Item.Url); } catch { }
+    }
+
+    private async Task CopyUrl()
+    {
+        if (Item == null || string.IsNullOrWhiteSpace(Item.Url)) return;
+        try { await Js.InvokeAsync<bool>("bmInterop.copyText", new object[] { Item.Url }); } catch { }
+    }
+
+    private void StartNoteEdit()
+    {
+        _noteText = Item?.Notes ?? string.Empty;
+        _noteEdit = true;
+    }
+
+    private async Task SaveNote()
+    {
+        if (Item == null) return;
+        Item.Notes = _noteText;
+        _noteEdit = false;
+        await State.SaveItemAsync(Item);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task AddTag()
+    {
+        if (Item == null || string.IsNullOrWhiteSpace(_newTag)) return;
+        var tags = BookmarkQuery.TagsOf(Item);
+        var t = _newTag.Trim();
+        if (!tags.Contains(t))
+        {
+            tags.Add(t);
+            Item.TagsJson = System.Text.Json.JsonSerializer.Serialize(tags);
+            if (!State.Tags.Any(x => x.Name == t))
+                await State.SaveTagAsync(new BookmarkTag { Name = t });
+            await State.SaveItemAsync(Item);
+            await OnChanged.InvokeAsync();
+        }
+        _newTag = string.Empty;
+    }
+
+    private async Task TagKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await AddTag();
+    }
+
+    private async Task RemoveRelation(string rid)
+    {
+        if (Item == null) return;
+        var rels = BookmarkQuery.RelationsOf(Item);
+        rels.Remove(rid);
+        Item.RelationsJson = System.Text.Json.JsonSerializer.Serialize(rels);
+        await State.SaveItemAsync(Item);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task AddRelation()
+    {
+        if (Item == null || string.IsNullOrEmpty(_relateId)) return;
+        var rels = BookmarkQuery.RelationsOf(Item);
+        if (!rels.Contains(_relateId))
+        {
+            rels.Add(_relateId);
+            Item.RelationsJson = System.Text.Json.JsonSerializer.Serialize(rels);
+            await State.SaveItemAsync(Item);
+            await OnChanged.InvokeAsync();
+        }
+        _relateId = string.Empty;
+    }
+}

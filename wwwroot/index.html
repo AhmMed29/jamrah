@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -7,16 +7,21 @@
     <base href="/" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/jamrah-theme.css" />
     <link rel="stylesheet" href="css/tui-calendar.css" />
     <link rel="stylesheet" href="css/tasks.css" />
+    <link rel="stylesheet" href="css/bookmark.css" />
+    <!-- ADDITIVE: styles for pages/popup additions -->
+    <link rel="stylesheet" href="css/bookmark-pages.css" />
+    <link rel="stylesheet" href="css/appshell.css" />
     <link rel="stylesheet" href="css/mobile.css" />
     <link rel="stylesheet" href="css/mobile-pomodoro.css" />
     <link rel="stylesheet" href="css/mobile-tasks.css" />
     <link rel="stylesheet" href="css/mobile-calendar.css" />
     <script src="js/zoom-per-page.js"></script>
     <script src="js/planning-editor.js"></script>
+    <script src="js/bookmark.js"></script>
     <script>
         window.playPomoSound = function(src, volume) {
             try {
@@ -32,7 +37,7 @@
 </head>
 <body>
     <div id="app">Loading...</div>
-    <div id="blazor-error-ui" style="display:none;position:fixed;bottom:0;width:100%;background:#FFF3CD;color:#856404;padding:8px;font:12px Tajawal;border-top:1px solid #FFE69C;z-index:9999">Blazor error: <span id="blazor-error-msg"></span> <a href="" onclick="location.reload();return false" style="color:#856404">Reload</a> <span style="float:left" onclick="this.parentElement.style.display='none'">×</span></div>
+    <div id="blazor-error-ui" style="display:none;position:fixed;bottom:0;width:100%;background:#FFF3CD;color:#856404;padding:8px;font:12px Tajawal;border-top:1px solid #FFE69C;z-index:9999">Blazor error: <span id="blazor-error-msg"></span> <a href="" onclick="location.reload();return false" style="color:#856404">Reload</a> <span style="float:left" onclick="this.parentElement.style.display='none'">�</span></div>
     <script>window.onerror=function(m,s,l,c,e){var d=document.getElementById('blazor-error-msg');if(d)d.textContent=m;var ui=document.getElementById('blazor-error-ui');if(ui)ui.style.display='block';console.error(m,e)};window.addEventListener('unhandledrejection',function(e){window.onerror(e.reason,'',0,0,e.reason)});</script>
     <script src="_framework/blazor.webview.js" autostart="false"></script>
 </body>

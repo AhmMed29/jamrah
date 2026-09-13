@@ -57,8 +57,8 @@ namespace Jamrah.Infrastructure.Repositories
 
         public static double DefaultZoomForPage(string? pageKey) => pageKey switch
         {
-            "tasks" => 1.5,
-            "pomodoro" => 1.7,
+            "tasks" => 1.25,
+            "pomodoro" => 1.25,
             _ => 1.0,
         };
 
@@ -82,15 +82,15 @@ namespace Jamrah.Infrastructure.Repositories
             await SetAsync($"zoom_{pageKey}", zoom.ToString(System.Globalization.CultureInfo.InvariantCulture)).ConfigureAwait(false);
         }
 
-        // One-time migration: force the new per-page natural zoom (tasks 1.5 / pomodoro 1.7)
-        // by dropping any previously saved values, then remember that we did it.
+        // One-time migration: apply the comfortable default zoom (tasks 1.25 / pomodoro 1.25)
+        // for a clean start, then never wipe user preferences again.
         private async Task ApplyZoomDefaultsMigrationAsync()
         {
-            var marker = await _database!.FindAsync<Setting>("zoom_defaults_v2").ConfigureAwait(false);
+            var marker = await _database!.FindAsync<Setting>("zoom_defaults_v3").ConfigureAwait(false);
             if (marker?.Value == "done") return;
             await _database.ExecuteAsync("DELETE FROM Settings WHERE Key=?", "zoom_tasks").ConfigureAwait(false);
             await _database.ExecuteAsync("DELETE FROM Settings WHERE Key=?", "zoom_pomodoro").ConfigureAwait(false);
-            await _database.InsertOrReplaceAsync(new Setting { Key = "zoom_defaults_v2", Value = "done", UpdatedAt = DateTime.UtcNow }).ConfigureAwait(false);
+            await _database.InsertOrReplaceAsync(new Setting { Key = "zoom_defaults_v3", Value = "done", UpdatedAt = DateTime.UtcNow }).ConfigureAwait(false);
         }
     }
 }

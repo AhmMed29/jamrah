@@ -156,9 +156,11 @@ namespace Jamrah.Infrastructure.Repositories
                 // daily: كل يوم بعد البداية لآخر الشهر
                 if (task.RecurrenceDays == "daily")
                 {
+                    var siblings = await _database!.Table<AppTask>().Where(t => t.TemplateId == task.TemplateId).ToListAsync().ConfigureAwait(false);
                     for (var d = start.AddDays(1); d <= end; d = d.AddDays(1))
                     {
-                        var exists = await _database!.Table<AppTask>().Where(t => t.TemplateId == task.TemplateId && t.DueDate == d).CountAsync().ConfigureAwait(false) > 0;
+                        // يتضمن المؤرشف/المنجز حتى لا يعيد التوليد بعد الإنجاز أو الحذف
+                        var exists = siblings.Any(t => t.DueDate?.Date == d.Date);
                         if (exists) continue;
                         var inst = new AppTask
                         {
@@ -180,13 +182,15 @@ namespace Jamrah.Infrastructure.Repositories
                             UpdatedAt = DateTime.UtcNow
                         };
                         await _database!.InsertAsync(inst).ConfigureAwait(false);
+                        siblings.Add(inst);
                     }
                 }
                 else if (task.RecurrenceDays == "weekly")
                 {
+                    var siblingsW = await _database!.Table<AppTask>().Where(t => t.TemplateId == task.TemplateId).ToListAsync().ConfigureAwait(false);
                     for (var d = start.AddDays(7); d <= end; d = d.AddDays(7))
                     {
-                        var exists = await _database!.Table<AppTask>().Where(t => t.TemplateId == task.TemplateId && t.DueDate == d).CountAsync().ConfigureAwait(false) > 0;
+                        var exists = siblingsW.Any(t => t.DueDate?.Date == d.Date);
                         if (exists) continue;
                         var inst = new AppTask
                         {
@@ -208,6 +212,7 @@ namespace Jamrah.Infrastructure.Repositories
                             UpdatedAt = DateTime.UtcNow
                         };
                         await _database!.InsertAsync(inst).ConfigureAwait(false);
+                        siblingsW.Add(inst);
                     }
                 }
             }

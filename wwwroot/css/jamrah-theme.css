@@ -13,7 +13,7 @@ html,body{ background:var(--bg); color:var(--text); }
 
 /* App zoom removed for Android WebView - use native scaling */
 html{ --app-zoom:1; }
-.app-container,.tasks-page,.cal-wrapper{ height:100vh !important; }
+.app-container,.tasks-page,.cal-wrapper{ height:100%; }
 .floating-layer,.popup-overlay{
   width:100vw !important;
   height:100vh !important;

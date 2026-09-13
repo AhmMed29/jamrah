@@ -1,0 +1,127 @@
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@inject BookmarkStateService State
+
+<div class="toolbar">
+    <div class="seg">
+        @foreach (var (icon, id, label) in Views)
+        {
+            <button class="@(View == id ? "on" : "")" @onclick="() => OnView.InvokeAsync(id)" title="@label view">
+                @((MarkupString)BookmarkIcons.Svg(icon, 15))
+            </button>
+        }
+    </div>
+    <div style="position:relative">
+        <button class="tbtn" @onclick="() => { _showSort = !_showSort; _showFilter = false; }">
+            @((MarkupString)BookmarkIcons.Svg("sliders", 14))<b>@BookmarkQuery.SortNames.GetValueOrDefault(Sort, "Recently added")</b>@((MarkupString)BookmarkIcons.Svg("chevD", 12))
+        </button>
+        @if (_showSort)
+        {
+            <div class="popover" style="position:absolute;top:38px;left:0">
+                <div class="po-l">Sort by</div>
+                @foreach (var kv in BookmarkQuery.SortNames)
+                {
+                    <button class="po-i @(Sort == kv.Key ? "on" : "")" @onclick="() => PickSort(kv.Key)">@kv.Value</button>
+                }
+            </div>
+        }
+    </div>
+    <div style="position:relative">
+        <button class="tbtn @(State.Filters.ActiveCount > 0 ? "act" : "")" @onclick="() => { _showFilter = !_showFilter; _showSort = false; }">
+            @((MarkupString)BookmarkIcons.Svg("sliders", 14))
+            @(State.Filters.ActiveCount > 0 ? (MarkupString)$"<b>Filters · {State.Filters.ActiveCount}</b>" : (MarkupString)"Filters")
+        </button>
+        @if (_showFilter)
+        {
+            <div class="popover" style="position:absolute;top:38px;left:0;width:360px">
+                <div class="fp-h">Filters<button class="fp-clear" @onclick="ClearFilters">Clear all</button></div>
+                <div class="fp-sec">Type</div>
+                <div class="fp-chips">
+                    @foreach (var t in BookmarkQuery.Types.Keys)
+                    {
+                        <button class="fpc @(State.Filters.Types.Contains(t) ? "on" : "")" @onclick="() => ToggleList(State.Filters.Types, t)">@BookmarkQuery.TypeName(t)</button>
+                    }
+                </div>
+                <div class="fp-sec">Tags</div>
+                <div class="fp-chips">
+                    @if (State.Tags.Count == 0) { <span class="fp-none">No tags yet.</span> }
+                    @foreach (var t in State.Tags)
+                    {
+                        <button class="fpc @(State.Filters.Tags.Contains(t.Name) ? "on" : "")" @onclick="() => ToggleList(State.Filters.Tags, t.Name)">#@t.Name</button>
+                    }
+                </div>
+                <div class="fp-sec">Flags</div>
+                <div class="fp-flags">
+                    <label class="fpf"><input type="checkbox" checked="@State.Filters.Fav" @onchange="e => { State.Filters.Fav = (bool)(e.Value ?? false); Notify(); }" /> Favorites</label>
+                    <label class="fpf"><input type="checkbox" checked="@State.Filters.Pin" @onchange="e => { State.Filters.Pin = (bool)(e.Value ?? false); Notify(); }" /> Pinned</label>
+                </div>
+                <div class="fp-sec">Min rating: @(State.Filters.Rating > 0 ? State.Filters.Rating.ToString() : "any")</div>
+                <div class="fp-chips">
+                    @foreach (var r in new double[] { 0, 7, 8, 9 })
+                    {
+                        <button class="fpc @(State.Filters.Rating == r ? "on" : "")" @onclick="() => { State.Filters.Rating = r; Notify(); }">@(r == 0 ? "Any" : "★ " + r)</button>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+    <span style="margin-left:auto;font-size:12px;color:var(--ink3);font-weight:700" class="mono">@TotalCount</span>
+</div>
+
+@if (State.Filters.HasActive)
+{
+    <div class="fchips">
+        @foreach (var t in State.Filters.Types)
+        {
+            <span class="fchip">type: @BookmarkQuery.TypeName(t)<button @onclick="() => { State.Filters.Types.Remove(t); Notify(); }">×</button></span>
+        }
+        @foreach (var t in State.Filters.Tags)
+        {
+            <span class="fchip" @((MarkupString)BookmarkQuery.TagStyleAttr(t, State.Tags))>tag: @t<button @onclick="() => { State.Filters.Tags.Remove(t); Notify(); }">×</button></span>
+        }
+        @if (State.Filters.Fav) { <span class="fchip">favorites only<button @onclick="() => { State.Filters.Fav = false; Notify(); }">×</button></span> }
+        @if (State.Filters.Pin) { <span class="fchip">pinned only<button @onclick="() => { State.Filters.Pin = false; Notify(); }">×</button></span> }
+        @if (State.Filters.Rating > 0) { <span class="fchip">rating ≥ @State.Filters.Rating<button @onclick="() => { State.Filters.Rating = 0; Notify(); }">×</button></span> }
+        @if (!string.IsNullOrEmpty(State.Filters.Status)) { <span class="fchip">status: @State.Filters.Status<button @onclick="() => { State.Filters.Status = string.Empty; Notify(); }">×</button></span> }
+        <button class="btn sm" @onclick="ClearFilters">Clear all</button>
+    </div>
+}
+
+@code {
+    [Parameter] public string View { get; set; } = "grid";
+    [Parameter] public string Sort { get; set; } = "added";
+    [Parameter] public int TotalCount { get; set; }
+    [Parameter] public EventCallback<string> OnView { get; set; }
+    [Parameter] public EventCallback<string> OnSort { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool _showSort;
+    private bool _showFilter;
+
+    private static readonly (string Icon, string Id, string Label)[] Views = new[]
+    {
+        ("grid", "grid", "Grid"), ("list", "list", "List"), ("compact", "compact", "Compact list"),
+        ("table", "table", "Table"), ("columns", "masonry", "Masonry"), ("timeline", "timeline", "Timeline"),
+    };
+
+    private async Task PickSort(string s)
+    {
+        _showSort = false;
+        await OnSort.InvokeAsync(s);
+    }
+
+    private void ToggleList(List<string> list, string v)
+    {
+        if (!list.Remove(v)) list.Add(v);
+        Notify();
+    }
+
+    private void ClearFilters()
+    {
+        State.Filters.Clear();
+        _showFilter = false;
+        Notify();
+    }
+
+    private void Notify() => OnChanged.InvokeAsync();
+}

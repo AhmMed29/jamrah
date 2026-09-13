@@ -1,0 +1,33 @@
+@namespace Jamrah.Presentation.Shared
+@using Jamrah.Presentation.Bookmarks
+
+<div class="page-shell @(_slim ? "slim" : "")">
+    <AppSidebar OnToggleSidebar="() => _slim = !_slim"
+                OnNavigate="OnSidebarNavigate"
+                OnNewFolder='() => OnFolderModal.InvokeAsync(("folder", null, null))'
+                OnNewCollection='() => OnFolderModal.InvokeAsync(("collection", null, null))'
+                OnNewSmart='() => OnFolderModal.InvokeAsync(("smart", null, null))'
+                OnFolderMenu='id => OnFolderModal.InvokeAsync(("folder", id, null))'
+                OnCollectionMenu='id => OnFolderModal.InvokeAsync(("collection", null, id))'
+                OnNewFolderInCollection='cid => OnFolderModal.InvokeAsync(("folder", null, cid))'
+                OnNewPageInCollection='cid => OnPageModal.InvokeAsync(("page", null, cid, null, null))'
+                OnNewSubPage='pid => OnPageModal.InvokeAsync(("page", null, null, null, pid))'
+                OnPageMenu='pid => OnPageModal.InvokeAsync(("page", pid, null, null, null))' />
+    <div class="page-shell-frame">@ChildContent</div>
+</div>
+@if (_slim)
+{
+    <button class="page-shell-expand" @onclick="() => _slim = false" title="Open sidebar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3,6 L21,6 L21,8 L3,8 L3,6 Z M3,11 L21,11 L21,13 L3,13 L3,11 Z M3,16 L21,16 L21,18 L3,18 L3,16 Z"/></svg>
+    </button>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback<(string Ctx, string? Id, string? Tag)> OnSidebarNavigate { get; set; }
+    [Parameter] public EventCallback<(string Mode, string? FolderId, string? CollectionId)> OnFolderModal { get; set; }
+    // ADDITIVE (new): page modal requests (mode is always "page").
+    [Parameter] public EventCallback<(string Mode, string? PageId, string? CollectionId, string? FolderId, string? ParentPageId)> OnPageModal { get; set; }
+
+    private bool _slim;
+}

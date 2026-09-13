@@ -23,9 +23,9 @@
 .bmk{scrollbar-width:none}
 .bmk .mono{font-family:var(--mono)}
 .bmk kbd{font-family:var(--mono);font-size:10.5px;font-weight:600;border:1px solid var(--line2);border-bottom-width:2px;border-radius:5px;padding:1px 6px;background:var(--surface);color:var(--ink2)}
-.bmk{display:grid;grid-template-columns:1fr;height:100vh}
-.bmk .bmk-frame{display:flex;flex-direction:column;min-width:0;height:100vh;overflow:hidden}
-.bmk .bmk-main{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;padding:26px 34px 90px}
+.bmk{display:grid;grid-template-columns:1fr;height:100%}
+.bmk .bmk-frame{display:flex;flex-direction:column;min-width:0;height:100%;overflow:hidden}
+.bmk .bmk-main{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;padding:26px 34px 90px;overscroll-behavior:contain}
 .bmk .page{animation:pgin .25s ease both}
 @keyframes pgin{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 .bmk .bmk-top{height:56px;display:flex;align-items:center;gap:12px;padding:0 22px;border-bottom:1px solid var(--line);background:rgba(247,246,243,.88);backdrop-filter:blur(6px);flex:none}

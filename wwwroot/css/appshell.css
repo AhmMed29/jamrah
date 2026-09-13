@@ -6,13 +6,20 @@
     --line:#e9e6e0; --line2:#d8d4cb; --hover:#f1efe9;
     --sans:'Tajawal','Segoe UI',system-ui,sans-serif;
     display:grid;grid-template-columns:auto 1fr;height:100vh;overflow:hidden;background:var(--bg);
+    /* FIX: pin the shell to the viewport so the document itself can never scroll
+       (root zoom inflates vh boxes → body scroll moved both panels together).
+       Panels keep their own independent scroll. */
+    position:fixed;inset:0;
 }
-.page-shell-frame{min-width:0;height:100vh;overflow:hidden}
+.page-shell-frame{min-width:0;height:100%;overflow:hidden}
 
 /* Reset + base — scoped to the sidebar only so page styles stay untouched */
 .page-shell .app-sb,.page-shell .app-sb *{margin:0;padding:0;box-sizing:border-box}
 .page-shell .app-sb{font-family:var(--sans);color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased;scrollbar-width:none;
-    overflow-y:auto;overflow-x:hidden;border-right:1px solid var(--line);background:var(--bg);white-space:nowrap;height:100vh;width:250px;
+    overflow-y:auto;overflow-x:hidden;border-right:1px solid var(--line);background:var(--bg);white-space:nowrap;height:100%;width:250px;
+    /* FIX: independent sidebar scroll — % of the pinned shell (zoom-proof),
+       never chains into the page scroll. */
+    min-height:0;overscroll-behavior:contain;
     transition:margin-left .28s cubic-bezier(.25,.9,.3,1),opacity .25s ease}
 .page-shell.slim .app-sb{margin-left:-250px;opacity:0;pointer-events:none}
 .page-shell .app-sb button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}

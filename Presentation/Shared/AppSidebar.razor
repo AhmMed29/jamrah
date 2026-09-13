@@ -17,7 +17,7 @@
     @foreach (var n in NavItems)
     {
         var id = n.Id;
-        <div class="sb-i sb-navi @(Nav.CurrentPage == id ? "on" : "")" @onclick='() => Nav.Request(id)'>
+        <div class="sb-i sb-navi nav-@id @(Nav.CurrentPage == id ? "on" : "")" @onclick='() => Nav.Request(id)'>
             @((MarkupString)NavIcon(n.Path))<span class="n">@n.Label</span>
         </div>
     }

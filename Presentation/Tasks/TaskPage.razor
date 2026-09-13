@@ -48,7 +48,7 @@
                         @if(_upcomingCount>0){<span class="capsule-count">@_upcomingCount</span>}
                     </button>
                 </div>
-                <button class="primary-btn" @onclick="OpenCreateModal"><span>+</span><span>مهمة جديدة</span></button>
+                <button class="primary-btn" @onclick="OpenCreateModal"><span>+</span><span class="pb-label">مهمة جديدة</span></button>
             </div>
         </header>
 
@@ -175,9 +175,14 @@
         </div>
         <div class="details-footer">
             <button class="archive-btn" @onclick="ArchiveSelected" title="أرشفة">@(_selectedTask?.ArchivedAt!=null ? "↶" : "▱")</button>
-            <button class="delete-btn" @onclick="DeleteSelected" title="حذف">×</button>
+            <button class="delete-btn" @onclick="DeleteSelected" title="حذف اليوم فقط">×</button>
             <button class="save-btn" @onclick="SaveSelected">حفظ التغييرات</button>
         </div>
+        @if(_selectedTask!=null && IsRecurring(_selectedTask)){
+            <div style="padding:0 14px 14px;">
+                <button class="delete-btn" style="width:100%;border-color:var(--red);color:var(--red);" @onclick="DeleteSelectedSeries" title="حذف نهائي — لن تتكرر هذه المهمة خلال الأيام القادمة">⛔ حذف نهائياً (لن تتكرر بعد اليوم)</button>
+            </div>
+        }
     </aside>
 </div>
 
@@ -244,7 +249,10 @@
 <div class="context-backdrop" @onclick="CloseContext" style="position:fixed; inset:0; z-index:199;"></div>
 <div class="context-menu open" style="left:@(_contextX)px; top:@(_contextY)px; z-index:200;">
     <button class="context-item" @onclick="ContextEdit">✎ تعديل</button>
-    <button class="context-item danger" @onclick="ContextDelete">× حذف</button>
+    <button class="context-item danger" @onclick="ContextDelete">× حذف اليوم فقط</button>
+    @if(IsContextRecurring()){
+        <button class="context-item danger" @onclick="ContextDeleteSeries" title="حذف نهائي — لن تتكرر هذه المهمة خلال الأيام القادمة">⛔ حذف نهائياً (لن تتكرر)</button>
+    }
 </div>
 }
 
@@ -1710,8 +1718,22 @@
                 font-size: 10px;
             }
 
-            .primary-btn span {
+            .primary-btn {
+                width: 44px;
+                height: 44px;
+                padding: 0;
+                justify-content: center;
+                border-radius: 12px;
+                font-size: 20px;
+            }
+
+            .primary-btn .pb-label {
                 display: none;
+            }
+
+            .capsule-btn {
+                width: 44px;
+                height: 44px;
             }
 
             .day-header {
@@ -1799,6 +1821,8 @@
     private string _editNotes = "";
 
     private int _todayCount, _upcomingCount, _noDateCount, _completedCount, _archivedCount;
+    private int _archDoneCount, _archDeletedCount;
+    private string _archKind = "done"; // done | deleted
     private int _dayTotal, _dayCompleted, _dayPercent;
     private bool _archDay = true, _archWeek = false, _archMonth = false, _archYear = false;
 
@@ -1862,6 +1886,8 @@
         _noDateCount = active.Count(t => (t.DueDate==null && t.ScheduledDate==null) && !t.IsDone);
         _completedCount = active.Count(t => t.IsDone && ((t.DueDate?.Date==_currentDate.Date) || (t.ScheduledDate?.Date==_currentDate.Date) || (t.DueDate==null && t.ScheduledDate==null && t.CompletedAt?.Date==_currentDate.Date)));
         _archivedCount = tasks.Count(t => t.ArchivedAt!=null);
+        _archDoneCount = tasks.Count(t => t.ArchivedAt!=null && t.IsDone);
+        _archDeletedCount = tasks.Count(t => t.ArchivedAt!=null && !t.IsDone);
 
         var dayTasks = active.Where(t => (t.DueDate?.Date==_currentDate.Date) || (t.ScheduledDate?.Date==_currentDate.Date)).ToList();
         _dayTotal = dayTasks.Count;
@@ -1880,6 +1906,8 @@
     }
     private IEnumerable<AppTask> GetFilteredArchived(){
         var all = TaskState.Tasks.Where(t=>t.ArchivedAt!=null).OrderByDescending(t=>t.ArchivedAt).ToList();
+        // تقسيم الأرشيف: منجز / محذوف
+        all = (_archKind=="deleted" ? all.Where(t=>!t.IsDone) : all.Where(t=>t.IsDone)).ToList();
         if(!_archDay && !_archWeek && !_archMonth && !_archYear) return all;
         var today = DateTime.Today;
         if(_archDay){
@@ -2256,8 +2284,11 @@
     private RenderFragment ArchivedView => @<text>
         @{
             var filtered = GetFilteredArchived().ToList();
-            var allCount = TaskState.Tasks.Count(t=>t.ArchivedAt!=null);
         }
+        <div class="archive-toggles">
+            <button class="archive-toggle @(_archKind=="done"?"active":"")" @onclick='()=> _archKind="done"'>✓ منجز (@_archDoneCount)</button>
+            <button class="archive-toggle @(_archKind=="deleted"?"active":"")" @onclick='()=> _archKind="deleted"'>🗑 محذوف (@_archDeletedCount)</button>
+        </div>
         <div class="archive-toggles">
             <button class="archive-toggle @(_archDay?"active":"")" @onclick='()=>ToggleArch("day")'>يوم</button>
             <button class="archive-toggle @(_archWeek?"active":"")" @onclick='()=>ToggleArch("week")'>أسبوع</button>
@@ -2265,10 +2296,10 @@
             <button class="archive-toggle @(_archYear?"active":"")" @onclick='()=>ToggleArch("year")'>سنة</button>
         </div>
         @if(!filtered.Any()){
-            <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">الأرشيف فاضي</div><div class="empty-text">المهام اللي مش عايزها في الـ workspace الرئيسي تقدر تأرشفها هنا.</div></div></div>
+            <div class="task-list"><div class="empty"><div class="empty-icon">@(_archKind=="deleted" ? "🗑" : "✓")</div><div class="empty-title">@(_archKind=="deleted" ? "لا توجد مهام محذوفة" : "لا توجد مهام منجزة")</div><div class="empty-text">@(_archKind=="deleted" ? "المهام المحذوفة ستظهر هنا." : "المهام التي تنجزها ستظهر هنا.")</div></div></div>
         } else {
             <section class="task-section">
-                <div class="section-header"><div class="section-title"><span class="section-dot" style="background:var(--muted)"></span>الأرشيف<span class="section-count">@filtered.Count</span></div><button class="section-action" @onclick="async ()=>{ foreach(var t in filtered) await TaskState.RestoreTaskAsync(t.Id); UpdateCounts(); }">استرجاع الكل</button></div>
+                <div class="section-header"><div class="section-title"><span class="section-dot" style="background:var(--muted)"></span>@(_archKind=="deleted" ? "محذوف" : "منجز")<span class="section-count">@filtered.Count</span></div><button class="section-action" @onclick="async ()=>{ foreach(var t in filtered) await TaskState.RestoreTaskAsync(t.Id); UpdateCounts(); }">استرجاع الكل</button></div>
                 <div class="task-list">
                     @foreach(var task in filtered){
                         <div class="task-row @(task.IsDone?"completed":"")" @onclick="()=>OpenDetails(task.Id)" @oncontextmenu="(e)=>ShowContext(e, task.Id)" @oncontextmenu:preventDefault="true" style="@(!task.IsDone ? "color:var(--red)" : "")">

@@ -44,7 +44,7 @@ else if (Field.Type == "color")
 else if (Field.Type == "image")
 {
     <div class="upl">
-        @if (!string.IsNullOrEmpty(Value) && (Value.StartsWith("http") || Value.StartsWith("data:"))) { <img class="imgpv" src="@Value" alt="" /> }
+        @if (!string.IsNullOrEmpty(Value) && (Value.StartsWith("http") || Value.StartsWith("data:") || Value.StartsWith("file://"))) { <img class="imgpv" src="@Value" alt="" /> }
         <input type="url" value="@(Value.StartsWith("data:") ? "" : Value)" @oninput="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" placeholder="https://…" style="flex:1;min-width:140px" />
         <span class="hint" style="margin:0">@L["bmk.pasteUrl"]</span>
     </div>

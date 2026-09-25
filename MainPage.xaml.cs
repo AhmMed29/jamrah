@@ -394,8 +394,32 @@ public partial class MainPage : ContentPage
             Selector      = "#app",
             ComponentType = typeof(Presentation.Shared.ShellBookmarksPage)
         });
+        // Article reader links: external http(s) opens in the browser, in-page
+        // anchors and the app origin itself keep loading inside the WebView.
+        // The app origin is a loopback address that varies by version/config
+        // (0.0.0.0, 0.0.0.1, ...), so allow any IP/localhost host instead of one.
+        _bookmarkWebView.UrlLoading += (_, e) =>
+        {
+            if ((e.Url.Scheme == "http" || e.Url.Scheme == "https")
+                && !IsAppOriginHost(e.Url.Host))
+            {
+                e.UrlLoadingStrategy = Microsoft.AspNetCore.Components.WebView.UrlLoadingStrategy.CancelLoad;
+                _ = Microsoft.Maui.ApplicationModel.Launcher.OpenAsync(e.Url);
+            }
+        };
         MainContent.Children.Add(_bookmarkWebView);
         EnableZoomWithPersistence(_bookmarkWebView, "bookmarks");
+    }
+
+    /// <summary>
+    /// True for the BlazorWebView app origin and in-page anchors (same host).
+    /// Real article links are DNS names; anything numeric/local is the app itself.
+    /// </summary>
+    private static bool IsAppOriginHost(string host)
+    {
+        if (string.IsNullOrWhiteSpace(host)) return true;
+        if (host.Equals("localhost", System.StringComparison.OrdinalIgnoreCase)) return true;
+        return System.Net.IPAddress.TryParse(host, out _);
     }
 
     // ─── Zoom per-page persisted in Settings table ──────────────────────────

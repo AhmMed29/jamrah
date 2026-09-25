@@ -1,5 +1,6 @@
 @using Jamrah.Application.Services
 @using Jamrah.Core.Entities
+@using Markdig
 @inject BookmarkStateService State
 @inject LocalizationService L
 @implements IDisposable
@@ -49,6 +50,16 @@
                     @if (!string.IsNullOrEmpty(g.Status)) { @((MarkupString)BookmarkTemplates.StChip(g.Status)) }
                 </div>
                 @if (!string.IsNullOrEmpty(Item.Description)) { <div class="d-desc">@Item.Description</div> }
+
+                @if (ReaderHtml() is string saved && !string.IsNullOrWhiteSpace(saved))
+                {
+                    <div class="d-sec"><h4>@(L.Lang == "ar" ? "القراءة المحلية" : "Saved offline")<span style="font-weight:500;color:var(--ink3)"> · @_readerWords @(L.Lang == "ar" ? "كلمة" : "words")</span><span class="hact" @onclick="() => _readerOpen = !_readerOpen">@(_readerOpen ? (L.Lang == "ar" ? "إخفاء" : "Hide") : (L.Lang == "ar" ? "عرض" : "Show"))</span></h4>
+                        @if (_readerOpen)
+                        {
+                            <div class="reader">@((MarkupString)saved)</div>
+                        }
+                    </div>
+                }
 
                 <div class="d-sec"><h4>@L["bmk.metadata"]</h4><div class="mgrid">
                     @foreach (var fd in BookmarkTypeSchema.For(Item.Type))
@@ -201,6 +212,70 @@
     private string _noteText = string.Empty;
     private string _newTag = string.Empty;
     private string _relateId = string.Empty;
+    private bool _readerOpen = true;
+    private string? _readerCacheId;
+    private DateTime _readerCacheTs;
+    private string? _readerHtml;
+    private int _readerWords;
+
+    /// <summary>
+    /// Local article copy: renders Archive/article.md via Markdig (article.html is the
+    /// fallback for items archived before the MD switch). Cached per item version so the
+    /// background archiver appearing later refreshes automatically via UpdatedAt.
+    /// </summary>
+    private string? ReaderHtml()
+    {
+        if (Item == null) return null;
+        if (_readerCacheId == Item.Id && _readerCacheTs == Item.UpdatedAt) return _readerHtml;
+        _readerCacheId = Item.Id;
+        _readerCacheTs = Item.UpdatedAt;
+        _readerHtml = null;
+        _readerWords = 0;
+        try
+        {
+            var m = System.Text.Json.Nodes.JsonNode.Parse(
+                string.IsNullOrWhiteSpace(Item.MetadataJson) ? "{}" : Item.MetadataJson)
+                as System.Text.Json.Nodes.JsonObject;
+            var dir = m?["archivePath"]?.GetValue<string>();
+            if (m?["wordCount"] != null)
+                try { _readerWords = m["wordCount"]!.GetValue<int>(); } catch { }
+            if (string.IsNullOrWhiteSpace(dir)) return null;
+            var mdFile = System.IO.Path.Combine(dir, "article.md");
+            string html;
+            if (System.IO.File.Exists(mdFile))
+            {
+                var md = System.IO.File.ReadAllText(mdFile);
+                if (string.IsNullOrWhiteSpace(md)) return null;
+                html = Markdown.ToHtml(md, new MarkdownPipelineBuilder()
+                    .UseAdvancedExtensions().UseTaskLists().Build());
+            }
+            else
+            {
+                var htmlFile = System.IO.Path.Combine(dir, "article.html");
+                if (!System.IO.File.Exists(htmlFile)) return null;
+                var raw = System.IO.File.ReadAllText(htmlFile);
+                if (string.IsNullOrWhiteSpace(raw)) return null;
+                var legacy = new HtmlAgilityPack.HtmlDocument();
+                legacy.LoadHtml(raw);
+                html = legacy.DocumentNode.SelectSingleNode("//body")?.InnerHtml.Trim() ?? raw;
+            }
+            // Patch imgs to fall back to remote when the WebView blocks file://.
+            try
+            {
+                var doc = new HtmlAgilityPack.HtmlDocument();
+                doc.LoadHtml(html);
+                foreach (var img in doc.DocumentNode.SelectNodes("//img[@data-remote-src]") ?? Enumerable.Empty<HtmlAgilityPack.HtmlNode>())
+                {
+                    if (string.IsNullOrWhiteSpace(img.GetAttributeValue("onerror", string.Empty)))
+                        img.SetAttributeValue("onerror", "this.onerror=null;this.src=this.getAttribute('data-remote-src');");
+                }
+                _readerHtml = doc.DocumentNode.InnerHtml.Trim();
+            }
+            catch { _readerHtml = html; }
+        }
+        catch { _readerHtml = null; }
+        return _readerHtml;
+    }
 
     private async Task DoAsync(Func<Task> op, bool close = false)
     {

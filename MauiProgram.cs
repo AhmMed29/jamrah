@@ -41,6 +41,22 @@ namespace Jamrah
             builder.Services.AddSingleton<ITaskStateService>(sp => sp.GetRequiredService<TaskStateService>());
             builder.Services.AddSingleton<BookmarkStateService>();
             builder.Services.AddSingleton<BookmarkEmbedService>();
+            // Link preview + archiving (B): shared HttpClient then layered providers.
+            builder.Services.AddSingleton(sp =>
+            {
+                var http = new System.Net.Http.HttpClient
+                {
+                    Timeout = System.TimeSpan.FromSeconds(15),
+                };
+                http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36");
+                return http;
+            });
+            builder.Services.AddSingleton<Jamrah.Application.Services.LinkPreview.HttpOpenGraphProvider>();
+            builder.Services.AddSingleton<Jamrah.Application.Services.LinkPreview.OEmbedProvider>();
+            builder.Services.AddSingleton<Jamrah.Application.Services.LinkPreview.PlaywrightFallbackProvider>();
+            builder.Services.AddSingleton<Jamrah.Application.Services.LinkPreview.LinkPreviewService>();
+            builder.Services.AddSingleton<Jamrah.Application.Services.LinkPreview.LinkArchiver>();
             builder.Services.AddSingleton<IAppNavService, AppNavService>();
 
             // Register MAUI Blazor Services

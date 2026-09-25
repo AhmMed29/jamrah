@@ -2,6 +2,8 @@
 @using Jamrah.Core.Entities
 @inject BookmarkStateService State
 @inject BookmarkEmbedService Embed
+@inject Jamrah.Application.Services.LinkPreview.LinkPreviewService Preview
+@inject Jamrah.Application.Services.LinkPreview.LinkArchiver Archiver
 @inject LocalizationService L
 @implements IDisposable
 
@@ -338,12 +340,14 @@
         _fetchMsg = null;
         try
         {
-            var res = await Embed.FetchAsync(_link.Trim());
-            var dom = BookmarkCardData.HostOf(_link.Trim());
+            var url = Jamrah.Application.Services.LinkPreview.LinkPreviewService.NormalizeUrl(_link.Trim());
+            // Layered preview (B): Http+OpenGraph -> oEmbed -> Playwright fallback (Windows).
+            var res = await Preview.PreviewAsync(url);
+            var dom = BookmarkCardData.HostOf(url);
             var plat = BookmarkEmbedService.PlatformName(dom);
             if (res == null)
             {
-                var live = BookmarkTemplates.EmbedHtml(_link.Trim(), dom) != null;
+                var live = BookmarkTemplates.EmbedHtml(url, dom) != null;
                 if (_editId == null)
                 {
                     if (System.Text.RegularExpressions.Regex.IsMatch(dom, "facebook|instagram|twitter|x\\.com|threads|reddit|linkedin")) { _type = "post"; _tpl = "post"; }
@@ -356,7 +360,7 @@
             }
             if (!string.IsNullOrWhiteSpace(res.Title) && string.IsNullOrWhiteSpace(_title)) _title = res.Title;
             if (!string.IsNullOrWhiteSpace(res.Desc) && string.IsNullOrWhiteSpace(_desc)) _desc = res.Desc;
-            if (!string.IsNullOrWhiteSpace(res.Image) && string.IsNullOrWhiteSpace(_thumbUrl)) _thumbUrl = res.Image;
+            if (!string.IsNullOrWhiteSpace(res.ImageUrl) && string.IsNullOrWhiteSpace(_thumbUrl)) _thumbUrl = res.ImageUrl;
             var fields = BookmarkTypeSchema.For(_type);
             if (!string.IsNullOrWhiteSpace(res.Author) && fields.Any(f => f.Key == "author") && string.IsNullOrWhiteSpace(GetMeta("author")))
                 SetMeta("author", res.Author);
@@ -365,7 +369,14 @@
                 foreach (var k in new[] { "site", "platform", "source", "publisher", "channel" })
                     if (fields.Any(f => f.Key == k) && string.IsNullOrWhiteSpace(GetMeta(k))) { SetMeta(k, res.Provider); break; }
             }
-            var suggested = BookmarkEmbedService.SuggestType(dom, res.Otype);
+            if (res.DurationMinutes.HasValue && res.DurationMinutes.Value > 0
+                && fields.Any(f => f.Key == "duration") && string.IsNullOrWhiteSpace(GetMeta("duration")))
+                SetMeta("duration", res.DurationMinutes.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            if (!string.IsNullOrWhiteSpace(res.PublishedDate)
+                && fields.Any(f => f.Key == "date") && string.IsNullOrWhiteSpace(GetMeta("date")))
+                SetMeta("date", res.PublishedDate);
+            var suggested = string.IsNullOrWhiteSpace(res.SuggestedType)
+                ? BookmarkEmbedService.SuggestType(dom, res.Otype) : res.SuggestedType;
             if (_editId == null && suggested != _type)
             {
                 _type = suggested;
@@ -429,6 +440,7 @@
                 if (!State.Tags.Any(x => x.Name == t))
                     await State.SaveTagAsync(new BookmarkTag { Name = t });
 
+            BookmarkItem saved;
             if (_editId != null)
             {
                 var it = State.Items.FirstOrDefault(i => i.Id == _editId);
@@ -442,10 +454,11 @@
                 it.MetadataJson = BuildMetadataJson(); it.Tpl = _tpl;
                 it.Favorite = _fav; it.Pinned = _pin;
                 await State.SaveItemAsync(it);
+                saved = it;
             }
             else
             {
-                await State.SaveItemAsync(new BookmarkItem
+                saved = new BookmarkItem
                 {
                     Title = title, Type = _type, Url = _link, Description = _desc, Notes = _notes,
                     Thumb = thumb, TagsJson = System.Text.Json.JsonSerializer.Serialize(_tags),
@@ -456,11 +469,75 @@
                     MetadataJson = BuildMetadataJson(), Tpl = _tpl,
                     Favorite = _fav, Pinned = _pin,
                     CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
-                });
+                };
+                await State.SaveItemAsync(saved);
             }
+            // Local archiving in background (B): never blocks Save. Video keeps thumb+metadata only.
+            _ = ArchiveInBackground(saved);
             await OnSaved.InvokeAsync(L["bmk.savedToast"]);
         }
         finally { _saving = false; }
+    }
+
+    private async Task ArchiveInBackground(BookmarkItem item)
+    {
+        try
+        {
+            // Keep the remote URL in Thumb (display fallback); local file goes to MetadataJson.
+            var remoteThumb = item.Thumb;
+            var thumbRes = await Archiver.TrySaveThumbLocalAsync(item.Id, remoteThumb);
+            var touched = false;
+            System.Text.Json.Nodes.JsonObject m;
+            try
+            {
+                m = System.Text.Json.Nodes.JsonNode.Parse(
+                    string.IsNullOrWhiteSpace(item.MetadataJson) ? "{}" : item.MetadataJson)
+                    as System.Text.Json.Nodes.JsonObject ?? new System.Text.Json.Nodes.JsonObject();
+            }
+            catch { m = new System.Text.Json.Nodes.JsonObject(); }
+
+            // 1) Thumb local (all types incl. video thumbnail). Remote Thumb stays untouched.
+            if (!string.IsNullOrWhiteSpace(thumbRes.LocalPath))
+            {
+                m["thumbLocal"] = thumbRes.LocalPath;
+                if (!string.IsNullOrWhiteSpace(remoteThumb)) m["thumbSource"] = remoteThumb;
+                m.Remove("thumbError");
+                touched = true;
+            }
+            else if (thumbRes.Reason != "already-local")
+            {
+                m["thumbError"] = thumbRes.Reason ?? "unknown";
+                touched = true;
+            }
+            // 2) Full article copy (clean text + local images). Skipped for video/music/image/file.
+            var archiveable = item.Type is "link" or "article" or "website" or "documentation"
+                or "post" or "tool" or "research" or "reference" or "course" or "book" or "ebook";
+            if (archiveable && !string.IsNullOrWhiteSpace(item.Url))
+            {
+                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(45));
+                var (dir, words) = await Archiver.ArchiveArticleAsync(item.Id, item.Url.Trim(), cts.Token);
+                if (!string.IsNullOrWhiteSpace(dir) && words > 0)
+                {
+                    m["archivePath"] = dir;
+                    m["archivedAt"] = DateTime.UtcNow.ToString("o");
+                    m["wordCount"] = System.Text.Json.Nodes.JsonValue.Create(words);
+                    m.Remove("archiveError");
+                    touched = true;
+                }
+                else
+                {
+                    m["archiveError"] = "fetch-failed";
+                    touched = true;
+                }
+            }
+            if (touched)
+            {
+                item.MetadataJson = m.ToJsonString();
+                item.UpdatedAt = DateTime.UtcNow;
+                await State.SaveItemAsync(item);
+            }
+        }
+        catch { /* archiving must never break the UI */ }
     }
 
     private void OnLang() => InvokeAsync(StateHasChanged);

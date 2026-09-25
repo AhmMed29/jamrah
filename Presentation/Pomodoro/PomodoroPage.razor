@@ -3,10 +3,11 @@
 @implements IDisposable
 @inject Jamrah.Application.Services.PrayerTimesService PrayerService
 @inject Jamrah.Application.Services.PomodoroSoundService Sound
+@inject Jamrah.Application.Services.LocalizationService L
 @inject IJSRuntime JS
 @inject IAppNavService Nav
 
-<div class="app-container" dir="rtl" style="flex-direction:row-reverse;">
+<div class="app-container" style="flex-direction:row-reverse;">
 
     <div class="right-panel">
         <div class="view-modes">
@@ -31,16 +32,16 @@
 
         <div class="timer-box @(_currentSession != null ? "has-session" : "")" @onclick="OnTimerBoxClick">
             <div class="timer-adjust timer-adjust--left">
-                <button class="adj-btn adj-btn--large" @onclick:stopPropagation="true" @onclick="() => AdjustPlannedMinutes(-5)" title="-5 دقائق">−5</button>
-                <button class="adj-btn adj-btn--small" @onclick:stopPropagation="true" @onclick="() => AdjustPlannedMinutes(-1)" title="-1 دقيقة">−1</button>
+                <button class="adj-btn adj-btn--large" @onclick:stopPropagation="true" @onclick="() => AdjustPlannedMinutes(-5)" title="@L["pomo.minus5"]">−5</button>
+                <button class="adj-btn adj-btn--small" @onclick:stopPropagation="true" @onclick="() => AdjustPlannedMinutes(-1)" title="@L["pomo.minus1"]">−1</button>
             </div>
             <div class="timer-center">
                 <div class="timer-value">@FormatTime(_timer.Remaining)</div>
-                <div class="timer-label">Work</div>
+                <div class="timer-label">@L["pomo.work"]</div>
             </div>
             <div class="timer-adjust timer-adjust--right">
-                <button class="adj-btn adj-btn--large" @onclick:stopPropagation="true" @onclick="() => AdjustPlannedMinutes(+5)" title="+5 دقائق">+5</button>
-                <button class="adj-btn adj-btn--small" @onclick:stopPropagation="true" @onclick="() => AdjustPlannedMinutes(+1)" title="+1 دقيقة">+1</button>
+                <button class="adj-btn adj-btn--large" @onclick:stopPropagation="true" @onclick="() => AdjustPlannedMinutes(+5)" title="@L["pomo.plus5"]">+5</button>
+                <button class="adj-btn adj-btn--small" @onclick:stopPropagation="true" @onclick="() => AdjustPlannedMinutes(+1)" title="@L["pomo.plus1"]">+1</button>
             </div>
         </div>
 
@@ -52,10 +53,10 @@
         </div>
 
         <div class="actions">
-            <button class="action-btn" title="Reset" @onclick="ResetTimer">
+            <button class="action-btn" title="@L["com.resetTitle"]" @onclick="ResetTimer">
                 <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
             </button>
-            <button class="action-btn" title="@(_timer.IsRunning ? "Pause" : "Start")" @onclick="ToggleTimer">
+            <button class="action-btn" title="@(_timer.IsRunning ? L["com.pause"] : L["com.start"])" @onclick="ToggleTimer">
                 @if (_timer.IsRunning)
                 {
                     <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="4" height="16"></rect><rect x="15" y="4" width="4" height="16"></rect></svg>
@@ -65,20 +66,20 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                 }
             </button>
-            <button class="action-btn" title="Complete" @onclick="CompleteCurrentSession">
+            <button class="action-btn" title="@L["com.complete"]" @onclick="CompleteCurrentSession">
                 <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
             </button>
         </div>
 
         <div class="timer-info">
-            <div class="info-row"><span>وقت البداية</span><span>@StartTimeText</span></div>
-            <div class="info-row"><span>وقت النهاية</span><span>@FinalTimeText</span></div>
-            <div class="info-row"><span>المدة</span><span>@DurationText</span></div>
+            <div class="info-row"><span>@L["pomo.startTime"]</span><span>@StartTimeText</span></div>
+            <div class="info-row"><span>@L["pomo.endTime"]</span><span>@FinalTimeText</span></div>
+            <div class="info-row"><span>@L["com.duration"]</span><span>@DurationText</span></div>
         </div>
         </div>
 
         <div class="pomo-extra">
-        <button class="dur-btn" style="width:100%; margin-top:2px;" @onclick="() => _soundModalOpen = true">اعدادات الصوت</button>
+        <button class="dur-btn" style="width:100%; margin-top:2px;" @onclick="() => _soundModalOpen = true">@L["pomo.soundSettings"]</button>
 
         @if (_soundModalOpen)
         {
@@ -88,34 +89,34 @@
         <div class="prayer-section">
 
             <div class="prayer-countdown">
-                <div class="prayer-countdown-label">@_nextPrayerName</div>
+                <div class="prayer-countdown-label">@L.PrayerName(_nextPrayerKey)</div>
                 <div class="prayer-countdown-timer">@FormatCountdown(_timeToNextPrayer)</div>
             </div>
 
-            <div class="prayer-title">مواقيت الصلاة</div>
+            <div class="prayer-title">@L["pomo.prayerTimes"]</div>
             <table class="prayer-table">
                 <thead>
-                <tr><th>الصلاة</th><th>الأذان</th></tr>
+                <tr><th>@L["pomo.prayer"]</th><th>@L["pomo.adhan"]</th></tr>
                 </thead>
                 <tbody>
                 @if (_todayPrayers != null)
                 {
-                    <tr class="@(_nextPrayerName == "الفجر"  ? "next-prayer" : "")"><td>الفجر</td><td>@To12H(_todayPrayers.Fajr)</td></tr>
-                    <tr class="@(_nextPrayerName == "الشروق" ? "next-prayer" : "")"><td>الشروق</td><td>@To12H(_todayPrayers.Sunrise)</td></tr>
-                    <tr class="@(_nextPrayerName == "الظهر"  ? "next-prayer" : "")"><td>الظهر</td><td>@To12H(_todayPrayers.Dhuhr)</td></tr>
-                    <tr class="@(_nextPrayerName == "العصر"  ? "next-prayer" : "")"><td>العصر</td><td>@To12H(_todayPrayers.Asr)</td></tr>
-                    <tr class="@(_nextPrayerName == "المغرب" ? "next-prayer" : "")"><td>المغرب</td><td>@To12H(_todayPrayers.Maghrib)</td></tr>
-                    <tr class="@(_nextPrayerName == "العشاء" ? "next-prayer" : "")"><td>العشاء</td><td>@To12H(_todayPrayers.Isha)</td></tr>
+                    <tr class="@(_nextPrayerKey == "fajr"  ? "next-prayer" : "")"><td>@L["prayer.fajr"]</td><td>@To12H(_todayPrayers.Fajr)</td></tr>
+                    <tr class="@(_nextPrayerKey == "sunrise" ? "next-prayer" : "")"><td>@L["prayer.sunrise"]</td><td>@To12H(_todayPrayers.Sunrise)</td></tr>
+                    <tr class="@(_nextPrayerKey == "dhuhr"  ? "next-prayer" : "")"><td>@L["prayer.dhuhr"]</td><td>@To12H(_todayPrayers.Dhuhr)</td></tr>
+                    <tr class="@(_nextPrayerKey == "asr"  ? "next-prayer" : "")"><td>@L["prayer.asr"]</td><td>@To12H(_todayPrayers.Asr)</td></tr>
+                    <tr class="@(_nextPrayerKey == "maghrib" ? "next-prayer" : "")"><td>@L["prayer.maghrib"]</td><td>@To12H(_todayPrayers.Maghrib)</td></tr>
+                    <tr class="@(_nextPrayerKey == "isha" ? "next-prayer" : "")"><td>@L["prayer.isha"]</td><td>@To12H(_todayPrayers.Isha)</td></tr>
                 }
                 else
                 {
-                    <tr><td colspan="2" style="text-align:center;">جاري التحميل...</td></tr>
+                    <tr><td colspan="2" style="text-align:center;">@L["pomo.loading"]</td></tr>
                 }
                 </tbody>
             </table>
 
             <button class="dur-btn" style="width:100%; margin-top:8px;" @onclick="OpenLocationModal">
-                تغيير المنطقة
+                @L["pomo.changeRegion"]
             </button>
 
         </div>
@@ -128,11 +129,11 @@
     {
         <div class="modal-group">
             <div class="modal-box tags-modal-box">
-                <div class="modal-header"><span class="modal-title">التاجات</span></div>
-                <div class="input-group"><input type="text" class="minimal-input" @bind="_tagSearch" placeholder="بحث..." /></div>
+                <div class="modal-header"><span class="modal-title">@L["pomo.tags"]</span></div>
+                <div class="input-group"><input type="text" class="minimal-input" @bind="_tagSearch" placeholder="@L["pomo.search"]" /></div>
                 <div class="input-group">
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="text" class="minimal-input" @bind="_newTagName" placeholder="إضافة تاج" style="flex:1;" />
+                        <input type="text" class="minimal-input" @bind="_newTagName" placeholder="@L["pomo.addTag"]" style="flex:1;" />
                         <input type="color" class="color-input" @bind="_newTagColor" />
                         <button class="modal-btn primary" @onclick="AddTag" style="padding:8px;">+</button>
                     </div>
@@ -149,13 +150,13 @@
             </div>
             <div class="modal-box">
                 <div class="modal-header">
-                    <span class="modal-title">جلسة جديدة @if (_selectedTag != null) { <span class="tag-badge" style="background:@_selectedTag.Color; color:@TagTextColor(_selectedTag);">@_selectedTag.Name</span> }</span>
+                    <span class="modal-title">@L["pomo.newSession"] @if (_selectedTag != null) { <span class="tag-badge" style="background:@_selectedTag.Color; color:@TagTextColor(_selectedTag);">@_selectedTag.Name</span> }</span>
                     <button class="close-btn" @onclick="CloseModal">X</button>
                 </div>
-                <div class="input-group"><label class="input-label">اسم الجلسة</label><input type="text" class="minimal-input" @bind="_sessionName" placeholder="untitled" /></div>
-                <div class="input-group"><label class="input-label">ملاحظات</label><textarea class="minimal-textarea" @bind="_sessionNote" placeholder="اكتب ملاحظاتك هنا..."></textarea></div>
-                <div class="input-group"><label class="input-label">المدة</label><input type="number" class="minimal-input" @bind="_sessionDuration" /></div>
-                <div class="modal-actions"><button class="modal-btn" @onclick="CloseModal">إلغاء</button><button class="modal-btn primary" @onclick="StartSessionFromCreate">بدء</button></div>
+                <div class="input-group"><label class="input-label">@L["pomo.sessionName"]</label><input type="text" class="minimal-input" @bind="_sessionName" placeholder="@L["pomo.untitled"]" /></div>
+                <div class="input-group"><label class="input-label">@L["pomo.sessionNotes"]</label><textarea class="minimal-textarea" @bind="_sessionNote" placeholder="@L["pomo.notesPh"]"></textarea></div>
+                <div class="input-group"><label class="input-label">@L["com.duration"]</label><input type="number" class="minimal-input" @bind="_sessionDuration" /></div>
+                <div class="modal-actions"><button class="modal-btn" @onclick="CloseModal">@L["com.cancel"]</button><button class="modal-btn primary" @onclick="StartSessionFromCreate">@L["com.start"]</button></div>
             </div>
         </div>
     }
@@ -166,11 +167,11 @@
             @if (_editing)
             {
                 <div class="modal-box tags-modal-box">
-                    <div class="modal-header"><span class="modal-title">التاجات</span></div>
-                    <div class="input-group"><input type="text" class="minimal-input" @bind="_tagSearch" placeholder="بحث..." /></div>
+                    <div class="modal-header"><span class="modal-title">@L["pomo.tags"]</span></div>
+                    <div class="input-group"><input type="text" class="minimal-input" @bind="_tagSearch" placeholder="@L["pomo.search"]" /></div>
                     <div class="input-group">
                         <div style="display:flex; gap:8px; align-items:center;">
-                            <input type="text" class="minimal-input" @bind="_newTagName" placeholder="إضافة تاج" style="flex:1;" />
+                            <input type="text" class="minimal-input" @bind="_newTagName" placeholder="@L["pomo.addTag"]" style="flex:1;" />
                             <input type="color" class="color-input" @bind="_newTagColor" />
                             <button class="modal-btn primary" @onclick="AddTag" style="padding:8px;">+</button>
                         </div>
@@ -188,23 +189,23 @@
             }
             <div class="modal-box">
                 <div class="modal-header">
-                    <span class="modal-title">تفاصيل الجلسة @if (CurrentDetailTag != null) { <span class="tag-badge" style="background:@CurrentDetailTag.Color; color:@TagTextColor(CurrentDetailTag);">@CurrentDetailTag.Name</span> }</span>
+                    <span class="modal-title">@L["pomo.sessionDetails"] @if (CurrentDetailTag != null) { <span class="tag-badge" style="background:@CurrentDetailTag.Color; color:@TagTextColor(CurrentDetailTag);">@CurrentDetailTag.Name</span> }</span>
                     <button class="close-btn" @onclick="CloseModal">X</button>
                 </div>
-                <div class="input-group"><label class="input-label">اسم الجلسة</label><input type="text" class="minimal-input" @bind="_editName" disabled="@(!_editing)" /></div>
-                <div class="input-group"><label class="input-label">ملاحظات</label><textarea class="minimal-textarea" @bind="_editNote" disabled="@(!_editing)"></textarea></div>
+                <div class="input-group"><label class="input-label">@L["pomo.sessionName"]</label><input type="text" class="minimal-input" @bind="_editName" disabled="@(!_editing)" /></div>
+                <div class="input-group"><label class="input-label">@L["pomo.sessionNotes"]</label><textarea class="minimal-textarea" @bind="_editNote" disabled="@(!_editing)"></textarea></div>
                 <div class="input-group">
-                    <label class="input-label">@(IsDetailCurrent ? "المدة" : "المدة المقضية")</label>
-                    <span class="detail-static">@(IsDetailCurrent ? CurrentElapsedText : FormatTime(TimeSpan.FromSeconds(_detailSession!.ElapsedSeconds))) @(IsDetailCurrent ? $"من {_detailSession!.PlannedMinutes} دقيقة" : "")</span>
+                    <label class="input-label">@(IsDetailCurrent ? L["com.duration"] : L["pomo.spent"])</label>
+                    <span class="detail-static">@(IsDetailCurrent ? CurrentElapsedText : FormatTime(TimeSpan.FromSeconds(_detailSession!.ElapsedSeconds))) @(IsDetailCurrent ? L.Get("pomo.ofMinutes", _detailSession!.PlannedMinutes) : "")</span>
                 </div>
                 @if (!IsDetailCurrent && _editing)
                 {
-                    <div class="input-group"><label class="input-label">المدة (دقيقة)</label><input type="number" class="minimal-input" @bind="_editDurationMinutes" /></div>
+                    <div class="input-group"><label class="input-label">@L["pomo.durationMin"]</label><input type="number" class="minimal-input" @bind="_editDurationMinutes" /></div>
                 }
                 <div class="modal-actions">
-                    <button class="modal-btn" @onclick="ToggleEdit">تعديل</button>
-                    <button class="modal-btn" @onclick="DeleteCurrentDetails">حذف</button>
-                    <button class="modal-btn primary" @onclick="SaveDetails">حفظ</button>
+                    <button class="modal-btn" @onclick="ToggleEdit">@L["com.edit"]</button>
+                    <button class="modal-btn" @onclick="DeleteCurrentDetails">@L["com.delete"]</button>
+                    <button class="modal-btn primary" @onclick="SaveDetails">@L["com.save"]</button>
                 </div>
             </div>
         </div>
@@ -215,13 +216,13 @@
         <div class="modal-group">
             <div class="modal-box">
                 <div class="modal-header">
-                    <span class="modal-title">جلسة شغالة</span>
+                    <span class="modal-title">@L["pomo.running"]</span>
                     <button class="close-btn" @onclick="CloseModal">X</button>
                 </div>
-                <div class="input-group"><span class="detail-static">هناك جلسة تعمل بالفعل</span></div>
+                <div class="input-group"><span class="detail-static">@L["pomo.alreadyRunning"]</span></div>
                 <div class="modal-actions">
-                    <button class="modal-btn" @onclick="CancelCurrentAndStart">الغاء الجلسة الحالية (حذفها)</button>
-                    <button class="modal-btn primary" @onclick="SaveCurrentAndStart">حفظ الجلسة وبدأ جلسة جديدة مدتها: @_pendingMinutes دقيقة</button>
+                    <button class="modal-btn" @onclick="CancelCurrentAndStart">@L["pomo.cancelCurrent"]</button>
+                    <button class="modal-btn primary" @onclick="SaveCurrentAndStart">@L.Get("pomo.saveAndNew", _pendingMinutes)</button>
                 </div>
             </div>
         </div>
@@ -235,25 +236,25 @@
             <div class="modal-group">
                 <div class="modal-box" style="width:300px;">
                     <div class="modal-header">
-                        <span class="modal-title">تغيير المنطقة</span>
+                        <span class="modal-title">@L["pomo.changeRegion"]</span>
                         <button class="close-btn" @onclick="() => _locationModalOpen = false">X</button>
                     </div>
                     <div class="input-group">
-                        <label class="input-label">خط العرض (Latitude)</label>
+                        <label class="input-label">@L["pomo.lat"]</label>
                         <input type="number" class="minimal-input" step="0.0001"
                                @bind="_latInput" placeholder="30.0444" />
                     </div>
                     <div class="input-group">
-                        <label class="input-label">خط الطول (Longitude)</label>
+                        <label class="input-label">@L["pomo.lon"]</label>
                         <input type="number" class="minimal-input" step="0.0001"
                                @bind="_lonInput" placeholder="31.2357" />
                     </div>
                     <div style="font-size:11px; color:#555; margin-top:-8px;">
-                        ابحث عن إحداثياتك على Google Maps
+                        @L["pomo.mapsHint"]
                     </div>
                     <div class="modal-actions">
-                        <button class="modal-btn" @onclick="() => _locationModalOpen = false">إلغاء</button>
-                        <button class="modal-btn primary" @onclick="SaveLocation">حفظ</button>
+                        <button class="modal-btn" @onclick="() => _locationModalOpen = false">@L["com.cancel"]</button>
+                        <button class="modal-btn primary" @onclick="SaveLocation">@L["com.save"]</button>
                     </div>
                 </div>
             </div>
@@ -264,11 +265,11 @@
 @if (_showDeleteConfirm)
 {
     <div class="confirm-delete-overlay" @onclick="CancelQuickDelete">
-        <div class="confirm-delete-popup" dir="rtl" @onclick:stopPropagation="true">
-            <span class="confirm-delete-msg">الوقت الفعلي تجاوز المخطط — هل تحذف الجلسة؟</span>
+        <div class="confirm-delete-popup" @onclick:stopPropagation="true">
+            <span class="confirm-delete-msg">@L["pomo.overtime"]</span>
             <div class="confirm-delete-actions">
-                <button class="confirm-btn-del" @onclick="() => DoQuickDelete(_confirmDeleteSessionId)">مسح</button>
-                <button class="confirm-btn-cancel" @onclick="CancelQuickDelete">إلغاء</button>
+                <button class="confirm-btn-del" @onclick="() => DoQuickDelete(_confirmDeleteSessionId)">@L["pomo.clear"]</button>
+                <button class="confirm-btn-cancel" @onclick="CancelQuickDelete">@L["com.cancel"]</button>
             </div>
         </div>
     </div>
@@ -505,7 +506,7 @@
     private string _newTagColor = "#000000";
 
     private PrayerTimeEntry? _todayPrayers;
-    private string _nextPrayerName = "";
+    private string _nextPrayerKey = "fajr";
     private TimeSpan _timeToNextPrayer = TimeSpan.Zero;
     private System.Threading.Timer? _prayerTimer;
 
@@ -515,14 +516,13 @@
     private bool _soundModalOpen;
     
     private static readonly int[] Durations = { 25, 50, 5, 10 };
-    private static readonly (string Label, string Value)[] ViewModes =
+    private (string Label, string Value)[] ViewModes => new[]
     {
-        ("يومي", "daily"), ("اسبوعي", "weekly"), ("شهري", "monthly"), ("سنوي", "yearly"),
+        (L["pomo.daily"], "daily"), (L["pomo.weekly"], "weekly"), (L["pomo.monthly"], "monthly"), (L["pomo.yearly"], "yearly"),
     };
-    private static readonly string[] ArabicDays = { "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت" };
 
-    private string StartTimeText => _startedAt?.ToString("hh:mm:ss tt", new System.Globalization.CultureInfo("ar-SA")) ?? "00:00:00";
-    private string FinalTimeText => _startedAt?.AddMinutes(_activeMinutes).ToString("hh:mm:ss tt", new System.Globalization.CultureInfo("ar-SA")) ?? "00:00:00";
+    private string StartTimeText => _startedAt?.ToString("hh:mm:ss tt", L.Culture) ?? "00:00:00";
+    private string FinalTimeText => _startedAt?.AddMinutes(_activeMinutes).ToString("hh:mm:ss tt", L.Culture) ?? "00:00:00";
     private string DurationText => TimeSpan.FromMinutes(_activeMinutes).ToString(@"hh\:mm\:ss");
     private IEnumerable<Tag> FilteredTags => _tags.Where(t => t.Name.Contains(_tagSearch, StringComparison.OrdinalIgnoreCase));
 
@@ -570,13 +570,14 @@
         }
     }
 
-    private static string To12H(string time24)
+    private string To12H(string time24)
     {
         if (!TimeSpan.TryParse(time24, out var t)) return time24;
-        var suffix = t.Hours < 12 ? "ص" : "م";
         var h = t.Hours % 12;
         if (h == 0) h = 12;
-        return $"{h}:{t.Minutes:D2} {suffix}";
+        if (L.Lang == "ar")
+            return $"{h}:{t.Minutes:D2} {(t.Hours < 12 ? "ص" : "م")}";
+        return $"{h}:{t.Minutes:D2} {(t.Hours < 12 ? "AM" : "PM")}";
     }
     
     protected override async Task OnInitializedAsync()
@@ -589,6 +590,7 @@
             _todayPrayers = await PrayerService.GetTodayAsync();
             UpdateNextPrayer();
             Nav.CurrentChanged += OnVisibilityChanged;
+            L.OnLanguageChanged += OnLangChanged;
             await LoadFromDbAsync();
             RebuildToggles();
             if (Nav.CurrentPage == "pomodoro")
@@ -612,6 +614,14 @@
     {
         if (page == "pomodoro") StartUiTimers();
         else StopUiTimers();
+    }
+
+    private void OnLangChanged()
+    {
+        UpdateClock();
+        UpdateNextPrayer();
+        RebuildToggles();
+        InvokeAsync(StateHasChanged);
     }
 
     private void StartUiTimers()
@@ -643,10 +653,12 @@
     private void UpdateClock()
     {
         var now = DateTime.Now;
-        var ar = new System.Globalization.CultureInfo("ar-EG");
-        _currentDateStr = now.ToString("dddd، d MMMM yyyy", ar);
-        _currentTimeStr = now.ToString("hh:mm:ss tt", ar);
-        _currentSubStr = now.ToString("ddd", ar) + " • " + now.ToString("dd-MM-yyyy");
+        var culture = L.Culture;
+        _currentDateStr = L.Lang == "ar"
+            ? now.ToString("dddd، d MMMM yyyy", culture)
+            : now.ToString("dddd, d MMMM yyyy", culture);
+        _currentTimeStr = now.ToString("hh:mm:ss tt", culture);
+        _currentSubStr = now.ToString("ddd", culture) + " • " + now.ToString("dd-MM-yyyy");
     }
 
     private void UpdateNextPrayer()
@@ -656,23 +668,23 @@
 
         var prayers = new[]
         {
-            ("الفجر",    _todayPrayers.Fajr),
-            ("الشروق",   _todayPrayers.Sunrise),
-            ("الظهر",    _todayPrayers.Dhuhr),
-            ("العصر",    _todayPrayers.Asr),
-            ("المغرب",   _todayPrayers.Maghrib),
-            ("العشاء",   _todayPrayers.Isha),
+            ("fajr",    _todayPrayers.Fajr),
+            ("sunrise", _todayPrayers.Sunrise),
+            ("dhuhr",   _todayPrayers.Dhuhr),
+            ("asr",     _todayPrayers.Asr),
+            ("maghrib", _todayPrayers.Maghrib),
+            ("isha",    _todayPrayers.Isha),
         };
 
-        foreach (var (name, timeStr) in prayers)
+        foreach (var (key, timeStr) in prayers)
         {
             if (TimeSpan.TryParse(timeStr, out var t))
             {
                 var prayerDt = now.Date.Add(t);
                 if (prayerDt > now)
                 {
-                    _nextPrayerName    = name;
-                    _timeToNextPrayer  = prayerDt - now;
+                    _nextPrayerKey    = key;
+                    _timeToNextPrayer = prayerDt - now;
                     return;
                 }
             }
@@ -680,7 +692,7 @@
         // بعد العشاء → الفجر الجاي
         if (TimeSpan.TryParse(_todayPrayers.Fajr, out var fajr))
         {
-            _nextPrayerName   = "الفجر";
+            _nextPrayerKey    = "fajr";
             _timeToNextPrayer = now.Date.AddDays(1).Add(fajr) - now;
         }
     }
@@ -698,9 +710,9 @@
     private async Task SaveLocation()
     {
         var culture = System.Globalization.CultureInfo.InvariantCulture;
-    
-        if (double.TryParse(_latInput, System.Globalization.NumberStyles.Any, culture, out var lat) &&
-            double.TryParse(_lonInput, System.Globalization.NumberStyles.Any, culture, out var lon))
+
+        if (double.TryParse(Jamrah.Application.Services.PrayerTimesService.NormalizeDigits(_latInput), System.Globalization.NumberStyles.Any, culture, out var lat) &&
+            double.TryParse(Jamrah.Application.Services.PrayerTimesService.NormalizeDigits(_lonInput), System.Globalization.NumberStyles.Any, culture, out var lon))
         {
             await PrayerService.SetLocationAsync(lat, lon);
             _todayPrayers = await PrayerService.GetTodayAsync();
@@ -715,11 +727,12 @@
         _tags.AddRange(await _repo.GetTagsAsync());
         if (_tags.Count == 0)
         {
+            var en = L.Lang == "en";
             var defaults = new[]
             {
-                new Tag { Name = "برمجة", Color = "#000000" },
-                new Tag { Name = "تصميم", Color = "#3B82F6" },
-                new Tag { Name = "كتابة", Color = "#EF4444" },
+                new Tag { Name = en ? "Coding" : "برمجة", Color = "#000000" },
+                new Tag { Name = en ? "Design" : "تصميم", Color = "#3B82F6" },
+                new Tag { Name = en ? "Writing" : "كتابة", Color = "#EF4444" },
             };
             foreach (var t in defaults)
             {
@@ -772,7 +785,7 @@
             if (_currentSession == null)
             {
                 _startedAt = DateTime.Now;
-                var s = NewSession("untitled", "", _activeMinutes, null);
+                var s = NewSession(L["pomo.untitled"], "", _activeMinutes, null);
                 _sessions.Insert(0, s);
                 _currentSession = s;
                 await _repo.SaveSessionAsync(s);
@@ -857,7 +870,7 @@
         _timer.SetDuration(TimeSpan.FromMinutes(minutes));
         _timer.Start();
         _startedAt = DateTime.Now;
-        var s = NewSession("untitled", "", minutes, null);
+        var s = NewSession(L["pomo.untitled"], "", minutes, null);
         _sessions.Insert(0, s);
         _currentSession = s;
         await _repo.SaveSessionAsync(s);
@@ -976,7 +989,7 @@
     private async Task SaveDetails()
     {
         if (_detailSession == null) return;
-        _detailSession.Title = string.IsNullOrWhiteSpace(_editName) ? "untitled" : _editName.Trim();
+        _detailSession.Title = string.IsNullOrWhiteSpace(_editName) ? L["pomo.untitled"] : _editName.Trim();
         _detailSession.Note = _editNote;
         if (_detailSession == _currentSession)
         {
@@ -1005,7 +1018,7 @@
         _timer.SetDuration(TimeSpan.FromMinutes(dur));
         _timer.Start();
         _startedAt = DateTime.Now;
-        var s = NewSession(string.IsNullOrWhiteSpace(_sessionName) ? "untitled" : _sessionName.Trim(), _sessionNote, dur, _selectedTag);
+        var s = NewSession(string.IsNullOrWhiteSpace(_sessionName) ? L["pomo.untitled"] : _sessionName.Trim(), _sessionNote, dur, _selectedTag);
         _sessions.Insert(0, s);
         _currentSession = s;
         await _repo.SaveSessionAsync(s);
@@ -1021,7 +1034,7 @@
         var s = new Session
         {
             Id = $"s-{now.Ticks}",
-            Date = $"{now.Year}-{now.Month}-{now.Day}",
+            Date = now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
             Title = title,
             Time = now.ToString("HH:mm"),
             Note = note,
@@ -1085,19 +1098,19 @@
         CollectOpenIds(_toggles, openIds);
         
         var ordered = _sessions
-            .OrderByDescending(s => s.Date)
+            .OrderByDescending(s => SafeParseDate(s.Date))
             .ThenByDescending(s => s.Time)
             .ToList();
         var now = DateTime.Now;
-        var todayKey = $"{now.Year}-{now.Month}-{now.Day}";
+        var todayKey = now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
 
         switch (_viewMode)
         {
             case "weekly":
-                _toggles = ordered.GroupBy(s => WeekNumber(ParseDate(s.Date)))
+                _toggles = ordered.GroupBy(s => WeekNumber(SafeParseDate(NormalizeDateKey(s.Date))))
                     .OrderByDescending(g => g.Key)
-                    .Select(g => GroupWithChildren($"W{g.Key}", $"الأسبوع {g.Key}", g.Count(),
-                        g.GroupBy(s => s.Date).Select(d => Group($"{g.Key}-{d.Key}", FullDateLabel(d.Key), d.ToList(), d.Key == todayKey)).ToList()))
+                    .Select(g => GroupWithChildren($"W{g.Key}", L.Get("pomo.weekN", g.Key), g.Count(),
+                        g.GroupBy(s => NormalizeDateKey(s.Date)).Select(d => Group($"{g.Key}-{d.Key}", FullDateLabel(d.Key), d.ToList(), d.Key == todayKey)).ToList()))
                     .ToList();
                 break;
             case "monthly":
@@ -1107,13 +1120,13 @@
                 _toggles = new List<SessionGroup>
                 {
                     GroupWithChildren($"y-{now.Year}", $"{now.Year}",
-                        ordered.Count(s => s.Date.StartsWith($"{now.Year}-")),
+                        ordered.Count(s => SafeParseDate(s.Date).Year == now.Year),
                         BuildMonthsOfYear(now.Year, now.Month, ordered)),
                 };
                 break;
             default: // يومي — النهارده فوق + توجل بسيط "عرض جميع الأيام" تحته
                 {
-                    var allDayGroups = ordered.GroupBy(s => s.Date)
+                    var allDayGroups = ordered.GroupBy(s => NormalizeDateKey(s.Date))
                         .Select(g => Group($"tg-{g.Key}", FullDateLabel(g.Key), g.ToList(), g.Key == todayKey))
                         .ToList();
                     var todayGroup = allDayGroups.FirstOrDefault(g => g.IsToday);
@@ -1128,7 +1141,7 @@
                         var wrapper = new SessionGroup
                         {
                             Id = "show-all-days",
-                            Label = "عرض جميع الأيام",
+                            Label = L["pomo.showAllDays"],
                             Count = otherGroups.Sum(g => g.Count),
                             Children = otherGroups,
                             IsSimple = true
@@ -1162,25 +1175,25 @@
         }
     }
 
-    private static List<SessionGroup> BuildMonthsOfYear(int year, int currentMonth, List<Session> ordered)
+    private List<SessionGroup> BuildMonthsOfYear(int year, int currentMonth, List<Session> ordered)
     {
         var now = DateTime.Now;
-        var todayKey = $"{now.Year}-{now.Month}-{now.Day}";
+        var todayKey = now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
         var byMonth = ordered
-            .Where(s => s.Date.StartsWith($"{year}-"))
-            .GroupBy(s => s.Date[..s.Date.LastIndexOf('-')])
+            .Where(s => SafeParseDate(s.Date).Year == year)
+            .GroupBy(s => NormalizeDateKey(s.Date)[..NormalizeDateKey(s.Date).LastIndexOf('-')])
             .ToDictionary(g => g.Key, g => g.ToList());
         var months = new List<SessionGroup>();
         for (var m = 1; m <= currentMonth; m++)
         {
-            var key = $"{year}-{m}";
+            var key = new DateTime(year, m, 1).ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
             var monthSessions = byMonth.TryGetValue(key, out var list) ? list : new List<Session>();
             var dayLimit = m == currentMonth ? now.Day : DateTime.DaysInMonth(year, m);
             var children = new List<SessionGroup>();
             for (var d = 1; d <= dayLimit; d++)
             {
-                var dateStr = $"{year}-{m}-{d}";
-                var daySessions = monthSessions.Where(s => s.Date == dateStr).ToList();
+                var dateStr = new DateTime(year, m, d).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+                var daySessions = monthSessions.Where(s => NormalizeDateKey(s.Date) == dateStr).ToList();
                 var isToday = dateStr == todayKey;
                 children.Add(Group($"d-{dateStr}", FullDateLabel(dateStr), daySessions, isToday));
             }
@@ -1195,20 +1208,35 @@
     private static SessionGroup GroupWithChildren(string id, string label, int count, List<SessionGroup> children) =>
         new() { Id = id, Label = label, Count = count, Children = children };
 
-    private static string FullDateLabel(string d)
+    private string FullDateLabel(string d)
     {
-        var date = ParseDate(d);
-        return $"{ArabicDays[(int)date.DayOfWeek]} {date.Day}/{date.Month}/{date.Year}";
+        var date = SafeParseDate(d);
+        return $"{L.DayName(date.DayOfWeek)} {date.Day}/{date.Month}/{date.Year}";
     }
 
-    private static string MonthLabel(string m)
+    private string MonthLabel(string m)
     {
         var p = m.Split('-');
-        return $"شهر {p[1]}";
+        if (L.Lang == "ar") return L.Get("pomo.monthN", p[1]);
+        if (int.TryParse(p[1], out var mi) && mi >= 1 && mi <= 12)
+            return L.Culture.DateTimeFormat.MonthNames[mi - 1];
+        return L.Get("pomo.monthN", p[1]);
     }
 
-    private static DateTime ParseDate(string d) =>
-        DateTime.ParseExact(d, "yyyy-M-d", System.Globalization.CultureInfo.InvariantCulture);
+    private static DateTime ParseDate(string d) => SafeParseDate(d);
+
+    private static DateTime SafeParseDate(string? d)
+    {
+        if (!string.IsNullOrWhiteSpace(d) && DateTime.TryParseExact(d, new[] { "yyyy-MM-dd", "yyyy-M-d" },
+            System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dt))
+            return dt;
+        return DateTime.MinValue;
+    }
+
+    private static string NormalizeDateKey(string? d) =>
+        SafeParseDate(d) == DateTime.MinValue
+            ? (d ?? "")
+            : SafeParseDate(d).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
 
     private static int WeekNumber(DateTime d)
     {
@@ -1221,6 +1249,7 @@
     public void Dispose()
     {
         Nav.CurrentChanged -= OnVisibilityChanged;
+        L.OnLanguageChanged -= OnLangChanged;
         _timer.Tick -= OnTimerEvent;
         _timer.Completed -= OnTimerEvent;
         _timer.Dispose();

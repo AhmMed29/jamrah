@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Jamrah.Application.Services;
 using Jamrah.Core.Entities;
 
 namespace Jamrah.Presentation.Bookmarks
@@ -34,7 +35,9 @@ namespace Jamrah.Presentation.Bookmarks
         public string MetaLine => string.Join(" · ",
             new[] { Who, Year, Dur, Site }.Where(s => !string.IsNullOrEmpty(s)));
 
-        public static BookmarkCardData From(BookmarkItem it)
+        public static BookmarkCardData From(BookmarkItem it) => From(it, LocalizationService.CurrentLang);
+
+        public static BookmarkCardData From(BookmarkItem it, string lang)
         {
             JsonObject m;
             try { m = JsonNode.Parse(string.IsNullOrWhiteSpace(it.MetadataJson) ? "{}" : it.MetadataJson) as JsonObject ?? new JsonObject(); }
@@ -57,7 +60,14 @@ namespace Jamrah.Presentation.Bookmarks
             }
 
             var url = !string.IsNullOrEmpty(it.Url) ? it.Url : Str("url");
-            var img = PickImage(it.Thumb) ?? PickImage(First("poster", "cover", "image", "photo")) ?? string.Empty;
+            // Local archived thumb wins when the file is really on disk; remote stays as fallback.
+            // (ResolveLocalImage on Thumb itself repairs items saved before the fix, whose
+            // Thumb is already a file:// URI, by inlining small files as data: URIs.)
+            var img = ResolveLocalImage(First("thumbLocal"))
+                ?? ResolveLocalImage(it.Thumb)
+                ?? PickImage(it.Thumb)
+                ?? PickImage(First("poster", "cover", "image", "photo"))
+                ?? string.Empty;
             var desc = !string.IsNullOrEmpty(it.Description) ? it.Description : Str("content");
 
             double ratingNum = SafeDouble(m["rating"]);
@@ -96,7 +106,7 @@ namespace Jamrah.Presentation.Bookmarks
                 Stars = double.IsNaN(starsNum) ? string.Empty : Kfmt(starsNum),
                 Pages = Str("pages"),
                 Fav = it.Favorite,
-                Type = BookmarkQuery.TypeName(it.Type),
+                Type = BookmarkQuery.TypeName(it.Type, lang),
                 Icon = BookmarkQuery.TypeIcon(it.Type),
             };
         }
@@ -104,7 +114,50 @@ namespace Jamrah.Presentation.Bookmarks
         private static string? PickImage(string? v)
         {
             if (string.IsNullOrEmpty(v)) return null;
-            return v.StartsWith("data:image") || v.StartsWith("http") ? v : null;
+            v = v.Trim();
+            if (v.StartsWith("data:image") || v.StartsWith("http") || v.StartsWith("file://")) return v;
+            // Raw local path (old archives) — expose as file:// for Blazor <img>.
+            try { if (System.IO.File.Exists(v)) return new System.Uri(v).AbsoluteUri; } catch { }
+            return null;
+        }
+
+        /// <summary>
+        /// Archived thumb path -&gt; displayable src. Small files (&lt;=300KB) are inlined as
+        /// data: URIs so they render even where the WebView blocks file://. Returns null
+        /// when the file is missing so the caller falls back to the remote URL.
+        /// </summary>
+        private static string? ResolveLocalImage(string? localPath)
+        {
+            if (string.IsNullOrWhiteSpace(localPath)) return null;
+            localPath = localPath.Trim();
+            if (localPath.StartsWith("data:image") || localPath.StartsWith("http"))
+                return localPath;
+            string path = localPath;
+            if (localPath.StartsWith("file://"))
+            {
+                try { path = new System.Uri(localPath).LocalPath; }
+                catch { return localPath; }
+            }
+            try
+            {
+                if (!System.IO.File.Exists(path)) return null;
+                var info = new System.IO.FileInfo(path);
+                if (info.Length > 0 && info.Length <= 300 * 1024)
+                {
+                    var mime = info.Extension.ToLowerInvariant() switch
+                    {
+                        ".png" => "image/png",
+                        ".gif" => "image/gif",
+                        ".webp" => "image/webp",
+                        ".bmp" => "image/bmp",
+                        ".svg" => "image/svg+xml",
+                        _ => "image/jpeg",
+                    };
+                    return "data:" + mime + ";base64," + System.Convert.ToBase64String(System.IO.File.ReadAllBytes(path));
+                }
+                return new System.Uri(path).AbsoluteUri;
+            }
+            catch { return null; }
         }
 
         public static string HostOf(string? u)
@@ -118,21 +171,11 @@ namespace Jamrah.Presentation.Bookmarks
             catch { return string.Empty; }
         }
 
-        public static string FmtDate(DateTime t)
-        {
-            if (t == DateTime.MinValue) return string.Empty;
-            return t.ToString("MMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture);
-        }
+        public static string FmtDate(DateTime t) => LocalizationService.FmtCardDate(t, LocalizationService.CurrentLang);
+        public static string FmtDate(DateTime t, string lang) => LocalizationService.FmtCardDate(t, lang);
 
-        public static string FmtAgo(DateTime t)
-        {
-            if (t == DateTime.MinValue) return string.Empty;
-            var d = DateTime.UtcNow - t.ToUniversalTime();
-            if (d.TotalHours < 1) return Math.Max(1, (int)Math.Round(d.TotalMinutes)) + "m ago";
-            if (d.TotalDays < 1) return ((int)Math.Round(d.TotalHours)) + "h ago";
-            if (d.TotalDays < 30) return ((int)Math.Round(d.TotalDays)) + "d ago";
-            return FmtDate(t);
-        }
+        public static string FmtAgo(DateTime t) => LocalizationService.FmtAgo(t, LocalizationService.CurrentLang);
+        public static string FmtAgo(DateTime t, string lang) => LocalizationService.FmtAgo(t, lang);
 
         public static string FmtDur(string v)
         {

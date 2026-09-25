@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jamrah", "Jamrah.csproj", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClipAgent", "ClipAgent\ClipAgent.csproj", "{0EBF86E5-720D-4AF9-AE37-ECBF889ED610}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TranslatorAgent", "TranslatorAgent\TranslatorAgent.csproj", "{A1B2C3D4-1111-4222-8333-444455556666}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,18 @@ Global
 		{0EBF86E5-720D-4AF9-AE37-ECBF889ED610}.Release|x64.Build.0 = Release|Any CPU
 		{0EBF86E5-720D-4AF9-AE37-ECBF889ED610}.Release|x86.ActiveCfg = Release|Any CPU
 		{0EBF86E5-720D-4AF9-AE37-ECBF889ED610}.Release|x86.Build.0 = Release|Any CPU
+		{A1B2C3D4-1111-4222-8333-444455556666}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-1111-4222-8333-444455556666}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-1111-4222-8333-444455556666}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-1111-4222-8333-444455556666}.Debug|x64.Build.0 = Debug|Any CPU
+		{A1B2C3D4-1111-4222-8333-444455556666}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-1111-4222-8333-444455556666}.Debug|x86.Build.0 = Debug|Any CPU
+		{A1B2C3D4-1111-4222-8333-444455556666}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-1111-4222-8333-444455556666}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-1111-4222-8333-444455556666}.Release|x64.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-1111-4222-8333-444455556666}.Release|x64.Build.0 = Release|Any CPU
+		{A1B2C3D4-1111-4222-8333-444455556666}.Release|x86.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-1111-4222-8333-444455556666}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

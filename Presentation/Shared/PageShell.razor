@@ -1,5 +1,7 @@
 @namespace Jamrah.Presentation.Shared
 @using Jamrah.Presentation.Bookmarks
+@inject Jamrah.Application.Services.LocalizationService L
+@implements IDisposable
 
 <div class="page-shell @(_slim ? "slim" : "")">
     <AppSidebar OnToggleSidebar="() => _slim = !_slim"
@@ -13,11 +15,11 @@
                 OnNewPageInCollection='cid => OnPageModal.InvokeAsync(("page", null, cid, null, null))'
                 OnNewSubPage='pid => OnPageModal.InvokeAsync(("page", null, null, null, pid))'
                 OnPageMenu='pid => OnPageModal.InvokeAsync(("page", pid, null, null, null))' />
-    <div class="page-shell-frame">@ChildContent</div>
+    <div class="page-shell-frame" dir="@L.Dir" lang="@L.Lang">@ChildContent</div>
 </div>
 @if (_slim)
 {
-    <button class="page-shell-expand" @onclick="() => _slim = false" title="Open sidebar">
+    <button class="page-shell-expand" @onclick="() => _slim = false" title="@L["nav.openSidebar"]">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3,6 L21,6 L21,8 L3,8 L3,6 Z M3,11 L21,11 L21,13 L3,13 L3,11 Z M3,16 L21,16 L21,18 L3,18 L3,16 Z"/></svg>
     </button>
 }
@@ -30,4 +32,16 @@
     [Parameter] public EventCallback<(string Mode, string? PageId, string? CollectionId, string? FolderId, string? ParentPageId)> OnPageModal { get; set; }
 
     private bool _slim;
+
+    protected override void OnInitialized()
+    {
+        L.OnLanguageChanged += OnLang;
+    }
+
+    private void OnLang() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        L.OnLanguageChanged -= OnLang;
+    }
 }

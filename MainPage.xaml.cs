@@ -1,3 +1,4 @@
+using Jamrah.Application.Services;
 using Jamrah.Core.Interfaces;
 using Jamrah.Presentation.Shared;
 using Microsoft.AspNetCore.Components.WebView.Maui;
@@ -14,6 +15,8 @@ public partial class MainPage : ContentPage
     private readonly ISettingsRepository _settingsRepository;
     private readonly IAppNavService _navService;
     private readonly IClipAgentService _clipAgent;
+    private readonly ITranslatorService _translator;
+    private readonly LocalizationService _lang;
     private BlazorWebView? _calendarWebView;
     private BlazorWebView? _tasksWebView;
     private BlazorWebView? _pomodoroWebView;
@@ -28,13 +31,15 @@ public partial class MainPage : ContentPage
     private int _pillGen;
     private bool _warmupStarted;
 
-    public MainPage(ICalendarStateService calendarState, ISettingsRepository settingsRepository, IAppNavService navService, IClipAgentService clipAgent)
+    public MainPage(ICalendarStateService calendarState, ISettingsRepository settingsRepository, IAppNavService navService, IClipAgentService clipAgent, ITranslatorService translator, LocalizationService lang)
     {
         InitializeComponent();
         _calendarState = calendarState;
         _settingsRepository = settingsRepository;
         _navService = navService;
         _clipAgent = clipAgent;
+        _translator = translator;
+        _lang = lang;
         _navService.PageRequested += OnNavPageRequested;
         Loaded += OnPageLoaded;
     }
@@ -44,7 +49,16 @@ public partial class MainPage : ContentPage
         Loaded -= OnPageLoaded;
         if (_warmupStarted) return;
         _warmupStarted = true;
+#if ANDROID
+        // Mobile only: skip splash preloading (triple hidden WebViews suspected in startup kill).
+        // Go straight to Tasks; other pages build lazily on first navigation.
+        SplashLayer.IsVisible = false;
+        ShowTasksPage();
+        await Task.CompletedTask;
+        return;
+#else
         await RunWarmupAsync();
+#endif
     }
 
     // ─── Blazor → native page switching (app sidebar nav buttons) ────────────
@@ -151,25 +165,26 @@ public partial class MainPage : ContentPage
         try
         {
             await LoadSplashAsync();
-            await SetSplashAsync(5, "جاري تجهيز الإعدادات...");
+            await SetSplashAsync(5, _lang["splash.preparing"]);
             await _settingsRepository.InitAsync();
             _ = _clipAgent.ApplyStartupStateAsync();
-            await SetSplashAsync(10, "جاري تحميل المهام...");
+            _ = _translator.ApplyStartupStateAsync();
+            await SetSplashAsync(10, _lang["splash.tasks"]);
             EnsureTasksWebView();
             if (_tasksWebView != null) _tasksWebView.IsVisible = false;
             await WaitForBlazorReadyAsync(_tasksWebView);
-            await SetSplashAsync(40, "جاري تحميل البومودورو...");
+            await SetSplashAsync(40, _lang["splash.pomo"]);
             EnsurePomodoroWebView();
             if (_pomodoroWebView != null) _pomodoroWebView.IsVisible = false;
             await WaitForBlazorReadyAsync(_pomodoroWebView);
-            await SetSplashAsync(65, "جاري تحميل المحفوظات...");
+            await SetSplashAsync(65, _lang["splash.bookmarks"]);
             EnsureBookmarksWebView();
             if (_bookmarkWebView != null) _bookmarkWebView.IsVisible = false;
             await WaitForBlazorReadyAsync(_bookmarkWebView);
-            await SetSplashAsync(90, "اللمسات الأخيرة...");
+            await SetSplashAsync(90, _lang["splash.finishing"]);
         }
         catch { }
-        try { await SetSplashAsync(100, "اكتمل التحميل ✓"); } catch { }
+        try { await SetSplashAsync(100, _lang["splash.done"]); } catch { }
         await Task.Delay(350);
         SplashLayer.IsVisible = false;
         ShowTasksPage();
@@ -181,7 +196,18 @@ public partial class MainPage : ContentPage
         {
             using var stream = await FileSystem.OpenAppPackageFileAsync("wwwroot/splash.html");
             using var reader = new StreamReader(stream);
-            SplashView.Source = new HtmlWebViewSource { Html = await reader.ReadToEndAsync() };
+            var html = await reader.ReadToEndAsync();
+            if (_lang.Lang == "en")
+            {
+                html = html.Replace("<html lang=\"ar\" dir=\"rtl\">", "<html lang=\"en\" dir=\"ltr\">")
+                    .Replace("جَمْرَة — جاري التحميل", "JAMRAH — Loading")
+                    .Replace("شعلة الإنتاجية", "Ember of productivity")
+                    .Replace("ember of productivity", string.Empty)
+                    .Replace("جاري تجهيز مساحة عملك وتحميل جميع الصفحات مسبقاً،<br>عشان تتنقل بينها بدون انتظار.", "Preparing your workspace and preloading all pages,<br>so you can switch between them without waiting.")
+                    .Replace("جاري التحميل...", "Loading...")
+                    .Replace("الإصدار 4.3.0 • جميع بياناتك محلية وآمنة", "Version 4.3.0 • All your data is local and safe");
+            }
+            SplashView.Source = new HtmlWebViewSource { Html = html };
         }
         catch { }
     }
@@ -371,8 +397,32 @@ public partial class MainPage : ContentPage
             Selector      = "#app",
             ComponentType = typeof(Presentation.Shared.ShellBookmarksPage)
         });
+        // Article reader links: external http(s) opens in the browser, in-page
+        // anchors and the app origin itself keep loading inside the WebView.
+        // The app origin is a loopback address that varies by version/config
+        // (0.0.0.0, 0.0.0.1, ...), so allow any IP/localhost host instead of one.
+        _bookmarkWebView.UrlLoading += (_, e) =>
+        {
+            if ((e.Url.Scheme == "http" || e.Url.Scheme == "https")
+                && !IsAppOriginHost(e.Url.Host))
+            {
+                e.UrlLoadingStrategy = Microsoft.AspNetCore.Components.WebView.UrlLoadingStrategy.CancelLoad;
+                _ = Microsoft.Maui.ApplicationModel.Launcher.OpenAsync(e.Url);
+            }
+        };
         MainContent.Children.Add(_bookmarkWebView);
         EnableZoomWithPersistence(_bookmarkWebView, "bookmarks");
+    }
+
+    /// <summary>
+    /// True for the BlazorWebView app origin and in-page anchors (same host).
+    /// Real article links are DNS names; anything numeric/local is the app itself.
+    /// </summary>
+    private static bool IsAppOriginHost(string host)
+    {
+        if (string.IsNullOrWhiteSpace(host)) return true;
+        if (host.Equals("localhost", System.StringComparison.OrdinalIgnoreCase)) return true;
+        return System.Net.IPAddress.TryParse(host, out _);
     }
 
     // ─── Zoom per-page persisted in Settings table ──────────────────────────

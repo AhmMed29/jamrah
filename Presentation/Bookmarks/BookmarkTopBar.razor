@@ -1,20 +1,21 @@
 @using Jamrah.Application.Services
 @inject BookmarkStateService State
+@inject LocalizationService L
 
 <header class="bmk-top">
     <div class="qwrap">
         <span class="sic">@((MarkupString)BookmarkIcons.Svg("search", 15))</span>
-        <input class="bmk-q" placeholder="Search — try  type:book  tag:backend  favorite:true"
+        <input class="bmk-q" placeholder="@L["bmk.searchHint"]"
                value="@Search" @oninput="e => OnSearch.InvokeAsync(e.Value?.ToString() ?? string.Empty)" spellcheck="false" />
         @if (!string.IsNullOrEmpty(Search))
         {
-            <button class="qclr" @onclick="() => OnClearSearch.InvokeAsync()" title="Clear">
+            <button class="qclr" @onclick="() => OnClearSearch.InvokeAsync()" title="@L["bmk.clearAll"]">
                 @((MarkupString)BookmarkIcons.Svg("x", 13))
             </button>
         }
     </div>
     <div class="top-r">
-        <button class="btn pri" @onclick="() => OnAdd.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("plus", 14)) Add item</button>
+        <button class="btn pri" @onclick="() => OnAdd.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("plus", 14)) @L["bmk.addItem"]</button>
     </div>
 </header>
 

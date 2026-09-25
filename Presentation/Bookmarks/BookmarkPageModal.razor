@@ -2,18 +2,20 @@
 @using Jamrah.Application.Services
 @using Jamrah.Core.Entities
 @inject BookmarkStateService State
+@inject LocalizationService L
+@implements IDisposable
 
 @* ADDITIVE (new): create/edit modal for a Page (name + icon).
    Delete here = move to Archive (soft flag), restore happens in the Archive page. *@
 <div class="modal-wrap">
     <div class="modal">
         <div class="m-h">
-            <span class="m-t">@(PageId == null ? "New page" : "Edit page")</span>
+            <span class="m-t">@(PageId == null ? L["bmk.newPage"] : L["bmk.editPage"])</span>
             <button class="m-x" @onclick="() => OnClose.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("x", 16))</button>
         </div>
         <div class="m-b">
-            <div class="fld"><label>Name <i>*</i></label><input type="text" @bind="_name" placeholder="e.g. Backend notes" /></div>
-            <div class="fld"><label>Icon (emoji or icon name)</label>
+            <div class="fld"><label>@L["bmk.fName"] <i>*</i></label><input type="text" @bind="_name" placeholder="@L["bmk.pNameEx"]" /></div>
+            <div class="fld"><label>@L["bmk.fIcon"]</label>
                 <div class="icpick">
                     <div class="icp-row">
                         @foreach (var ic in IconPresets)
@@ -23,22 +25,22 @@
                             </button>
                         }
                     </div>
-                    <input @bind="_icon" placeholder="emoji or Svg name…" />
+                    <input @bind="_icon" placeholder="@L["bmk.fIconPh"]" />
                 </div>
             </div>
             <div class="f2">
-                <div class="fld"><label>Collection</label>
+                <div class="fld"><label>@L["bmk.collection"]</label>
                     <select @bind="_collectionId">
-                        <option value="">— standalone —</option>
+                        <option value="">@L["bmk.standaloneOpt"]</option>
                         @foreach (var c in State.Collections.Where(c => !c.IsArchived && BookmarkQuery.ParseSmart(c.SmartJson) == null))
                         {
                             <option value="@c.Id">@c.Name</option>
                         }
                     </select>
                 </div>
-                <div class="fld"><label>Folder</label>
+                <div class="fld"><label>@L["bmk.folder"]</label>
                     <select @bind="_folderId">
-                        <option value="">— none —</option>
+                        <option value="">@L["bmk.noneOpt"]</option>
                         @foreach (var f in State.Folders.Where(f => !f.IsArchived))
                         {
                             <option value="@f.Id">@f.Name</option>
@@ -46,9 +48,9 @@
                     </select>
                 </div>
             </div>
-            <div class="fld"><label>Parent page (nested under)</label>
+            <div class="fld"><label>@L["bmk.parentPage"]</label>
                 <select @bind="_parentPageId">
-                    <option value="">— top level —</option>
+                    <option value="">@L["bmk.topLevel"]</option>
                     @foreach (var p in State.Pages.Where(p => !p.IsArchived && p.Id != PageId && !IsDescendant(p.Id, PageId)))
                     {
                         <option value="@p.Id">@p.Name</option>
@@ -60,11 +62,11 @@
             @if (PageId != null)
             {
                 <button class="btn @(_confirmArchive ? "dgr" : "")" style="margin-right:auto" @onclick="Archive">
-                    @(_confirmArchive ? "Click again to confirm" : "Delete")
+                    @(_confirmArchive ? L["bmk.confirmAgain"] : L["com.delete"])
                 </button>
             }
-            <button class="btn" @onclick="() => OnClose.InvokeAsync()">Cancel</button>
-            <button class="btn pri" @onclick="Save" disabled="@(string.IsNullOrWhiteSpace(_name))">Save</button>
+            <button class="btn" @onclick="() => OnClose.InvokeAsync()">@L["com.cancel"]</button>
+            <button class="btn pri" @onclick="Save" disabled="@(string.IsNullOrWhiteSpace(_name))">@L["com.save"]</button>
         </div>
     </div>
 </div>
@@ -89,6 +91,7 @@
 
     protected override void OnInitialized()
     {
+        L.OnLanguageChanged += OnLang;
         if (PageId != null)
         {
             var p = State.Pages.FirstOrDefault(x => x.Id == PageId);
@@ -121,6 +124,13 @@
         return false;
     }
 
+    private void OnLang() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        L.OnLanguageChanged -= OnLang;
+    }
+
     private async Task Save()
     {
         var p = PageId != null
@@ -131,13 +141,13 @@
         p.FolderId = string.IsNullOrEmpty(_folderId) ? null : _folderId;
         p.ParentPageId = string.IsNullOrEmpty(_parentPageId) ? null : _parentPageId;
         await State.SavePageAsync(p);
-        await OnSaved.InvokeAsync("Saved ✓");
+        await OnSaved.InvokeAsync(L["bmk.savedToast"]);
     }
 
     private async Task Archive()
     {
         if (!_confirmArchive) { _confirmArchive = true; return; }
         if (PageId != null) await State.ArchivePageAsync(PageId);
-        await OnSaved.InvokeAsync("Moved to Archive");
+        await OnSaved.InvokeAsync(L["bmk.archivedToast"]);
     }
 }

@@ -1,51 +1,53 @@
 ﻿@namespace Jamrah.Presentation.Pomodoro
 @using Microsoft.JSInterop
 @inject Jamrah.Application.Services.PomodoroSoundService SoundService
+@inject Jamrah.Application.Services.LocalizationService L
 @inject IJSRuntime JS
+@implements IDisposable
 
 <div class="sound-modal-overlay" @onclick="HandleOverlayClick">
-    <div class="sound-modal" dir="rtl" @onclick:stopPropagation="true">
+    <div class="sound-modal" @onclick:stopPropagation="true">
         <div class="sound-modal-header">
-            <span class="sound-modal-title">إعدادات الصوت</span>
+            <span class="sound-modal-title">@L["snd.title"]</span>
             <button class="sound-close-btn" @onclick="Cancel">✕</button>
         </div>
 
         <div class="sound-modal-body">
             <!-- Right Column -->
             <div class="sound-col">
-                <div class="sound-group-label">الإعدادات العامة</div>
+                <div class="sound-group-label">@L["snd.general"]</div>
                 <div class="sound-row">
-                    <span>تشغيل المؤثرات الصوتية</span>
-                    <button class="sound-toggle @(S.MasterEnabled ? "on" : "")" @onclick="() => S.MasterEnabled = !S.MasterEnabled">@(S.MasterEnabled ? "ON" : "OFF")</button>
+                    <span>@L["snd.master"]</span>
+                    <button class="sound-toggle @(S.MasterEnabled ? "on" : "")" @onclick="() => S.MasterEnabled = !S.MasterEnabled">@(S.MasterEnabled ? L["com.on"] : L["com.off"])</button>
                 </div>
                 <div class="sound-row">
-                    <span>مستوى الصوت</span>
+                    <span>@L["snd.volume"]</span>
                     <input type="range" min="0" max="100" step="1" value="@S.MasterVolume" @oninput="OnVolumeChanged" />
                     <b class="sound-vol">@($"{S.MasterVolume}%")</b>
                 </div>
 
-                <div class="sound-group-label" style="margin-top:12px;">التنبيهات</div>
+                <div class="sound-group-label" style="margin-top:12px;">@L["snd.alerts"]</div>
                 <div class="sound-row">
-                    <span>التشغيل عند تصغير البرنامج</span>
-                    <button class="sound-toggle @(S.PlayWhenMinimized ? "on" : "")" @onclick="() => S.PlayWhenMinimized = !S.PlayWhenMinimized">@(S.PlayWhenMinimized ? "ON" : "OFF")</button>
+                    <span>@L["snd.minimized"]</span>
+                    <button class="sound-toggle @(S.PlayWhenMinimized ? "on" : "")" @onclick="() => S.PlayWhenMinimized = !S.PlayWhenMinimized">@(S.PlayWhenMinimized ? L["com.on"] : L["com.off"])</button>
                 </div>
             </div>
 
             <!-- Left Column -->
             <div class="sound-col">
-                <div class="sound-group-label">أحداث المؤقت</div>
+                <div class="sound-group-label">@L["snd.events"]</div>
                 @foreach (var ev in Events)
                 {
                     <div class="sound-event-row">
                         <div class="sound-event-head">
                             <span>@ev.Title</span>
-                            <button class="sound-toggle @(ev.Setting.Enabled ? "on" : "")" @onclick="() => ev.Setting.Enabled = !ev.Setting.Enabled">@(ev.Setting.Enabled ? "ON" : "OFF")</button>
+                            <button class="sound-toggle @(ev.Setting.Enabled ? "on" : "")" @onclick="() => ev.Setting.Enabled = !ev.Setting.Enabled">@(ev.Setting.Enabled ? L["com.on"] : L["com.off"])</button>
                         </div>
                         <div class="sound-event-body">
                             <select class="minimal-input" value="@ev.Setting.SoundFile" @onchange="e => ev.Setting.SoundFile = e.Value?.ToString() ?? string.Empty">
                                 @foreach (var s in Sounds) { <option value="@s.File">@s.Label</option> }
                             </select>
-                            <button class="preview-btn" @onclick="() => Preview(ev.Setting.SoundFile)">تجربة</button>
+                            <button class="preview-btn" @onclick="() => Preview(ev.Setting.SoundFile)">@L["snd.preview"]</button>
                         </div>
                     </div>
                 }
@@ -53,10 +55,10 @@
         </div>
 
         <div class="sound-modal-footer">
-            <button class="modal-btn" @onclick="Reset">إعادة ضبط</button>
+            <button class="modal-btn" @onclick="Reset">@L["com.reset"]</button>
             <div style="flex:1"></div>
-            <button class="modal-btn" @onclick="Cancel">إلغاء</button>
-            <button class="modal-btn primary" @onclick="SaveAndClose">حفظ</button>
+            <button class="modal-btn" @onclick="Cancel">@L["com.cancel"]</button>
+            <button class="modal-btn primary" @onclick="SaveAndClose">@L["com.save"]</button>
         </div>
     </div>
 </div>
@@ -98,10 +100,10 @@
 
     private List<SoundEventRow> Events => new()
     {
-        new("بدء الجلسة", S.SessionStart),
-        new("اكتمال الجلسة", S.SessionComplete),
-        new("بداية الاستراحة", S.BreakStart),
-        new("انتهاء الاستراحة", S.BreakComplete),
+        new(L["snd.sessionStart"], S.SessionStart),
+        new(L["snd.sessionDone"], S.SessionComplete),
+        new(L["snd.breakStart"], S.BreakStart),
+        new(L["snd.breakDone"], S.BreakComplete),
     };
 
     private Jamrah.Application.Services.PomodoroSoundSettings S => SoundService.Settings;
@@ -111,7 +113,24 @@
 
     protected override void OnInitialized()
     {
-        _sounds = SoundService.GetAvailableSounds();
+        L.OnLanguageChanged += OnLang;
+        ReloadSounds();
+    }
+
+    private void ReloadSounds()
+    {
+        _sounds = SoundService.GetAvailableSounds(L.Lang);
+    }
+
+    private void OnLang()
+    {
+        ReloadSounds();
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        L.OnLanguageChanged -= OnLang;
     }
 
     private void OnVolumeChanged(ChangeEventArgs e)

@@ -51,9 +51,9 @@ namespace Jamrah.Infrastructure.Repositories
         public async Task<List<Session>> GetSessionsAsync()
         {
             await InitAsync().ConfigureAwait(false);
+            // ملاحظة: الترتيب الزمني يتم في الميموري بعد الـ parse (PomodoroPage.RebuildToggles)
+            // لأن ترتيب string على صيغة yyyy-M-d غير المبطنة كان يكسر ترتيب الأيام 10+.
             return await _database!.Table<Session>()
-                .OrderByDescending(s => s.Date)
-                .ThenByDescending(s => s.Time)
                 .ToListAsync()
                 .ConfigureAwait(false);
         }

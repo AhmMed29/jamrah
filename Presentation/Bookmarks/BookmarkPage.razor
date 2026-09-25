@@ -6,6 +6,7 @@
 @inject IJSRuntime JS
 @inject Jamrah.Core.Interfaces.IClipAgentService ClipAgent
 @inject IAppNavService Nav
+@inject Jamrah.Application.Services.LocalizationService L
 @implements IDisposable
 
 <div class="bmk">
@@ -15,47 +16,47 @@
         <main class="bmk-main">
             @if (!_ready)
             {
-                <div class="page"><div class="empty"><h3>Loading library…</h3></div></div>
+                <div class="page"><div class="empty"><h3>@L["bmk.loading"]</h3></div></div>
             }
             else if (State.Route.Ctx == "home")
             {
                 <div class="page">
                     <div class="hero-g">@((MarkupString)(Greeting() + "<em>.</em>"))</div>
-                    <div class="hero-sub">@Alive().Count items · @State.Folders.Count folders · @State.Collections.Count collections &nbsp;·&nbsp; press <kbd>Ctrl K</kbd> to search</div>
+                    <div class="hero-sub">@Alive().Count items · @State.Folders.Count folders · @State.Collections.Count collections &nbsp;·&nbsp; press <kbd>Ctrl K</kbd> @L["bmk.searchHintShort"]</div>
                     <div class="hero-search">
-                        <input value="@State.Search" @oninput="e => OnSearch(e.Value?.ToString() ?? string.Empty)" placeholder="Search your library…" />
+                        <input value="@State.Search" @oninput="e => OnSearch(e.Value?.ToString() ?? string.Empty)" placeholder="@L["bmk.searchPh"]" />
                         @((MarkupString)BookmarkIcons.Svg("search", 17))
                     </div>
                     @if (ActiveKhatm() != null)
                     {
                         var qa = ActiveKhatm()!;
-                        <section class="hsec"><div class="hsec-h"><span class="hsec-t">Quran — الختمة</span><a class="hsec-a" @onclick='() => Navigate(("quran", null, null))'>open tracker →</a></div>
+                        <section class="hsec"><div class="hsec-h"><span class="hsec-t">@L["nav.quran"]</span><a class="hsec-a" @onclick='() => Navigate(("quran", null, null))'>@L["bmk.openTracker"]</a></div>
                         <div class="card" style="padding:18px 20px;max-width:560px" @onclick='() => Navigate(("quran", null, null))'>
-                            <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:14px">الختمة الحالية</b><span class="mono" style="font-size:12px;color:var(--ink3);direction:ltr">@qa.Page / 604</span></div>
+                            <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:14px">@L["bmk.currentKhatm"]</b><span class="mono" style="font-size:12px;color:var(--ink3);direction:ltr">@qa.Page / 604</span></div>
                             <div class="bar" style="margin-top:10px"><i style="width:@(qa.Page * 100 / 604)%"></i></div>
-                            <div style="margin-top:8px;font-size:12.5px;color:var(--ink3);font-weight:600">@(TodayPages() > 0 ? $"الورد اليومي: {TodayPages()} صفحة · " : "سجّل ورد اليوم · ")الجزء @((qa.Page - 1) / 20 + 1)</div>
+                            <div style="margin-top:8px;font-size:12.5px;color:var(--ink3);font-weight:600">@(TodayPages() > 0 ? L.Get("bmk.dailyWird", TodayPages()) + " · " : L["bmk.logWird"] + " · ")@L.Get("bmk.juz", ((qa.Page - 1) / 20 + 1))</div>
                         </div></section>
                     }
-                    <section class="hsec"><div class="hsec-h"><span class="hsec-t">Recently Added</span><a class="hsec-a" @onclick='() => Navigate(("all", null, null))'>view all →</a></div>
+                    <section class="hsec"><div class="hsec-h"><span class="hsec-t">@L["bmk.recentAdded"]</span><a class="hsec-a" @onclick='() => Navigate(("all", null, null))'>@L["bmk.viewAll"]</a></div>
                         <div class="hrow">@foreach (var it in HomeRec()) { <BookmarkCard Item="it" TemplateId="minimalImage" OnOpen="OpenItem" OnToggleFav="ToggleFav" /> }</div></section>
                     @if (HomeCont().Count > 0)
                     {
-                        <section class="hsec"><div class="hsec-h"><span class="hsec-t">Continue</span><a class="hsec-a" @onclick='() => Navigate(("all", null, null))'>view all →</a></div>
+                        <section class="hsec"><div class="hsec-h"><span class="hsec-t">@L["bmk.continue"]</span><a class="hsec-a" @onclick='() => Navigate(("all", null, null))'>@L["bmk.viewAll"]</a></div>
                             <div class="hrow wide">@foreach (var it in HomeCont()) { <BookmarkCard Item="it" TemplateId="reading" OnOpen="OpenItem" OnToggleFav="ToggleFav" /> }</div></section>
                     }
                     @if (HomeFavs().Count > 0)
                     {
-                        <section class="hsec"><div class="hsec-h"><span class="hsec-t">Favorites</span><a class="hsec-a" @onclick='() => Navigate(("favorites", null, null))'>view all →</a></div>
+                        <section class="hsec"><div class="hsec-h"><span class="hsec-t">@L["nav.favorites"]</span><a class="hsec-a" @onclick='() => Navigate(("favorites", null, null))'>@L["bmk.viewAll"]</a></div>
                             <div class="hrow">@foreach (var it in HomeFavs()) { <BookmarkCard Item="it" TemplateId="minimalImage" OnOpen="OpenItem" OnToggleFav="ToggleFav" /> }</div></section>
                     }
                     @if (HomePins().Count > 0)
                     {
-                        <section class="hsec"><div class="hsec-h"><span class="hsec-t">Pinned</span><a class="hsec-a" @onclick='() => Navigate(("pinned", null, null))'>view all →</a></div>
+                        <section class="hsec"><div class="hsec-h"><span class="hsec-t">@L["nav.pinned"]</span><a class="hsec-a" @onclick='() => Navigate(("pinned", null, null))'>@L["bmk.viewAll"]</a></div>
                             <div class="hrow">@foreach (var it in HomePins()) { <BookmarkCard Item="it" TemplateId="minimalImage" OnOpen="OpenItem" OnToggleFav="ToggleFav" /> }</div></section>
                     }
                     @if (HomeClips().Count > 0)
                     {
-                        <section class="hsec"><div class="hsec-h"><span class="hsec-t">Clipboard — recent copies</span><a class="hsec-a" @onclick='() => Navigate(("clipboard", null, null))'>open →</a></div>
+                        <section class="hsec"><div class="hsec-h"><span class="hsec-t">@L["bmk.clipboard"] — @L["bmk.recentCopies"]</span><a class="hsec-a" @onclick='() => Navigate(("clipboard", null, null))'>@L["bmk.openAll"]</a></div>
                             <div class="hcol">
                                 @foreach (var c in HomeClips())
                                 {
@@ -68,12 +69,12 @@
                                         {
                                             <div class="mono" style="font-size:11.5px;color:var(--ink2);line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;word-break:break-word">@(c.Text.Length > 180 ? c.Text[..180] : c.Text)</div>
                                         }
-                                        <div class="clip-m" style="margin-top:8px">@BookmarkCardData.FmtAgo(c.At)@(c.Pinned ? " · pinned" : "")</div>
+                                        <div class="clip-m" style="margin-top:8px">@BookmarkCardData.FmtAgo(c.At, L.Lang)@(c.Pinned ? " · " + L["bmk.pinnedClip"] : "")</div>
                                     </div>
                                 }
                             </div></section>
                     }
-                    <section class="hsec"><div class="hsec-h"><span class="hsec-t">Collections</span></div>
+                    <section class="hsec"><div class="hsec-h"><span class="hsec-t">@L["bmk.collections"]</span></div>
                         <div class="hcol">
                             @foreach (var c in State.Collections)
                             {
@@ -84,15 +85,15 @@
                                         @((MarkupString)BookmarkIcons.FdIcon(cicon, "layers"))<b style="font-size:14px;color:var(--ink)">@c.Name</b>
                                         @(BookmarkQuery.ParseSmart(c.SmartJson) != null ? (MarkupString)"<span class=\"st\" style=\"--c:#0f766e\">smart</span>" : (MarkupString)"")
                                     </div>
-                                    <div style="margin-top:10px;font-size:12.5px;color:var(--ink3);font-weight:500">@BookmarkQuery.CountCollection(c, State) items · @State.Folders.Count(fd => fd.CollectionId == cid) folders</div>
+                                    <div style="margin-top:10px;font-size:12.5px;color:var(--ink3);font-weight:500">@BookmarkQuery.CountCollection(c, State) @L["bmk.countItems"] · @State.Folders.Count(fd => fd.CollectionId == cid) @L["bmk.countFolders"]</div>
                                 </div>
                             }
                         </div></section>
-                    <section class="hsec"><div class="hsec-h"><span class="hsec-t">Statistics</span></div>
+                    <section class="hsec"><div class="hsec-h"><span class="hsec-t">@L["bmk.stats"]</span></div>
                         <div class="stats">
                             @foreach (var (t, n, max) in TypeStats())
                             {
-                                <div class="stat"><span class="sn">@BookmarkQuery.TypeName(t)</span><span class="sv">@n</span><span class="sb"><i style="width:@(n * 100 / max)%"></i></span></div>
+                                <div class="stat"><span class="sn">@BookmarkQuery.TypeName(t, L.Lang)</span><span class="sv">@n</span><span class="sb"><i style="width:@(n * 100 / max)%"></i></span></div>
                             }
                         </div></section>
                 </div>
@@ -100,11 +101,11 @@
             else if (State.Route.Ctx == "quran")
             {
                 <div class="page">
-                    <div class="ph-row"><h1 class="ph-title">Quran</h1><span class="ph-sub">الختمة والورد اليومي</span>
-                        <button class="btn sm" style="margin-left:auto" @onclick="NewKhatm">+ New khatm</button></div>
+                    <div class="ph-row"><h1 class="ph-title">@L["bmk.quran"]</h1><span class="ph-sub">@L["bmk.khatmWird"]</span>
+                        <button class="btn sm" style="margin-left:auto" @onclick="NewKhatm">@L["bmk.newKhatm"]</button></div>
                     @if (ActiveKhatm() == null)
                     {
-                        <div class="empty"><h3>No active khatm.</h3><p>Start a new khatm to track your 604 pages.</p></div>
+                        <div class="empty"><h3>@L["bmk.noKhatm"]</h3><p>@L["bmk.noKhatmHint"]</p></div>
                     }
                     else
                     {
@@ -112,19 +113,19 @@
                         <div class="q-grid">
                             <div>
                                 <div class="qcard">
-                                    <div class="q-k">Current page</div>
+                                    <div class="q-k">@L["bmk.currentPage"]</div>
                                     <div class="q-big">@qa.Page <span>/ 604</span></div>
                                     <div class="bar" style="margin-top:10px"><i style="width:@(qa.Page * 100 / 604)%"></i></div>
-                                    <div class="q-meta">الجزء @((qa.Page - 1) / 20 + 1) · @Math.Round(qa.Page * 100.0 / 604)% complete</div>
+                                    <div class="q-meta">@L.Get("bmk.juz", ((qa.Page - 1) / 20 + 1)) · @Math.Round(qa.Page * 100.0 / 604)% @L["bmk.completePct"]</div>
                                     <div class="q-wir">
-                                        <div class="fld"><label>Pages read</label><input type="number" min="1" max="604" value="@_wridInput" @oninput="e => _wridInput = e.Value?.ToString() ?? string.Empty" /></div>
-                                        <button class="btn pri sm" @onclick="AddWrid">Log wrid</button>
+                                        <div class="fld"><label>@L["bmk.pagesRead"]</label><input type="number" min="1" max="604" value="@_wridInput" @oninput="e => _wridInput = e.Value?.ToString() ?? string.Empty" /></div>
+                                        <button class="btn pri sm" @onclick="AddWrid">@L["bmk.logWird"]</button>
                                     </div>
-                                    @if (TodayPages() > 0) { <div class="q-today" style="margin-top:10px">الورد اليومي: @TodayPages() صفحة ✓</div> }
-                                    <div class="q-wirhint">Log how many pages you read — the khatm page advances automatically.</div>
+                                    @if (TodayPages() > 0) { <div class="q-today" style="margin-top:10px">@L.Get("bmk.dailyWird", TodayPages()) ✓</div> }
+                                    <div class="q-wirhint">@L["bmk.wirdHint"]</div>
                                 </div>
                                 <div class="qcard" style="margin-top:16px">
-                                    <div class="q-k">Juz’an (30)</div>
+                                    <div class="q-k">@L["bmk.juz30"]</div>
                                     <div class="q-juz" style="margin-top:10px">
                                         @for (var j = 0; j < 30; j++)
                                         {
@@ -136,14 +137,14 @@
                                 </div>
                             </div>
                             <div class="qcard">
-                                <div class="q-k">Reading log</div>
+                                <div class="q-k">@L["bmk.readingLog"]</div>
                                 @foreach (var l in State.QuranLogs.Where(x => x.KhatmId == qa.Id).OrderByDescending(x => x.At))
                                 {
                                     var lid = l.Id;
-                                    <div class="q-stat"><span>@l.At.ToString("MMM d") · <b class="mono">@l.FromPage → @l.ToPage</b></span>
+                                    <div class="q-stat"><span>@l.At.ToString("MMM d", L.Culture) · <b class="mono">@l.FromPage → @l.ToPage</b></span>
                                         <button class="mini" @onclick="() => State.DeleteQuranLogAsync(lid)">@((MarkupString)BookmarkIcons.Svg("x", 12))</button></div>
                                 }
-                                @if (!State.QuranLogs.Any(x => x.KhatmId == qa.Id)) { <p style="color:var(--ink3);font-size:12.5px;margin-top:8px">No entries yet.</p> }
+                                @if (!State.QuranLogs.Any(x => x.KhatmId == qa.Id)) { <p style="color:var(--ink3);font-size:12.5px;margin-top:8px">@L["bmk.noEntries"]</p> }
                             </div>
                         </div>
                     }
@@ -152,18 +153,18 @@
             else if (State.Route.Ctx == "clipboard")
             {
                 <div class="page">
-                    <div class="ph-row"><h1 class="ph-title">Clipboard</h1><span class="ph-sub">@State.Clips.Count saved</span></div>
+                    <div class="ph-row"><h1 class="ph-title">@L["bmk.clipboard"]</h1><span class="ph-sub">@State.Clips.Count @L["bmk.savedClip"]</span></div>
                     @if (ClipAgent.IsSupported)
                     {
                         <div class="clipcard" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                            <button class="btn sm @(_capOn ? "pri" : "")" @onclick="ToggleCapture">@(_capOn ? "⏺ Capture on" : "○ Capture off")</button>
-                            <button class="btn sm @(_autoOn ? "pri" : "")" @onclick="ToggleAutoStart">@(_autoOn ? "✓ Start with Windows" : "Start with Windows")</button>
-                            <span class="clip-m">@(_agentRunning ? "agent running" : "agent idle") · every copy is auto-saved</span>
+                            <button class="btn sm @(_capOn ? "pri" : "")" @onclick="ToggleCapture">@(_capOn ? L["bmk.capOn"] : L["bmk.capOff"])</button>
+                            <button class="btn sm @(_autoOn ? "pri" : "")" @onclick="ToggleAutoStart">@(_autoOn ? "✓ " + L["bmk.startWin"] : L["bmk.startWin"])</button>
+                            <span class="clip-m">@(_agentRunning ? L["bmk.agentOn"] : L["bmk.agentIdle"]) · @L["bmk.autosave"]</span>
                         </div>
                     }
                     <div class="clipcard">
-                        <textarea value="@_clipInput" @oninput="e => _clipInput = e.Value?.ToString() ?? string.Empty" placeholder="Paste text or a link to keep it here…" style="width:100%;min-height:64px;border:0;outline:none;font-size:13px;background:none;resize:vertical"></textarea>
-                        <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn pri sm" @onclick="AddClip">Save clip</button></div>
+                        <textarea value="@_clipInput" @oninput="e => _clipInput = e.Value?.ToString() ?? string.Empty" placeholder="@L["bmk.clipPh"]" style="width:100%;min-height:64px;border:0;outline:none;font-size:13px;background:none;resize:vertical"></textarea>
+                        <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn pri sm" @onclick="AddClip">@L["bmk.saveClip"]</button></div>
                     </div>
                     @foreach (var c in State.Clips.OrderByDescending(x => x.Pinned).ThenByDescending(x => x.At))
                     {
@@ -177,35 +178,35 @@
                             {
                                 <div class="clip-t">@clip.Text</div>
                             }
-                            <div class="clip-f"><span class="clip-m">@BookmarkCardData.FmtAgo(clip.At)@(clip.Pinned ? " · pinned" : "")</span>
+                            <div class="clip-f"><span class="clip-m">@BookmarkCardData.FmtAgo(clip.At, L.Lang)@(clip.Pinned ? " · " + L["bmk.pinnedClip"] : "")</span>
                                 <span class="clip-acts">
                                     @if (clip.Kind == "image" && !string.IsNullOrEmpty(clip.FilePath))
                                     {
-                                        <button class="btn sm" @onclick="() => OpenClipFile(clip)">Open</button>
+                                        <button class="btn sm" @onclick="() => OpenClipFile(clip)">@L["bmk.open"]</button>
                                     }
                                     else
                                     {
-                                        <button class="btn sm" @onclick="() => CopyClip(clip.Text)">Copy</button>
+                                        <button class="btn sm" @onclick="() => CopyClip(clip.Text)">@L["bmk.copy"]</button>
                                     }
-                                    <button class="btn sm" @onclick="() => ToggleClipPin(clip)">@(clip.Pinned ? "Unpin" : "Pin")</button>
-                                    <button class="btn sm dgr" @onclick="() => State.DeleteClipAsync(clip.Id)">Delete</button>
+                                    <button class="btn sm" @onclick="() => ToggleClipPin(clip)">@(clip.Pinned ? L["bmk.unpin"] : L["bmk.pin"])</button>
+                                    <button class="btn sm dgr" @onclick="() => State.DeleteClipAsync(clip.Id)">@L["com.delete"]</button>
                                 </span></div>
                         </div>
                     }
-                    @if (State.Clips.Count == 0) { <div class="empty"><h3>Clipboard is empty.</h3><p>Save anything you copy often — snippets, links, addresses.</p></div> }
+                    @if (State.Clips.Count == 0) { <div class="empty"><h3>@L["bmk.clipEmpty"]</h3><p>@L["bmk.clipEmptyHint"]</p></div> }
                 </div>
             }
             else if (State.Route.Ctx == "tags")
             {
                 <div class="page">
-                    <div class="ph-row"><h1 class="ph-title">Tags</h1><span class="ph-sub">@State.Tags.Count tags · click one to browse</span></div>
-                    @if (State.Tags.Count == 0) { <div class="empty"><h3>No tags yet.</h3><p>Tags appear here as you add them to items.</p></div> }
+                    <div class="ph-row"><h1 class="ph-title">@L["nav.tags"]</h1><span class="ph-sub">@State.Tags.Count @L["bmk.tagsSub"]</span></div>
+                    @if (State.Tags.Count == 0) { <div class="empty"><h3>@L["bmk.noTags"]</h3><p>@L["bmk.noTagsHint"]</p></div> }
                     @foreach (var t in State.Tags.OrderByDescending(t => BookmarkQuery.TagCount(t.Name, State)))
                     {
                         var tag = t;
                         <div class="tagrow" @onclick='() => Navigate(("tag", null, tag.Name))'>
                             <span class="cdot" style="background:@(string.IsNullOrEmpty(tag.Color) ? "#c9c5bc" : tag.Color)"></span>
-                            <b>#@tag.Name</b><span class="cnt">@BookmarkQuery.TagCount(tag.Name, State) items</span>
+                            <b>#@tag.Name</b><span class="cnt">@BookmarkQuery.TagCount(tag.Name, State) @L["bmk.countItems"]</span>
                             <span class="acts" @onclick:stopPropagation="true">
                                 <input type="color" value="@(string.IsNullOrEmpty(tag.Color) ? "#c9c5bc" : tag.Color)" @onchange="e => SaveTagColor(tag, e.Value?.ToString() ?? string.Empty)" style="width:30px;height:26px;border:1px solid var(--line);border-radius:6px;padding:1px;background:var(--surface)" title="Tag color" />
                             </span>
@@ -216,7 +217,7 @@
             else if (State.Route.Ctx == "templates")
             {
                 <div class="page">
-                    <div class="ph-row"><h1 class="ph-title">Templates</h1><span class="ph-sub">22 built-in card styles · applied automatically per type</span></div>
+                    <div class="ph-row"><h1 class="ph-title">@L["nav.templates"]</h1><span class="ph-sub">@L["bmk.tplSub"]</span></div>
                     <div class="hcol">
                         @foreach (var (id, name, cat) in GalleryTemplates)
                         {
@@ -234,26 +235,29 @@
             else if (State.Route.Ctx == "settings")
             {
                 <div class="page">
-                    <div class="ph-row"><h1 class="ph-title">Settings</h1><span class="ph-sub">backup &amp; shortcuts</span></div>
-                    <div class="qcard" style="max-width:640px">
-                        <div class="q-k">Library backup (JSON)</div>
-                        <div class="q-meta">@State.Items.Count(i => !i.Deleted) items · @State.Folders.Count folders · @State.Collections.Count collections</div>
+                    <div class="ph-row"><h1 class="ph-title">@L["bmk.settings"]</h1><span class="ph-sub">@L["bmk.backupTitle"]</span></div>
+                    <div style="max-width:640px"><Jamrah.Presentation.Shared.LanguageSelector /></div>
+                    <div class="qcard" style="max-width:640px;margin-top:16px">
+                        <div class="q-k">@L["bmk.backupJson"]</div>
+                        <div class="q-meta">@State.Items.Count(i => !i.Deleted) @L["bmk.countItems"] · @State.Folders.Count @L["bmk.countFolders"] · @State.Collections.Count @L["bmk.countCollections"]</div>
                         <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-                            <button class="btn pri sm" @onclick="ExportBackup">@((MarkupString)BookmarkIcons.Svg("download", 13)) Export JSON</button>
-                            <label class="btn sm" style="cursor:pointer">@((MarkupString)BookmarkIcons.Svg("upload", 13)) Import JSON
+                            <button class="btn pri sm" @onclick="ExportBackup">@((MarkupString)BookmarkIcons.Svg("download", 13)) @L["bmk.export"]</button>
+                            <label class="btn sm" style="cursor:pointer">@((MarkupString)BookmarkIcons.Svg("upload", 13)) @L["bmk.import"]
                                 <InputFile OnChange="ImportFile" accept=".json,application/json" style="display:none" />
                             </label>
                         </div>
-                        <p class="hint" style="margin-top:10px">Import replaces the whole library — export first to be safe.</p>
+                        <p class="hint" style="margin-top:10px">@L["bmk.importWarn"]</p>
                     </div>
                     <div class="qcard" style="max-width:640px;margin-top:16px">
-                        <div class="q-k">Search operators</div>
+                        <div class="q-k">@L["bmk.searchOps"]</div>
                         <div class="q-meta"><span class="mono">type:book</span> · <span class="mono">tag:backend</span> · <span class="mono">author:joel</span> · <span class="mono">favorite:true</span> · <span class="mono">year:2024</span></div>
                     </div>
                     <div class="qcard" style="max-width:640px;margin-top:16px">
-                        <div class="q-k">Zoom shortcuts (per page)</div>
-                        <div class="q-meta"><kbd>Ctrl +</kbd> <kbd>Ctrl -</kbd> <kbd>Ctrl 0</kbd> · <kbd>Ctrl</kbd> + mouse wheel</div>
+                        <div class="q-k">@L["bmk.zoomTitle"]</div>
+                        <div class="q-meta"><kbd>Ctrl +</kbd> <kbd>Ctrl -</kbd> <kbd>Ctrl 0</kbd> · <kbd>Ctrl</kbd> + @L["bmk.zoomHint"]</div>
                     </div>
+                    @* ADDITIVE: translator agent settings (no existing logic touched) *@
+                    <div style="max-width:640px"><TranslatorSettings /></div>
                 </div>
             }
             else
@@ -262,8 +266,8 @@
                 var isTrash = State.Route.Ctx == "trash";
                 var col = State.Route.Ctx == "collection" ? State.Collections.FirstOrDefault(c => c.Id == State.Route.Id) : null;
                 <div class="page">
-                    <div class="ph-row"><h1 class="ph-title">@BookmarkQuery.TitleFor(State.Route, State)</h1>
-                        <span class="ph-sub">@items.Count item@(items.Count == 1 ? "" : "s")@(isTrash ? " · deleted items stay until removed" : "")</span>
+                    <div class="ph-row"><h1 class="ph-title">@BookmarkQuery.TitleFor(State.Route, State, L.Lang)</h1>
+                        <span class="ph-sub">@items.Count @L["bmk.countItems"]@(isTrash ? " · " + L["bmk.trashHint"] : "")</span>
                         @if (col != null && BookmarkQuery.ParseSmart(col.SmartJson) == null)
                         {
                             <span style="margin-left:auto" class="mono"></span>
@@ -278,10 +282,10 @@
                             var acid = ac.Id;
                             <div class="tagrow">
                                 @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(ac.Icon) ? "layers" : ac.Icon, "layers"))
-                                <b>@ac.Name</b><span class="cnt">collection · archived</span>
+                                <b>@ac.Name</b><span class="cnt">@L["bmk.collection"] · @L["bmk.archivedLbl"]</span>
                                 <span class="acts" @onclick:stopPropagation="true" style="margin-left:auto;display:flex;gap:6px">
-                                    <button class="btn sm" @onclick="() => State.RestoreCollectionAsync(acid)">Restore</button>
-                                    <button class="btn sm dgr" @onclick="() => State.DeleteCollectionAsync(acid)">Delete forever</button>
+                                    <button class="btn sm" @onclick="() => State.RestoreCollectionAsync(acid)">@L["bmk.restore"]</button>
+                                    <button class="btn sm dgr" @onclick="() => State.DeleteCollectionAsync(acid)">@L["bmk.deleteForever"]</button>
                                 </span>
                             </div>
                         }
@@ -290,10 +294,10 @@
                             var afid = af.Id;
                             <div class="tagrow">
                                 @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(af.Icon) ? "folder" : af.Icon, "folder"))
-                                <b>@af.Name</b><span class="cnt">folder · archived</span>
+                                <b>@af.Name</b><span class="cnt">@L["bmk.folder"] · @L["bmk.archivedLbl"]</span>
                                 <span class="acts" @onclick:stopPropagation="true" style="margin-left:auto;display:flex;gap:6px">
-                                    <button class="btn sm" @onclick="() => State.RestoreFolderAsync(afid)">Restore</button>
-                                    <button class="btn sm dgr" @onclick="() => State.DeleteFolderAsync(afid)">Delete forever</button>
+                                    <button class="btn sm" @onclick="() => State.RestoreFolderAsync(afid)">@L["bmk.restore"]</button>
+                                    <button class="btn sm dgr" @onclick="() => State.DeleteFolderAsync(afid)">@L["bmk.deleteForever"]</button>
                                 </span>
                             </div>
                         }
@@ -302,10 +306,10 @@
                             var apid = ap.Id;
                             <div class="tagrow">
                                 @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(ap.Icon) ? "note" : ap.Icon, "note"))
-                                <b>@ap.Name</b><span class="cnt">page · archived</span>
+                                <b>@ap.Name</b><span class="cnt">@L["bmk.page"] · @L["bmk.archivedLbl"]</span>
                                 <span class="acts" @onclick:stopPropagation="true" style="margin-left:auto;display:flex;gap:6px">
-                                    <button class="btn sm" @onclick="() => State.RestorePageAsync(apid)">Restore</button>
-                                    <button class="btn sm dgr" @onclick="() => State.DeletePageAsync(apid)">Delete forever</button>
+                                    <button class="btn sm" @onclick="() => State.RestorePageAsync(apid)">@L["bmk.restore"]</button>
+                                    <button class="btn sm dgr" @onclick="() => State.DeletePageAsync(apid)">@L["bmk.deleteForever"]</button>
                                 </span>
                             </div>
                         }
@@ -377,15 +381,15 @@
                     }
                     @if (!string.IsNullOrEmpty(State.Search))
                     {
-                        <div class="res-head"><span>Results for <b>“@State.Search”</b> — @items.Count found</span>
-                            <button class="btn sm" @onclick='() => OnSearch(string.Empty)'>@((MarkupString)BookmarkIcons.Svg("x", 12)) Clear</button></div>
+                        <div class="res-head"><span>@L.Get("bmk.resultsFor", State.Search) — @items.Count @L["bmk.foundCount"]</span>
+                            <button class="btn sm" @onclick='() => OnSearch(string.Empty)'>@((MarkupString)BookmarkIcons.Svg("x", 12)) @L["bmk.clearAll"]</button></div>
                     }
                     <BookmarkToolbar View="@_view" Sort="@_sort" TotalCount="@items.Count"
                                      OnView="ChangeView" OnSort="ChangeSort" OnChanged="() => StateHasChanged()" />
                     @if (isTrash && items.Count > 0)
                     {
                         <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-                            <button class="btn sm dgr" @onclick="EmptyTrash">@((MarkupString)BookmarkIcons.Svg("trash", 13)) @(_confirmEmptyTrash ? "Click again to confirm" : "Empty trash")</button>
+                            <button class="btn sm dgr" @onclick="EmptyTrash">@((MarkupString)BookmarkIcons.Svg("trash", 13)) @(_confirmEmptyTrash ? L["bmk.confirmAgain"] : L["bmk.emptyTrash"])</button>
                         </div>
                     }
                     @if (_view == "table")
@@ -398,7 +402,7 @@
                         }
                         else
                         {
-                            <table class="tbl"><thead><tr><th>Title</th><th>Type</th><th>Meta</th><th>Tags</th><th>Rating</th><th>Added</th></tr></thead>
+                            <table class="tbl"><thead><tr><th>@L["bmk.thTitle"]</th><th>@L["bmk.type"]</th><th>@L["bmk.thMeta"]</th><th>@L["bmk.tagsCol"]</th><th>@L["bmk.thRating"]</th><th>@L["bmk.added"]</th></tr></thead>
                             <tbody>
                                 @foreach (var it in items)
                                 {
@@ -416,7 +420,7 @@
                     }
                     else if (_view == "timeline")
                     {
-                        @foreach (var grp in items.GroupBy(i => i.CreatedAt.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture)))
+                        @foreach (var grp in items.GroupBy(i => i.CreatedAt.ToString("MMMM yyyy", L.Culture)))
                         {
                             <div class="tl-g"><div class="tl-m">@grp.Key</div><div class="tl-r">
                                 @foreach (var it in grp)
@@ -516,6 +520,7 @@
     protected override async Task OnInitializedAsync()
     {
         State.OnStateChanged += OnState;
+        L.OnLanguageChanged += OnLang;
         await State.InitAsync();
         await LoadVS();
         await LoadAgentState();
@@ -526,11 +531,13 @@
     }
 
     private void OnState() => InvokeAsync(StateHasChanged);
+    private void OnLang() => InvokeAsync(StateHasChanged);
     public void Dispose()
     {
         Nav.CurrentChanged -= OnVisibilityChanged;
         try { _clipTimer?.Dispose(); } catch { }
         State.OnStateChanged -= OnState;
+        L.OnLanguageChanged -= OnLang;
     }
 
     // ─── Clip refresh timer runs only while this page is visible ───
@@ -715,6 +722,8 @@
     private string Greeting()
     {
         var h = DateTime.Now.Hour;
+        if (L.Lang == "ar")
+            return h < 5 ? "ليلة سعيدة" : h < 12 ? "صباح الخير" : "مساء الخير";
         return h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
     }
 
@@ -756,7 +765,7 @@
         _confirmEmptyTrash = false;
         foreach (var it in State.Items.Where(i => i.Deleted).ToList())
             await State.DeleteItemAsync(it.Id, true);
-        ShowToast("Trash emptied");
+        ShowToast(L["bmk.trashEmptied"]);
     }
 
     private async Task AddWrid()
@@ -768,13 +777,13 @@
         qa.Page = to;
         await State.SaveKhatmAsync(qa);
         _wridInput = string.Empty;
-        ShowToast("Wrid saved ✓");
+        ShowToast(L["bmk.wirdSaved"]);
     }
 
     private async Task NewKhatm()
     {
         await State.SaveKhatmAsync(new BookmarkQuranKhatm { StartedAt = DateTime.UtcNow, Page = 1 });
-        ShowToast("New khatm started ✓");
+        ShowToast(L["bmk.khatmStarted"]);
     }
 
     private async Task AddClip()
@@ -782,7 +791,7 @@
         if (string.IsNullOrWhiteSpace(_clipInput)) return;
         await State.SaveClipAsync(new BookmarkClip { Text = _clipInput.Trim(), At = DateTime.UtcNow });
         _clipInput = string.Empty;
-        ShowToast("Clip saved ✓");
+        ShowToast(L["bmk.clipSaved"]);
     }
 
     private async Task ToggleClipPin(BookmarkClip clip)
@@ -796,9 +805,9 @@
         try
         {
             var ok = await JS.InvokeAsync<bool>("bmInterop.copyText", text);
-            ShowToast(ok ? "Copied ✓" : "Copy failed");
+            ShowToast(ok ? L["bmk.copied"] : L["bmk.copyFailed"]);
         }
-        catch { ShowToast("Copy failed"); }
+        catch { ShowToast(L["bmk.copyFailed"]); }
     }
 
     private async Task SaveTagColor(BookmarkTag tag, string color)
@@ -813,9 +822,9 @@
         {
             var json = await State.ExportJsonAsync();
             await JS.InvokeVoidAsync("bmInterop.download", "athenaeum-backup.json", json);
-            ShowToast("Exported ✓");
+            ShowToast(L["bmk.exported"]);
         }
-        catch { ShowToast("Export failed"); }
+        catch { ShowToast(L["bmk.exportFailed"]); }
     }
 
     private async Task ImportFile(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs e)
@@ -825,8 +834,8 @@
             using var s = e.File.OpenReadStream(10_000_000);
             using var r = new System.IO.StreamReader(s);
             await State.ImportJsonAsync(await r.ReadToEndAsync());
-            ShowToast("Imported ✓");
+            ShowToast(L["bmk.imported"]);
         }
-        catch { ShowToast("Invalid backup file"); }
+        catch { ShowToast(L["bmk.invalidBackup"]); }
     }
 }

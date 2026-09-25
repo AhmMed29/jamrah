@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject CalendarLayoutEngine LayoutEngine
 @inject ICalendarStateService StateService
+@inject Jamrah.Application.Services.LocalizationService L
 
 <div class="toastui-calendar-layout month-view">
     <!-- 1. Weekday Header Row -->
@@ -10,7 +11,7 @@
             @foreach (var day in GetWeekdayHeaders())
             {
                 <div class="day-name-item @GetWeekdayHeaderClass(day)">
-                    <span class="day-name__name">@day.ToString().Substring(0, 3).ToUpper()</span>
+                    <span class="day-name__name">@L.Culture.DateTimeFormat.AbbreviatedDayNames[(int)day].ToUpper()</span>
                 </div>
             }
         </div>
@@ -43,7 +44,7 @@
                                                 class="toastui-calendar-more-events grid-cell-more-events"
                                                 @onclick:stopPropagation="true"
                                                 @onclick="() => HandleSeeMoreClick(cell.Date)">
-                                            +@cell.OverflowCount more
+                                            +@cell.OverflowCount @L["cal.more"]
                                         </button>
                                     </div>
                                 }
@@ -92,6 +93,7 @@
     protected override void OnInitialized()
     {
         StateService.OnStateChanged += HandleStateChanged;
+        L.OnLanguageChanged += HandleStateChanged;
     }
 
     protected override void OnParametersSet()
@@ -203,6 +205,7 @@
     public void Dispose()
     {
         StateService.OnStateChanged -= HandleStateChanged;
+        L.OnLanguageChanged -= HandleStateChanged;
     }
 }
 

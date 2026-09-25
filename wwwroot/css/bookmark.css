@@ -435,6 +435,24 @@
 .bmk .notes-r h5{font-weight:800;font-size:15px;margin:12px 0 4px;color:var(--ink)}
 .bmk .notes-r ul{padding-left:18px;margin:4px 0}
 .bmk .notes-r textarea{width:100%;min-height:160px;border:1px solid var(--line2);border-radius:9px;padding:10px 12px;line-height:1.6;outline:none;font-size:13.5px}
+.bmk .reader{font-size:15px;line-height:1.8;color:var(--ink2);overflow-wrap:anywhere;min-width:0}
+.bmk .reader>*{max-width:100%}
+.bmk .reader h1,.bmk .reader h2,.bmk .reader h3,.bmk .reader h4,.bmk .reader h5,.bmk .reader h6{color:var(--ink);line-height:1.3;margin:20px 0 8px;font-weight:800}
+.bmk .reader h1{font-size:22px}.bmk .reader h2{font-size:20px}.bmk .reader h3{font-size:17px}
+.bmk .reader h4,.bmk .reader h5,.bmk .reader h6{font-size:15px}
+.bmk .reader p{margin:10px 0}
+.bmk .reader img,.bmk .reader video,.bmk .reader iframe{max-width:100%;height:auto;display:block;border-radius:8px;margin:12px auto}
+.bmk .reader a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--ink3);text-underline-offset:3px}
+.bmk .reader a:hover{text-decoration-color:var(--ink)}
+.bmk .reader ul,.bmk .reader ol{padding-left:22px;margin:10px 0}
+.bmk .reader li{margin:4px 0}
+.bmk .reader blockquote{border-left:3px solid var(--line2);margin:12px 0;padding:4px 0 4px 14px;color:var(--ink3)}
+.bmk .reader pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-x:auto;font-size:12.5px}
+.bmk .reader code{font-family:var(--mono);font-size:.88em;background:var(--bg);border-radius:4px;padding:1px 5px}
+.bmk .reader pre code{background:none;border:0;padding:0}
+.bmk .reader table{display:block;overflow-x:auto;border-collapse:collapse;margin:12px 0;font-size:13px}
+.bmk .reader th,.bmk .reader td{border:1px solid var(--line2);padding:6px 10px;text-align:left}
+.bmk .reader hr{border:0;border-top:1px solid var(--line);margin:18px 0}
 .bmk .rel{display:flex;align-items:center;gap:11px;padding:7px 9px;border-radius:9px;cursor:pointer}
 .bmk .rel:hover{background:var(--hover)}
 .bmk .rel img{width:40px;height:30px;object-fit:cover;border-radius:5px;background:#e9e7e1;flex:none}

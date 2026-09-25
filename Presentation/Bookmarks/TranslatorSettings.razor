@@ -1,0 +1,218 @@
+@namespace Jamrah.Presentation.Bookmarks
+@using Jamrah.Core.Interfaces
+@inject ITranslatorService Translator
+@inject Jamrah.Application.Services.LocalizationService L
+@implements IDisposable
+
+@* ADDITIVE: Translator agent settings card — does not touch any existing logic. *@
+<div class="qcard" style="max-width:640px;margin-top:16px">
+    <div class="q-k">🌐 @(L.Lang == "ar" ? "وكيل الترجمة" : "Translator agent")</div>
+    @if (!Translator.IsSupported)
+    {
+        <div class="q-meta">@(L.Lang == "ar" ? "متاح على ويندوز فقط." : "Windows only.")</div>
+    }
+    else
+    {
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
+            <button class="btn sm @(_enabled ? "pri" : "")" @onclick="ToggleEnabled">
+                @(_enabled ? (L.Lang == "ar" ? "⏺ يعمل في الخلفية" : "⏺ Running") : (L.Lang == "ar" ? "○ متوقف" : "○ Stopped"))
+            </button>
+            <button class="btn sm @(_auto ? "pri" : "")" @onclick="ToggleAuto">
+                @(_auto ? "✓ " : "")@(L.Lang == "ar" ? "البدء مع ويندوز" : "Start with Windows")
+            </button>
+            <button class="btn sm" @onclick="RestartAsync" disabled="@_restarting" title="@(L.Lang == "ar" ? "يقتل العملية ويشغلها من جديد" : "Kill and start the agent again")">
+                ↻ @(L.Lang == "ar" ? "إعادة تشغيل" : "Restart")
+            </button>
+            <span class="clip-m" style="font-size:12px;color:var(--ink3)">
+                @(_running ? (L.Lang == "ar" ? "الوكيل يعمل" : "agent running") : (L.Lang == "ar" ? "الوكيل متوقف" : "agent idle"))
+                · @_hotkey
+                @if (_activeHotkey == "none" || string.IsNullOrEmpty(_activeHotkey))
+                {
+                    <span style="color:#b91c1c;font-weight:700">(لا يوجد اختصار مسجل! دوس إعادة تشغيل)</span>
+                }
+                else if (_activeHotkey != _hotkey)
+                {
+                    <span>(النشط فعلياً: @_activeHotkey)</span>
+                }
+            </span>
+        </div>
+
+        <div style="margin-top:12px;display:grid;gap:10px">
+            <label style="display:grid;gap:4px;font-size:12.5px;font-weight:700">
+                @(L.Lang == "ar" ? "الترجمة إلى" : "Translate to")
+                <select @bind="_target" style="padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface)">
+                    <option value="ar">العربية</option>
+                    <option value="en">English</option>
+                    <option value="fr">Français</option>
+                    <option value="de">Deutsch</option>
+                    <option value="es">Español</option>
+                    <option value="tr">Türkçe</option>
+                    <option value="ur">اردو</option>
+                </select>
+            </label>
+
+            <label style="display:grid;gap:4px;font-size:12.5px;font-weight:700">
+                @(L.Lang == "ar" ? "اختصار الترجمة" : "Translate shortcut")
+                <select @bind="_hotkey" style="padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);direction:ltr">
+                    <option value="Win+Shift+T">Win+Shift+T</option>
+                    <option value="Ctrl+Alt+T">Ctrl+Alt+T</option>
+                    <option value="Alt+T">Alt+T</option>
+                    <option value="Ctrl+Shift+T">Ctrl+Shift+T</option>
+                </select>
+            </label>
+
+            <label style="display:grid;gap:4px;font-size:12.5px;font-weight:700">
+                @(L.Lang == "ar" ? "مفتاح Gemini API" : "Gemini API key")
+                <input type="password" value="@_apiInput" @oninput="e => _apiInput = e.Value?.ToString() ?? string.Empty"
+                       placeholder="@(_hasKey ? "•••••••• (محفوظ — اتركه فاضياً للإبقاء عليه)" : "AIza...")"
+                       style="padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);direction:ltr" />
+            </label>
+
+            <label style="display:grid;gap:4px;font-size:12.5px;font-weight:700">
+                @(L.Lang == "ar" ? "الموديل" : "Model")
+                <input value="@_model" @oninput="e => _model = e.Value?.ToString() ?? string.Empty"
+                       placeholder="gemini-2.5-flash"
+                       style="padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);direction:ltr" />
+            </label>
+
+            <label style="display:grid;gap:4px;font-size:12.5px;font-weight:700">
+                @(L.Lang == "ar" ? "تفضيلات الترجمة (اختياري)" : "Translation preferences (optional)")
+                <textarea value="@_prefs" @oninput="e => _prefs = e.Value?.ToString() ?? string.Empty"
+                          placeholder="@(L.Lang == "ar" ? "مثال: بالعامية المصرية + إيموجيز … أو: ترجمة حرفية رسمية … أو: بلغتين" : "e.g. Egyptian dialect + emojis …")"
+                          style="width:100%;min-height:64px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);resize:vertical"></textarea>
+            </label>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn sm" @onclick="TestApi" disabled="@_testing">@(L.Lang == "ar" ? "تجربة الـ API" : "Test API")</button>
+                <button class="btn pri sm" @onclick="Save" disabled="@_saving">@(L.Lang == "ar" ? "حفظ" : "Save")</button>
+            </div>
+
+            @if (_testOk.HasValue)
+            {
+                <div style="padding:10px 12px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid @(_testOk.Value ? "#16a34a" : "#dc2626");background:@(_testOk.Value ? "#f0fdf4" : "#fef2f2");color:@(_testOk.Value ? "#15803d" : "#b91c1c")">
+                    @_testMsg
+                </div>
+            }
+            <p class="hint">حدد أي نص ← قف بالماوس على التحديد ثانيتين ← تظهر الدائرة ← اضغطها (الطلب يُرسل عند الضغط فقط). أو حدد ثم اضغط <kbd>@_hotkey</kbd>. بدون مفتاح API يعمل بوضع جوجل المجاني.</p>
+        </div>
+    }
+</div>
+
+@code {
+    private bool _enabled;
+    private bool _auto = true;
+    private bool _running;
+    private string _target = "ar";
+    private string _apiInput = string.Empty;
+    private bool _hasKey;
+    private string _model = "gemini-2.5-flash";
+    private string _prefs = string.Empty;
+    private string _hotkey = "Win+Shift+T";
+    private string _activeHotkey = string.Empty;
+    private bool _testing;
+    private bool _saving;
+    private bool? _testOk;
+    private string _testMsg = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.OnLanguageChanged += OnLang;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            // تحديث تلقائي للنسخة القديمة — لا حاجة لقتل العملية يدوياً
+            bool restarted = false;
+            try { restarted = await Translator.EnsureFreshRunningAsync(); } catch { }
+            if (restarted)
+            {
+                try { await Task.Delay(1500); } catch { }
+            }
+            _enabled = await Translator.IsEnabledAsync();
+            _auto = await Translator.IsAutoStartEnabledAsync();
+            _target = await Translator.GetTargetLangAsync();
+            _hasKey = await Translator.HasApiKeyAsync();
+            _model = await Translator.GetModelAsync();
+            _prefs = await Translator.GetPrefsAsync();
+            _hotkey = await Translator.GetHotkeyAsync();
+            _running = Translator.IsAgentRunning();
+            try { _activeHotkey = await Translator.GetActiveHotkeyAsync(); } catch { }
+        }
+        catch { }
+    }
+
+    private void OnLang() => InvokeAsync(StateHasChanged);
+    public void Dispose() { L.OnLanguageChanged -= OnLang; }
+
+    private async Task ToggleEnabled()
+    {
+        _enabled = !_enabled;
+        await Translator.SetEnabledAsync(_enabled);
+        try { _running = Translator.IsAgentRunning(); } catch { }
+    }
+
+    private async Task ToggleAuto()
+    {
+        _auto = !_auto;
+        await Translator.SetAutoStartEnabledAsync(_auto);
+    }
+
+    private bool _restarting;
+
+    private async Task RestartAsync()
+    {
+        _restarting = true;
+        try
+        {
+            await Translator.RestartAgentAsync();
+            await Task.Delay(1500);
+            try { _running = Translator.IsAgentRunning(); } catch { }
+            try { _activeHotkey = await Translator.GetActiveHotkeyAsync(); } catch { }
+        }
+        catch { }
+        finally { _restarting = false; }
+    }
+
+    private async Task TestApi()
+    {
+        _testing = true;
+        _testOk = null;
+        try
+        {
+            // لو حقل المفتاح فاضي والمفتاح محفوظ مسبقاً → نختبر بالمحفوظ
+            var key = string.IsNullOrWhiteSpace(_apiInput)
+                ? await Translator.GetApiKeyAsync()
+                : _apiInput.Trim();
+            var r = await Translator.TestApiAsync(key, _model, _target, _prefs);
+            _testOk = r.Ok;
+            _testMsg = r.Message;
+        }
+        catch (Exception ex) { _testOk = false; _testMsg = ex.Message; }
+        finally { _testing = false; }
+    }
+
+    private async Task Save()
+    {
+        _saving = true;
+        try
+        {
+            // فاضي = إبقاء المفتاح القديم (حتى لا نمسح المحفوظ المموّه)
+            string keyToSave;
+            if (string.IsNullOrWhiteSpace(_apiInput))
+                keyToSave = await Translator.GetApiKeyAsync();
+            else
+                keyToSave = _apiInput.Trim();
+            await Translator.SaveAllAsync(_enabled, _auto, _target, keyToSave, _model, _prefs, _hotkey);
+            _hasKey = !string.IsNullOrWhiteSpace(keyToSave);
+            _apiInput = string.Empty; // تمويه بعد الحفظ
+            _testOk = true;
+            _testMsg = L.Lang == "ar" ? "تم الحفظ ✓" : "Saved ✓";
+            try { _running = Translator.IsAgentRunning(); } catch { }
+        }
+        catch { }
+        finally { _saving = false; }
+    }
+}

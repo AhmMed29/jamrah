@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Jamrah.Application.Services;
 using Jamrah.Core.Entities;
 
 namespace Jamrah.Presentation.Bookmarks
@@ -55,11 +56,13 @@ namespace Jamrah.Presentation.Bookmarks
         public static string RatingH(BookmarkCardData g) =>
             string.IsNullOrEmpty(g.Rating) ? string.Empty : $"<span class=\"rt\">★ {E(g.Rating)}</span>";
 
-        public static string StChip(string s)
+        public static string StChip(string s) => StChip(s, LocalizationService.CurrentLang);
+
+        public static string StChip(string s, string lang)
         {
             if (string.IsNullOrEmpty(s)) return string.Empty;
             var c = BookmarkQuery.StatusColors.TryGetValue(s, out var col) ? col : "#a5a199";
-            return $"<span class=\"st\" style=\"--c:{c}\">{E(s)}</span>";
+            return $"<span class=\"st\" style=\"--c:{c}\">{E(LocalizationService.StatusLabel(s, lang))}</span>";
         }
 
         private static string TypoPoster(BookmarkCardData g) =>
@@ -68,33 +71,36 @@ namespace Jamrah.Presentation.Bookmarks
         private static string BookFb(BookmarkCardData g) =>
             $"<div class=\"bk-fb\"><div class=\"bk-fb-t\">{E(g.Title)}</div><div class=\"bk-fb-a\">{E(string.IsNullOrEmpty(g.Who) ? g.Type : g.Who)}</div></div>";
 
-        public static string Render(BookmarkItem it, string tid, List<BookmarkTag> allTags)
+        public static string Render(BookmarkItem it, string tid, List<BookmarkTag> allTags) =>
+            Render(it, tid, allTags, LocalizationService.CurrentLang);
+
+        public static string Render(BookmarkItem it, string tid, List<BookmarkTag> allTags, string lang)
         {
-            var g = BookmarkCardData.From(it);
+            var g = BookmarkCardData.From(it, lang);
             return tid switch
             {
                 "minimal" => Minimal(g, allTags),
                 "minimalImage" => MinimalImage(g, allTags),
                 "linkcard" => Linkcard(g, allTags),
-                "post" => Post(g, allTags),
+                "post" => Post(g, allTags, lang),
                 "compact" => Compact(g, allTags),
                 "poster" => Poster(g),
                 "cinematic" => Cinematic(g),
                 "hero" => Hero(g),
                 "landscape" => Landscape(g),
-                "photo" => string.IsNullOrEmpty(g.Img) ? Minimal(g, allTags) : Photo(g),
+                "photo" => string.IsNullOrEmpty(g.Img) ? Minimal(g, allTags) : Photo(g, lang),
                 "audio" => Audio(g, allTags),
                 "thumbGrid" => string.IsNullOrEmpty(g.Img) ? Minimal(g, allTags) : ThumbGrid(g),
                 "book" => Book(g),
-                "reading" => Reading(g),
+                "reading" => Reading(g, lang),
                 "shelf" => Shelf(g),
-                "note" => Note(g, allTags),
-                "dev" => Dev(g, allTags),
+                "note" => Note(g, allTags, lang),
+                "dev" => Dev(g, allTags, lang),
                 "file" => File(g, allTags),
                 "horizontal" => Horizontal(g, allTags),
                 "magazine" => Magazine(g, allTags),
-                "detailed" => Detailed(g, allTags),
-                "metadata" => Metadata(g, it, allTags),
+                "detailed" => Detailed(g, allTags, lang),
+                "metadata" => Metadata(g, it, allTags, lang),
                 _ => Minimal(g, allTags),
             };
         }
@@ -117,10 +123,10 @@ namespace Jamrah.Presentation.Bookmarks
             $"{Chips(g.Tags, 2, t)}</div>" +
             (string.IsNullOrEmpty(g.Img) ? "" : $"<img class=\"lk-th\" src=\"{E(g.Img)}\" alt=\"\">") + "</div>";
 
-        private static string Post(BookmarkCardData g, List<BookmarkTag> t) =>
+        private static string Post(BookmarkCardData g, List<BookmarkTag> t, string lang = "en") =>
             $"<div class=\"pst\"><div class=\"pst-h\">{BookmarkIcons.Svg("globe", 12)}<b>{E(string.IsNullOrEmpty(g.Site) ? (string.IsNullOrEmpty(g.Domain) ? g.Type : g.Domain) : g.Site)}</b>" +
             (string.IsNullOrEmpty(g.Who) ? "" : $"<span>· {E(g.Who)}</span>") +
-            $"<span class=\"ago\">{E(BookmarkCardData.FmtAgo(g.Item.CreatedAt))}</span></div>" +
+            $"<span class=\"ago\">{E(BookmarkCardData.FmtAgo(g.Item.CreatedAt, lang))}</span></div>" +
             (string.IsNullOrEmpty(g.Title) ? "" : $"<div class=\"pst-t\">{E(g.Title)}</div>") +
             (string.IsNullOrEmpty(g.Desc) ? "" : $"<div class=\"pst-c\">{E(g.Desc)}</div>") +
             (string.IsNullOrEmpty(g.Img) ? "" : $"<div class=\"pst-im\"><img src=\"{E(g.Img)}\" loading=\"lazy\" alt=\"\"></div>") +
@@ -154,9 +160,9 @@ namespace Jamrah.Presentation.Bookmarks
             (string.IsNullOrEmpty(g.Dur) ? "" : $"<span class=\"ls-d\">{E(g.Dur)}</span>") +
             $"</div><div class=\"ls-b\"><div class=\"ls-t\">{E(g.Title)}</div><div class=\"ls-m\">{E(string.Join(" · ", new[] { g.Who, g.Site }.Where(s => !string.IsNullOrEmpty(s))))}</div></div></div>";
 
-        private static string Photo(BookmarkCardData g) =>
+        private static string Photo(BookmarkCardData g, string lang = "en") =>
             $"<div><div class=\"ph-i\"><img src=\"{E(g.Img)}\" loading=\"lazy\" alt=\"\"></div>" +
-            $"<div class=\"ph-b\"><span class=\"ph-t\">{E(g.Title)}</span><span class=\"ph-m\">{E(string.IsNullOrEmpty(g.Domain) ? BookmarkCardData.FmtAgo(g.Item.CreatedAt) : g.Domain)}</span></div></div>";
+            $"<div class=\"ph-b\"><span class=\"ph-t\">{E(g.Title)}</span><span class=\"ph-m\">{E(string.IsNullOrEmpty(g.Domain) ? BookmarkCardData.FmtAgo(g.Item.CreatedAt, lang) : g.Domain)}</span></div></div>";
 
         private static string Audio(BookmarkCardData g, List<BookmarkTag> t) =>
             $"<div><div class=\"au-h\"><span class=\"au-btn\">{BookmarkIcons.Svg("play", 13)}</span><span class=\"au-wv\">{BookmarkIcons.Wave(22)}</span>" +
@@ -172,18 +178,20 @@ namespace Jamrah.Presentation.Bookmarks
             $"</figure><div class=\"bk-b\"><div class=\"bk-t\">{E(g.Title)}</div><div class=\"bk-a\">{E(g.Who)}</div>" +
             (string.IsNullOrEmpty(RatingH(g)) ? "" : $"<div class=\"bk-r\">{RatingH(g)}</div>") + "</div></div>";
 
-        private static string Reading(BookmarkCardData g)
+        private static string Reading(BookmarkCardData g, string lang = "en")
         {
             var pageInfo = string.Empty;
             if (!string.IsNullOrEmpty(g.Pages) && int.TryParse(g.Pages, out var pg) && g.Progress.HasValue)
-                pageInfo = $" · page {System.Math.Round(pg * g.Progress.Value / 100.0)} / {E(g.Pages)}";
+                pageInfo = lang == "ar"
+                    ? $" · صفحة {System.Math.Round(pg * g.Progress.Value / 100.0)} / {E(g.Pages)}"
+                    : $" · page {System.Math.Round(pg * g.Progress.Value / 100.0)} / {E(g.Pages)}";
             var prog = g.Progress.HasValue
                 ? $"<div class=\"bar\"><i style=\"width:{g.Progress}%\"></i></div><div class=\"rd-p\">{g.Progress}%{pageInfo}</div>"
                 : string.Empty;
             return $"<div class=\"rd\"><div class=\"rd-c\">" +
                 (string.IsNullOrEmpty(g.Img) ? BookFb(g) : $"<img src=\"{E(g.Img)}\" alt=\"\">") +
                 $"</div><div class=\"rd-b\"><div class=\"rd-t\">{E(g.Title)}</div><div class=\"rd-a\">{E(g.Who)}</div>{prog}" +
-                (string.IsNullOrEmpty(g.Status) ? "" : $"<div style=\"margin-top:8px\">{StChip(g.Status)}</div>") + "</div></div>";
+                (string.IsNullOrEmpty(g.Status) ? "" : $"<div style=\"margin-top:8px\">{StChip(g.Status, lang)}</div>") + "</div></div>";
         }
 
         private static string Shelf(BookmarkCardData g) =>
@@ -191,11 +199,11 @@ namespace Jamrah.Presentation.Bookmarks
             (string.IsNullOrEmpty(g.Img) ? BookFb(g) : $"<img src=\"{E(g.Img)}\" loading=\"lazy\" alt=\"\">") +
             $"</div><div class=\"sh-t\">{E(g.Title)}</div></div>";
 
-        private static string Note(BookmarkCardData g, List<BookmarkTag> t) =>
-            $"<div class=\"nt\"><div class=\"nt-h\">{BookmarkIcons.Svg("note", 13)}<span>{E(g.Type)} · {E(BookmarkCardData.FmtAgo(g.Item.CreatedAt))}</span></div>" +
+        private static string Note(BookmarkCardData g, List<BookmarkTag> t, string lang = "en") =>
+            $"<div class=\"nt\"><div class=\"nt-h\">{BookmarkIcons.Svg("note", 13)}<span>{E(g.Type)} · {E(BookmarkCardData.FmtAgo(g.Item.CreatedAt, lang))}</span></div>" +
             $"<div class=\"nt-t\">{E(g.Title)}</div><div class=\"nt-c\">{E(g.Desc ?? string.Empty)}</div><div class=\"nt-f\">{Chips(g.Tags, 3, t)}</div></div>";
 
-        private static string Dev(BookmarkCardData g, List<BookmarkTag> t) =>
+        private static string Dev(BookmarkCardData g, List<BookmarkTag> t, string lang = "en") =>
             $"<div class=\"dev\">" +
             (string.IsNullOrEmpty(g.Domain) ? "" : $"<div class=\"dev-u\">{BookmarkIcons.Svg("git", 12)}{E(g.Domain + (!string.IsNullOrEmpty(g.Who) && g.Domain.Contains("github") ? "/" + g.Who : string.Empty))}</div>") +
             $"<div class=\"dev-t\">{E(g.Title)}</div>" +
@@ -203,7 +211,7 @@ namespace Jamrah.Presentation.Bookmarks
             $"<div class=\"dev-s\">" +
             (string.IsNullOrEmpty(g.Lang) ? "" : $"<span class=\"lg\"><span class=\"dot\"></span>{E(g.Lang)}</span>") +
             (string.IsNullOrEmpty(g.Stars) ? "" : $"<span>{BookmarkIcons.Svg("star", 11)} {E(g.Stars)}</span>") +
-            (string.IsNullOrEmpty(g.Status) ? "" : StChip(g.Status)) + "</div>" +
+            (string.IsNullOrEmpty(g.Status) ? "" : StChip(g.Status, lang)) + "</div>" +
             $"{Chips(g.Tags, 4, t)}</div>";
 
         private static string File(BookmarkCardData g, List<BookmarkTag> t) =>
@@ -223,36 +231,39 @@ namespace Jamrah.Presentation.Bookmarks
             (string.IsNullOrEmpty(g.Desc) ? "" : $"<p class=\"mg-d\">{E(g.Desc)}</p>") + $"{Chips(g.Tags, 3, t)}</div>" +
             (string.IsNullOrEmpty(g.Img) ? "" : $"<div class=\"mg-i\"><img src=\"{E(g.Img)}\" loading=\"lazy\" alt=\"\"></div>") + "</div>";
 
-        private static string Detailed(BookmarkCardData g, List<BookmarkTag> t) =>
+        private static string Detailed(BookmarkCardData g, List<BookmarkTag> t, string lang = "en") =>
             $"<div>" + (string.IsNullOrEmpty(g.Img) ? "" : $"<div class=\"dt-i\"><img src=\"{E(g.Img)}\" loading=\"lazy\" alt=\"\"></div>") +
             $"<div class=\"dt-b\"><div class=\"dt-t\">{E(g.Title)}</div><div class=\"dt-k\">{E(g.Type)} · {E(g.MetaLine)}</div>" +
             (string.IsNullOrEmpty(g.Desc) ? "" : $"<p class=\"dt-d\">{E(g.Desc)}</p>") +
             $"<div class=\"dt-f\">{RatingH(g)}" +
-            (string.IsNullOrEmpty(g.Status) ? "" : StChip(g.Status)) +
+            (string.IsNullOrEmpty(g.Status) ? "" : StChip(g.Status, lang)) +
             (g.Progress.HasValue ? $"<span class=\"bar w120\"><i style=\"width:{g.Progress}%\"></i></span>" : "") +
             string.Concat(g.Tags.Take(2).Select(x => $"<span class=\"chip\" {BookmarkQuery.TagStyleAttr(x, t)}>{E(x)}</span>")) +
             "</div></div></div>";
 
-        private static string Metadata(BookmarkCardData g, BookmarkItem it, List<BookmarkTag> t)
+        private static string Metadata(BookmarkCardData g, BookmarkItem it, List<BookmarkTag> t, string lang = "en")
         {
             var fields = TypeFields.TryGetValue(it.Type, out var f) ? f : new List<(string Key, string Label)>();
             var rows = string.Concat(fields
                 .Where(fd => !string.IsNullOrEmpty(NodeText(g.Meta[fd.Key])))
                 .Take(4)
-                .Select(fd => $"<div class=\"mt-r\"><span class=\"mt-k\">{E(fd.Label)}</span><span class=\"mt-v\">{E(NodeText(g.Meta[fd.Key]))}</span></div>"));
+                .Select(fd => $"<div class=\"mt-r\"><span class=\"mt-k\">{E(LocalizationService.MetaLabel(fd.Key, lang, fd.Label))}</span><span class=\"mt-v\">{E(NodeText(g.Meta[fd.Key]))}</span></div>"));
             return $"<div class=\"mt\"><div class=\"mt-t\">{E(g.Title)}</div><div class=\"mt-g\">{rows}</div>{Chips(g.Tags, 3, t)}</div>";
         }
 
         // Table body cells only (the page renders <tr> to attach @onclick).
-        public static string TableCells(BookmarkItem it, List<BookmarkTag> allTags)
+        public static string TableCells(BookmarkItem it, List<BookmarkTag> allTags) =>
+            TableCells(it, allTags, LocalizationService.CurrentLang);
+
+        public static string TableCells(BookmarkItem it, List<BookmarkTag> allTags, string lang)
         {
-            var g = BookmarkCardData.From(it);
+            var g = BookmarkCardData.From(it, lang);
             return $"<td><span class=\"tt\">" +
                 (string.IsNullOrEmpty(g.Img) ? "" : $"<img src=\"{E(g.Img)}\" alt=\"\">") + $"{E(it.Title)}</span></td>" +
                 $"<td><span class=\"st\">{E(g.Type)}</span></td>" +
                 $"<td class=\"mono\" style=\"font-size:12px;color:var(--ink2)\">{E(g.MetaLine)}</td>" +
                 $"<td>{Chips(BookmarkQuery.TagsOf(it), 3, allTags)}</td><td>{RatingH(g)}</td>" +
-                $"<td style=\"color:var(--ink3);font-size:12px\">{E(BookmarkCardData.FmtAgo(it.CreatedAt))}</td>";
+                $"<td style=\"color:var(--ink3);font-size:12px\">{E(BookmarkCardData.FmtAgo(it.CreatedAt, lang))}</td>";
         }
 
         // Port of embedFrame(): live embeds for social/video URLs, else null.
@@ -287,7 +298,10 @@ namespace Jamrah.Presentation.Bookmarks
         }
 
         // Port of fval(): typed metadata value rendering for the drawer.
-        public static string? MetaValue(string typeId, string key, System.Text.Json.Nodes.JsonNode? node)
+        public static string? MetaValue(string typeId, string key, System.Text.Json.Nodes.JsonNode? node) =>
+            MetaValue(typeId, key, node, LocalizationService.CurrentLang);
+
+        public static string? MetaValue(string typeId, string key, System.Text.Json.Nodes.JsonNode? node, string lang)
         {
             if (node == null) return null;
             var v = node.ToString();
@@ -298,11 +312,11 @@ namespace Jamrah.Presentation.Bookmarks
                 "url" => $"<a class=\"dlink\" href=\"{E(v)}\" target=\"_blank\" rel=\"noopener\">{E(v)}</a>",
                 "rating" => $"<span class=\"rt\">★ {E(v)}</span>",
                 "progress" => $"<span style=\"display:flex;align-items:center;gap:10px\"><span class=\"bar w120\"><i style=\"width:{E(v)}%\"></i></span><span class=\"pv\">{E(v)}%</span></span>",
-                "boolean" => (ToBool(node) ? "Yes" : "No"),
+                "boolean" => (ToBool(node) ? (lang == "ar" ? "نعم" : "Yes") : (lang == "ar" ? "لا" : "No")),
                 "image" => (v.StartsWith("http") || v.StartsWith("data:")) ? $"<img class=\"dimg\" src=\"{E(v)}\" alt=\"\">" : null,
                 "file" => $"<span class=\"mono\" style=\"font-size:12px\">{E(v)}</span>",
-                "select" => BookmarkQuery.StatusColors.ContainsKey(v) ? StChip(v) : $"<span class=\"st\">{E(v)}</span>",
-                "date" => BookmarkCardData.FmtDate(System.DateTime.TryParse(v, out var dt) ? dt : System.DateTime.MinValue),
+                "select" => BookmarkQuery.StatusColors.ContainsKey(v) ? StChip(v, lang) : $"<span class=\"st\">{E(v)}</span>",
+                "date" => BookmarkCardData.FmtDate(System.DateTime.TryParse(v, out var dt) ? dt : System.DateTime.MinValue, lang),
                 _ => E(v),
             };
         }

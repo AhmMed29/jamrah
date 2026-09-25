@@ -32,7 +32,7 @@
 
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
 		<WindowsPackageType>None</WindowsPackageType>
-		<DefaultItemExcludes>$(DefaultItemExcludes);.worktrees\**;ClipAgent\**</DefaultItemExcludes>
+		<DefaultItemExcludes>$(DefaultItemExcludes);.worktrees\**;ClipAgent\**;TranslatorAgent\**</DefaultItemExcludes>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
@@ -61,9 +61,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="HtmlAgilityPack" Version="1.11.72" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.9" />
+		<PackageReference Include="Microsoft.Playwright" Version="1.55.0" Condition="$([System.String]::Copy('$(TargetFramework)').Contains('windows'))" />
 		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
 		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.10" />
 		<PackageReference Include="Markdig" Version="0.37.0" />
@@ -73,11 +75,19 @@
 		<Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\ClipAgent\ClipAgent.csproj&quot; -c $(Configuration) --nologo -v:q" />
 	</Target>
 
+	<Target Name="BuildTranslatorAgent" BeforeTargets="BeforeBuild" Condition="$([System.String]::Copy('$(TargetFramework)').Contains('windows')) And '$(DesignTimeBuild)' != 'true'">
+		<Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\TranslatorAgent\TranslatorAgent.csproj&quot; -c $(Configuration) --nologo -v:q" />
+	</Target>
+
 	<!-- Dev-loop helper (revert: delete this Target): kill the running ClipAgent before copy,
 	     otherwise the copy below fails with MSB3021/3027 file-lock errors on every build.
 	     The agent auto-restarts on next app launch. ContinueOnError covers "not running". -->
 	<Target Name="KillClipAgentBeforeCopy" BeforeTargets="CopyClipAgent" Condition="$([System.String]::Copy('$(TargetFramework)').Contains('windows'))">
 		<Exec Command="taskkill /F /IM ClipAgent.exe" ContinueOnError="true" />
+	</Target>
+
+	<Target Name="KillTranslatorAgentBeforeCopy" BeforeTargets="CopyTranslatorAgent" Condition="$([System.String]::Copy('$(TargetFramework)').Contains('windows'))">
+		<Exec Command="taskkill /F /IM TranslatorAgent.exe" ContinueOnError="true" />
 	</Target>
 
 	<Target Name="CopyClipAgent" AfterTargets="Build" Condition="$([System.String]::Copy('$(TargetFramework)').Contains('windows'))">
@@ -87,6 +97,13 @@
 		</ItemGroup>
 		<Copy SourceFiles="@(ClipAgentBin)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
 		<Copy SourceFiles="@(ClipAgentNative)" DestinationFolder="$(OutputPath)runtimes\win-x64\native\" SkipUnchangedFiles="true" />
+	</Target>
+
+	<Target Name="CopyTranslatorAgent" AfterTargets="Build" Condition="$([System.String]::Copy('$(TargetFramework)').Contains('windows'))">
+		<ItemGroup>
+			<TranslatorAgentBin Include="TranslatorAgent\bin\$(Configuration)\net9.0-windows10.0.19041.0\TranslatorAgent.exe;TranslatorAgent\bin\$(Configuration)\net9.0-windows10.0.19041.0\TranslatorAgent.runtimeconfig.json;TranslatorAgent\bin\$(Configuration)\net9.0-windows10.0.19041.0\*.dll" />
+		</ItemGroup>
+		<Copy SourceFiles="@(TranslatorAgentBin)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
 	</Target>
 
 </Project>

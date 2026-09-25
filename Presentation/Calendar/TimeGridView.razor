@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject CalendarLayoutEngine LayoutEngine
 @inject ICalendarStateService StateService
+@inject Jamrah.Application.Services.LocalizationService L
 
 <div class="toastui-calendar-layout time-grid-view">
     <!-- 1. Header Row -->
@@ -17,7 +18,7 @@
                 <div class="day-name-item @(isSunday ? "holiday" : isSaturday ? "saturday" : "")"
                      @onclick="() => HandleHeaderClick(day)">
                     <span class="day-name__date @(isToday ? "weekday-grid-date-decorator" : "")">@day.Day</span>
-                    <span class="day-name__name">@day.ToString("ddd").ToUpper()</span>
+                    <span class="day-name__name">@day.ToString("ddd", L.Culture).ToUpper()</span>
                 </div>
             }
         </div>
@@ -27,7 +28,7 @@
     <div class="allday-panel">
         <div style="display: flex; width: 100%; height: 100%;">
             <div style="width: 60px; min-width: 60px; border-right: 1px solid var(--tui-calendar-border); font-size: 11px; color: var(--tui-calendar-sub-text); padding: 4px; text-align: right;">
-                all-day
+                @L["com.allday"]
             </div>
             <div class="panel-event-wrapper" style="flex: 1; position: relative;">
                 @if (DaysCount == 7)
@@ -145,6 +146,7 @@
     protected override void OnInitialized()
     {
         StateService.OnStateChanged += HandleStateChanged;
+        L.OnLanguageChanged += HandleStateChanged;
     }
 
     protected override void OnParametersSet()
@@ -263,6 +265,7 @@
     public void Dispose()
     {
         StateService.OnStateChanged -= HandleStateChanged;
+        L.OnLanguageChanged -= HandleStateChanged;
     }
 }
 

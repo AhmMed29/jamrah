@@ -1034,7 +1034,7 @@
         var s = new Session
         {
             Id = $"s-{now.Ticks}",
-            Date = $"{now.Year}-{now.Month}-{now.Day}",
+            Date = now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
             Title = title,
             Time = now.ToString("HH:mm"),
             Note = note,
@@ -1098,19 +1098,19 @@
         CollectOpenIds(_toggles, openIds);
         
         var ordered = _sessions
-            .OrderByDescending(s => s.Date)
+            .OrderByDescending(s => SafeParseDate(s.Date))
             .ThenByDescending(s => s.Time)
             .ToList();
         var now = DateTime.Now;
-        var todayKey = $"{now.Year}-{now.Month}-{now.Day}";
+        var todayKey = now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
 
         switch (_viewMode)
         {
             case "weekly":
-                _toggles = ordered.GroupBy(s => WeekNumber(ParseDate(s.Date)))
+                _toggles = ordered.GroupBy(s => WeekNumber(SafeParseDate(NormalizeDateKey(s.Date))))
                     .OrderByDescending(g => g.Key)
                     .Select(g => GroupWithChildren($"W{g.Key}", L.Get("pomo.weekN", g.Key), g.Count(),
-                        g.GroupBy(s => s.Date).Select(d => Group($"{g.Key}-{d.Key}", FullDateLabel(d.Key), d.ToList(), d.Key == todayKey)).ToList()))
+                        g.GroupBy(s => NormalizeDateKey(s.Date)).Select(d => Group($"{g.Key}-{d.Key}", FullDateLabel(d.Key), d.ToList(), d.Key == todayKey)).ToList()))
                     .ToList();
                 break;
             case "monthly":
@@ -1120,13 +1120,13 @@
                 _toggles = new List<SessionGroup>
                 {
                     GroupWithChildren($"y-{now.Year}", $"{now.Year}",
-                        ordered.Count(s => s.Date.StartsWith($"{now.Year}-")),
+                        ordered.Count(s => SafeParseDate(s.Date).Year == now.Year),
                         BuildMonthsOfYear(now.Year, now.Month, ordered)),
                 };
                 break;
             default: // يومي — النهارده فوق + توجل بسيط "عرض جميع الأيام" تحته
                 {
-                    var allDayGroups = ordered.GroupBy(s => s.Date)
+                    var allDayGroups = ordered.GroupBy(s => NormalizeDateKey(s.Date))
                         .Select(g => Group($"tg-{g.Key}", FullDateLabel(g.Key), g.ToList(), g.Key == todayKey))
                         .ToList();
                     var todayGroup = allDayGroups.FirstOrDefault(g => g.IsToday);
@@ -1178,22 +1178,22 @@
     private List<SessionGroup> BuildMonthsOfYear(int year, int currentMonth, List<Session> ordered)
     {
         var now = DateTime.Now;
-        var todayKey = $"{now.Year}-{now.Month}-{now.Day}";
+        var todayKey = now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
         var byMonth = ordered
-            .Where(s => s.Date.StartsWith($"{year}-"))
-            .GroupBy(s => s.Date[..s.Date.LastIndexOf('-')])
+            .Where(s => SafeParseDate(s.Date).Year == year)
+            .GroupBy(s => NormalizeDateKey(s.Date)[..NormalizeDateKey(s.Date).LastIndexOf('-')])
             .ToDictionary(g => g.Key, g => g.ToList());
         var months = new List<SessionGroup>();
         for (var m = 1; m <= currentMonth; m++)
         {
-            var key = $"{year}-{m}";
+            var key = new DateTime(year, m, 1).ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
             var monthSessions = byMonth.TryGetValue(key, out var list) ? list : new List<Session>();
             var dayLimit = m == currentMonth ? now.Day : DateTime.DaysInMonth(year, m);
             var children = new List<SessionGroup>();
             for (var d = 1; d <= dayLimit; d++)
             {
-                var dateStr = $"{year}-{m}-{d}";
-                var daySessions = monthSessions.Where(s => s.Date == dateStr).ToList();
+                var dateStr = new DateTime(year, m, d).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+                var daySessions = monthSessions.Where(s => NormalizeDateKey(s.Date) == dateStr).ToList();
                 var isToday = dateStr == todayKey;
                 children.Add(Group($"d-{dateStr}", FullDateLabel(dateStr), daySessions, isToday));
             }
@@ -1210,7 +1210,7 @@
 
     private string FullDateLabel(string d)
     {
-        var date = ParseDate(d);
+        var date = SafeParseDate(d);
         return $"{L.DayName(date.DayOfWeek)} {date.Day}/{date.Month}/{date.Year}";
     }
 
@@ -1223,8 +1223,20 @@
         return L.Get("pomo.monthN", p[1]);
     }
 
-    private static DateTime ParseDate(string d) =>
-        DateTime.ParseExact(d, "yyyy-M-d", System.Globalization.CultureInfo.InvariantCulture);
+    private static DateTime ParseDate(string d) => SafeParseDate(d);
+
+    private static DateTime SafeParseDate(string? d)
+    {
+        if (!string.IsNullOrWhiteSpace(d) && DateTime.TryParseExact(d, new[] { "yyyy-MM-dd", "yyyy-M-d" },
+            System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dt))
+            return dt;
+        return DateTime.MinValue;
+    }
+
+    private static string NormalizeDateKey(string? d) =>
+        SafeParseDate(d) == DateTime.MinValue
+            ? (d ?? "")
+            : SafeParseDate(d).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
 
     private static int WeekNumber(DateTime d)
     {

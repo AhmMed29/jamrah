@@ -32,6 +32,7 @@ namespace Jamrah
             builder.Services.AddSingleton<IPlanningRepository, PlanningRepository>();
             builder.Services.AddSingleton<IBookmarkRepository, BookmarkRepository>();
             builder.Services.AddSingleton<IClipAgentService, ClipAgentService>();
+            builder.Services.AddSingleton<ITranslatorService, TranslatorService>();
             
             // Register Calendar State & Layout Engine Services
             builder.Services.AddSingleton<CalendarStateService>();

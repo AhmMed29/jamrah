@@ -15,6 +15,7 @@ public partial class MainPage : ContentPage
     private readonly ISettingsRepository _settingsRepository;
     private readonly IAppNavService _navService;
     private readonly IClipAgentService _clipAgent;
+    private readonly ITranslatorService _translator;
     private readonly LocalizationService _lang;
     private BlazorWebView? _calendarWebView;
     private BlazorWebView? _tasksWebView;
@@ -30,13 +31,14 @@ public partial class MainPage : ContentPage
     private int _pillGen;
     private bool _warmupStarted;
 
-    public MainPage(ICalendarStateService calendarState, ISettingsRepository settingsRepository, IAppNavService navService, IClipAgentService clipAgent, LocalizationService lang)
+    public MainPage(ICalendarStateService calendarState, ISettingsRepository settingsRepository, IAppNavService navService, IClipAgentService clipAgent, ITranslatorService translator, LocalizationService lang)
     {
         InitializeComponent();
         _calendarState = calendarState;
         _settingsRepository = settingsRepository;
         _navService = navService;
         _clipAgent = clipAgent;
+        _translator = translator;
         _lang = lang;
         _navService.PageRequested += OnNavPageRequested;
         Loaded += OnPageLoaded;
@@ -166,6 +168,7 @@ public partial class MainPage : ContentPage
             await SetSplashAsync(5, _lang["splash.preparing"]);
             await _settingsRepository.InitAsync();
             _ = _clipAgent.ApplyStartupStateAsync();
+            _ = _translator.ApplyStartupStateAsync();
             await SetSplashAsync(10, _lang["splash.tasks"]);
             EnsureTasksWebView();
             if (_tasksWebView != null) _tasksWebView.IsVisible = false;

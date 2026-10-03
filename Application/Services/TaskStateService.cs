@@ -31,6 +31,16 @@ namespace Jamrah.Application.Services
 
         private void NotifyStateChanged() => OnStateChanged?.Invoke();
 
+        // --- Hidden template helpers (template = definition only, never shown as a day task) ---
+        private static bool IsTemplate(AppTask t)
+            => t.Id == t.TemplateId
+            && !string.IsNullOrWhiteSpace(t.RecurrenceDays)
+            && t.RecurrenceDays != "none";
+
+        private static bool IsSeriesInstance(AppTask t)
+            => !string.IsNullOrWhiteSpace(t.TemplateId)
+            && t.Id != t.TemplateId;
+
         public void SetView(string view) { CurrentView = view; CurrentLayout = "list"; NotifyStateChanged(); }
         public void SetLayout(string layout) { CurrentLayout = layout; NotifyStateChanged(); }
         public void SetSelectedTask(string? id) { SelectedTaskId = id; NotifyStateChanged(); }
@@ -87,6 +97,66 @@ namespace Jamrah.Application.Services
                 changed = false;
             }
 
+            // --- Revive archived templates (series that died when the template day was archived) ---
+            // Note: keep IsDone/CompletedAt here — the hide step below clones the old day state into an instance first
+            foreach (var t in Tasks.Where(x => IsTemplate(x) && x.ArchivedAt != null).ToList())
+            {
+                t.ArchivedAt = null;
+                t.UpdatedAt = DateTime.UtcNow;
+                await _repository.SaveTaskAsync(t);
+                changed = true;
+            }
+
+            // --- Hide visible templates: template becomes date-less definition, old date becomes an instance ---
+            foreach (var tpl in Tasks.Where(x => IsTemplate(x) && (x.DueDate.HasValue || x.ScheduledDate.HasValue)).ToList())
+            {
+                var day = tpl.DueDate?.Date ?? tpl.ScheduledDate?.Date;
+                if (day.HasValue)
+                {
+                    bool hasInstance = Tasks.Any(x => x.TemplateId == tpl.Id && x.Id != tpl.Id
+                        && (x.DueDate?.Date == day.Value.Date || x.ScheduledDate?.Date == day.Value.Date));
+                    if (!hasInstance)
+                    {
+                        var inst = new AppTask
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Title = tpl.Title,
+                            Priority = tpl.Priority,
+                            IsDone = tpl.IsDone,
+                            DueDate = day.Value,
+                            ScheduledDate = day.Value,
+                            ScheduledTime = tpl.ScheduledTime,
+                            RecurrenceDays = tpl.RecurrenceDays,
+                            IsRecurring = true,
+                            EisenhowerQuadrant = tpl.EisenhowerQuadrant,
+                            Notes = tpl.Notes,
+                            ColumnId = tpl.ColumnId,
+                            FolderId = tpl.FolderId,
+                            TemplateId = tpl.TemplateId,
+                            CreatedAt = tpl.CreatedAt,
+                            UpdatedAt = DateTime.UtcNow,
+                            ArchivedAt = tpl.ArchivedAt,
+                            CompletedAt = tpl.CompletedAt
+                        };
+                        await _repository.SaveTaskAsync(inst);
+                        Tasks.Add(inst);
+                    }
+                }
+                tpl.DueDate = null;
+                tpl.ScheduledDate = null;
+                tpl.IsDone = false;
+                tpl.ArchivedAt = null;
+                tpl.CompletedAt = null;
+                tpl.UpdatedAt = DateTime.UtcNow;
+                await _repository.SaveTaskAsync(tpl);
+                changed = true;
+            }
+            if (changed)
+            {
+                Tasks = await _repository.GetTasksAsync();
+                changed = false;
+            }
+
             // --- إزالة التكرارات (Hotfix للـ 3 مهام) ---
             var dupGroups = Tasks
                 .Where(t => !string.IsNullOrWhiteSpace(t.TemplateId) && t.DueDate.HasValue && t.ArchivedAt==null)
@@ -131,7 +201,7 @@ namespace Jamrah.Application.Services
             var dailyTemplates = Tasks.Where(t => t.ArchivedAt==null && t.RecurrenceDays=="daily" && !string.IsNullOrWhiteSpace(t.TemplateId) && t.Id==t.TemplateId).ToList();
             foreach (var tpl in dailyTemplates)
             {
-                var tplStart = tpl.DueDate?.Date ?? tpl.CreatedAt.Date;
+                var tplStart = tpl.DueDate?.Date ?? tpl.ScheduledDate?.Date ?? tpl.CreatedAt.Date;
                 // لا نولد قبل تاريخ إنشاء القالب
                 var start = tplStart > monthStart ? tplStart : monthStart;
                 for (var d = start; d <= monthEnd; d = d.AddDays(1))
@@ -169,7 +239,7 @@ namespace Jamrah.Application.Services
             var weeklyTemplates = Tasks.Where(t => t.ArchivedAt==null && t.RecurrenceDays=="weekly" && !string.IsNullOrWhiteSpace(t.TemplateId) && t.Id==t.TemplateId).ToList();
             foreach(var tpl in weeklyTemplates)
             {
-                var tplDate = tpl.DueDate?.Date ?? tpl.CreatedAt.Date;
+                var tplDate = tpl.DueDate?.Date ?? tpl.ScheduledDate?.Date ?? tpl.CreatedAt.Date;
                 for (var d = monthStart; d <= monthEnd; d = d.AddDays(1))
                 {
                     if (d.DayOfWeek != tplDate.DayOfWeek) continue;
@@ -204,8 +274,8 @@ namespace Jamrah.Application.Services
             var monthlyTemplates = Tasks.Where(t => t.ArchivedAt==null && t.RecurrenceDays=="monthly" && !string.IsNullOrWhiteSpace(t.TemplateId) && t.Id==t.TemplateId).ToList();
             foreach(var tpl in monthlyTemplates)
             {
-                var tplDate = tpl.DueDate?.Date ?? tpl.CreatedAt.Date;
-                if (tplDate.Month == now.Month && tplDate.Year == now.Year) continue; // القالب نفسه يمثل هذا الشهر
+                // Hidden template never represents a month itself — always generate the current month
+                var tplDate = tpl.DueDate?.Date ?? tpl.ScheduledDate?.Date ?? tpl.CreatedAt.Date;
                 var targetDay = Math.Min(tplDate.Day, DateTime.DaysInMonth(now.Year, now.Month));
                 var d = new DateTime(now.Year, now.Month, targetDay);
                 if (d < tplDate) continue;
@@ -330,6 +400,7 @@ namespace Jamrah.Application.Services
 
         public async Task ToggleTaskAsync(AppTask task)
         {
+            if (IsTemplate(task)) return; // hidden definition can never be completed
             task.IsDone = !task.IsDone;
             if (task.IsDone)
             {
@@ -350,6 +421,12 @@ namespace Jamrah.Application.Services
         public async Task DeleteTaskAsync(string id)
         {
             var task = Tasks.FirstOrDefault(t => t.Id == id);
+            if (task != null && IsTemplate(task))
+            {
+                // Deleting a hidden template = delete the whole series
+                await DeleteSeriesAsync(id);
+                return;
+            }
             if (task != null && task.ArchivedAt == null)
             {
                 // حذف مهمة نشطة → أرشيف (سلة) بدل الحذف النهائي
@@ -403,8 +480,65 @@ namespace Jamrah.Application.Services
         public async Task UpdateTaskAsync(AppTask task)
         {
             if (string.IsNullOrEmpty(task.Id)) return;
+            // Detach a series instance turned to "no repeat" — it becomes a normal one-day task
+            if (IsSeriesInstance(task) && string.IsNullOrWhiteSpace(task.RecurrenceDays) == false
+                && task.RecurrenceDays == "none")
+            {
+                task.TemplateId = null;
+                task.IsRecurring = false;
+                await _repository.SaveTaskAsync(task);
+                await RefreshDataAsync();
+                return;
+            }
             await _repository.SaveTaskAsync(task);
+            if (IsTemplate(task))
+            {
+                await PropagateTemplateToUpcomingAsync(task, excludeId: string.Empty);
+            }
+            else if (IsSeriesInstance(task))
+            {
+                // Editing any instance edits the habit: update the hidden definition + upcoming days
+                var tpl = Tasks.FirstOrDefault(x => x.Id == task.TemplateId);
+                if (tpl != null)
+                {
+                    tpl.Title = task.Title;
+                    tpl.Priority = task.Priority;
+                    tpl.ScheduledTime = task.ScheduledTime;
+                    tpl.EisenhowerQuadrant = task.EisenhowerQuadrant;
+                    tpl.Notes = task.Notes;
+                    tpl.ColumnId = task.ColumnId;
+                    tpl.FolderId = task.FolderId;
+                    tpl.RecurrenceDays = task.RecurrenceDays;
+                    tpl.IsRecurring = task.IsRecurring;
+                    tpl.UpdatedAt = DateTime.UtcNow;
+                    await _repository.SaveTaskAsync(tpl);
+                    await PropagateTemplateToUpcomingAsync(tpl, excludeId: task.Id);
+                }
+            }
             await RefreshDataAsync();
+        }
+
+        // Template edit applies to current month onward: active upcoming instances inherit the definition
+        private async Task PropagateTemplateToUpcomingAsync(AppTask template, string excludeId)
+        {
+            var today = DateTime.Today;
+            var upcoming = Tasks.Where(x => x.TemplateId == template.Id && x.Id != template.Id
+                && x.Id != excludeId && x.ArchivedAt == null && !x.IsDone
+                && (TaskDay(x) ?? DateTime.MaxValue).Date >= today).ToList();
+            foreach (var s in upcoming)
+            {
+                s.Title = template.Title;
+                s.Priority = template.Priority;
+                s.ScheduledTime = template.ScheduledTime;
+                s.EisenhowerQuadrant = template.EisenhowerQuadrant;
+                s.Notes = template.Notes;
+                s.ColumnId = template.ColumnId;
+                s.FolderId = template.FolderId;
+                s.RecurrenceDays = template.RecurrenceDays;
+                s.IsRecurring = template.IsRecurring;
+                s.UpdatedAt = DateTime.Now;
+                await _repository.SaveTaskAsync(s);
+            }
         }
 
         public async Task CarryForwardTaskAsync(AppTask task)

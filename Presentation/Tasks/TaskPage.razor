@@ -1052,9 +1052,8 @@
         }
 
         .today-row-grid {
-            display: grid;
+            display: flex;
             gap: 8px;
-            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
         }
 
         .today-cell {
@@ -1063,6 +1062,69 @@
             border-radius: 12px;
             overflow: hidden;
             min-width: 0;
+            flex: 1 1 0;
+            transition: flex-grow .28s cubic-bezier(.25,.9,.3,1), flex-basis .28s cubic-bezier(.25,.9,.3,1);
+        }
+
+        /* hover-expand (sidebar motion): only when 2+ cells share a row —
+           hovered cell grows to fit its name, siblings collapse to ✓ squares.
+           A lone task is already full-width, so hovering it changes nothing. */
+        .today-free:not(.fDragging) .today-row-grid:has(> :nth-child(2)):has(.today-cell:hover) .today-cell:not(:hover) {
+            flex: 0 0 44px;
+        }
+        .today-free:not(.fDragging) .today-row-grid:has(> :nth-child(2)):has(.today-cell:hover) .today-cell:not(:hover) .task-main,
+        .today-free:not(.fDragging) .today-row-grid:has(> :nth-child(2)):has(.today-cell:hover) .today-cell:not(:hover) .task-more,
+        .today-free:not(.fDragging) .today-row-grid:has(> :nth-child(2)):has(.today-cell:hover) .today-cell:not(:hover) .priority-dot,
+        .today-free:not(.fDragging) .today-row-grid:has(> :nth-child(2)):has(.today-cell:hover) .today-cell:not(:hover) .today-sub {
+            display: none;
+        }
+        .today-free:not(.fDragging) .today-row-grid:has(> :nth-child(2)) .today-cell:hover {
+            flex: 3 1 0;
+            max-width: min(max-content, calc(100% - 4 * 52px));
+        }
+        .today-free:not(.fDragging) .today-row-grid:has(> :nth-child(2)) .today-cell:hover .task-title {
+            white-space: nowrap;
+        }
+
+        /* lone task: full-width like the classic list (no 240px card, no hover stretch) */
+        .today-row-grid:has(> :only-child) .today-cell {
+            flex: 1 1 100%;
+            max-width: 100%;
+        }
+
+        /* side-by-side cells keep a readable minimum (≈ two words) */
+        .today-row-grid:has(> :nth-child(2)) .today-cell {
+            min-width: 120px;
+        }
+
+        /* subtask toggle chevron (same affordance as group headers) */
+        .sub-toggle {
+            width: 26px;
+            height: 26px;
+            display: grid;
+            place-items: center;
+            border-radius: 7px;
+            background: transparent;
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+        .sub-toggle:hover {
+            background: var(--surface-soft);
+            color: var(--text);
+        }
+
+        /* smooth subtask expand/collapse (sidebar motion) */
+        .sub-wrap {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows .28s cubic-bezier(.25,.9,.3,1);
+        }
+        .sub-wrap.open {
+            grid-template-rows: 1fr;
+        }
+        .sub-inner {
+            overflow: hidden;
+            min-height: 0;
         }
 
         .today-cell .task-row {
@@ -1092,29 +1154,50 @@
             bottom: 0;
             z-index: 5;
             display: none; /* shown while mouse-dragging via .fDragging */
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .task-row .dz span {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--muted);
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 6px;
+            padding: 1px 6px;
+            white-space: nowrap;
+            pointer-events: none;
         }
 
         .task-row .dz-a {
             inset-inline-start: 0;
-            width: 33%;
+            width: 25%;
         }
 
         .task-row .dz-b {
-            inset-inline-end: 0;
-            width: 33%;
+            inset-inline-start: 50%;
+            width: 25%;
         }
 
         .task-row .dz-c {
-            inset-inline-start: 33%;
-            inset-inline-end: 33%;
+            inset-inline-start: 25%;
+            width: 25%;
+        }
+
+        .task-row .dz-s {
+            inset-inline-start: 75%;
+            width: 25%;
         }
 
         .today-free.fDragging .task-row .dz {
-            display: block;
+            display: flex;
         }
 
         .today-free.fDragging .task-row .dz-a,
-        .today-free.fDragging .task-row .dz-b {
+        .today-free.fDragging .task-row .dz-b,
+        .today-free.fDragging .task-row .dz-s {
             background: rgba(28,25,23,.05);
             border-inline-start: 2px dashed var(--border2);
             border-inline-end: 2px dashed var(--border2);
@@ -1830,7 +1913,7 @@
             }
 
             .today-row-grid {
-                grid-template-columns: 1fr;
+                flex-direction: column;
             }
 
             .details {
@@ -1940,8 +2023,9 @@
     private double _downX, _downY;
     private double _docZoom = 1; // page zoom (CSS zoom breaks clientX-based fixed positioning)
     private string _hoverTaskId = "";
-    private string _hoverThird = ""; // "a" | "c" | "b"
+    private string _hoverThird = ""; // "a" | "c" | "b" | "s"
     private bool _justDragged; // suppress click-to-open right after a drag
+    private HashSet<string> _expandedSubs = new(); // subtask groups expanded (collapsed by default)
 
     private string _quickTitle = "";
     private string _newTitle = "";
@@ -2015,7 +2099,7 @@
         _ = _layout;
         var tasks = TaskState.Tasks;
         var today = DateTime.Today;
-        var active = tasks.Where(t => t.ArchivedAt == null).ToList();
+        var active = tasks.Where(t => t.ArchivedAt == null && !IsTemplate(t)).ToList();
         _todayCount = active.Count(t => t.DueDate?.Date == today && !t.IsDone);
         // For badge today we count pending today only (like HTML)
         var todayTasks = active.Where(t => t.DueDate?.Date == today || t.ScheduledDate?.Date == today).ToList();
@@ -2048,7 +2132,7 @@
         // لو كلهم false → يعرض الكل
     }
     private IEnumerable<AppTask> GetFilteredArchived(){
-        var all = TaskState.Tasks.Where(t=>t.ArchivedAt!=null).OrderByDescending(t=>t.ArchivedAt).ToList();
+        var all = TaskState.Tasks.Where(t=>t.ArchivedAt!=null && !IsTemplate(t)).OrderByDescending(t=>t.ArchivedAt).ToList();
         // تقسيم الأرشيف: منجز / محذوف
         all = (_archKind=="deleted" ? all.Where(t=>!t.IsDone) : all.Where(t=>t.IsDone)).ToList();
         if(!_archDay && !_archWeek && !_archMonth && !_archYear) return all;
@@ -2087,7 +2171,9 @@
         if(DateTime.TryParse(e.Value?.ToString(), out var d)) TaskState.SetCurrentDate(d);
     }
 
-    private List<AppTask> ActiveTasks() => TaskState.Tasks.Where(t=>t.ArchivedAt==null).ToList();
+    private static bool IsTemplate(AppTask t) => t.Id == t.TemplateId && !string.IsNullOrWhiteSpace(t.RecurrenceDays) && t.RecurrenceDays != "none";
+
+    private List<AppTask> ActiveTasks() => TaskState.Tasks.Where(t=>t.ArchivedAt==null && !IsTemplate(t)).ToList();
 
     private List<AppTask> TasksForDate(DateTime date)
     {
@@ -2130,14 +2216,14 @@
         return ActiveTasks().Where(t => (t.DueDate?.Date==d) || (t.ScheduledDate?.Date==d)).ToList();
     }
     private List<AppTask> MorningPending(DateTime date) => ApplyTodayOrder(DayTasks(date)
-        .Where(t => !t.IsDone && t.ScheduledTime != null && t.ScheduledTime.Value < Noon)
+        .Where(t => t.ScheduledTime != null && t.ScheduledTime.Value < Noon)
         .OrderBy(t => t.ScheduledTime).ThenBy(t => PriorityOrder(t.Priority)).ThenBy(t => t.CreatedAt).ToList());
     private List<AppTask> EveningPending(DateTime date) => ApplyTodayOrder(DayTasks(date)
-        .Where(t => !t.IsDone && t.ScheduledTime != null && t.ScheduledTime.Value >= Noon)
+        .Where(t => t.ScheduledTime != null && t.ScheduledTime.Value >= Noon)
         .OrderBy(t => t.ScheduledTime).ThenBy(t => PriorityOrder(t.Priority)).ThenBy(t => t.CreatedAt).ToList());
     private List<AppTask> UntimedPending(DateTime date)
     {
-        var q = DayTasks(date).Where(t => !t.IsDone && t.ScheduledTime == null);
+        var q = DayTasks(date).Where(t => t.ScheduledTime == null);
         var ordered = _untimedSort switch {
             "oldest" => q.OrderBy(t => t.CreatedAt).ToList(),
             "newest" => q.OrderByDescending(t => t.CreatedAt).ToList(),
@@ -2148,24 +2234,12 @@
     // Free layout: manual order wins once the user arranges anything
     private List<AppTask> ApplyTodayOrder(List<AppTask> tasks)
         => tasks.Any(t => t.SortOrder != 0) ? tasks.OrderBy(t => t.SortOrder).ThenBy(t => t.CreatedAt).ToList() : tasks;
-    private List<AppTask> MorningDone(DateTime date) => DayTasks(date)
-        .Where(t => t.IsDone && t.ScheduledTime != null && t.ScheduledTime.Value < Noon)
-        .OrderBy(t => t.ScheduledTime).ToList();
-    private List<AppTask> EveningDone(DateTime date) => DayTasks(date)
-        .Where(t => t.IsDone && t.ScheduledTime != null && t.ScheduledTime.Value >= Noon)
-        .OrderBy(t => t.ScheduledTime).ToList();
-    private List<AppTask> UntimedDone(DateTime date) => DayTasks(date)
-        .Where(t => t.IsDone && t.ScheduledTime == null)
-        .OrderByDescending(t => t.CompletedAt ?? t.UpdatedAt).ToList();
     private void ToggleGroup(string which)
     {
         switch (which) {
             case "m": _morningOpen = !_morningOpen; break;
             case "u": _untimedOpen = !_untimedOpen; break;
             case "e": _eveningOpen = !_eveningOpen; break;
-            case "md": _morningDoneOpen = !_morningDoneOpen; break;
-            case "ud": _untimedDoneOpen = !_untimedDoneOpen; break;
-            case "ed": _eveningDoneOpen = !_eveningDoneOpen; break;
         }
         SaveGroupPrefs();
     }
@@ -2242,8 +2316,9 @@
             IsDone=false,
             CreatedAt=DateTime.UtcNow,
             UpdatedAt=DateTime.UtcNow,
-            DueDate=due,
-            ScheduledDate=due,
+            // Recurring template is a hidden definition — only instances carry dates
+            DueDate=isRec ? null : due,
+            ScheduledDate=isRec ? null : due,
             ScheduledTime=ts,
             RecurrenceDays=_newRepeat,
             IsRecurring=isRec,
@@ -2345,24 +2420,14 @@
             var morn = MorningPending(_currentDate);
             var untimed = UntimedPending(_currentDate);
             var even = EveningPending(_currentDate);
-            var mornDone = MorningDone(_currentDate);
-            var untimedDone = UntimedDone(_currentDate);
-            var evenDone = EveningDone(_currentDate);
-            var totalPending = morn.Count + untimed.Count + even.Count;
-            var totalDone = mornDone.Count + untimedDone.Count + evenDone.Count;
+            var total = morn.Count + untimed.Count + even.Count;
         }
-        @if(totalPending==0 && totalDone==0){
+        @if(total==0){
             <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">@L["tasks.noToday"]</div><div class="empty-text">@L["tasks.emptyAdd"]</div></div></div>
         } else {
             @TimeGroup("m", L["tasks.dayMorning"], morn, _morningOpen, true, "", true)
             @TimeGroup("u", L["tasks.dayUntimed"], untimed, _untimedOpen, false, "", null, true)
             @TimeGroup("e", L["tasks.dayEvening"], even, _eveningOpen, true, "", false)
-            @if(totalDone>0){
-                <div style="margin-top:8px;"></div>
-                @TimeGroup("md", $"{L["tasks.doneShort"]} — {L["tasks.morning"]}", mornDone, _morningDoneOpen, true, "", true, false, true)
-                @TimeGroup("ud", $"{L["tasks.doneShort"]} — {L["tasks.untimed"]}", untimedDone, _untimedDoneOpen, false, "", null, false, true)
-                @TimeGroup("ed", $"{L["tasks.doneShort"]} — {L["tasks.evening"]}", evenDone, _eveningDoneOpen, true, "", false, false, true)
-            }
         }
     </text>;
 
@@ -2399,14 +2464,14 @@
         </section>
     </text>;
 
-    private RenderFragment TaskRow(AppTask task, bool free = false, bool isTarget = true, List<AppTask>? group = null) => @<text>
+    private RenderFragment TaskRow(AppTask task, bool free = false, bool isTarget = true, List<AppTask>? group = null, bool hasKids = false) => @<text>
         <div class="task-row @(task.IsDone?"completed":"") @(_selectedTask?.Id==task.Id?"selected":"") @(free && _draggedTask?.Id==task.Id ? "drag-src" : "")" @onmousedown="e=>HandleFreeDown(e, task, free)" @onclick="()=>OpenDetails(task.Id)" @oncontextmenu="(e)=>ShowContext(e, task.Id)" @oncontextmenu:preventDefault="true">
             <button class="task-check" @onclick="async (e)=>{ await ToggleTask(task); }" @onclick:stopPropagation="true" title="@L["tasks.toggleState"]">
                 @if(task.IsDone){<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>}
             </button>
             <span class="priority-dot priority-@(task.Priority ?? "low")"></span>
             <div class="task-main">
-                <div class="task-title">@task.Title</div>
+                <div class="task-title" title="@task.Title">@task.Title</div>
                 <div class="task-meta">
                     @if(task.ScheduledTime!=null){<span class="task-meta-item">◷ @task.ScheduledTime?.ToString(@"hh\:mm")</span>}
                     @if(task.DueDate!=null && task.DueDate?.Date != _currentDate.Date){<span class="task-meta-item">▣ @FormatShortDate(task.DueDate)</span>}
@@ -2415,11 +2480,15 @@
                     @if(task.IsDone && task.CompletedAt!=null){<span class="task-meta-item">✓ @task.CompletedAt?.ToLocalTime().ToString(@"hh\:mm")</span>}
                 </div>
             </div>
+            @if(free && hasKids){
+                <button class="sub-toggle" @onclick="()=>ToggleSubs(task.Id)" @onclick:stopPropagation="true" @onmousedown:stopPropagation="true"><span class="group-chevron @(_expandedSubs.Contains(task.Id)?"":"closed")">∨</span></button>
+            }
             <button class="task-more" @onclick="(e)=>ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button>
-            @if(free && isTarget){
-                <div class="dz dz-a @(_isDragging && _hoverTaskId==task.Id && _hoverThird=="a" ? "hot" : "")" @onmouseenter="()=>HandleFreeHover(task.Id, 'a')"></div>
-                <div class="dz dz-c @(_isDragging && _hoverTaskId==task.Id && _hoverThird=="c" ? "hot" : "")" @onmouseenter="()=>HandleFreeHover(task.Id, 'c')"></div>
-                <div class="dz dz-b @(_isDragging && _hoverTaskId==task.Id && _hoverThird=="b" ? "hot" : "")" @onmouseenter="()=>HandleFreeHover(task.Id, 'b')"></div>
+            @if(free && isTarget && !task.IsDone){
+                <div class="dz dz-a @(_isDragging && _hoverTaskId==task.Id && _hoverThird=="a" ? "hot" : "")" @onmouseenter="()=>HandleFreeHover(task.Id, 'a')"><span>@L["tasks.dropBefore"]</span></div>
+                <div class="dz dz-c @(_isDragging && _hoverTaskId==task.Id && _hoverThird=="c" ? "hot" : "")" @onmouseenter="()=>HandleFreeHover(task.Id, 'c')"><span>@L["tasks.dropSub"]</span></div>
+                <div class="dz dz-b @(_isDragging && _hoverTaskId==task.Id && _hoverThird=="b" ? "hot" : "")" @onmouseenter="()=>HandleFreeHover(task.Id, 'b')"><span>@L["tasks.dropAfter"]</span></div>
+                <div class="dz dz-s @(_isDragging && _hoverTaskId==task.Id && _hoverThird=="s" ? "hot" : "")" @onmouseenter="()=>HandleFreeHover(task.Id, 's')"><span>@L["tasks.dropSwap"]</span></div>
             }
         </div>
     </text>;
@@ -2437,10 +2506,15 @@
                 @foreach(var row in TodayRows(tasks)){
                     <div class="today-row-grid">
                         @foreach(var t in row){
+                            var kids = TodayChildren(t, tasks);
                             <div class="today-cell">
-                                @TaskRow(t, true, true, tasks)
-                                @foreach(var child in TodayChildren(t, tasks)){
-                                    <div class="today-sub">@TaskRow(child, true, false, tasks)</div>
+                                @TaskRow(t, true, true, tasks, kids.Any())
+                                @if(kids.Any()){
+                                    <div class="sub-wrap @(_expandedSubs.Contains(t.Id)?"open":"")"><div class="sub-inner">
+                                        @foreach(var child in kids){
+                                            <div class="today-sub">@TaskRow(child, true, false, tasks, false)</div>
+                                        }
+                                    </div></div>
                                 }
                             </div>
                         }
@@ -2456,6 +2530,10 @@
         return group.Where(t => string.IsNullOrEmpty(t.ParentId) || !ids.Contains(t.ParentId)).ToList();
     }
 
+    private void ToggleSubs(string id){
+        if (!_expandedSubs.Remove(id)) _expandedSubs.Add(id);
+    }
+
     private List<AppTask> TodayChildren(AppTask parent, List<AppTask> tasks)
         => tasks.Where(t => t.ParentId == parent.Id).OrderBy(t => t.SortOrder).ThenBy(t => t.CreatedAt).ToList();
 
@@ -2467,7 +2545,7 @@
         {
             if (!emitted.Add(t.Id)) continue;
             if (string.IsNullOrEmpty(t.RowGroupId)) { rows.Add(new List<AppTask> { t }); continue; }
-            var row = TodayTops(tasks).Where(x => x.RowGroupId == t.RowGroupId).Take(3).ToList();
+            var row = TodayTops(tasks).Where(x => x.RowGroupId == t.RowGroupId).Take(5).ToList();
             foreach (var r in row) emitted.Add(r.Id);
             rows.Add(row);
         }
@@ -2532,6 +2610,7 @@
             var target = group.FirstOrDefault(t => t.Id == targetId);
             if (target == null) { StateHasChanged(); return; }
             if (third == "c") await DropCenter(group, dragged, target);
+            else if (third == "s") await DropSwap(group, dragged, target);
             else await DropBeside(group, dragged, target, before: third == "a");
             return;
         }
@@ -2572,9 +2651,9 @@
         var gid = anchor.RowGroupId;
         var row = string.IsNullOrEmpty(gid) ? new List<AppTask> { anchor } : tops.Where(t => t.RowGroupId == gid).ToList();
         dragged.ParentId = string.Empty;
-        if (row.Count >= 3)
+        if (row.Count >= 5)
         {
-            // الصف مليان (3): صف جديد منفصل قبل/بعد صف الهدف
+            // الصف مليان (5): صف جديد منفصل قبل/بعد صف الهدف
             dragged.RowGroupId = string.Empty;
             var rowIds = new HashSet<string>(row.Select(t => t.Id));
             var at = before ? tops.FindIndex(t => rowIds.Contains(t.Id)) : tops.FindLastIndex(t => rowIds.Contains(t.Id)) + 1;
@@ -2591,6 +2670,22 @@
             tops.Insert(before ? at : at + 1, dragged);
         }
         for (int i = 0; i < tops.Count; i++) tops[i].SortOrder = i + 1;
+        await TaskState.SaveTodayGroupAsync(group);
+        UpdateCounts();
+    }
+
+    private async Task DropSwap(List<AppTask> group, AppTask dragged, AppTask target)
+    {
+        if (dragged.Id == target.Id) { StateHasChanged(); return; }
+        // swap with top-level only: subtask target → its parent
+        var other = !string.IsNullOrEmpty(target.ParentId) ? group.FirstOrDefault(t => t.Id == target.ParentId) ?? target : target;
+        if (other.Id == dragged.Id) { StateHasChanged(); return; }
+        dragged.ParentId = string.Empty;
+        var tops = TodayTops(group);
+        if (!tops.Contains(dragged)) tops.Add(dragged);
+        for (int i = 0; i < tops.Count; i++) if (tops[i].SortOrder == 0) tops[i].SortOrder = i + 1;
+        (dragged.SortOrder, other.SortOrder) = (other.SortOrder, dragged.SortOrder);
+        (dragged.RowGroupId, other.RowGroupId) = (other.RowGroupId, dragged.RowGroupId);
         await TaskState.SaveTodayGroupAsync(group);
         UpdateCounts();
     }
@@ -2674,7 +2769,7 @@
                                     @if(task.ArchivedAt!=null){<span class="task-meta-item">▱ @FormatShortDate(task.ArchivedAt)</span>}
                                 </div>
                             </div>
-                            <button class="task-more" @onclick="(e)=>ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button>
+            <button class="task-more" @onclick="(e)=>ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button>
                         </div>
                     }
                 </div>

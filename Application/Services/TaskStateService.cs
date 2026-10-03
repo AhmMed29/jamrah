@@ -64,7 +64,7 @@ namespace Jamrah.Application.Services
             bool changed = false;
 
             // --- أي مهمة منجزة → أرشيف (منجَز = مؤرشَف دائماً) ---
-            foreach (var t in Tasks.Where(x => x.IsDone && x.ArchivedAt == null).ToList())
+            foreach (var t in Tasks.Where(x => x.IsDone && x.ArchivedAt == null && x.Id != x.TemplateId).ToList())
             {
                 t.ArchivedAt = t.CompletedAt ?? DateTime.UtcNow;
                 await _repository.SaveTaskAsync(t);
@@ -200,6 +200,9 @@ namespace Jamrah.Application.Services
             }
 
             // monthly: نفس يوم الشهر
+                task.Id != task.TemplateId;
+                task.Id != task.TemplateId;
+                task.Id != task.TemplateId;
             var monthlyTemplates = Tasks.Where(t => t.ArchivedAt==null && t.RecurrenceDays=="monthly" && !string.IsNullOrWhiteSpace(t.TemplateId) && t.Id==t.TemplateId).ToList();
             foreach(var tpl in monthlyTemplates)
             {

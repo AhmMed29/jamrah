@@ -359,6 +359,13 @@ namespace Jamrah.Application.Services
                 // حذف من داخل الأرشيف → حذف نهائي
                 await _repository.DeleteTaskAsync(id);
             }
+            // فرعيات المهمة ترجع لمستوى أعلى بدل ما تتيتم
+            foreach (var child in Tasks.Where(t => t.ParentId == id).ToList())
+            {
+                child.ParentId = task?.ParentId ?? string.Empty;
+                child.RowGroupId = string.Empty;
+                await _repository.SaveTaskAsync(child);
+            }
             await RefreshDataAsync();
         }
 
@@ -401,6 +408,17 @@ namespace Jamrah.Application.Services
         {
             task.ScheduledDate = DateTime.Today;
             await _repository.SaveTaskAsync(task);
+            await RefreshDataAsync();
+        }
+
+        public async Task SaveTodayGroupAsync(List<AppTask> tasks)
+        {
+            foreach (var t in tasks)
+            {
+                if (t.IsDone || t.ArchivedAt != null) continue;
+                t.UpdatedAt = DateTime.Now;
+                await _repository.SaveTaskAsync(t);
+            }
             await RefreshDataAsync();
         }
     }

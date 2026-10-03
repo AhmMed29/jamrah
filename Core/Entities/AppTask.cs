@@ -45,5 +45,10 @@ namespace Jamrah.Core.Entities
         public DateTime? CompletedAt { get; set; }
 
         public string? TemplateId { get; set; }
+
+        // Free layout (Today): subtask parent + manual order + side-by-side row
+        public string ParentId { get; set; } = string.Empty;
+        public int SortOrder { get; set; } = 0;
+        public string RowGroupId { get; set; } = string.Empty;
     }
 }

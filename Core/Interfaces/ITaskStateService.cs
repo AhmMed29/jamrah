@@ -32,5 +32,8 @@ namespace Jamrah.Core.Interfaces
         Task DeleteSeriesAsync(string id);
         Task MoveTaskAsync(string taskId, string newColumnId);
         Task CarryForwardTaskAsync(AppTask task);
+
+        // Free layout (Today): persist manual order / subtasks / side-by-side rows
+        Task SaveTodayGroupAsync(List<AppTask> tasks);
     }
 }

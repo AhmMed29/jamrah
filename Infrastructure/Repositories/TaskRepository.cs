@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SQLite;
@@ -41,6 +42,12 @@ namespace Jamrah.Infrastructure.Repositories
                 await _database.CreateTableAsync<AppTask>().ConfigureAwait(false);
                 await _database.CreateTableAsync<TaskFolder>().ConfigureAwait(false);
                 await _database.CreateTableAsync<KanbanColumn>().ConfigureAwait(false);
+
+                // ADDITIVE: free-layout columns for pre-existing DBs
+                // (CreateTableAsync never adds columns to existing tables).
+                await EnsureColumnAsync("TaskItems", "ParentId", "TEXT NOT NULL DEFAULT ''").ConfigureAwait(false);
+                await EnsureColumnAsync("TaskItems", "SortOrder", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
+                await EnsureColumnAsync("TaskItems", "RowGroupId", "TEXT NOT NULL DEFAULT ''").ConfigureAwait(false);
 
                 // Seed default folder
                 var folderCount = await _database.Table<TaskFolder>().CountAsync();
@@ -225,6 +232,21 @@ namespace Jamrah.Infrastructure.Repositories
 
             await InitAsync().ConfigureAwait(false);
             await _database!.DeleteAsync<AppTask>(id).ConfigureAwait(false);
+        }
+
+        // ADDITIVE: minimal column migration for existing user databases.
+        private sealed class PragmaColumn
+        {
+            [Column("name")]
+            public string Name { get; set; } = string.Empty;
+        }
+
+        private async Task EnsureColumnAsync(string table, string column, string definition)
+        {
+            // NOTE: only called from InitAsync after _database is assigned (no InitAsync() here — would deadlock _initLock).
+            var cols = await _database!.QueryAsync<PragmaColumn>($"PRAGMA table_info([{table}])").ConfigureAwait(false);
+            if (!cols.Any(c => c.Name == column))
+                await _database.ExecuteAsync($"ALTER TABLE [{table}] ADD COLUMN [{column}] {definition}").ConfigureAwait(false);
         }
 
         public async Task ArchiveTaskAsync(string id)

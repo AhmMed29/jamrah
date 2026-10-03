@@ -53,6 +53,9 @@
         </div>
 
         <div class="actions">
+            <button class="action-btn" title="@L["pomo.tags"]" @onclick="OpenTagManager">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29a1 1 0 0 0 1.42 0l8.58-8.58a1 1 0 0 0 0-1.42Z"/><circle cx="7" cy="7" r="1.5"/></svg>
+            </button>
             <button class="action-btn" title="@L["com.resetTitle"]" @onclick="ResetTimer">
                 <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
             </button>
@@ -141,9 +144,8 @@
                 <div class="tags-list">
                     @foreach (var t in FilteredTags)
                     {
-                        <div class="tag-item" style="background:@t.Color; color:@TagTextColor(t);" @onclick="() => SelectTagForEdit(t)">
+                        <div class="tag-item" style="background:@t.Color; color:@TagTextColor(t);@(_selectedTag == t ? " outline:2px solid currentColor;" : "")" @onclick="() => SelectTagForEdit(t)">
                             @t.Name
-                            <span class="tag-delete" @onclick="() => DeleteTag(t)" @onclick:stopPropagation="true">X</span>
                         </div>
                     }
                 </div>
@@ -271,6 +273,77 @@
                 <button class="confirm-btn-del" @onclick="() => DoQuickDelete(_confirmDeleteSessionId)">@L["pomo.clear"]</button>
                 <button class="confirm-btn-cancel" @onclick="CancelQuickDelete">@L["com.cancel"]</button>
             </div>
+        </div>
+    </div>
+}
+
+@if (_tagManagerOpen)
+{
+    <div class="modal-overlay" style="display:flex;" @onclick="CloseTagManager">
+        <div class="modal-box tags-modal-box" style="width:300px;" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <span class="modal-title">@L["pomo.tags"]</span>
+                <button class="close-btn" @onclick="CloseTagManager">X</button>
+            </div>
+            <div style="display:flex; gap:6px;">
+                <button class="dur-btn @(_mgrTab == "active" ? "active" : null)" style="flex:1;" @onclick='() => _mgrTab = "active"'>@(L.Lang == "ar" ? "نشط" : "Active")</button>
+                <button class="dur-btn @(_mgrTab == "archived" ? "active" : null)" style="flex:1;" @onclick='() => _mgrTab = "archived"'>@(L.Lang == "ar" ? "مؤرشف" : "Archived")</button>
+            </div>
+            <div class="input-group"><input type="text" class="minimal-input" @bind="_mgrSearch" @bind:event="oninput" placeholder="@L["pomo.search"]" /></div>
+            @if (_mgrTab == "active")
+            {
+                <div class="input-group">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" class="minimal-input" @bind="_newTagName" placeholder="@L["pomo.addTag"]" style="flex:1;" />
+                        <input type="color" class="color-input" @bind="_newTagColor" />
+                        <button class="modal-btn primary" @onclick="AddTag" style="padding:8px;">+</button>
+                    </div>
+                </div>
+                <div class="tags-list">
+                    @foreach (var t in MgrActiveTags)
+                    {
+                        var captured = t;
+                        if (_renamingTag == captured)
+                        {
+                            <div class="tag-item" style="background:@captured.Color; gap:6px;">
+                                <input type="text" class="minimal-input" @bind="_renameName" style="width:90px; padding:2px 6px; font-size:11px;" @onclick:stopPropagation="true" />
+                                <input type="color" class="color-input" @bind="_renameColor" style="width:22px; height:22px;" @onclick:stopPropagation="true" />
+                                <button class="modal-btn primary" style="height:24px; padding:0 8px; font-size:11px;" @onclick="SaveTagRename" @onclick:stopPropagation="true">✓</button>
+                                <button class="modal-btn" style="height:24px; padding:0 8px; font-size:11px;" @onclick="CancelTagRename" @onclick:stopPropagation="true">X</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="tag-item" style="background:@captured.Color; color:@TagTextColor(captured);" @onclick="() => SelectQuickTag(captured)">
+                                @captured.Name
+                                <span style="display:inline-flex; gap:2px; margin-inline-start:4px;" @onclick:stopPropagation="true">
+                                    <button title="@L["com.edit"]" @onclick="() => StartTagRename(captured)" @onclick:stopPropagation="true" style="background:transparent; border:none; cursor:pointer; color:inherit; display:inline-grid; place-items:center; padding:0 2px;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                    </button>
+                                    <button title="@L["pomo.deleteTitle"]" @onclick="() => ArchiveTag(captured)" @onclick:stopPropagation="true" style="background:transparent; border:none; cursor:pointer; color:inherit; display:inline-grid; place-items:center; padding:0 2px;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><line x1="10" y1="12" x2="10" y2="17"/></svg>
+                                    </button>
+                                </span>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="tags-list">
+                    @foreach (var t in MgrArchivedTags)
+                    {
+                        var captured = t;
+                        <div class="tag-item" style="background:@captured.Color; color:@TagTextColor(captured); opacity:.85;">
+                            @captured.Name
+                            <button title="↺" @onclick="() => RestoreTag(captured)" @onclick:stopPropagation="true" style="background:transparent; border:none; cursor:pointer; color:inherit; display:inline-grid; place-items:center; padding:0 2px; margin-inline-start:4px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
         </div>
     </div>
 }
@@ -505,6 +578,14 @@
     private string _newTagName = "";
     private string _newTagColor = "#000000";
 
+    private bool _tagManagerOpen;
+    private string _mgrSearch = "";
+    private string _mgrTab = "active";
+    private Tag? _renamingTag;
+    private string _renameName = "";
+    private string _renameColor = "#000000";
+    private const string LastTagPrefKey = "pomo.lastTagId";
+
     private PrayerTimeEntry? _todayPrayers;
     private string _nextPrayerKey = "fajr";
     private TimeSpan _timeToNextPrayer = TimeSpan.Zero;
@@ -524,7 +605,15 @@
     private string StartTimeText => _startedAt?.ToString("hh:mm:ss tt", L.Culture) ?? "00:00:00";
     private string FinalTimeText => _startedAt?.AddMinutes(_activeMinutes).ToString("hh:mm:ss tt", L.Culture) ?? "00:00:00";
     private string DurationText => TimeSpan.FromMinutes(_activeMinutes).ToString(@"hh\:mm\:ss");
-    private IEnumerable<Tag> FilteredTags => _tags.Where(t => t.Name.Contains(_tagSearch, StringComparison.OrdinalIgnoreCase));
+    private IEnumerable<Tag> FilteredTags => _tags
+        .Where(t => !t.IsArchived && t.Name.Contains(_tagSearch, StringComparison.OrdinalIgnoreCase))
+        .OrderByDescending(t => t.LastUsedTicks).ThenBy(t => t.Id);
+    private IEnumerable<Tag> MgrActiveTags => _tags
+        .Where(t => !t.IsArchived && t.Name.Contains(_mgrSearch, StringComparison.OrdinalIgnoreCase))
+        .OrderByDescending(t => t.LastUsedTicks).ThenBy(t => t.Id);
+    private IEnumerable<Tag> MgrArchivedTags => _tags
+        .Where(t => t.IsArchived && t.Name.Contains(_mgrSearch, StringComparison.OrdinalIgnoreCase))
+        .OrderByDescending(t => t.LastUsedTicks).ThenBy(t => t.Id);
 
     private bool IsDetailCurrent => _detailSession != null && _detailSession == _currentSession;
     private Tag? CurrentDetailTag => _editing ? _editTag : _detailSession?.Tag;
@@ -785,10 +874,12 @@
             if (_currentSession == null)
             {
                 _startedAt = DateTime.Now;
-                var s = NewSession(L["pomo.untitled"], "", _activeMinutes, null);
+                var lastTag = GetLastTag();
+                var s = NewSession(L["pomo.untitled"], "", _activeMinutes, lastTag);
                 _sessions.Insert(0, s);
                 _currentSession = s;
                 await _repo.SaveSessionAsync(s);
+                if (lastTag != null) await TouchTagAsync(lastTag);
                 RebuildToggles();
             }
         }
@@ -870,10 +961,12 @@
         _timer.SetDuration(TimeSpan.FromMinutes(minutes));
         _timer.Start();
         _startedAt = DateTime.Now;
-        var s = NewSession(L["pomo.untitled"], "", minutes, null);
+        var lastTag = GetLastTag();
+        var s = NewSession(L["pomo.untitled"], "", minutes, lastTag);
         _sessions.Insert(0, s);
         _currentSession = s;
         await _repo.SaveSessionAsync(s);
+        if (lastTag != null) await TouchTagAsync(lastTag);
         RebuildToggles();
         await Sound.FireEventAsync(JS, PomodoroSoundEvent.SessionStart);
     }
@@ -889,7 +982,7 @@
         _sessionName = "";
         _sessionNote = "";
         _sessionDuration = 25;
-        _selectedTag = null;
+        _selectedTag = GetLastTag();
         _modalMode = ModalMode.Create;
     }
 
@@ -995,6 +1088,7 @@
         {
             ApplyTag(_detailSession, _editTag);
             await _repo.SaveSessionAsync(_detailSession);
+            if (_editTag != null) await TouchTagAsync(_editTag);
             _modalMode = ModalMode.None;
             RebuildToggles(); 
         }
@@ -1004,6 +1098,7 @@
             {
                 _detailSession.ElapsedSeconds = Math.Max(0, _editDurationMinutes) * 60;
                 ApplyTag(_detailSession, _editTag);
+                if (_editTag != null) await TouchTagAsync(_editTag);
             }
             await _repo.SaveSessionAsync(_detailSession);
             _modalMode = ModalMode.None;
@@ -1022,6 +1117,7 @@
         _sessions.Insert(0, s);
         _currentSession = s;
         await _repo.SaveSessionAsync(s);
+        if (_selectedTag != null) await TouchTagAsync(_selectedTag);
         _selectedTag = null;
         _modalMode = ModalMode.None;
         RebuildToggles();
@@ -1055,27 +1151,145 @@
         s.TagColor = tag?.Color ?? "#000000";
     }
 
-    private void SelectTagForEdit(Tag t)
+    private async Task SelectTagForEdit(Tag t)
     {
+        if (t.IsArchived) return;
         if (_modalMode == ModalMode.Create) _selectedTag = t;
         else _editTag = t;
+        await TouchTagAsync(t);
     }
 
     private async Task DeleteTag(Tag t)
     {
-        _tags.Remove(t);
-        if (_selectedTag == t) _selectedTag = null;
-        if (_editTag == t) _editTag = null;
-        await _repo.DeleteTagAsync(t);
+        // أي مسح = أرشفة بنفس الـ ID (لا حذف نهائي)
+        await ArchiveTag(t);
     }
 
     private async Task AddTag()
     {
         if (string.IsNullOrWhiteSpace(_newTagName)) return;
-        var t = new Tag { Name = _newTagName.Trim(), Color = _newTagColor };
+        var t = new Tag { Name = _newTagName.Trim(), Color = _newTagColor, LastUsedTicks = DateTime.UtcNow.Ticks };
         await _repo.SaveTagAsync(t);
         _tags.Add(t);
+        RememberLastTag(t);
+        if (_modalMode == ModalMode.Create) _selectedTag = t;
         _newTagName = "";
+    }
+
+    private void OpenTagManager()
+    {
+        _mgrSearch = "";
+        _mgrTab = "active";
+        _renamingTag = null;
+        _tagManagerOpen = true;
+    }
+
+    private void CloseTagManager()
+    {
+        _tagManagerOpen = false;
+        _renamingTag = null;
+    }
+
+    private Tag? GetLastTag()
+    {
+        try
+        {
+            var id = Microsoft.Maui.Storage.Preferences.Get(LastTagPrefKey, -1);
+            if (id < 0) return null;
+            return _tags.FirstOrDefault(t => t.Id == id && !t.IsArchived);
+        }
+        catch { return _tags.FirstOrDefault(t => !t.IsArchived); }
+    }
+
+    private void RememberLastTag(Tag? t)
+    {
+        try
+        {
+            if (t == null) return;
+            Microsoft.Maui.Storage.Preferences.Set(LastTagPrefKey, t.Id);
+        }
+        catch { }
+    }
+
+    private async Task TouchTagAsync(Tag t)
+    {
+        t.LastUsedTicks = DateTime.UtcNow.Ticks;
+        RememberLastTag(t);
+        await _repo.SaveTagAsync(t);
+    }
+
+    private async Task SelectQuickTag(Tag t)
+    {
+        if (t.IsArchived) return;
+        await TouchTagAsync(t);
+        if (_currentSession != null)
+        {
+            ApplyTag(_currentSession, t);
+            await _repo.SaveSessionAsync(_currentSession);
+            RebuildToggles();
+        }
+        else
+        {
+            _selectedTag = t;
+        }
+        StateHasChanged();
+    }
+
+    private async Task ArchiveTag(Tag t)
+    {
+        t.IsArchived = true;
+        if (_selectedTag == t) _selectedTag = null;
+        if (_editTag == t) _editTag = null;
+        if (_renamingTag == t) _renamingTag = null;
+        await _repo.SaveTagAsync(t);
+        try
+        {
+            var last = Microsoft.Maui.Storage.Preferences.Get(LastTagPrefKey, -1);
+            if (last == t.Id) Microsoft.Maui.Storage.Preferences.Set(LastTagPrefKey, -1);
+        }
+        catch { }
+        StateHasChanged();
+    }
+
+    private async Task RestoreTag(Tag t)
+    {
+        t.IsArchived = false;
+        t.LastUsedTicks = DateTime.UtcNow.Ticks;
+        await _repo.SaveTagAsync(t);
+        RememberLastTag(t);
+        StateHasChanged();
+    }
+
+    private void StartTagRename(Tag t)
+    {
+        _renamingTag = t;
+        _renameName = t.Name;
+        _renameColor = t.Color;
+    }
+
+    private void CancelTagRename()
+    {
+        _renamingTag = null;
+    }
+
+    private async Task SaveTagRename()
+    {
+        var t = _renamingTag;
+        if (t == null || string.IsNullOrWhiteSpace(_renameName)) { _renamingTag = null; return; }
+        t.Name = _renameName.Trim();
+        t.Color = _renameColor;
+        await _repo.SaveTagAsync(t);
+        // حدّث لقطات الجلسات اللي شايلة نفس الـ ID عشان الماضي يعكس الاسم/اللون الجديد
+        foreach (var s in _sessions.Where(s => s.TagId == t.Id))
+        {
+            s.TagName = t.Name;
+            s.TagColor = t.Color;
+            s.Tag = t;
+            await _repo.SaveSessionAsync(s);
+        }
+        _renamingTag = null;
+        RebuildToggles();
+        StateHasChanged();
     }
 
     private static string TagTextColor(Tag t) => t.Color == "#000000" ? "white" : "black";

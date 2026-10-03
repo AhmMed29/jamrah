@@ -31,6 +31,8 @@ namespace Jamrah.Core.Entities
         public int Id { get; set; }
         public string Name { get; set; } = "";
         public string Color { get; set; } = "#000000";
+        public bool IsArchived { get; set; } = false;
+        public long LastUsedTicks { get; set; } = 0;
     }
 
     public sealed class SessionGroup

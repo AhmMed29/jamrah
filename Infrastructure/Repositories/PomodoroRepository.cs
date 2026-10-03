@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SQLite;
@@ -39,6 +40,7 @@ namespace Jamrah.Infrastructure.Repositories
                 _database = new SQLiteAsyncConnection(_dbPath);
                 await _database.CreateTableAsync<Session>().ConfigureAwait(false);
                 await _database.CreateTableAsync<Tag>().ConfigureAwait(false);
+                await EnsureTagColumnsAsync().ConfigureAwait(false);
 
                 _isInitialized = true;
             }
@@ -91,7 +93,7 @@ namespace Jamrah.Infrastructure.Repositories
                 throw new ArgumentNullException(nameof(tag));
 
             await InitAsync().ConfigureAwait(false);
-            await _database!.InsertAsync(tag).ConfigureAwait(false);
+            await _database!.InsertOrReplaceAsync(tag).ConfigureAwait(false);
         }
 
         public async Task DeleteTagAsync(Tag tag)
@@ -101,6 +103,23 @@ namespace Jamrah.Infrastructure.Repositories
 
             await InitAsync().ConfigureAwait(false);
             await _database!.DeleteAsync(tag).ConfigureAwait(false);
+        }
+
+        private async Task EnsureTagColumnsAsync()
+        {
+            try
+            {
+                var cols = await _database!.GetTableInfoAsync("PomodoroTag").ConfigureAwait(false);
+                var names = new HashSet<string>(cols.Select(c => c.Name), StringComparer.OrdinalIgnoreCase);
+                if (!names.Contains(nameof(Tag.IsArchived)))
+                    await _database.ExecuteAsync("ALTER TABLE PomodoroTag ADD COLUMN IsArchived INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
+                if (!names.Contains(nameof(Tag.LastUsedTicks)))
+                    await _database.ExecuteAsync("ALTER TABLE PomodoroTag ADD COLUMN LastUsedTicks INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
+            }
+            catch
+            {
+                // تجاهل بصمت: الأعمدة قد تكون موجودة بالفعل في DBs الجديدة
+            }
         }
     }
 }

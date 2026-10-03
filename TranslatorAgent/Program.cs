@@ -384,48 +384,84 @@ internal static class SelectionCapture
 
     private static string? TryGetClipboardText()
     {
-        try
+        // retry قصير: الحافظة بتتخطف من برامج تانية (شوف اللوج: Requested Clipboard operation did not succeed)
+        for (var i = 0; i < 3; i++)
         {
-            if (Clipboard.ContainsText())
-                return Clipboard.GetText();
+            try
+            {
+                if (Clipboard.ContainsText())
+                    return Clipboard.GetText();
+                return null;
+            }
+            catch (Exception ex)
+            {
+                AgentLog.Log("WARN clip-read tried#" + i + ": " + ex.Message);
+                try { Thread.Sleep(100); } catch { }
+            }
         }
-        catch (Exception ex) { AgentLog.Log("WARN clip-read: " + ex.Message); }
         return null;
+    }
+
+    private static bool TryClearClipboard()
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            try { Clipboard.Clear(); return true; }
+            catch (Exception ex)
+            {
+                AgentLog.Log("WARN clip-clear tried#" + i + ": " + ex.Message);
+                try { Thread.Sleep(100); } catch { }
+            }
+        }
+        return false;
+    }
+
+    private static void TryRestoreClipboard(string? original)
+    {
+        if (string.IsNullOrEmpty(original)) return;
+        try { Clipboard.SetText(original); }
+        catch (Exception ex) { AgentLog.Log("WARN clip-restore: " + ex.Message); }
     }
 
     /// <summary>
     /// الالتقاط الكامل — يجب النداء من الـ UI thread (Clipboard يشترط STA+pump).
-    /// لا يجمد الواجهة: كل الانتظارات await. بدون Clear وبدون استعادة (مقارنة بالأصل).
+    /// لا يجمد الواجهة: كل الانتظارات await. Clear قبل Ctrl+C + استعادة الأصل عند الفشل فقط.
     /// </summary>
     public static async Task<string?> CaptureAsync()
     {
-        // حيلة Ctrl+C بمقارنة الأصل — بدون Clear وبدون استعادة (لا تدمير أصلاً)
+        // Clear أولاً: عشان لو نفس النص اتحدد مرتين (cur == original) ميترفضش —
+        // اللوج كان عالق على capture empty (origLen=26) بالسبب ده.
         string? original = TryGetClipboardText();
+        TryClearClipboard();
         try
         {
             var inputs = new[] { KeyDown(VK_CONTROL), KeyDown(VK_C), KeyUp(VK_C), KeyUp(VK_CONTROL) };
-            var sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
+            var cbSize = Marshal.SizeOf<INPUT>();
+            var sent = SendInput((uint)inputs.Length, inputs, cbSize);
             if (sent != (uint)inputs.Length)
             {
                 int err;
                 try { err = Marshal.GetLastWin32Error(); } catch { err = -999; }
-                AgentLog.Log("WARN SendInput sent " + sent + "/" + inputs.Length + " win32err=" + err + " cbSize=" + Marshal.SizeOf<INPUT>());
+                AgentLog.Log("WARN SendInput sent " + sent + "/" + inputs.Length + " win32err=" + err + " cbSize=" + cbSize);
+                TryRestoreClipboard(original);
                 return null;
             }
         }
-        catch (Exception ex) { AgentLog.Log("ERR SendInput: " + ex.Message); return null; }
+        catch (Exception ex) { AgentLog.Log("ERR SendInput: " + ex.Message); TryRestoreClipboard(original); return null; }
 
         for (var i = 0; i < 10; i++)
         {
             await Task.Delay(200).ConfigureAwait(true);
+            // بعد الـ Clear أي نص غير فاضي هو التحديد الجديد (حتى لو يساوي الأصل حرفياً)
             var cur = TryGetClipboardText()?.Trim();
-            if (!string.IsNullOrEmpty(cur) && cur != original)
+            if (!string.IsNullOrEmpty(cur))
             {
                 AgentLog.Log("capture clip len=" + cur.Length + " tries=" + i);
                 return cur;
             }
         }
         AgentLog.Log("capture empty (origLen=" + (original?.Length ?? -1) + ")");
+        TryRestoreClipboard(original);
         return null;
     }
 }
@@ -561,7 +597,7 @@ internal sealed class AgentAppContext : ApplicationContext
     private readonly TranslatePopupForm _popup;
     private readonly FileSystemWatcher _watcher;
     private DateTime _lastWatchReload = DateTime.MinValue;
-    // حالة التحديد: فحص صامت لحظة الفك + إظهار على الهوفر فقط
+    // حالة التحديد: فحص صامت لحظة الفك + إظهار فوري (الهوفر مسار احتياطي)
     private Point _lastMouseDownPt;
     private bool _downInOwn;
     private string? _selectedText;
@@ -569,7 +605,7 @@ internal sealed class AgentAppContext : ApplicationContext
     private Point _releasePt;
     private bool _armed;
     private int _gestureId;
-    private int _busy;
+    private int _trsGen;
     private string _hotkeyLabel = "Win+Shift+T";
     private readonly System.Windows.Forms.Timer _showTimer;
 
@@ -729,6 +765,14 @@ internal sealed class AgentAppContext : ApplicationContext
                         _releasePt = pt;
                         _armed = true;
                         AgentLog.Log("probe armed len=" + text.Length);
+                        // إظهار فوري عند الفك — بدون انتظار هوفر ثانيتين
+                        try
+                        {
+                            var at = pt;
+                            _pill.InvokeIfNeeded(() => _pill.ShowNear(at));
+                            AgentLog.Log("pill show immediate at " + at.X + "," + at.Y);
+                        }
+                        catch (Exception ex) { AgentLog.Log("ERR pill-immediate: " + ex.Message); }
                     }
                     catch (Exception ex) { AgentLog.Log("ERR probe: " + ex.Message); }
                 }));
@@ -855,26 +899,36 @@ internal sealed class AgentAppContext : ApplicationContext
 
     private void StartTranslation(string text)
     {
-        if (string.IsNullOrWhiteSpace(text)) return;
-        // منع تكدس الطلبات — طلب واحد في المرة
-        if (Interlocked.Exchange(ref _busy, 1) == 1)
+        if (string.IsNullOrWhiteSpace(text))
         {
-            AgentLog.Log("busy — skip overlapping request");
+            _popup.InvokeIfNeeded(() => _popup.ShowStage("اكتب أو الصق نصاً أولاً ثم اضغط ترجم"));
             return;
         }
+        // كل دوسة تبدأ طلباً جديداً — الأحدث هو الفائز، والقديم تُتجاهل نتيجته عند وصولها
+        var gen = Interlocked.Increment(ref _trsGen);
         var cfg = _cfg;
-        try { _popup.InvokeIfNeeded(() => _popup.ShowTranslating()); } catch { }
+        var srcName = cfg.Source == "gemini" ? "الذكاء (Gemini)" : cfg.Source == "google" ? "جوجل" : cfg.Source == "local" ? "المحلية" : "تلقائي";
+        try { _popup.InvokeIfNeeded(() => { _popup.ShowTranslating(); _popup.ShowStage("ببعت لـ " + srcName + "..."); }); } catch { }
         // الشغل التقيل خارج الـ UI thread — الـ UI يعرض فقط
         _ = Task.Run(async () =>
         {
             try
             {
                 var r = await Translator.TranslateWithSource(text, cfg, cfg.Source).ConfigureAwait(false);
-                AgentLog.Log("translated src=" + r.Source + " len=" + (r.Text?.Length ?? 0));
+                AgentLog.Log("translated src=" + r.Source + " len=" + (r.Text?.Length ?? 0) + " gen=" + gen);
+                if (gen != Volatile.Read(ref _trsGen))
+                {
+                    AgentLog.Log("superseded gen=" + gen + " — skip display");
+                    return;
+                }
                 _popup.InvokeIfNeeded(() => _popup.ShowOutput(r, IsRtl(r.Ok ? (r.Text ?? "") : cfg.TargetLang)));
             }
-            catch (Exception ex) { AgentLog.Log("ERR translate-flow: " + ex.Message); }
-            finally { Interlocked.Exchange(ref _busy, 0); }
+            catch (Exception ex)
+            {
+                AgentLog.Log("ERR translate-flow: " + ex.Message);
+                if (gen == Volatile.Read(ref _trsGen))
+                    _popup.InvokeIfNeeded(() => _popup.ShowStage("خطأ داخلي — افتح السجل لعرض التفاصيل"));
+            }
         });
     }
 
@@ -894,14 +948,24 @@ internal sealed class AgentAppContext : ApplicationContext
                 _popup.InvokeIfNeeded(() => _popup.ShowInput(anchor, c, autoTranslate: true, IsRtl(cfg.TargetLang)));
                 return;
             }
-            // هوتكي بلا مخزن: نافذة يدوية فوراً + التقاط حي في الخلفية يملؤها تلقائياً
-            _popup.InvokeIfNeeded(() => _popup.ShowInput(anchor, "", autoTranslate: false, IsRtl(cfg.TargetLang)));
+            // هوتكي بلا مخزن: التقاط أولاً والفوكس لسه في البرنامج الأصلي —
+            // عرض بدون خطف فوكس، ثم الملء + الترجمة بعد وصول النص.
+            _popup.InvokeIfNeeded(() => _popup.ShowCapturing(anchor));
             _ = Task.Run(async () =>
             {
                 try
                 {
                     var text = await CaptureOnUiAsync().ConfigureAwait(false);
-                    if (string.IsNullOrWhiteSpace(text)) return; // المستخدم يكتب يدوياً
+                    if (string.IsNullOrWhiteSpace(text))
+                    {
+                        AgentLog.Log("hotkey capture empty — manual mode");
+                        _popup.InvokeIfNeeded(() =>
+                        {
+                            _popup.ShowStage("تعذّر الالتقاط — اكتب أو الصق النص ثم اضغط ترجم");
+                            _popup.ActivateAndFocusInput();
+                        });
+                        return; // المستخدم يكتب يدوياً
+                    }
                     AgentLog.Log("hotkey captured len=" + text.Length);
                     bool empty = true;
                     try { empty = (bool)_popup.Invoke(new Func<bool>(() => _popup.IsInputEmpty())); } catch { }
@@ -1088,8 +1152,10 @@ internal sealed class TranslatePopupForm : Form
     private readonly TextBox _input;
     private readonly TextBox _output;
     private readonly Label _src;
+    private readonly Label _stage;
     private readonly Button _trBtn;
     private readonly Button _copyBtn;
+    private readonly Button _logBtn;
     private readonly Button _closeBtn;
     private readonly Button _btnAuto;
     private readonly Button _btnAi;
@@ -1098,6 +1164,8 @@ internal sealed class TranslatePopupForm : Form
     private string _source = "auto";
     private string _lastInput = string.Empty;
     private string _lastResult = string.Empty;
+    private DateTime _lastOutputAt = DateTime.MinValue;
+    private bool _translating;
 
     public event Action<string>? TranslateRequested;
 
@@ -1113,7 +1181,7 @@ internal sealed class TranslatePopupForm : Form
         ShowInTaskbar = false;
         TopMost = true;
         StartPosition = FormStartPosition.Manual;
-        Size = new Size(460, 430);
+        Size = new Size(460, 452);
         BackColor = Color.FromArgb(0xE7, 0xE5, 0xE4);
         Padding = new Padding(1);
 
@@ -1131,6 +1199,9 @@ internal sealed class TranslatePopupForm : Form
 
         var accent = new Panel { Dock = DockStyle.Top, Height = 2, BackColor = Accent };
         inner.Controls.Add(accent);
+
+        _stage = new Label { Dock = DockStyle.Top, Height = 22, ForeColor = Muted, Font = new Font("Segoe UI", 8.5f), Text = "Jamrah Translate", TextAlign = ContentAlignment.MiddleLeft };
+        inner.Controls.Add(_stage);
 
         var srcRow = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 36, BackColor = Color.White, FlowDirection = FlowDirection.RightToLeft, WrapContents = false };
         _btnAuto = MkSrc("تلقائية", "auto");
@@ -1185,11 +1256,33 @@ internal sealed class TranslatePopupForm : Form
             try { if (!string.IsNullOrEmpty(_lastResult)) Clipboard.SetText(_lastResult); } catch { }
             HidePopup();
         };
+        _logBtn = new Button { Dock = DockStyle.Right, Width = 70, Text = "السجل", FlatStyle = FlatStyle.Flat, BackColor = Color.White, ForeColor = Muted, Cursor = Cursors.Hand };
+        _logBtn.Click += (_, __) =>
+        {
+            try
+            {
+                var path = Path.Combine(AppContext.BaseDirectory, "translator-agent.log");
+                if (File.Exists(path))
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = path, UseShellExecute = true });
+            }
+            catch (Exception ex) { AgentLog.Log("ERR open-log: " + ex.Message); }
+        };
         bottom.Controls.Add(_trBtn);
         bottom.Controls.Add(_copyBtn);
+        bottom.Controls.Add(_logBtn);
         inner.Controls.Add(bottom);
 
-        Deactivate += (_, __) => HidePopup();
+        Deactivate += (_, __) =>
+        {
+            try
+            {
+                // مهلة سماح: لا إخفاء أثناء ترجمة جارية أو خلال 5 ثوانٍ من رد جديد
+                if (_translating) return;
+                if ((DateTime.Now - _lastOutputAt).TotalSeconds < 5) return;
+            }
+            catch { }
+            HidePopup();
+        };
         _input.KeyDown += (_, e) =>
         {
             if (e.KeyCode == Keys.Escape) HidePopup();
@@ -1205,6 +1298,47 @@ internal sealed class TranslatePopupForm : Form
         try { SetSource(Translator.NormalizeSource(getSource()), save: false); }
         catch { SetSource("auto", save: false); }
         RefreshLocalVisibility();
+        // الـ Fill (مربع الترجمة) لازم يتحسب آخر واحد في الـ dock وإلا يغطي إخوته —
+        // SetChildIndex(0) = مقدمة الـ Z-order = آخر من يتوزع عليه المساحة المتبقية فقط.
+        try { inner.Controls.SetChildIndex(_output, 0); } catch { }
+    }
+
+    // العرض الأولي (التقاط/تحميل) لا يخطف الفوكس — ShowInput يفعّل صراحة عند الحاجة
+    protected override bool ShowWithoutActivation => true;
+
+    public void ShowStage(string text)
+    {
+        try { _stage.Text = text ?? string.Empty; } catch { }
+    }
+
+    /// <summary>وضع الالتقاط: نافذة ظاهرة بدون خطف فوكس حتى يكتمل التقاط النص من البرنامج الأصلي.</summary>
+    public void ShowCapturing(Point anchor)
+    {
+        try
+        {
+            PlaceAt(anchor);
+            RefreshLocalVisibility();
+            _input.Text = string.Empty;
+            _src.Text = "Jamrah Translate";
+            _translating = true;
+            _stage.Text = "جارٍ التقاط التحديد...";
+            if (string.IsNullOrWhiteSpace(_output.Text))
+                _output.Text = "حدد نصاً ثم اضغط الاختصار — أو اكتب هنا مباشرة.";
+            if (!Visible) Show();
+        }
+        catch (Exception ex) { AgentLog.Log("ERR popup-capturing: " + ex.Message); }
+    }
+
+    public void ActivateAndFocusInput()
+    {
+        try
+        {
+            _translating = false;
+            if (!Visible) Show();
+            Activate();
+            try { _input.Focus(); } catch { }
+        }
+        catch (Exception ex) { AgentLog.Log("ERR popup-activate: " + ex.Message); }
     }
 
     private Button MkSrc(string text, string src)
@@ -1317,12 +1451,16 @@ internal sealed class TranslatePopupForm : Form
             if (autoTranslate && !string.IsNullOrWhiteSpace(text))
             {
                 _output.Text = "جاري الترجمة...";
+                _translating = true;
+                _stage.Text = "التقطت " + text.Length + " حرف ✓ — بترجم...";
                 if (!Visible) Show();
                 Activate();
                 RaiseTranslate();
             }
             else
             {
+                _translating = false;
+                _stage.Text = "وضع يدوي — الصق النص واضغط ترجم";
                 if (string.IsNullOrWhiteSpace(_output.Text))
                     _output.Text = "اكتب النص ثم اضغط ترجم (Ctrl+Enter).";
                 if (!Visible) Show();
@@ -1335,7 +1473,7 @@ internal sealed class TranslatePopupForm : Form
 
     public void ShowTranslating()
     {
-        try { _output.Text = "جاري الترجمة..."; } catch { }
+        try { _translating = true; _output.Text = "جاري الترجمة..."; } catch { }
     }
 
     public void ShowOutput(TranslationResult r, bool rtl)
@@ -1353,7 +1491,11 @@ internal sealed class TranslatePopupForm : Form
             };
             _src.Text = $"Jamrah Translate · {tag}";
             _output.Text = r.Text;
-            _lastResult = r.Ok ? r.Text : string.Empty;
+            _stage.Text = r.Ok ? "وصل الرد ✓ (" + tag + ")" : "تعذّر — التفاصيل في مربع الترجمة";
+            _translating = false;
+            _lastOutputAt = DateTime.Now;
+            try { AgentLog.Log($"output shown textLen={(r.Text?.Length ?? 0)} outBounds={_output.Bounds} outVisible={_output.Visible} formVisible={Visible} src={r.Source}"); } catch { }
+            _lastResult = r.Ok ? (r.Text ?? string.Empty) : string.Empty;
             try { _lastInput = _input.Text ?? string.Empty; } catch { }
             if (!Visible) Show();
             Activate();

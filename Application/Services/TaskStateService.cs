@@ -245,6 +245,9 @@ namespace Jamrah.Application.Services
                 Tasks = await _repository.GetTasksAsync();
             }
 
+            // New recurring instances inherit their template's layout pattern
+            await ApplyTemplateLayoutsAsync();
+
             NotifyStateChanged();
         }
 
@@ -419,7 +422,88 @@ namespace Jamrah.Application.Services
                 t.UpdatedAt = DateTime.Now;
                 await _repository.SaveTaskAsync(t);
             }
+            // Recurring pattern: layout arranged on one instance applies to the template + siblings
+            await PropagateLayoutToSeriesAsync(tasks);
             await RefreshDataAsync();
+        }
+
+        private static DateTime? TaskDay(AppTask t) => (t.DueDate ?? t.ScheduledDate)?.Date;
+
+        private static string TemplateRef(AppTask t) => !string.IsNullOrWhiteSpace(t.TemplateId) ? t.TemplateId : t.Id;
+
+        private AppTask? SameDateInstance(string templateRef, DateTime? day, string excludeId = "")
+        {
+            if (string.IsNullOrEmpty(templateRef) || day == null) return null;
+            return Tasks.FirstOrDefault(x => x.ArchivedAt == null && x.Id != excludeId
+                && (x.Id == templateRef || x.TemplateId == templateRef)
+                && TaskDay(x) == day);
+        }
+
+        private async Task PropagateLayoutToSeriesAsync(List<AppTask> tasks)
+        {
+            foreach (var t in tasks)
+            {
+                if (t.IsDone || t.ArchivedAt != null) continue;
+                if (string.IsNullOrWhiteSpace(t.TemplateId) || t.Id == t.TemplateId) continue;
+                // parent reference at template level (so every date resolves its own instance)
+                string parentTemplateRef = "";
+                var parent = Tasks.FirstOrDefault(x => x.Id == t.ParentId);
+                if (parent != null) parentTemplateRef = TemplateRef(parent);
+                // existing siblings follow the same pattern
+                var siblings = Tasks.Where(x => x.TemplateId == t.TemplateId && x.Id != t.Id && x.ArchivedAt == null).ToList();
+                foreach (var s in siblings)
+                {
+                    s.RowGroupId = t.RowGroupId;
+                    s.SortOrder = t.SortOrder;
+                    if (!string.IsNullOrEmpty(parentTemplateRef))
+                    {
+                        var sp = SameDateInstance(parentTemplateRef, TaskDay(s), s.Id);
+                        s.ParentId = sp?.Id ?? string.Empty;
+                        if (sp == null) s.RowGroupId = string.Empty;
+                    }
+                    else s.ParentId = string.Empty;
+                    s.UpdatedAt = DateTime.Now;
+                    await _repository.SaveTaskAsync(s);
+                }
+                // template itself stores the pattern for future instances
+                var template = Tasks.FirstOrDefault(x => x.Id == t.TemplateId);
+                if (template != null)
+                {
+                    template.RowGroupId = t.RowGroupId;
+                    template.SortOrder = t.SortOrder;
+                    template.ParentId = parentTemplateRef;
+                    template.UpdatedAt = DateTime.Now;
+                    await _repository.SaveTaskAsync(template);
+                }
+            }
+        }
+
+        // Newly generated recurring instances inherit the template's layout pattern
+        private async Task ApplyTemplateLayoutsAsync()
+        {
+            bool changed = false;
+            var templates = Tasks.Where(t => t.Id == t.TemplateId && !string.IsNullOrWhiteSpace(t.TemplateId)).ToList();
+            foreach (var tpl in templates)
+            {
+                if (string.IsNullOrEmpty(tpl.RowGroupId) && tpl.SortOrder == 0 && string.IsNullOrEmpty(tpl.ParentId)) continue;
+                var instances = Tasks.Where(x => x.TemplateId == tpl.Id && x.Id != tpl.Id && x.ArchivedAt == null).ToList();
+                foreach (var inst in instances)
+                {
+                    bool instChanged = false;
+                    if (inst.RowGroupId != tpl.RowGroupId) { inst.RowGroupId = tpl.RowGroupId; instChanged = true; }
+                    if (inst.SortOrder != tpl.SortOrder) { inst.SortOrder = tpl.SortOrder; instChanged = true; }
+                    var wantParent = string.IsNullOrEmpty(tpl.ParentId) ? null : SameDateInstance(tpl.ParentId, TaskDay(inst), inst.Id);
+                    var wantParentId = wantParent?.Id ?? string.Empty;
+                    if (inst.ParentId != wantParentId) { inst.ParentId = wantParentId; instChanged = true; }
+                    if (instChanged)
+                    {
+                        inst.UpdatedAt = DateTime.Now;
+                        await _repository.SaveTaskAsync(inst);
+                        changed = true;
+                    }
+                }
+            }
+            if (changed) Tasks = await _repository.GetTasksAsync();
         }
     }
 }

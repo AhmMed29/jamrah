@@ -185,6 +185,8 @@ namespace Jamrah.Infrastructure.Repositories
                             ColumnId = task.ColumnId,
                             FolderId = task.FolderId,
                             TemplateId = task.TemplateId,
+                            RowGroupId = task.RowGroupId,
+                            SortOrder = task.SortOrder,
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow
                         };
@@ -215,6 +217,8 @@ namespace Jamrah.Infrastructure.Repositories
                             ColumnId = task.ColumnId,
                             FolderId = task.FolderId,
                             TemplateId = task.TemplateId,
+                            RowGroupId = task.RowGroupId,
+                            SortOrder = task.SortOrder,
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow
                         };

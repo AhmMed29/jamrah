@@ -344,6 +344,15 @@
             min-height: 0;
             overflow: hidden;
             position: relative;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .app input,
+        .app textarea,
+        .app select {
+            user-select: text;
+            -webkit-user-select: text;
         }
 
                 .archive-toggles{
@@ -1082,7 +1091,7 @@
             top: 0;
             bottom: 0;
             z-index: 5;
-            display: none; /* shown via body.today-dragging only — no Blazor re-render, no flicker */
+            display: none; /* shown while mouse-dragging via .fDragging */
         }
 
         .task-row .dz-a {
@@ -1100,23 +1109,46 @@
             inset-inline-end: 33%;
         }
 
-        body.today-dragging .today-free .task-row .dz {
+        .today-free.fDragging .task-row .dz {
             display: block;
         }
 
-        body.today-dragging .today-free .task-row .dz-a,
-        body.today-dragging .today-free .task-row .dz-b {
+        .today-free.fDragging .task-row .dz-a,
+        .today-free.fDragging .task-row .dz-b {
             background: rgba(28,25,23,.05);
             border-inline-start: 2px dashed var(--border2);
             border-inline-end: 2px dashed var(--border2);
         }
 
-        body.today-dragging .today-free .task-row .dz-c {
+        .today-free.fDragging .task-row .dz-c {
             background: rgba(28,25,23,.03);
         }
 
-        .task-row .dz:hover {
-            background: rgba(28,25,23,.12) !important;
+        .today-free.fDragging .task-row .dz.hot {
+            background: rgba(28,25,23,.14) !important;
+        }
+
+        .ghost-task {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            min-width: 220px;
+            max-width: 300px;
+            background: var(--surface);
+            border: 1px dashed var(--text);
+            border-radius: 10px;
+            padding: 10px 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.18);
+            transform: rotate(2deg);
+            opacity: .95;
+        }
+
+        .ghost-title {
+            font-size: 12px;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         /* =========================================================
@@ -1900,10 +1932,15 @@
     private bool _showCreateModal;
     private string? _contextTaskId;
     private double _contextX, _contextY;
-    private string? _dragId; // free-layout drag (Today only)
-    private bool _suppressRender; // true while HTML5 dragging: skips Blazor re-render (prevents flicker)
-    private bool _dropping; // a drop handler is saving; dragend must not render
-    protected override bool ShouldRender() => !_suppressRender;
+    // Free-layout mouse drag (Today only) — same mechanism as the old Kanban (no HTML5 DnD)
+    private AppTask? _potentialDragTask;
+    private AppTask? _draggedTask;
+    private bool _isDragging;
+    private double _mouseX, _mouseY;
+    private double _downX, _downY;
+    private string _hoverTaskId = "";
+    private string _hoverThird = ""; // "a" | "c" | "b"
+    private bool _justDragged; // suppress click-to-open right after a drag
 
     private string _quickTitle = "";
     private string _newTitle = "";
@@ -2219,6 +2256,7 @@
     }
 
     private void OpenDetails(string id){
+        if(_justDragged){ _justDragged = false; return; } // click after a drag: don't open details
         if(_selectedTask?.Id==id){ CloseDetails(); return; }
         var task=TaskState.Tasks.FirstOrDefault(x=>x.Id==id);
         if(task==null) return;
@@ -2264,13 +2302,20 @@
     }
 
     // Context menu — تظهر مباشرة تحت الضغطة
-    private void ShowContext(Microsoft.AspNetCore.Components.Web.MouseEventArgs e, string id){
+    private async Task ShowContext(Microsoft.AspNetCore.Components.Web.MouseEventArgs e, string id){
         _contextTaskId=id;
-        _contextX=e.ClientX;
-        _contextY=e.ClientY + 8;
-        // clamp بسيط لمنع خروجها أسفل الشاشة (بدون JS window)
-        if(_contextY + 90 > 700) _contextY = e.ClientY - 90;
-        if(_contextX + 160 > 1200) _contextX = e.ClientX - 160;
+        var x=e.ClientX;
+        var y=e.ClientY + 8;
+        // clamp against the real viewport (measured once per click)
+        try {
+            var size = await JS.InvokeAsync<double[]>("eval", "(()=>{return [window.innerWidth, window.innerHeight];})()");
+            if(size!=null && size.Length==2){
+                if(x + 160 > size[0]) x = e.ClientX - 160;
+                if(y + 90 > size[1]) y = e.ClientY - 90;
+            }
+        } catch { }
+        _contextX=x;
+        _contextY=y;
     }
     private void CloseContext()=> _contextTaskId=null;
     private async Task ContextComplete(){ if(_contextTaskId==null) return; var id=_contextTaskId; CloseContext(); await TaskState.ToggleTaskByIdAsync(id); UpdateCounts(); }
@@ -2351,7 +2396,7 @@
     </text>;
 
     private RenderFragment TaskRow(AppTask task, bool free = false, bool isTarget = true, List<AppTask>? group = null) => @<text>
-        <div id="@(free ? $"trow-{task.Id}" : null)" class="task-row @(task.IsDone?"completed":"") @(_selectedTask?.Id==task.Id?"selected":"") @(free && _dragId==task.Id ? "drag-src" : "") @(_dragId!=null && free && isTarget && task.Id!=_dragId ? "drop-target" : "")" draggable="@(free ? "true" : "false")" @ondragstart="()=>StartDrag(task.Id, free)" @ondragend="EndDrag" @onclick="()=>OpenDetails(task.Id)" @oncontextmenu="(e)=>ShowContext(e, task.Id)" @oncontextmenu:preventDefault="true">
+        <div class="task-row @(task.IsDone?"completed":"") @(_selectedTask?.Id==task.Id?"selected":"") @(free && _draggedTask?.Id==task.Id ? "drag-src" : "")" @onmousedown="e=>HandleFreeDown(e, task, free)" @onclick="()=>OpenDetails(task.Id)" @oncontextmenu="(e)=>ShowContext(e, task.Id)" @oncontextmenu:preventDefault="true">
             <button class="task-check" @onclick="async (e)=>{ await ToggleTask(task); }" @onclick:stopPropagation="true" title="@L["tasks.toggleState"]">
                 @if(task.IsDone){<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>}
             </button>
@@ -2366,16 +2411,21 @@
                 </div>
             </div>
             <button class="task-more" @onclick="(e)=>ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button>
-            @if(free && isTarget && group!=null){
-                <div class="dz dz-a" @ondragover:preventDefault="true" @ondragover:stopPropagation="true" @ondrop="()=>DropBeside(task, group, true)" @ondrop:stopPropagation="true" @ondrop:preventDefault="true"></div>
-                <div class="dz dz-c" @ondragover:preventDefault="true" @ondragover:stopPropagation="true" @ondrop="()=>DropCenter(task, group)" @ondrop:stopPropagation="true" @ondrop:preventDefault="true"></div>
-                <div class="dz dz-b" @ondragover:preventDefault="true" @ondragover:stopPropagation="true" @ondrop="()=>DropBeside(task, group, false)" @ondrop:stopPropagation="true" @ondrop:preventDefault="true"></div>
+            @if(free && isTarget){
+                <div class="dz dz-a @(_isDragging && _hoverTaskId==task.Id && _hoverThird=="a" ? "hot" : "")" @onmouseenter="()=>HandleFreeHover(task.Id, 'a')"></div>
+                <div class="dz dz-c @(_isDragging && _hoverTaskId==task.Id && _hoverThird=="c" ? "hot" : "")" @onmouseenter="()=>HandleFreeHover(task.Id, 'c')"></div>
+                <div class="dz dz-b @(_isDragging && _hoverTaskId==task.Id && _hoverThird=="b" ? "hot" : "")" @onmouseenter="()=>HandleFreeHover(task.Id, 'b')"></div>
             }
         </div>
     </text>;
 
     private RenderFragment TodayFreeList(List<AppTask> tasks, bool isTimed) => @<text>
-        <div class="today-free @(_dragId!=null ? "dragging" : "")" @ondragover:preventDefault="true" @ondrop="()=>DropToEnd(tasks)">
+        <div class="today-free @(_isDragging ? "fDragging" : "")" @onmousemove="e=>HandleFreeMove(e)" @onmouseup="()=>HandleFreeUp(tasks)" @onmouseleave="()=>HandleFreeUp(tasks)">
+            @if(_isDragging && _draggedTask != null && tasks.Any(t => t.Id == _draggedTask.Id)){
+                <div class="ghost-task" style="left:@(_mouseX)px;top:@(_mouseY)px;">
+                    <div class="ghost-title">@_draggedTask.Title</div>
+                </div>
+            }
             @if(!tasks.Any()){
                 <div class="group-empty">@(isTimed ? L["tasks.noTimedHere"] : L["tasks.noUntimedHere"])</div>
             } else {
@@ -2419,28 +2469,67 @@
         return rows;
     }
 
-    private async Task StartDrag(string id, bool free)
+    private void HandleFreeDown(MouseEventArgs e, AppTask task, bool free)
     {
-        if (!free) return;
-        _dragId = id;
-        _suppressRender = true; // no Blazor re-render mid-drag: zones show via body class (no flicker)
-        try { await JS.InvokeVoidAsync("eval", $"document.body.classList.add('today-dragging');var el=document.getElementById('trow-{id}');if(el)el.classList.add('drag-src');"); }
-        catch { }
+        _justDragged = false;
+        if (!free || task.IsDone) return;
+        _potentialDragTask = task;
+        _downX = e.ClientX;
+        _downY = e.ClientY;
     }
 
-    private async Task EndDrag()
+    private void HandleFreeMove(MouseEventArgs e)
     {
-        var wasDropping = _dropping;
-        _dragId = null;
-        _suppressRender = false;
-        await ClearDragJS();
-        if (!wasDropping) StateHasChanged();
+        if (_potentialDragTask == null) return;
+        if (!_isDragging)
+        {
+            // movement threshold: plain clicks/long-presses never start a drag (no flash)
+            if (Math.Abs(e.ClientX - _downX) + Math.Abs(e.ClientY - _downY) < 6) return;
+            _draggedTask = _potentialDragTask;
+            _isDragging = true;
+        }
+        _mouseX = e.ClientX - 30;
+        _mouseY = e.ClientY - 16;
     }
 
-    private async Task ClearDragJS()
+    private void HandleFreeHover(string taskId, char third)
     {
-        try { await JS.InvokeVoidAsync("eval", "document.body.classList.remove('today-dragging');var q=document.querySelectorAll('.task-row.drag-src');for(var i=0;i<q.length;i++)q[i].classList.remove('drag-src');"); }
-        catch { }
+        if (!_isDragging) return;
+        _hoverTaskId = taskId;
+        _hoverThird = third.ToString();
+    }
+
+    private async Task HandleFreeUp(List<AppTask> group)
+    {
+        if (_isDragging && _draggedTask != null)
+        {
+            var draggedId = _draggedTask.Id;
+            var targetId = _hoverTaskId;
+            var third = _hoverThird;
+            _potentialDragTask = null;
+            _draggedTask = null;
+            _isDragging = false;
+            _hoverTaskId = "";
+            _hoverThird = "";
+            _justDragged = true;
+            var dragged = group.FirstOrDefault(t => t.Id == draggedId);
+            if (dragged == null) { StateHasChanged(); return; } // another group: out of scope
+            if (string.IsNullOrEmpty(targetId) || targetId == draggedId)
+            {
+                await DropToEnd(group, dragged);
+                return;
+            }
+            var target = group.FirstOrDefault(t => t.Id == targetId);
+            if (target == null) { StateHasChanged(); return; }
+            if (third == "c") await DropCenter(group, dragged, target);
+            else await DropBeside(group, dragged, target, before: third == "a");
+            return;
+        }
+        _potentialDragTask = null;
+        _draggedTask = null;
+        _isDragging = false;
+        _hoverTaskId = "";
+        _hoverThird = "";
     }
 
     private async Task RenumberAndSave(List<AppTask> group)
@@ -2451,39 +2540,25 @@
         UpdateCounts();
     }
 
-    private async Task DropCenter(AppTask target, List<AppTask> group)
+    private async Task DropCenter(List<AppTask> group, AppTask dragged, AppTask target)
     {
-        var id = _dragId;
-        _dropping = true;
-        _dragId = null;
-        await ClearDragJS();
-        if (id == null) { _dropping = false; _suppressRender = false; return; }
-        var dragged = group.FirstOrDefault(t => t.Id == id);
-        if (dragged == null || id == target.Id) { _dropping = false; _suppressRender = false; StateHasChanged(); return; }
+        if (dragged.Id == target.Id) { StateHasChanged(); return; }
         // مستوى واحد فقط: الإفلات على فرعية = إفلات على أبيها
         var parent = !string.IsNullOrEmpty(target.ParentId) ? group.FirstOrDefault(t => t.Id == target.ParentId) ?? target : target;
-        if (parent.Id == id || dragged.ParentId == parent.Id) { _dropping = false; _suppressRender = false; StateHasChanged(); return; }
+        if (parent.Id == dragged.Id || dragged.ParentId == parent.Id) { StateHasChanged(); return; }
         dragged.ParentId = parent.Id;
         dragged.RowGroupId = string.Empty;
-        var sibs = group.Where(t => t.ParentId == parent.Id && t.Id != id).ToList();
+        var sibs = group.Where(t => t.ParentId == parent.Id && t.Id != dragged.Id).ToList();
         dragged.SortOrder = sibs.Any() ? sibs.Max(t => t.SortOrder) + 1 : 1;
-        _suppressRender = false;
         await RenumberAndSave(group);
-        _dropping = false;
     }
 
-    private async Task DropBeside(AppTask target, List<AppTask> group, bool before)
+    private async Task DropBeside(List<AppTask> group, AppTask dragged, AppTask target, bool before)
     {
-        var id = _dragId;
-        _dropping = true;
-        _dragId = null;
-        await ClearDragJS();
-        if (id == null) { _dropping = false; _suppressRender = false; return; }
-        var dragged = group.FirstOrDefault(t => t.Id == id);
-        if (dragged == null || id == target.Id) { _dropping = false; _suppressRender = false; StateHasChanged(); return; }
+        if (dragged.Id == target.Id) { StateHasChanged(); return; }
         // لو الهدف فرعية: الصف المقصود هو صف أبيها
         var anchor = !string.IsNullOrEmpty(target.ParentId) ? group.FirstOrDefault(t => t.Id == target.ParentId) ?? target : target;
-        var tops = TodayTops(group).Where(t => t.Id != id).ToList();
+        var tops = TodayTops(group).Where(t => t.Id != dragged.Id).ToList();
         var gid = anchor.RowGroupId;
         var row = string.IsNullOrEmpty(gid) ? new List<AppTask> { anchor } : tops.Where(t => t.RowGroupId == gid).ToList();
         dragged.ParentId = string.Empty;
@@ -2506,31 +2581,20 @@
             tops.Insert(before ? at : at + 1, dragged);
         }
         for (int i = 0; i < tops.Count; i++) tops[i].SortOrder = i + 1;
-        _suppressRender = false;
         await TaskState.SaveTodayGroupAsync(group);
         UpdateCounts();
-        _dropping = false;
     }
 
-    private async Task DropToEnd(List<AppTask> group)
+    private async Task DropToEnd(List<AppTask> group, AppTask dragged)
     {
-        var id = _dragId;
-        _dropping = true;
-        _dragId = null;
-        await ClearDragJS();
-        if (id == null) { _dropping = false; _suppressRender = false; return; }
-        var dragged = group.FirstOrDefault(t => t.Id == id);
-        if (dragged == null) { _dropping = false; _suppressRender = false; return; } // مجموعة تانية: خارج النطاق
-        if (string.IsNullOrEmpty(dragged.ParentId) && string.IsNullOrEmpty(dragged.RowGroupId)) { _dropping = false; _suppressRender = false; StateHasChanged(); return; }
-        var tops = TodayTops(group).Where(t => t.Id != id).ToList();
+        if (string.IsNullOrEmpty(dragged.ParentId) && string.IsNullOrEmpty(dragged.RowGroupId)) { StateHasChanged(); return; }
+        var tops = TodayTops(group).Where(t => t.Id != dragged.Id).ToList();
         dragged.ParentId = string.Empty;
         dragged.RowGroupId = string.Empty;
         tops.Add(dragged);
         for (int i = 0; i < tops.Count; i++) tops[i].SortOrder = i + 1;
-        _suppressRender = false;
         await TaskState.SaveTodayGroupAsync(group);
         UpdateCounts();
-        _dropping = false;
     }
 
     private RenderFragment UpcomingView => @<text>

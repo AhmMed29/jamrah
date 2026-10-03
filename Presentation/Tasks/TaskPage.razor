@@ -1938,6 +1938,7 @@
     private bool _isDragging;
     private double _mouseX, _mouseY;
     private double _downX, _downY;
+    private double _docZoom = 1; // page zoom (CSS zoom breaks clientX-based fixed positioning)
     private string _hoverTaskId = "";
     private string _hoverThird = ""; // "a" | "c" | "b"
     private bool _justDragged; // suppress click-to-open right after a drag
@@ -2306,12 +2307,15 @@
         _contextTaskId=id;
         var x=e.ClientX;
         var y=e.ClientY + 8;
-        // clamp against the real viewport (measured once per click)
+        // clamp against the real viewport, compensating page zoom (fixed menu vs client coords)
         try {
-            var size = await JS.InvokeAsync<double[]>("eval", "(()=>{return [window.innerWidth, window.innerHeight];})()");
-            if(size!=null && size.Length==2){
-                if(x + 160 > size[0]) x = e.ClientX - 160;
-                if(y + 90 > size[1]) y = e.ClientY - 90;
+            var m = await JS.InvokeAsync<double[]>("eval", "(()=>{var z=parseFloat(document.documentElement.style.zoom)||1;return [window.innerWidth, window.innerHeight, z];})()");
+            if(m!=null && m.Length==3 && m[2] > 0){
+                var z = m[2];
+                x = e.ClientX / z;
+                y = (e.ClientY + 8) / z;
+                if(x + 160 > m[0] / z) x = (e.ClientX - 160) / z;
+                if(y + 90 > m[1] / z) y = (e.ClientY - 90) / z;
             }
         } catch { }
         _contextX=x;
@@ -2408,6 +2412,7 @@
                     @if(task.DueDate!=null && task.DueDate?.Date != _currentDate.Date){<span class="task-meta-item">▣ @FormatShortDate(task.DueDate)</span>}
                     @if(!string.IsNullOrWhiteSpace(task.RecurrenceDays) && task.RecurrenceDays!="none"){<span class="task-meta-item">↻ @RepeatLabel(task.RecurrenceDays)</span>}
                     @if(!string.IsNullOrWhiteSpace(task.Notes)){<span class="task-meta-item">▤ @L["tasks.notesMeta"]</span>}
+                    @if(task.IsDone && task.CompletedAt!=null){<span class="task-meta-item">✓ @task.CompletedAt?.ToLocalTime().ToString(@"hh\:mm")</span>}
                 </div>
             </div>
             <button class="task-more" @onclick="(e)=>ShowContext(e, task.Id)" @onclick:stopPropagation="true">⋮</button>
@@ -2469,13 +2474,18 @@
         return rows;
     }
 
-    private void HandleFreeDown(MouseEventArgs e, AppTask task, bool free)
+    private async Task HandleFreeDown(MouseEventArgs e, AppTask task, bool free)
     {
         _justDragged = false;
         if (!free || task.IsDone) return;
         _potentialDragTask = task;
         _downX = e.ClientX;
         _downY = e.ClientY;
+        // read page zoom once per gesture (fixed-positioned ghost must compensate for CSS zoom)
+        try {
+            var z = await JS.InvokeAsync<double>("eval", "parseFloat(document.documentElement.style.zoom)||1");
+            if (z > 0) _docZoom = z;
+        } catch { _docZoom = 1; }
     }
 
     private void HandleFreeMove(MouseEventArgs e)
@@ -2488,8 +2498,8 @@
             _draggedTask = _potentialDragTask;
             _isDragging = true;
         }
-        _mouseX = e.ClientX - 30;
-        _mouseY = e.ClientY - 16;
+        _mouseX = (e.ClientX - 30) / _docZoom;
+        _mouseY = (e.ClientY - 16) / _docZoom;
     }
 
     private void HandleFreeHover(string taskId, char third)

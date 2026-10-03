@@ -63,10 +63,11 @@ namespace Jamrah.Application.Services
 
             bool changed = false;
 
-            // --- أي مهمة منجزة → أرشيف (منجَز = مؤرشَف دائماً) ---
-            foreach (var t in Tasks.Where(x => x.IsDone && x.ArchivedAt == null && x.Id != x.TemplateId).ToList())
+            // --- أي مهمة منجزة → تفضل مكانها (لا أرشفة تلقائية) ---
+            // ترجيع منجز اليوم من الأرشيف لمرة واحدة (مقيد بتاريخ اليوم، بلا مسح)
+            foreach (var t in Tasks.Where(x => x.IsDone && x.ArchivedAt != null && x.CompletedAt != null && x.CompletedAt.Value.Date == DateTime.Today).ToList())
             {
-                t.ArchivedAt = t.CompletedAt ?? DateTime.UtcNow;
+                t.ArchivedAt = null;
                 await _repository.SaveTaskAsync(t);
                 changed = true;
             }
@@ -332,9 +333,8 @@ namespace Jamrah.Application.Services
             task.IsDone = !task.IsDone;
             if (task.IsDone)
             {
-                // إنجاز → أرشيف مباشرة
+                // إنجاز → تفضل مكانها (وقت الإتمام فقط، بلا أرشفة)
                 task.CompletedAt = DateTime.UtcNow;
-                task.ArchivedAt = DateTime.UtcNow;
             }
             else
             {

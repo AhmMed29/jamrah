@@ -200,9 +200,6 @@ namespace Jamrah.Application.Services
             }
 
             // monthly: نفس يوم الشهر
-                task.Id != task.TemplateId;
-                task.Id != task.TemplateId;
-                task.Id != task.TemplateId;
             var monthlyTemplates = Tasks.Where(t => t.ArchivedAt==null && t.RecurrenceDays=="monthly" && !string.IsNullOrWhiteSpace(t.TemplateId) && t.Id==t.TemplateId).ToList();
             foreach(var tpl in monthlyTemplates)
             {

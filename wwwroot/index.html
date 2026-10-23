@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Jamrah Calendar</title>
+    <base href="/" />
+    <script>
+        // Platform tag for Android-only CSS hooks (runs before first paint).
+        // WebView/WebView2 userAgent always carries the OS token.
+        try { if (/Android/i.test(navigator.userAgent || '')) document.documentElement.classList.add('maui-android'); } catch (e) {}
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/jamrah-theme.css" />
+    <link rel="stylesheet" href="css/tui-calendar.css" />
+    <link rel="stylesheet" href="css/calendar-modern.css" />
+    <link rel="stylesheet" href="css/tasks.css" />
+    <link rel="stylesheet" href="css/bookmark.css" />
+    <!-- ADDITIVE: styles for pages/popup additions -->
+    <link rel="stylesheet" href="css/bookmark-pages.css" />
+    <link rel="stylesheet" href="css/bookmark-mobile.css" />
+    <link rel="stylesheet" href="css/appshell.css" />
+    <link rel="stylesheet" href="css/mobile.css" />
+    <link rel="stylesheet" href="css/mobile-pomodoro.css" />
+    <link rel="stylesheet" href="css/mobile-tasks.css" />
+    <script src="js/zoom-per-page.js"></script>
+    <script src="js/planning-editor.js"></script>
+    <script src="js/bookmark.js"></script>
+    <script src="js/mobile-touch.js"></script>
+    <script src="js/local-files.js"></script>
+    <script>
+        window.pomoFs = {
+            enter: function() {
+                try {
+                    document.documentElement.classList.add('pomo-fullscreen');
+                    var el = document.documentElement;
+                    if (el.requestFullscreen) { el.requestFullscreen().catch(function(){}); }
+                } catch(e){}
+            },
+            exit: function() {
+                try {
+                    document.documentElement.classList.remove('pomo-fullscreen');
+                    if (document.fullscreenElement && document.exitFullscreen) { document.exitFullscreen().catch(function(){}); }
+                } catch(e){}
+            },
+            isFs: function() { try { return !!document.fullscreenElement; } catch(e){ return false; } },
+            wire: function(ref) {
+                if (window.__pomoFsWired) return;
+                window.__pomoFsWired = true;
+                document.addEventListener('fullscreenchange', function() {
+                    try {
+                        var on = !!document.fullscreenElement;
+                        if (!on) document.documentElement.classList.remove('pomo-fullscreen');
+                        ref.invokeMethodAsync('OnFsChanged', on);
+                    } catch(e){}
+                });
+                document.addEventListener('keydown', function(e) {
+                    try {
+                        var t = e.target;
+                        var tag = (t && t.tagName) || '';
+                        if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag) || (t && t.isContentEditable)) return;
+                        if (e.code === 'Space' && document.fullscreenElement) {
+                            e.preventDefault();
+                            ref.invokeMethodAsync('ToggleTimerFromKey');
+                        } else if ((e.code === 'KeyF' || e.key === 'F11') && !document.fullscreenElement) {
+                            e.preventDefault();
+                            ref.invokeMethodAsync('EnterFullscreenFromKey');
+                        }
+                    } catch(err){}
+                });
+            }
+        };
+        window.playPomoSound = function(src, volume) {
+            try {
+                var a = new Audio(src);
+                a.volume = (typeof volume === 'number') ? volume : 0.8;
+                a.play().catch(function(e){ console.log("audio play failed", e); });
+                setTimeout(function() {
+                    a.pause();
+                }, 2000);
+            } catch(e){ console.log(e); }
+        }
+    </script>
+</head>
+<body>
+    <div id="app">Loading...</div>
+    <div id="blazor-error-ui" style="display:none;position:fixed;bottom:0;width:100%;background:#FFF3CD;color:#856404;padding:8px;font:12px Tajawal;border-top:1px solid #FFE69C;z-index:9999">Blazor error: <span id="blazor-error-msg"></span> <a href="" onclick="location.reload();return false" style="color:#856404">Reload</a> <span style="float:left" onclick="this.parentElement.style.display='none'">�</span></div>
+    <script>window.onerror=function(m,s,l,c,e){var d=document.getElementById('blazor-error-msg');if(d)d.textContent=m;var ui=document.getElementById('blazor-error-ui');if(ui)ui.style.display='block';console.error(m,e)};window.addEventListener('unhandledrejection',function(e){window.onerror(e.reason,'',0,0,e.reason)});</script>
+    <script src="_framework/blazor.webview.js" autostart="false"></script>
+</body>
+</html>
+

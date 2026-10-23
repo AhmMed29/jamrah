@@ -1,0 +1,198 @@
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@using Microsoft.JSInterop
+@inject BookmarkStateService State
+@inject LocalizationService L
+@inject ItemClipboardService Clipboard
+@inject IJSRuntime JS
+
+@if (_item != null)
+{
+    <div class="ctx-scrim" @onclick="Close"></div>
+    <div class="ctx-menu" @ref="_menuRef"
+         style="@(_fallback ? "left:8px;top:8px" : "left:8px;top:8px;visibility:hidden")"
+         dir="@L.Dir" @onclick:stopPropagation="true">
+        @if (_item.Deleted)
+        {
+            <button class="ctx-i" @onclick="Restore">
+                @((MarkupString)BookmarkIcons.Svg("arrowL", 15))<span>@T("استعادة", "Restore")</span>
+            </button>
+        }
+        else
+        {
+            <button class="ctx-i" @onclick="Rename" disabled="@_busy">
+                @((MarkupString)BookmarkIcons.Svg("edit", 15))<span>@T("إعادة تسمية", "Rename")</span>
+            </button>
+            <div class="ctx-subwrap">
+                <button class="ctx-i" @onclick="() => _moveOpen = !_moveOpen" disabled="@_busy">
+                    @((MarkupString)BookmarkIcons.Svg("folder", 15))<span>@T("نقل إلى مجلد", "Move to folder")</span>
+                    <span class="ctx-chev @(_moveOpen ? "open" : "")">@((MarkupString)BookmarkIcons.Svg("chevD", 12))</span>
+                </button>
+                @if (_moveOpen)
+                {
+                    <div class="ctx-sub">
+                        <button class="ctx-i" @onclick="() => MoveTo(null)">@T("الوارد", "Inbox")</button>
+                        @foreach (var t in MoveTargets)
+                        {
+                            var tid = t.Id;
+                            <button class="ctx-i" style="padding-inline-start:@(10 + t.Depth * 14)px" @onclick="() => MoveTo(tid)">@t.Name</button>
+                        }
+                        @if (MoveTargets.Count == 0)
+                        {
+                            <div class="ctx-empty">@T("لا توجد مجلدات", "No folders")</div>
+                        }
+                    </div>
+                }
+            </div>
+            <button class="ctx-i" @onclick="CopyItem" disabled="@_busy">
+                @((MarkupString)BookmarkIcons.Svg("copy", 15))<span>@T("نسخ", "Copy")</span>
+            </button>
+            <button class="ctx-i" @onclick="CopyLink" disabled="@(!HasLink || _busy)">
+                @((MarkupString)BookmarkIcons.Svg("link", 15))<span>@T("نسخ الرابط", "Copy link")</span>
+            </button>
+            <div class="ctx-sep"></div>
+            <button class="ctx-i dgr" @onclick="Trash" disabled="@_busy">
+                @((MarkupString)BookmarkIcons.Svg("trash", 15))<span>@T("نقل إلى سلة المهملات", "Move to trash")</span>
+            </button>
+        }
+        <div class="ctx-sep"></div>
+        <button class="ctx-i dgr" @onclick="DeleteForever" disabled="@_busy">
+            @((MarkupString)BookmarkIcons.Svg("trash", 15))<span>@(_confirmForever ? T("تأكيد الحذف النهائي", "Confirm permanent delete") : T("حذف نهائي", "Delete forever"))</span>
+        </button>
+    </div>
+}
+
+@code {
+    [Parameter] public string ItemId { get; set; } = string.Empty;
+    [Parameter] public double X { get; set; }
+    [Parameter] public double Y { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<string> OnToast { get; set; }
+    [Parameter] public EventCallback<string> OnDeleteForever { get; set; }
+
+    private BookmarkItem? _item;
+    private bool _moveOpen;
+    private bool _busy;
+    private bool _fallback;
+    private bool _confirmForever;
+    private ElementReference _menuRef;
+    private List<(string Id, string Name, int Depth)> MoveTargets = new();
+    private bool HasLink => _item != null && !string.IsNullOrWhiteSpace(BookmarkCardData.From(_item).Url);
+
+    protected override void OnParametersSet()
+    {
+        _item = State.Items.FirstOrDefault(i => i.Id == ItemId);
+        if (_item == null) return;
+
+        MoveTargets = new();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        void Walk(string? parentId, int depth)
+        {
+            foreach (var f in State.Folders
+                .Where(x => !x.IsArchived && (x.ParentId ?? string.Empty) == (parentId ?? string.Empty))
+                .OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase))
+            {
+                if (!seen.Add(f.Id)) continue;
+                MoveTargets.Add((f.Id, f.Name, depth));
+                Walk(f.Id, depth + 1);
+            }
+        }
+        Walk(null, 0);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_item == null) return;
+        try
+        {
+            await JS.InvokeVoidAsync("bmShell.placeCtxMenu", _menuRef, X, Y);
+        }
+        catch
+        {
+            if (_fallback) return;
+            _fallback = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private string T(string ar, string en) => L.Lang == "ar" ? ar : en;
+
+    private async Task Close() => await OnClose.InvokeAsync();
+
+    private async Task Rename()
+    {
+        if (_item == null || _busy) return;
+        string? title;
+        try { title = await JS.InvokeAsync<string?>("prompt", T("اسم جديد", "New name"), _item.Title); }
+        catch { title = null; }
+        if (string.IsNullOrWhiteSpace(title)) return;
+
+        await OnClose.InvokeAsync();
+        var ok = await State.RenameItemAsync(ItemId, title);
+        await OnToast.InvokeAsync(ok
+            ? T("تمت إعادة التسمية", "Renamed")
+            : T("تعذر إعادة التسمية", "Could not rename"));
+    }
+
+    private async Task MoveTo(string? folderId)
+    {
+        if (_busy) return;
+        _busy = true;
+        var ok = await State.MoveItemToFolderAsync(ItemId, folderId);
+        _busy = false;
+        await OnClose.InvokeAsync();
+        await OnToast.InvokeAsync(ok
+            ? T("تم نقل العنصر", "Item moved")
+            : T("تعذر نقل العنصر", "Could not move item"));
+    }
+
+    private async Task CopyItem()
+    {
+        if (_busy) return;
+        _busy = true;
+        var copied = _item != null && await Clipboard.CopyAsync(_item);
+        _busy = false;
+        await OnClose.InvokeAsync();
+        await OnToast.InvokeAsync(copied ? L["bmk.copied"] : L["bmk.copyFailed"]);
+    }
+
+    private async Task CopyLink()
+    {
+        if (_item == null || !HasLink) return;
+        var url = BookmarkCardData.From(_item).Url;
+        try { await JS.InvokeVoidAsync("bmInterop.copyText", url); } catch { }
+        await OnClose.InvokeAsync();
+        await OnToast.InvokeAsync(T("تم نسخ الرابط", "Link copied"));
+    }
+
+    private async Task Trash()
+    {
+        if (_busy) return;
+        _busy = true;
+        await State.DeleteItemAsync(ItemId, false);
+        _busy = false;
+        await OnClose.InvokeAsync();
+        await OnToast.InvokeAsync(T("تم نقل العنصر إلى سلة المهملات", "Item moved to trash"));
+    }
+
+    private async Task Restore()
+    {
+        await State.RestoreItemAsync(ItemId);
+        await OnClose.InvokeAsync();
+        await OnToast.InvokeAsync(T("تمت استعادة العنصر", "Item restored"));
+    }
+
+    private async Task DeleteForever()
+    {
+        if (_busy) return;
+        if (!_confirmForever)
+        {
+            _confirmForever = true;
+            return;
+        }
+
+        _busy = true;
+        await OnClose.InvokeAsync();
+        await OnDeleteForever.InvokeAsync(ItemId);
+    }
+}

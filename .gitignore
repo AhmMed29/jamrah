@@ -1,0 +1,51 @@
+bin/
+obj/
+.vs/
+.idea/
+.codegraph/
+.worktrees/
+.opencode/
+*.user
+*.suo
+*.userosscache
+*.DotSettings.user
+*.sln.docstates
+
+# Build / packaging output
+artifacts/
+publish/
+.freebuff/
+
+# Design mocks / private
+tasks-page.html
+Pomo Minimal Design.html
+bookmark-mock.html
+*.html.mock
+*.local.html
+
+# AI / docs private
+docs/
+
+# Duplicate assets (keep wwwroot/sounds as source, assets/App Sounds is duplicate)
+assets/App Sounds/
+
+# Safety nets
+**/.vs/
+**/.idea/
+**/*.vsidx
+**/*.db-shm
+**/*.db-wal
+
+translator-config.json
+translator-cache.json
+translator-agent.log
+translator-status.json
+agent-config.json
+
+# Local secrets / signing material
+*.pfx
+*.snk
+*.keystore
+*.jks
+secrets.json
+appsettings.*.local.json

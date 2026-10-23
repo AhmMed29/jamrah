@@ -1,0 +1,918 @@
+/* ==========================================================================
+   TUI Calendar Port for Jamrah Blazor MAUI Application
+   File: Jamrah/wwwroot/css/tui-calendar.css
+   Consolidated styles for Month Grid, Week/Day Time Grid, Popups, and Themes
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. COMMON THEME CSS VARIABLES
+   -------------------------------------------------------------------------- */
+:root {
+  --tui-calendar-bg: #ffffff;
+  --tui-calendar-border: #e5e5e5;
+  --tui-calendar-text: #333333;
+  --tui-calendar-sub-text: #666666;
+  --tui-calendar-today-bg: #135de6;
+  --tui-calendar-today-text: #ffffff;
+  --tui-calendar-primary: #135de6;
+  --tui-calendar-now-indicator: #515ce6;
+  --tui-calendar-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --tui-calendar-holiday-color: #ff4040;
+  --tui-calendar-saturday-color: #335eea;
+  --tui-calendar-grid-line: #e5e5e5;
+  --tui-calendar-popup-bg: #ffffff;
+  --tui-calendar-popup-border: #d5d5d5;
+  --tui-calendar-popup-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* --------------------------------------------------------------------------
+   2. BASE RESET & LAYOUT CONTAINERS
+   -------------------------------------------------------------------------- */
+.toastui-calendar-layout,
+.layout {
+  box-sizing: border-box;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  font-family: var(--tui-calendar-font-family);
+  background-color: var(--tui-calendar-bg);
+  color: var(--tui-calendar-text);
+}
+
+.toastui-calendar-layout *,
+.layout * {
+  box-sizing: border-box;
+}
+
+.holiday {
+  color: var(--tui-calendar-holiday-color);
+}
+
+.saturday {
+  color: var(--tui-calendar-saturday-color);
+}
+
+/* Cursor states for interaction */
+.layout.dragging--move-event * {
+  cursor: move;
+}
+
+.layout.dragging--resize-horizontal-event * {
+  cursor: col-resize;
+}
+
+.layout.dragging--resize-vertical-event * {
+  cursor: row-resize;
+}
+
+/* --------------------------------------------------------------------------
+   3. WEEKDAY HEADER & DAY NAMES
+   -------------------------------------------------------------------------- */
+.toastui-calendar-weekday-header,
+.day-names {
+  position: relative;
+  display: flex;
+  width: 100%;
+  border-bottom: 1px solid var(--tui-calendar-border);
+  background-color: var(--tui-calendar-bg);
+  user-select: none;
+}
+
+.day-names.month,
+.toastui-calendar-weekday-header.month {
+  height: 31px;
+  line-height: 31px;
+  font-size: 12px;
+  font-weight: normal;
+  text-align: left;
+}
+
+.day-names.week,
+.toastui-calendar-weekday-header.week {
+  height: 42px;
+  line-height: 38px;
+}
+
+.day-name-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+}
+
+.day-name-item {
+  flex: 1;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: normal;
+  text-align: left;
+  border-left: 1px solid transparent;
+}
+
+.day-name-item + .day-name-item {
+  border-left: 1px solid var(--tui-calendar-border);
+}
+
+.day-name__date {
+  font-size: 24px;
+  font-weight: bold;
+  margin-right: 4px;
+}
+
+.day-name__name {
+  font-size: 12px;
+  color: var(--tui-calendar-sub-text);
+}
+
+/* --------------------------------------------------------------------------
+   4. MONTH GRID LAYOUT CLASSES
+   -------------------------------------------------------------------------- */
+.toastui-calendar-month-grid,
+.month-daygrid {
+  position: relative;
+  width: 100%;
+  height: calc(100% - 31px);
+  display: flex;
+  flex-direction: column;
+}
+
+.month-week-item {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  border-bottom: 1px solid var(--tui-calendar-border);
+}
+
+.weekday-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+.toastui-calendar-daygrid-cell,
+.daygrid-cell {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  padding: 3px 0;
+  border-left: 1px solid var(--tui-calendar-border);
+}
+
+.toastui-calendar-daygrid-cell:first-child,
+.daygrid-cell:first-child {
+  border-left: none;
+}
+
+.grid-cell-date {
+  display: inline-block;
+  width: 27px;
+  height: 27px;
+  line-height: 27px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: normal;
+  margin-left: 4px;
+}
+
+.grid-cell-date .weekday-grid-date-decorator,
+.toastui-calendar-today-badge {
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
+  text-align: center;
+  background-color: var(--tui-calendar-today-bg);
+  color: var(--tui-calendar-today-text);
+  border-radius: 50%;
+  font-weight: bold;
+}
+
+.grid-cell-footer {
+  position: absolute;
+  width: 100%;
+  bottom: 2px;
+  left: 0;
+  padding: 0 4px;
+}
+
+.toastui-calendar-more-events,
+.grid-cell-more-events {
+  float: right;
+  height: 22px;
+  line-height: 22px;
+  padding: 0 6px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--tui-calendar-primary);
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.toastui-calendar-more-events:hover,
+.grid-cell-more-events:hover {
+  background-color: rgba(19, 93, 230, 0.08);
+}
+
+/* --------------------------------------------------------------------------
+   5. EVENT BLOCKS & BADGES (MONTH & ALL-DAY)
+   -------------------------------------------------------------------------- */
+.weekday-events {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  width: 100%;
+  font-size: 12px;
+}
+
+.toastui-calendar-event-block,
+.weekday-event-block {
+  position: absolute;
+  height: 20px;
+  padding: 0 2px;
+  box-sizing: border-box;
+}
+
+.weekday-event {
+  position: relative;
+  height: 18px;
+  line-height: 18px;
+  padding: 0 4px;
+  border-radius: 2px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  border-left-style: solid;
+  border-left-width: 3px;
+}
+
+.weekday-event-title {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 3px;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.weekday-event-dot {
+  position: relative;
+  top: 4px;
+  float: left;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
+.weekday-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+/* --------------------------------------------------------------------------
+   6. WEEK & DAY TIME GRID LAYOUT CLASSES
+   -------------------------------------------------------------------------- */
+.toastui-calendar-timegrid,
+.timegrid {
+  user-select: none;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.allday-panel {
+  position: relative;
+  width: 100%;
+  min-height: 40px;
+  max-height: 120px;
+  border-bottom: 1px solid var(--tui-calendar-border);
+  overflow-y: auto;
+}
+
+.panel-event-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.timegrid-scroll-area {
+  position: relative;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+}
+
+.timegrid-time-column {
+  width: 60px;
+  min-width: 60px;
+  border-right: 1px solid var(--tui-calendar-border);
+  font-size: 11px;
+  background-color: var(--tui-calendar-bg);
+  position: relative;
+}
+
+.toastui-calendar-timegrid-hour,
+.timegrid-time {
+  position: absolute;
+  right: 8px;
+  height: 40px;
+  line-height: 40px;
+  text-align: right;
+  color: var(--tui-calendar-sub-text);
+  font-size: 11px;
+}
+
+.timegrid-time span {
+  transform: translateY(-50%);
+  display: inline-block;
+}
+
+.columns {
+  position: relative;
+  flex: 1;
+  display: flex;
+  height: 1440px; /* 24 hrs * 60px */
+}
+
+.column {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  border-left: 1px solid var(--tui-calendar-border);
+}
+
+.column:first-child {
+  border-left: none;
+}
+
+.gridline-half {
+  position: absolute;
+  width: 100%;
+  height: 1px;
+  border-bottom: 1px dashed var(--tui-calendar-grid-line);
+}
+
+.column .gridline-hour {
+  position: absolute;
+  width: 100%;
+  height: 1px;
+  border-bottom: 1px solid var(--tui-calendar-grid-line);
+}
+
+/* --------------------------------------------------------------------------
+   7. TIME GRID EVENTS & NOW INDICATOR
+   -------------------------------------------------------------------------- */
+.toastui-calendar-timegrid-event,
+.event-time {
+  position: absolute;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 11px;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  border-left: 3px solid var(--tui-calendar-primary);
+}
+
+.event-time .event-time-content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.event-time .travel-time {
+  font-size: 10px;
+  color: var(--tui-calendar-sub-text);
+}
+
+.resize-handler-x {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 6px;
+  cursor: row-resize;
+}
+
+.toastui-calendar-now-indicator,
+.timegrid-now-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.timegrid-now-indicator-marker {
+  position: absolute;
+  left: -5px;
+  top: -4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: var(--tui-calendar-now-indicator);
+}
+
+.timegrid-now-indicator-today {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background-color: var(--tui-calendar-now-indicator);
+}
+
+/* --------------------------------------------------------------------------
+   8. POPUP & MODAL LAYOUT CLASSES
+   -------------------------------------------------------------------------- */
+.floating-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toastui-calendar-popup-overlay,
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+}
+
+.toastui-calendar-popup-container,
+.popup-container {
+  position: relative;
+  z-index: 1001;
+  background-color: var(--tui-calendar-popup-bg);
+  border: 1px solid var(--tui-calendar-popup-border);
+  border-radius: 8px;
+  box-shadow: var(--tui-calendar-popup-shadow);
+  padding: 20px;
+  max-width: 90vw;
+}
+
+/* Form Modal */
+.toastui-calendar-form,
+.form-container {
+  width: 480px;
+  max-width: 90vw;
+  background-color: var(--tui-calendar-popup-bg);
+  border-radius: 8px;
+}
+
+.form-container .popup-section {
+  margin-bottom: 14px;
+}
+
+.popup-section-title input {
+  width: 100%;
+  height: 38px;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 0 12px;
+  border: 1px solid var(--tui-calendar-popup-border);
+  border-radius: 4px;
+}
+
+.popup-section-item {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--tui-calendar-popup-border);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.popup-section-item input {
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 13px;
+}
+
+.popup-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 4px;
+  border: 1px solid var(--tui-calendar-popup-border);
+  background-color: #ffffff;
+  color: var(--tui-calendar-text);
+  cursor: pointer;
+}
+
+.popup-button.popup-confirm {
+  background-color: var(--tui-calendar-primary);
+  color: #ffffff;
+  border: none;
+}
+
+.popup-button.popup-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* Detail Popup */
+.toastui-calendar-detail-popup,
+.detail-container {
+  width: 320px;
+  background-color: var(--tui-calendar-popup-bg);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.detail-container .event-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+.detail-container .content {
+  font-size: 13px;
+  color: var(--tui-calendar-sub-text);
+  margin-bottom: 6px;
+}
+
+.detail-container .section-button {
+  display: flex;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tui-calendar-border);
+}
+
+.edit-button,
+.delete-button {
+  flex: 1;
+  height: 32px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  color: var(--tui-calendar-primary);
+}
+
+.delete-button {
+  color: var(--tui-calendar-holiday-color);
+}
+
+/* See More Overflow Popup */
+.see-more-container {
+  position: absolute;
+  z-index: 1002;
+  width: 280px;
+  background-color: var(--tui-calendar-popup-bg);
+  border: 1px solid var(--tui-calendar-popup-border);
+  border-radius: 8px;
+  box-shadow: var(--tui-calendar-popup-shadow);
+  padding: 12px;
+}
+
+.see-more-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--tui-calendar-border);
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.more-title-date {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.more-title-day {
+  font-size: 12px;
+  color: var(--tui-calendar-sub-text);
+}
+
+.month-more-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+/* Dropdown Menu */
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid var(--tui-calendar-popup-border);
+  border-radius: 4px;
+  box-shadow: var(--tui-calendar-popup-shadow);
+  z-index: 1010;
+  display: none;
+}
+
+.dropdown-menu.open {
+  display: block;
+}
+
+.dropdown-menu-item {
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dropdown-menu-item:hover {
+  background-color: rgba(19, 93, 230, 0.08);
+}
+
+/* --------------------------------------------------------------------------
+   9. STANDALONE SVG UTILITY ICONS
+   -------------------------------------------------------------------------- */
+.icon {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  vertical-align: middle;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.icon.ic-title {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>');
+}
+
+.icon.ic-location {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>');
+}
+
+.icon.ic-date {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>');
+}
+
+.icon.ic-close {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>');
+}
+
+.icon.ic-edit {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23135de6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>');
+}
+
+.icon.ic-delete {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23ff4040" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>');
+}
+
+.icon.ic-arrow-left {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>');
+}
+
+.icon.ic-arrow-right {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>');
+}
+
+.icon.ic-checkbox-normal {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>');
+}
+
+.icon.ic-checkbox-checked {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23135de6" stroke="%23135de6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><polyline points="9 11 12 14 22 4" stroke="%23fff"/></svg>');
+}
+
+.icon.ic-dropdown-arrow {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>');
+}
+
+/* ==========================================================================
+   Calendar Page Toolbar & Layout Additions
+   ========================================================================== */
+
+/* ── Calendar Page Wrapper ── */
+.calendar-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background-color: var(--tui-calendar-bg);
+  font-family: var(--tui-calendar-font-family);
+}
+
+/* ── Toolbar ── */
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--tui-calendar-border);
+  background-color: var(--tui-calendar-bg);
+  flex-shrink: 0;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--tui-calendar-text);
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 4px;
+  border: 1px solid var(--tui-calendar-popup-border);
+  background-color: #ffffff;
+  color: var(--tui-calendar-text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease;
+}
+
+.toolbar-btn:hover {
+  background-color: rgba(19, 93, 230, 0.06);
+}
+
+.toolbar-btn--today {
+  font-weight: 600;
+}
+
+.toolbar-btn--nav {
+  width: 32px;
+  padding: 0;
+  font-size: 16px;
+}
+
+.nav-arrow {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.toolbar-btn--new-event {
+  background-color: var(--tui-calendar-primary);
+  color: #ffffff;
+  border: none;
+  font-weight: 600;
+}
+
+.toolbar-btn--new-event:hover {
+  background-color: #0d4fcf;
+}
+
+/* ── View Switcher ── */
+.view-switcher {
+  display: flex;
+  border: 1px solid var(--tui-calendar-popup-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 500;
+  background-color: #ffffff;
+  color: var(--tui-calendar-text);
+  border: none;
+  border-right: 1px solid var(--tui-calendar-popup-border);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.view-btn:last-child {
+  border-right: none;
+}
+
+.view-btn:hover {
+  background-color: rgba(19, 93, 230, 0.06);
+}
+
+.view-btn.active {
+  background-color: var(--tui-calendar-primary);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* ── View Area ── */
+.calendar-view-area {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Form Extras ── */
+.popup-form-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  color: var(--tui-calendar-text);
+}
+
+.popup-section--inline {
+  display: flex;
+  align-items: center;
+}
+
+.allday-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--tui-calendar-sub-text);
+  cursor: pointer;
+  padding: 4px 10px;
+}
+
+.allday-label input[type="checkbox"] {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+}
+
+.popup-cal-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.cal-select {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--tui-calendar-text);
+}
+
+.popup-buttons-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tui-calendar-border);
+}
+
+/* ── Detail Color Bar ── */
+.detail-color-bar {
+  height: 4px;
+  border-radius: 2px;
+  margin-bottom: 12px;
+}
+
+/* ── Other month cells ── */
+.daygrid-cell.other-month .grid-cell-date {
+  color: #c0c0c0;
+}

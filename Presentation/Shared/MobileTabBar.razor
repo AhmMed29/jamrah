@@ -1,0 +1,71 @@
+@namespace Jamrah.Presentation.Shared
+@using Jamrah.Application.Services
+@using Jamrah.Presentation.Bookmarks
+@inject Jamrah.Core.Interfaces.IAppNavService Nav
+@inject BookmarkStateService State
+@inject Jamrah.Application.Services.LocalizationService L
+@implements IDisposable
+
+@* Android-only bottom navigation. Hidden by default; only html.maui-android
+   shows it, so Windows keeps its current layout untouched. *@
+<nav class="mobile-tabbar" dir="@L.Dir">
+    <button class="mtb-i @(Nav.CurrentPage == "tasks" ? "on" : "")" @onclick='() => Go("tasks")'>
+        @((MarkupString)BookmarkIcons.Svg("list", 22))
+        <span>@L["nav.tasks"]</span>
+    </button>
+    <button class="mtb-i @(Nav.CurrentPage == "pomodoro" ? "on" : "")" @onclick='() => Go("pomodoro")'>
+        @((MarkupString)BookmarkIcons.Svg("clock", 22))
+        <span>@L["nav.pomodoro"]</span>
+    </button>
+    <button class="mtb-i @(IsLibrary ? "on" : "")" @onclick="GoLibrary">
+        @((MarkupString)BookmarkIcons.Svg("bookmark", 22))
+        <span>@L["nav.library"]</span>
+    </button>
+    <button class="mtb-i @(IsSettings ? "on" : "")" @onclick="GoSettings">
+        @((MarkupString)BookmarkIcons.Svg("sliders", 22))
+        <span>@L["nav.settings"]</span>
+    </button>
+</nav>
+
+@code {
+    private bool IsLibrary => Nav.CurrentPage == "bookmarks" && State.Route.Ctx != "settings";
+    private bool IsSettings => Nav.CurrentPage == "bookmarks" && State.Route.Ctx == "settings";
+
+    private void Go(string page)
+    {
+        if (Nav.CurrentPage == page) return;
+        Nav.Request(page);
+    }
+
+    private void GoLibrary()
+    {
+        Nav.SetBookmarksExpanded(true);
+        if (Nav.CurrentPage != "bookmarks") { Nav.Request("bookmarks"); return; }
+        if (State.Route.Ctx == "settings") State.SetRoute("home", null, null);
+    }
+
+    private void GoSettings()
+    {
+        if (Nav.CurrentPage == "bookmarks" && State.Route.Ctx == "settings") return;
+        State.SetRoute("settings", null, null);
+        Nav.SetBookmarksExpanded(true);
+        if (Nav.CurrentPage != "bookmarks") Nav.Request("bookmarks");
+    }
+
+    protected override void OnInitialized()
+    {
+        Nav.CurrentChanged += OnPageChanged;
+        State.OnStateChanged += OnChanged;
+        L.OnLanguageChanged += OnChanged;
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+    private void OnPageChanged(string _) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Nav.CurrentChanged -= OnPageChanged;
+        State.OnStateChanged -= OnChanged;
+        L.OnLanguageChanged -= OnChanged;
+    }
+}

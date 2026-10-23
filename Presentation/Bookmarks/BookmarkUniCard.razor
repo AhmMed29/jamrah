@@ -1,0 +1,194 @@
+@namespace Jamrah.Presentation.Bookmarks
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@inject BookmarkStateService State
+@inject LocalizationService L
+
+@* v2 parity (uniCard): cinematic image card / code block / link row / tip note *@
+<div class="card @(HasImg ? "uni" : "") @(IsSelected ? "sel" : "") @(_dropHi ? "drop-hi" : "")"
+     draggable="@(CanDrag ? "true" : "false")"
+     @ondragstart="OnDragStart" @ondragend="OnDragEnd"
+     @ondragover:preventDefault="true" @ondragover="OnDragOver" @ondragleave="OnDragLeave"
+     @ondrop:preventDefault="true" @ondrop:stopPropagation="true" @ondrop="OnDropAsync"
+     @oncontextmenu:preventDefault="true" @oncontextmenu="e => OnContextMenu.InvokeAsync(e)"
+     @onclick="() => OnOpen.InvokeAsync(Item.Id)">
+    @if (_d.IsPdf && HasImg)
+    {
+        <div class="pdftile">
+            <div class="pdftile-c">
+                <img src="@_d.Img" loading="lazy" alt="" />
+                <span class="pdftile-badge">PDF</span>
+            </div>
+            <div class="pdftile-b">
+                <div class="pdftile-t" dir="auto">@Item.Title</div>
+                <div class="pdftile-m">@(_d.FileExt.Length > 0 ? _d.FileExt : "PDF")@(!string.IsNullOrEmpty(_d.Pages) ? " - " + _d.Pages : "")</div>
+                @Tags(2)
+            </div>
+        </div>
+    }
+    else if (HasImg)
+    {
+        <div class="uni-im">
+            <img src="@_d.Img" loading="lazy" alt="" />
+            @if (IsVideo)
+            {
+                <span class="vplay">@((MarkupString)BookmarkIcons.Svg("play", 18))</span>
+            }
+            <div class="uni-ov">
+                <div class="uni-t" dir="auto">@Item.Title</div>
+                <div class="uni-m">
+                    @if (IsVideo)
+                    {
+                        <span>▶ video</span>
+                    }
+                    @if (!string.IsNullOrEmpty(_d.Domain))
+                    {
+                        <span>@_d.Domain</span>
+                    }
+                    @if (!string.IsNullOrEmpty(_d.Rating))
+                    {
+                        <span>★ @_d.Rating</span>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="uni-b">@Tags(3)</div>
+    }
+    else if (IsCode)
+    {
+        <div style="padding:13px 15px 0"><div class="tip-t" dir="auto" style="font-size:14px">@Item.Title</div></div>
+        <div style="padding:10px 12px 0"><div class="vcode" dir="auto">@CodePreview</div></div>
+        <div style="padding:10px 13px 13px">@Tags(3)</div>
+    }
+    else if (_d.IsLocalFile)
+    {
+        <div class="ftile">
+            @if (ShowRealImage)
+            {
+                <img class="ftile-ic" src="@_d.AppIcon" loading="lazy" alt="" />
+            }
+            else if (UseBadge)
+            {
+                <div class="ftile-badge">@BadgeText</div>
+            }
+            else
+            {
+                <div class="ftile-sheet">
+                    <span dir="auto">@Item.Title</span>
+                    <b>@BadgeText</b>
+                </div>
+            }
+            <div class="ftile-t" dir="auto">@Item.Title</div>
+            @Tags(3)
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(_d.Url))
+    {
+        <div class="lk">
+            <div class="lk-ic">@(_d.Domain.Length > 0 ? _d.Domain.Substring(0, 1).ToUpperInvariant() : (MarkupString)BookmarkIcons.Svg("link", 16))</div>
+            <div class="lk-b">
+                <div class="lk-t" dir="auto">@Item.Title</div>
+                @if (!string.IsNullOrEmpty(_d.DescShort))
+                {
+                    <div class="lk-d" dir="auto">@_d.DescShort</div>
+                }
+                @if (!string.IsNullOrEmpty(_d.Domain))
+                {
+                    <div class="lk-u">@((MarkupString)BookmarkIcons.Svg("globe", 11)) @_d.Domain</div>
+                }
+                @Tags(2)
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="tip">
+            <div class="tip-t" dir="auto">@Item.Title</div>
+            @if (!string.IsNullOrEmpty(_d.DescShort))
+            {
+                <div class="tip-c" dir="auto">@_d.DescShort</div>
+            }
+            @Tags(3)
+        </div>
+    }
+    <button class="favb @(Item.Favorite ? "on" : "") @(HasImg ? "lt" : "")" @onclick:stopPropagation="true" @onclick="() => OnToggleFav.InvokeAsync(Item.Id)" title="Favorite">
+        @((MarkupString)BookmarkIcons.Svg("star", 13))
+    </button>
+</div>
+
+@code {
+    [Parameter] public BookmarkItem Item { get; set; } = null!;
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public EventCallback<string> OnOpen { get; set; }
+    [Parameter] public EventCallback<Microsoft.AspNetCore.Components.Web.MouseEventArgs> OnContextMenu { get; set; }
+    [Parameter] public EventCallback<string> OnToggleFav { get; set; }
+    // ADDITIVE: file tile rendering mode ("preview" | "icon" | "sheet") + toast hook.
+    [Parameter] public string FileCardStyle { get; set; } = "preview";
+    [Parameter] public EventCallback<string> OnToast { get; set; }
+
+    private BookmarkCardData _d = null!;
+    private bool _dropHi;
+
+    protected override void OnParametersSet()
+    {
+        _d = BookmarkCardData.From(Item);
+    }
+
+    private bool HasImg => !string.IsNullOrEmpty(_d.Img);
+    private bool IsVideo => Item.Type == "video";
+    private bool IsCode => Item.Type == "snippet";
+    private bool CanDrag => _d.IsLocalFile;
+    private bool ShowRealImage => !string.IsNullOrEmpty(_d.AppIcon)
+        && (_d.IsProgram || _d.FileIconKind == "icon" || FileCardStyle == "preview");
+    private bool UseBadge => !ShowRealImage && FileCardStyle == "icon" && !_d.IsProgram;
+    private string BadgeText => string.IsNullOrEmpty(_d.FileExt) ? "FILE" : _d.FileExt;
+
+    private void OnDragStart()
+    {
+        if (!_d.IsLocalFile) return;
+        State.DragItemId = Item.Id;
+    }
+
+    private void OnDragEnd()
+    {
+        State.DragItemId = null;
+        _dropHi = false;
+    }
+
+    private void OnDragOver()
+    {
+        if (!_d.IsLocalFile) return;
+        if (!string.IsNullOrEmpty(State.DragItemId) && State.DragItemId != Item.Id) _dropHi = true;
+    }
+
+    private void OnDragLeave() => _dropHi = false;
+
+    private async Task OnDropAsync()
+    {
+        _dropHi = false;
+        var draggedId = State.DragItemId;
+        State.DragItemId = null;
+        if (string.IsNullOrEmpty(draggedId) || draggedId == Item.Id || !_d.IsLocalFile) return;
+        var ok = await State.GroupItemsIntoFolderAsync(draggedId, Item.Id);
+        if (OnToast.HasDelegate)
+            await OnToast.InvokeAsync(ok
+                ? (L.Lang == "ar" ? "اتعمل الكولكشن ✓" : "Collection created ✓")
+                : (L.Lang == "ar" ? "مقدرتش أجمعهم — لازم ملفات محلية" : "Could not group — local files only"));
+    }
+
+    private string CodePreview
+    {
+        get
+        {
+            var lines = (_d.Desc ?? string.Empty).Split('\n');
+            return string.Join('\n', lines.Take(8));
+        }
+    }
+
+    private RenderFragment Tags(int n) => @<span class="tags">
+        @foreach (var t in _d.Tags.Take(n))
+        {
+            <span class="chip" @((MarkupString)BookmarkQuery.TagStyleAttr(t, State.Tags))>@t</span>
+        }
+    </span>;
+}

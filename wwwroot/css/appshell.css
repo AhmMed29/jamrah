@@ -1,0 +1,116 @@
+/* App shell — the fixed library sidebar shown on every page.
+   Geometry mirrors the removed native MainPage sidebar:
+   250px, flush left, #f7f6f3 bg, 1px #e9e6e0 right border. */
+.page-shell{
+    --bg:#f7f6f3; --surface:#fff; --ink:#181715; --ink2:#59554e; --ink3:#a5a199;
+    --line:#e9e6e0; --line2:#d8d4cb; --hover:#f1efe9;
+    --sans:'Tajawal','Segoe UI',system-ui,sans-serif;
+    display:grid;grid-template-columns:auto 1fr;grid-template-rows:1fr;overflow:hidden;background:var(--bg);
+    /* FIX: pin the shell to the viewport so the document itself can never scroll
+       (root zoom inflates vh boxes → body scroll moved both panels together).
+       Panels keep their own independent scroll. */
+    position:fixed;inset:0;
+}
+.page-shell-frame{min-width:0;min-height:0;height:100%;overflow:hidden}
+/* Resizable sidebar: invisible 6px grab strip on the sidebar edge. */
+.page-shell .sb-rz{position:absolute;top:0;bottom:0;left:calc(var(--sbw,200px) - 3px);width:6px;z-index:7;cursor:col-resize;touch-action:none}
+.page-shell .sb-rz:hover{background:linear-gradient(90deg,transparent 0,#18171522 50%,transparent 100%)}
+.page-shell.slim .sb-rz{display:none}
+/* Arrow-key equivalent: keep the grip reachable with keyboard. */
+.page-shell .sb-rz:focus-visible{outline:2px solid var(--ink);outline-offset:-2px;background:#18171511}
+
+/* Reset + base — scoped to the sidebar only so page styles stay untouched */
+.page-shell .app-sb,.page-shell .app-sb *{margin:0;padding:0;box-sizing:border-box}
+.page-shell .app-sb{font-family:var(--sans);color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased;scrollbar-width:none;
+    overflow-y:auto;overflow-x:hidden;border-right:1px solid var(--line);background:var(--bg);white-space:nowrap;height:100%;width:var(--sbw,200px);
+    /* FIX: independent sidebar scroll — % of the pinned shell (zoom-proof),
+       never chains into the page scroll. */
+    min-height:0;overscroll-behavior:contain;
+    transition:margin-left .28s cubic-bezier(.25,.9,.3,1),opacity .25s ease}
+.page-shell.slim .app-sb{margin-left:calc(-1 * var(--sbw,200px) - 20px);opacity:0;pointer-events:none}
+.page-shell .app-sb button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.page-shell .app-sb svg{flex:none;vertical-align:-3px}
+.page-shell .app-sb ::-webkit-scrollbar{display:none}
+
+/* Brand */
+.page-shell .sb-brand{display:flex;align-items:center;gap:10px;padding:18px 16px 12px}
+.page-shell .sb-mark{width:25px;height:25px;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px;border-radius:7px;flex:none}
+.page-shell .sb-name{font-weight:800;font-size:17px}
+.page-shell .sb-coll{width:26px;height:26px;margin-left:auto;display:grid;place-items:center;border-radius:6px;color:var(--ink3)}
+.page-shell .sb-coll:hover{background:var(--hover);color:var(--ink)}
+
+/* Sections */
+.page-shell .sb-sec{display:flex;align-items:center;gap:6px;padding:15px 17px 5px;font-size:10.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--ink3);cursor:pointer;user-select:none}
+.page-shell .sb-sec:hover{color:var(--ink)}
+.page-shell .sb-sec .chev{margin-left:auto;display:grid;place-items:center;transition:transform .18s}
+.page-shell .sb-sec.closed .chev{transform:rotate(-90deg)}
+.page-shell .sb-sec .sb-sec-add{width:20px;height:20px;display:grid;place-items:center;border-radius:5px;color:var(--ink3);opacity:.45;transition:opacity .12s,background .12s}
+.page-shell .sb-sec:hover .sb-sec-add{opacity:1}
+.page-shell .sb-sec .sb-sec-add:hover{background:var(--line2);color:var(--ink)}
+
+/* Items */
+.page-shell .sb-i{display:flex;align-items:center;gap:9px;padding:6px 10px;margin:1px 8px;border-radius:8px;color:var(--ink2);cursor:pointer;font-weight:500;font-size:13.5px;user-select:none}
+.page-shell .sb-i:hover{background:var(--hover);color:var(--ink)}
+.page-shell .sb-i.on{background:var(--ink);color:#fff}
+.page-shell .sb-i .n{overflow:hidden;text-overflow:ellipsis}
+.page-shell .sb-i .c{margin-left:auto;font-size:11px;color:var(--ink3);font-weight:700}
+.page-shell .sb-i.on .c{color:#ffffff99}
+.page-shell .sb-i .dots{margin-left:auto;opacity:0;color:var(--ink3);display:grid;place-items:center;width:20px;height:20px;border-radius:5px;flex:none}
+.page-shell .sb-i .dots:hover{background:var(--line2);color:var(--ink)}
+.page-shell .sb-i:hover .dots{opacity:1}
+.page-shell .sb-i.has-dots:hover .c{display:none}
+.page-shell .sb-i .chev{width:17px;height:17px;flex:none;display:grid;place-items:center;color:var(--ink3);transition:transform .18s;border-radius:4px}
+.page-shell .sb-folder.closed>.chev{transform:rotate(-90deg)}
+.page-shell .sb-i.drop-hi{background:var(--hover);box-shadow:inset 0 0 0 2px var(--ink);border-radius:8px}
+.page-shell .sb-navi{font-weight:700}
+
+/* Library group nested under the Bookmarks nav button */
+.page-shell .bm-nest{margin-left:14px;border-left:1px solid var(--line);padding-left:4px}
+.page-shell .sb-navi .chev{margin-left:auto;display:grid;place-items:center;color:var(--ink3);transition:transform .18s}
+.page-shell .sb-navi.closed .chev{transform:rotate(-90deg)}
+.page-shell .sb-navi.on .chev{color:#ffffff99}
+
+/* Tree + misc */
+.page-shell .sb-sub{margin-left:15px;border-left:1px solid var(--line);padding-left:2px}
+/* v2 parity (bookmark-v2.html): straight indented tree line for nested folders */
+.page-shell .atree-lvl{margin-left:14px;border-left:1px solid var(--line2);padding-left:2px}
+/* Folder inline rename */
+.page-shell .sb-ren{min-width:0;flex:1;height:23px;border:1px solid var(--ink);border-radius:6px;padding:0 6px;
+    font:inherit;font-size:13px;font-weight:600;color:var(--ink);background:var(--surface);outline:none}
+.page-shell .sb-ren ~ .dots{display:none}
+/* v2 parity: folder color dot next to the fixed folder icon */
+.page-shell .sb-add{display:flex;align-items:center;gap:8px;padding:5px 10px;margin:2px 8px;border-radius:8px;color:var(--ink3);font-size:12.5px;font-weight:500;cursor:pointer}
+.page-shell .sb-add:hover{color:var(--ink);background:var(--hover)}
+.page-shell .sb-foot{padding:16px;font-size:11.5px;color:var(--ink3);border-top:1px solid var(--line);margin-top:14px;white-space:normal}
+/* v2 parity (bookmark-v2.html): settings button pinned in the footer */
+.page-shell .sb-setbtn{display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:1px solid var(--line2);border-radius:9px;background:var(--surface);font-weight:700;font-size:13px;color:var(--ink2);cursor:pointer}
+.page-shell .sb-setbtn:hover{color:var(--ink);background:var(--hover)}
+.page-shell .sb-emoji{font-size:15px;line-height:1;flex:none;width:16px;text-align:center}
+
+/* Floating expand button (sidebar collapsed) — sits in the topbar row,
+   left of the page's action buttons (e.g. "مهمة جديدة") */
+.page-shell-expand{position:fixed;top:9px;left:16px;z-index:40;width:34px;height:34px;display:grid;place-items:center;
+    border:1px solid #e9e6e0;border-radius:8px;color:#59554e;background:rgba(247,246,243,.92);transition:.15s;font:inherit;cursor:pointer}
+.page-shell-expand:hover{background:#fff;border-color:#d8d4cb;color:#181715}
+/* Make room for the floating ☰ inside the page's topbar actions row while collapsed */
+.page-shell.slim .topbar-actions{padding-left:42px}
+
+/* Folder context menu (sidebar tree + folder cards) */
+.ctx-scrim{position:fixed;inset:0;z-index:80;background:transparent}
+.ctx-menu{position:fixed;z-index:81;width:242px;max-height:min(430px,calc(100vh - 16px));overflow-y:auto;
+    background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px;
+    box-shadow:0 18px 50px rgba(20,18,15,.22);font-family:var(--sans);font-size:13.5px;color:var(--ink2)}
+.ctx-menu .ctx-i{display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border-radius:7px;
+    color:var(--ink2);font:inherit;font-weight:600;text-align:start;background:none;border:0;cursor:pointer;white-space:nowrap}
+.ctx-menu .ctx-i svg{flex:none;color:var(--ink3)}
+.ctx-menu .ctx-i:hover{background:var(--hover);color:var(--ink)}
+.ctx-menu .ctx-i:hover svg{color:var(--ink)}
+.ctx-menu .ctx-i.dgr{color:#b91c1c}
+.ctx-menu .ctx-i.dgr svg{color:#b91c1c}
+.ctx-menu .ctx-i[disabled]{opacity:.45;pointer-events:none}
+.ctx-menu .ctx-sep{height:1px;background:var(--line);margin:5px 6px}
+.ctx-menu .ctx-chev{margin-left:auto;display:grid;place-items:center;color:var(--ink3);transition:transform .15s}
+.ctx-menu .ctx-chev.open{transform:rotate(180deg)}
+.ctx-menu .ctx-sub{margin:2px 0 4px 8px;padding-left:6px;border-left:1px solid var(--line2);max-height:220px;overflow-y:auto}
+.ctx-menu .ctx-sub .ctx-i{font-weight:500;font-size:12.5px;padding:6px 8px}
+.ctx-menu .ctx-empty{font-size:12px;color:var(--ink3);padding:6px 10px}

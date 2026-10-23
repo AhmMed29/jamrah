@@ -1,0 +1,130 @@
+@namespace Jamrah.Presentation.Bookmarks
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@inject BookmarkStateService State
+@inject LocalizationService L
+
+@* v2 parity (pvCardHtml): side preview — title/domain/actions/where/saved/tags/cover/summary *@
+@if (_item != null)
+{
+    var localPath = LocalFileActions.PathFor(_item);
+    <div class="pv-card">
+        <div class="pv-h">
+            <span>@L["bmk.preview"]</span>
+            <button class="pv-x" @onclick="() => OnClose.InvokeAsync()" title="Close (Esc)">@((MarkupString)BookmarkIcons.Svg("x", 16))</button>
+        </div>
+        <div class="pv-b">
+            <div class="pv-t" dir="auto">@_item.Title</div>
+            @if (!string.IsNullOrEmpty(_d.Url))
+            {
+                <div class="pv-dom">@_d.Domain</div>
+            }
+            <div class="pv-acts">
+                @if (!string.IsNullOrEmpty(_d.Url))
+                {
+                    <a class="btn sm pri" href="@_d.Url" target="_blank" rel="noopener">@((MarkupString)BookmarkIcons.Svg("external", 13)) @L["bmk.open"]</a>
+                    <button class="btn sm" @onclick="CopyLink">@((MarkupString)BookmarkIcons.Svg("copy", 13)) @L["bmk.copyLink"]</button>
+                }
+                else if (localPath != null && LocalFileActions.Exists(_item))
+                {
+                    <button class="btn sm pri" @onclick="() => LocalFileActions.OpenAsync(localPath)">@((MarkupString)BookmarkIcons.Svg("external", 13)) @L["bmk.openFile"]</button>
+                }
+                <button class="btn sm" @onclick="Edit">@((MarkupString)BookmarkIcons.Svg("edit", 13)) @L["com.edit"]</button>
+                <button class="btn sm" @onclick="Fav">@((MarkupString)BookmarkIcons.Svg("star", 13)) @(_item.Favorite ? L["bmk.unfav"] : L["bmk.fav"])</button>
+                <button class="btn sm" @onclick="Pin">@((MarkupString)BookmarkIcons.Svg("pin", 13)) @(_item.Pinned ? L["bmk.unpin"] : L["bmk.pin"])</button>
+                <button class="btn sm" @onclick="Details">@((MarkupString)BookmarkIcons.Svg("eye", 13)) @L["bmk.details"]</button>
+                <button class="btn sm dgr" @onclick="Trash">@((MarkupString)BookmarkIcons.Svg("trash", 13))</button>
+            </div>
+            <div class="pv-crumbs"><span style="color:var(--ink3)">@L["bmk.where"]:</span>@WhereCrumbs</div>
+            <div class="pv-crumbs"><span style="color:var(--ink3)">@L["bmk.savedLbl"]:</span><span>@BookmarkCardData.FmtDate(_item.CreatedAt, L.Lang) · @BookmarkCardData.FmtAgo(_item.CreatedAt, L.Lang)</span></div>
+            @if (_d.Tags.Count > 0)
+            {
+                <div style="margin-top:12px"><span class="tags">
+                    @foreach (var t in _d.Tags)
+                    {
+                        <span class="chip" @((MarkupString)BookmarkQuery.TagStyleAttr(t, State.Tags))>@t</span>
+                    }
+                </span></div>
+            }
+            @if (!string.IsNullOrEmpty(_d.Img))
+            {
+                <div class="pv-img"><img src="@_d.Img" alt="" /></div>
+            }
+            @if (!string.IsNullOrEmpty(_d.Desc))
+            {
+                <div class="pv-sum" dir="auto"><b>@L["bmk.summary"]</b>@(_d.Desc.Length > 600 ? _d.Desc[..600] : _d.Desc)</div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string? ItemId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<string> OnEdit { get; set; }
+    [Parameter] public EventCallback<string> OnDetails { get; set; }
+    [Parameter] public EventCallback<string> OnCopy { get; set; }
+    [Parameter] public EventCallback<string> OnToggleFav { get; set; }
+    [Parameter] public EventCallback<string> OnTogglePin { get; set; }
+    [Parameter] public EventCallback<string> OnTrash { get; set; }
+
+    private BookmarkItem? _item;
+    private BookmarkCardData _d = null!;
+
+    protected override void OnParametersSet()
+    {
+        _item = string.IsNullOrEmpty(ItemId) ? null : State.Items.FirstOrDefault(i => i.Id == ItemId);
+        if (_item != null) _d = BookmarkCardData.From(_item);
+    }
+
+    private RenderFragment WhereCrumbs => __builder =>
+    {
+        var path = WherePath();
+        if (path.Count == 0)
+        {
+            __builder.AddContent(0, (MarkupString)"<span class=\"crumb\">Inbox · unsorted</span>");
+            return;
+        }
+        for (var i = 0; i < path.Count; i++)
+        {
+            if (i > 0) __builder.AddContent(i * 10 + 1, (MarkupString)"<span>→</span>");
+            var p = path[i];
+            __builder.AddContent(i * 10 + 2, (MarkupString)$"<span class=\"crumb\">{System.Net.WebUtility.HtmlEncode(p)}</span>");
+        }
+    };
+
+    private List<string> WherePath()
+    {
+        var names = new List<string>();
+        if (_item == null) return names;
+        var fids = BookmarkQuery.FoldersOf(_item);
+        if (fids.Count > 0)
+        {
+            var chain = new List<BookmarkFolder>();
+            var fd = State.Folders.FirstOrDefault(x => x.Id == fids[0]);
+            var n = 0;
+            while (fd != null && n++ < 50) { chain.Insert(0, fd); fd = State.Folders.FirstOrDefault(x => x.Id == fd.ParentId); }
+            if (chain.Count > 0)
+            {
+                var coll = State.Collections.FirstOrDefault(c => c.Id == chain[0].CollectionId);
+                if (coll != null) names.Add(coll.Name);
+                names.AddRange(chain.Select(x => x.Name));
+                return names;
+            }
+        }
+        var cids = BookmarkQuery.CollectionsOf(_item);
+        if (cids.Count > 0)
+        {
+            var c = State.Collections.FirstOrDefault(x => x.Id == cids[0]);
+            if (c != null) names.Add(c.Name);
+        }
+        return names;
+    }
+
+    private Task CopyLink() => OnCopy.InvokeAsync(_d.Url);
+    private Task Edit() => OnEdit.InvokeAsync(_item!.Id);
+    private Task Fav() => OnToggleFav.InvokeAsync(_item!.Id);
+    private Task Pin() => OnTogglePin.InvokeAsync(_item!.Id);
+    private Task Details() => OnDetails.InvokeAsync(_item!.Id);
+    private Task Trash() => OnTrash.InvokeAsync(_item!.Id);
+}

@@ -1,0 +1,811 @@
+@namespace Jamrah.Presentation.Bookmarks
+@using System.Text.Json
+@using System.Text.Json.Nodes
+@using System.Text.RegularExpressions
+@using Jamrah.Application.Services
+@using Jamrah.Application.Services.LinkPreview
+@using Jamrah.Core.Entities
+@using Jamrah.Files.Core
+@using Microsoft.JSInterop
+@inject BookmarkStateService State
+@inject BookmarkEmbedService Embed
+@inject LinkPreviewService Previewer
+@inject LinkArchiver Archiver
+@inject LocalizationService L
+@inject IJSRuntime JS
+@implements IDisposable
+
+@* Unified capture / edit modal: one QuickCapture surface for creating and editing items. *@
+<div class="modal-wrap">
+    <div class="modal addm capm">
+        <div class="m-h">
+            <span class="m-t">@(_isEdit ? L["bmk.editItem"] : L["bmk.quickCapture"])</span>
+            @if (!_isEdit)
+            {
+                <span class="hint" style="margin-left:auto">@L["bmk.enterSaves"]</span>
+            }
+            <button class="m-x" @onclick="() => OnClose.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("x", 16))</button>
+        </div>
+        <div class="m-b" id="capDrop">
+            @if (!_isEdit)
+            {
+                <textarea id="capText" class="cap-big" dir="auto" value="@_text" @oninput="e => _text = e.Value?.ToString() ?? string.Empty"
+                          @onkeydown="OnKeyDown" placeholder="@L["bmk.capPh"]"></textarea>
+            }
+            @if (_imgs.Count > 0 || _files.Count > 0)
+            {
+                <div class="cap-prev">
+                    @foreach (var u in _imgs)
+                    {
+                        var img = u;
+                        <span class="cap-ph"><img src="@img" alt="" /><button type="button" title="@L["com.delete"]" @onclick="() => _imgs.Remove(img)">×</button></span>
+                    }
+                    @foreach (var f in _files)
+                    {
+                        var file = f;
+                        <button type="button" class="chip" @onclick="() => _files.Remove(file)">@file ×</button>
+                    }
+                </div>
+            }
+            <div class="f2" style="margin-top:@(_isEdit ? "0" : "10px")">
+                <div class="fld" style="margin:0"><label>@L["bmk.capTitle"]</label>
+                    <input dir="auto" value="@_title" @oninput="e => _title = e.Value?.ToString() ?? string.Empty" placeholder="@L["bmk.capTitlePh"]" spellcheck="false" />
+                </div>
+                <div class="fld" style="margin:0"><label>@L["bmk.capTags"]</label>
+                    <div class="tagadd" style="padding:5px 8px">
+                        @foreach (var t in _tags)
+                        {
+                            <button type="button" class="chip x" @onclick="() => _tags.Remove(t)" @((MarkupString)BookmarkQuery.TagStyleAttr(t, State.Tags))>@t</button>
+                        }
+                        <input value="@_tagInput" @oninput="e => _tagInput = e.Value?.ToString() ?? string.Empty" @onkeydown="TagKey" placeholder="@L["bmk.tagPh"]" />
+                    </div>
+                </div>
+            </div>
+            @if (!_isEdit && Suggested.Count > 0)
+            {
+                <div style="margin-top:8px"><span class="hint">@L["bmk.suggestedTags"]</span>
+                    @foreach (var s in Suggested)
+                    {
+                        <button type="button" class="chip" @onclick="() => AddTag(s)" @((MarkupString)BookmarkQuery.TagStyleAttr(s, State.Tags))>@s</button>
+                    }
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(_err))
+            {
+                <div class="embfail" style="margin-top:10px">@_err<button class="embx" @onclick="() => _err = null">×</button></div>
+            }
+
+            <div class="fld" style="margin-top:10px">
+                <label style="display:flex;align-items:center;gap:8px">
+                    <span>@L["bmk.description"]</span>
+                    <span class="hint" style="margin-left:auto;font-variant-numeric:tabular-nums">@_desc.Length/@NoteText.DescriptionMax</span>
+                </label>
+                <input dir="auto" value="@_desc" @oninput="DescriptionInput" maxlength="@NoteText.DescriptionMax"
+                       placeholder="@L["bmk.descPh"]" spellcheck="false" />
+                <p class="hint" style="margin:4px 0 0">@L["bmk.descHint"]</p>
+            </div>
+
+            <button type="button" class="advT @(_detailsOpen ? "open" : "")" @onclick="() => _detailsOpen = !_detailsOpen">
+                @((MarkupString)BookmarkIcons.Svg("sliders", 14))<span>@L["bmk.advOptions"]</span>
+                <span class="advn">@(L.Lang == "ar" ? "النوع، الفولدر، الكولكشن، لينك، نوت..." : "type, folder, collections, link, notes...")</span>
+                @((MarkupString)BookmarkIcons.Svg("chevD", 13))
+            </button>
+            @if (_detailsOpen)
+            {
+                <div class="advB">
+                    <div class="f2">
+                        <div class="fld"><label>@L["bmk.type"]</label>
+                            <select value="@_type" @onchange="TypeChanged">
+                                @foreach (var t in BookmarkQuery.Types.Keys)
+                                {
+                                    <option value="@t">@BookmarkQuery.TypeName(t, L.Lang)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="fld"><label>@L["bmk.folder"]</label>
+                            <select @bind="_folderId">
+                                <option value="">@L["bmk.noneOpt"]</option>
+                                <optgroup label="@L["nav.standalone"]">@foreach (var (f, depth) in FolderOptions(null)) { <option value="@f.Id">@(new string('—', depth * 2))@f.Name</option> } </optgroup>
+                                @foreach (var c in State.Collections)
+                                {
+                                    var inner = FolderOptions(c.Id);
+                                    @if (inner.Count > 0)
+                                    {
+                                        <optgroup label="@c.Name">@foreach (var (f, depth) in inner) { <option value="@f.Id">@(new string('—', depth * 2))@f.Name</option> }</optgroup>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="f2">
+                        <div class="fld"><label>@L["bmk.page"]</label>
+                            <select @bind="_pageId">
+                                <option value="">@L["bmk.noneOpt"]</option>
+                                @foreach (var pg in State.Pages.Where(p => !p.IsArchived)) { <option value="@pg.Id">@PageLabel(pg.Id)</option> }
+                            </select>
+                        </div>
+                        <div class="fld"><label>@L["bmk.collections"]</label>
+                            <div class="tcheck" style="padding-top:3px">
+                                @foreach (var c in State.Collections)
+                                {
+                                    <button type="button" class="chip @(_colIds.Contains(c.Id) ? "on" : "")" @onclick="() => ToggleCol(c.Id)">
+                                        @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(c.Icon) ? (BookmarkQuery.ParseSmart(c.SmartJson) != null ? "spark" : "layers") : c.Icon, "layers")) @c.Name
+                                    </button>
+                                }
+                                @if (State.Collections.Count == 0) { <span class="hint">@L["bmk.noCollections"]</span> }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fld"><label>@L["bmk.linkEmbed"]</label>
+                        <div class="embedrow">
+                            <input type="url" value="@_link" @oninput="e => _link = e.Value?.ToString() ?? string.Empty" placeholder="@L["bmk.linkPh"]" spellcheck="false" />
+                            <button type="button" class="btn pri" @onclick="Fetch" disabled="@_fetching">
+                                @if (_fetching) { <span class="spin"></span> } else { @((MarkupString)BookmarkIcons.Svg("download", 13)) } @L["bmk.fetch"]
+                            </button>
+                        </div>
+                        @if (_fetchMsg != null)
+                        {
+                            <div class="@(_fetchOk ? "embsuccess" : "embfail")">
+                                @((MarkupString)BookmarkIcons.Svg(_fetchOk ? "check" : "info", 13))
+                                <span>@((MarkupString)_fetchMsg)</span>
+                                <button type="button" class="embx" @onclick="() => _fetchMsg = null">×</button>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(_thumbUrl))
+                        {
+                            <div class="embprev"><img src="@_thumbUrl" alt="" /><div><b>@(_fetchProvider ?? L["bmk.coverLbl"])</b><span>@L["bmk.coverHint"]</span></div></div>
+                        }
+                    </div>
+                    <div class="fld"><label>@L["com.notes"] <span style="text-transform:none;letter-spacing:0;font-weight:500">(markdown)</span></label><textarea dir="auto" style="min-height:70px" @bind="_notes"></textarea></div>
+                    <div class="fld"><label>@L["bmk.thumbnail"]</label>
+                        <div class="upl">
+                            @if (!string.IsNullOrEmpty(_thumbUrl)) { <img class="imgpv" src="@_thumbUrl" style="width:44px;height:34px" alt="" /> }
+                            <input type="url" @bind="_thumbUrl" placeholder="@L["bmk.thumbPh"]" style="flex:1;min-width:140px" />
+                            <span class="hint" style="margin:0">@L["bmk.pasteUrl"]</span>
+                        </div>
+                    </div>
+                    @{
+                        var fields = BookmarkTypeSchema.For(_type).Where(f => f.Key != "content" && f.Key != "url" && f.Type != "image").ToList();
+                        var simple = fields.Where(f => f.Type is not ("longtext" or "progress" or "file")).ToList();
+                        var big = fields.Where(f => f.Type is "longtext" or "progress" or "file").ToList();
+                    }
+                    @if (simple.Count > 0)
+                    {
+                        <div class="f2">
+                            @foreach (var fd in simple)
+                            {
+                                <div class="fld"><label>@LocalizationService.MetaLabel(fd.Key, L.Lang, fd.Label)</label><BookmarkMetaField Field="fd" Value="@GetMeta(fd.Key)" ValueChanged="v => SetMeta(fd.Key, v)" /></div>
+                            }
+                        </div>
+                    }
+                    @foreach (var fd in big)
+                    {
+                        <div class="fld"><label>@LocalizationService.MetaLabel(fd.Key, L.Lang, fd.Label)</label><BookmarkMetaField Field="fd" Value="@GetMeta(fd.Key)" ValueChanged="v => SetMeta(fd.Key, v)" /></div>
+                    }
+                    <div class="fld"><label>@L["bmk.flags"]</label>
+                        <div class="ckrow">
+                            <label class="ck"><input type="checkbox" @bind="_fav" /> @L["bmk.fav"]</label>
+                            <label class="ck"><input type="checkbox" @bind="_pin" /> @L["bmk.pin"]</label>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (!_isEdit)
+            {
+                <p class="hint" style="margin-top:10px">@L["bmk.capHint"]</p>
+                <div style="margin-top:8px">
+                    <label class="btn sm" style="cursor:pointer">@((MarkupString)BookmarkIcons.Svg("image", 13)) @L["bmk.attachImg"]
+                        <InputFile OnChange="AttachFiles" multiple accept="image/*" style="display:none" />
+                    </label>
+                </div>
+            }
+        </div>
+        <div class="m-f">
+            <button class="btn" @onclick="() => OnClose.InvokeAsync()">@L["com.cancel"]</button>
+            <button class="btn pri" @onclick="SaveAsync" disabled="@_saving">
+                @if (_saving) { <span class="spin"></span> }
+                @(_isEdit ? L["bmk.saveChangesBtn"] : (string.IsNullOrEmpty(_folderId) ? L["bmk.saveToInbox"] : L["com.save"]))
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? EditId { get; set; }
+    [Parameter] public string? PresetFolderId { get; set; }
+    [Parameter] public string? PresetType { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<string> OnSaved { get; set; }
+    [Parameter] public EventCallback<string> OnUpdated { get; set; }
+
+    private bool _isEdit;
+    private string? _editId;
+    private string _type = "note";
+    private bool _typeTouched;
+    private string _title = string.Empty;
+    private string _text = string.Empty;
+    private string _desc = string.Empty;
+    private string _notes = string.Empty;
+    private string _link = string.Empty;
+    private string _thumbUrl = string.Empty;
+    private string _siteIcon = string.Empty;
+    private bool _previewOk;
+    private string _tpl = "detailed";
+    private readonly List<string> _tags = new();
+    private string _tagInput = string.Empty;
+    private string _folderId = string.Empty;
+    private string _pageId = string.Empty;
+    private readonly List<string> _colIds = new();
+    private bool _fav;
+    private bool _pin;
+    private bool _detailsOpen;
+    private bool _saving;
+    private string? _err;
+    private bool _fetching;
+    private string? _fetchMsg;
+    private bool _fetchOk;
+    private string? _fetchProvider;
+    private readonly Dictionary<string, string> _meta = new();
+    private JsonObject? _metaSource;
+    private readonly List<string> _imgs = new();
+    private readonly List<string> _files = new();
+    private DotNetObjectReference<BookmarkQuickCapture>? _capRef;
+
+    private List<string> Suggested
+    {
+        get
+        {
+            var low = " " + ((_text ?? string.Empty) + " " + _title + " " + _desc).ToLowerInvariant() + " ";
+            return State.Tags.Select(t => t.Name)
+                .Where(n => !string.IsNullOrEmpty(n) && n.Length > 2 && low.Contains(n.ToLowerInvariant()) && !_tags.Contains(n))
+                .Take(5).ToList();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        L.OnLanguageChanged += OnLangChanged;
+        _isEdit = !string.IsNullOrEmpty(EditId);
+        _editId = EditId;
+        if (_isEdit)
+        {
+            var it = State.Items.FirstOrDefault(i => i.Id == _editId);
+            if (it != null) LoadItem(it);
+            _detailsOpen = true;
+        }
+        else
+        {
+            if (!string.IsNullOrEmpty(PresetFolderId)) _folderId = PresetFolderId;
+            if (!string.IsNullOrEmpty(PresetType)) { _type = PresetType; _typeTouched = true; }
+            _tpl = BookmarkQuery.TypeTpl.TryGetValue(_type, out var t) ? t : "detailed";
+        }
+    }
+
+    private void LoadItem(BookmarkItem it)
+    {
+        _type = string.IsNullOrEmpty(it.Type) ? "link" : it.Type;
+        _typeTouched = true;
+        _title = it.Title;
+        var normalized = string.Equals(it.Type, "note", StringComparison.OrdinalIgnoreCase)
+            ? NoteText.Normalize(it.Description, it.Notes)
+            : (Description: NoteText.Clamp(it.Description), Notes: it.Notes);
+        _desc = normalized.Description;
+        _notes = normalized.Notes;
+        _link = it.Url;
+        _thumbUrl = it.Thumb;
+        _siteIcon = string.Empty;
+        _previewOk = false;
+        _tags.Clear();
+        _tags.AddRange(BookmarkQuery.TagsOf(it));
+        _folderId = BookmarkQuery.FoldersOf(it).FirstOrDefault() ?? string.Empty;
+        _pageId = BookmarkQuery.PagesOf(it).FirstOrDefault() ?? string.Empty;
+        _colIds.Clear();
+        _colIds.AddRange(BookmarkQuery.CollectionsOf(it));
+        _fav = it.Favorite;
+        _pin = it.Pinned;
+        _tpl = string.IsNullOrEmpty(it.Tpl)
+            ? (BookmarkQuery.TypeTpl.TryGetValue(it.Type, out var td) ? td : "detailed")
+            : it.Tpl;
+        _meta.Clear();
+        _metaSource = null;
+        try
+        {
+            var m = JsonNode.Parse(string.IsNullOrWhiteSpace(it.MetadataJson) ? "{}" : it.MetadataJson) as JsonObject;
+            if (m != null)
+            {
+                _metaSource = (JsonObject)m.DeepClone();
+                foreach (var kv in m) _meta[kv.Key] = kv.Value?.ToString() ?? string.Empty;
+                _siteIcon = _meta.TryGetValue("siteIcon", out var si) ? si : string.Empty;
+                try { _previewOk = m["previewOk"]?.GetValue<bool>() == true; } catch { _previewOk = false; }
+            }
+        }
+        catch { }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _isEdit) return;
+        _capRef?.Dispose();
+        _capRef = DotNetObjectReference.Create(this);
+        try { await JS.InvokeVoidAsync("bmCap.init", "capDrop", "capText", _capRef); } catch { }
+    }
+
+    public void Dispose()
+    {
+        L.OnLanguageChanged -= OnLangChanged;
+        try { _capRef?.Dispose(); } catch { }
+        _capRef = null;
+    }
+
+    private void OnLangChanged() => InvokeAsync(StateHasChanged);
+
+    // Called from JS (paste/drop). Slots: max 6 images+files total.
+    [JSInvokable]
+    public Task<int> CapSlots() => Task.FromResult(Math.Max(0, 6 - _imgs.Count - _files.Count));
+
+    [JSInvokable]
+    public Task CapAddImage(string url)
+    {
+        return InvokeAsync(() =>
+        {
+            if (!string.IsNullOrEmpty(url) && _imgs.Count + _files.Count < 6) _imgs.Add(url);
+            StateHasChanged();
+        });
+    }
+
+    [JSInvokable]
+    public Task CapAddFile(string name)
+    {
+        return InvokeAsync(() =>
+        {
+            if (!string.IsNullOrEmpty(name) && _imgs.Count + _files.Count < 6) _files.Add(name);
+            StateHasChanged();
+        });
+    }
+
+    private async Task AttachFiles(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs e)
+    {
+        foreach (var f in e.GetMultipleFiles(6).Take(Math.Max(0, 6 - _imgs.Count - _files.Count)))
+        {
+            try
+            {
+                using var s = f.OpenReadStream(2_000_000);
+                using var ms = new System.IO.MemoryStream();
+                await s.CopyToAsync(ms);
+                _imgs.Add("data:" + f.ContentType + ";base64," + Convert.ToBase64String(ms.ToArray()));
+            }
+            catch { _err = L["bmk.imgTooBig"]; }
+        }
+    }
+
+    private async Task OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey) await SaveAsync();
+    }
+
+    private void TypeChanged(ChangeEventArgs e)
+    {
+        _type = e.Value?.ToString() ?? "link";
+        _typeTouched = true;
+        _tpl = BookmarkQuery.TypeTpl.TryGetValue(_type, out var t) ? t : "detailed";
+    }
+
+    private void TagKey(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") AddTag(_tagInput);
+    }
+
+    private void AddTag(string? tag)
+    {
+        var t = (tag ?? string.Empty).Trim().TrimEnd(',');
+        if (t.Length == 0) return;
+        if (!_tags.Contains(t)) _tags.Add(t);
+        _tagInput = string.Empty;
+    }
+
+    private void ToggleCol(string id)
+    {
+        if (!_colIds.Remove(id)) _colIds.Add(id);
+    }
+
+    private List<(BookmarkFolder Folder, int Depth)> FolderOptions(string? collectionId)
+    {
+        var list = new List<(BookmarkFolder, int)>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        void Walk(string? parentId, int depth)
+        {
+            foreach (var f in State.Folders.Where(x => !x.IsArchived
+                && (x.CollectionId ?? string.Empty) == (collectionId ?? string.Empty)
+                && (x.ParentId ?? string.Empty) == (parentId ?? string.Empty)))
+            {
+                if (!seen.Add(f.Id)) continue;
+                list.Add((f, depth));
+                Walk(f.Id, depth + 1);
+            }
+        }
+        Walk(null, 0);
+        return list;
+    }
+
+    private string PageLabel(string id)
+    {
+        var p = State.Pages.FirstOrDefault(x => x.Id == id);
+        if (p == null) return id;
+        var parts = new List<string>();
+        var n = 0;
+        var cur = p;
+        while (cur != null && n++ < 10) { parts.Insert(0, cur.Name); cur = State.Pages.FirstOrDefault(x => x.Id == cur.ParentPageId); }
+        var prefix = "";
+        if (!string.IsNullOrEmpty(p.FolderId))
+        {
+            var f = State.Folders.FirstOrDefault(x => x.Id == p.FolderId);
+            if (f != null) prefix = f.Name + " › ";
+        }
+        else if (!string.IsNullOrEmpty(p.CollectionId))
+        {
+            var c = State.Collections.FirstOrDefault(x => x.Id == p.CollectionId);
+            if (c != null) prefix = c.Name + " › ";
+        }
+        return prefix + string.Join(" › ", parts);
+    }
+
+    private string GetMeta(string key) => _meta.TryGetValue(key, out var v) ? v : string.Empty;
+    private void SetMeta(string key, string v) => _meta[key] = v;
+
+    private void DescriptionInput(Microsoft.AspNetCore.Components.ChangeEventArgs e)
+    {
+        _desc = NoteText.Clamp(e.Value?.ToString());
+    }
+
+    private static string ExtractUrl(string text)
+    {
+        var m = Regex.Match(text, @"https?://[^\s)>\]]+");
+        return m.Success ? m.Value : string.Empty;
+    }
+
+    private static bool IsVideoUrl(string url) =>
+        Regex.IsMatch(url, @"youtu\.?be|vimeo|tiktok|twitch|dailymotion|watch\?v=|/shorts/|/reel/", RegexOptions.IgnoreCase);
+
+    private async Task Fetch()
+    {
+        if (string.IsNullOrWhiteSpace(_link) || _fetching) return;
+        _fetching = true;
+        _fetchMsg = null;
+        try
+        {
+            var url = LinkPreviewService.NormalizeUrl(_link.Trim());
+            var res = await Previewer.PreviewAsync(url);
+            var dom = BookmarkCardData.HostOf(url);
+            var plat = BookmarkEmbedService.PlatformName(dom);
+            if (res == null)
+            {
+                var live = BookmarkTemplates.EmbedHtml(url, dom) != null;
+                if (!_isEdit)
+                {
+                    if (Regex.IsMatch(dom, "facebook|instagram|twitter|x\\.com|threads|reddit|linkedin")) { _type = "post"; _tpl = "post"; _typeTouched = true; }
+                    else if (Regex.IsMatch(dom, @"youtu\.?be")) { _type = "video"; _tpl = "landscape"; _typeTouched = true; }
+                }
+                _fetchOk = false;
+                _fetchProvider = plat;
+                _fetchMsg = L["bmk.fetchFail1"] + $" <b>{System.Net.WebUtility.HtmlEncode(plat)}</b> " + L["bmk.fetchFail2"] + (live ? " " + L["bmk.fetchFailLive"] + " " : " ") + L["bmk.fetchFail3"];
+                return;
+            }
+            if (!string.IsNullOrWhiteSpace(res.Title) && string.IsNullOrWhiteSpace(_title)) _title = res.Title;
+            if (!string.IsNullOrWhiteSpace(res.Desc) && string.IsNullOrWhiteSpace(_desc)) _desc = NoteText.Clamp(res.Desc);
+            if (!string.IsNullOrWhiteSpace(res.ImageUrl) && string.IsNullOrWhiteSpace(_thumbUrl)) _thumbUrl = res.ImageUrl;
+            if (!string.IsNullOrWhiteSpace(res.FaviconUrl) && string.IsNullOrWhiteSpace(_siteIcon)) _siteIcon = res.FaviconUrl;
+            _previewOk = true;
+            var fields = BookmarkTypeSchema.For(_type);
+            if (!string.IsNullOrWhiteSpace(res.Author) && fields.Any(f => f.Key == "author") && string.IsNullOrWhiteSpace(GetMeta("author")))
+                SetMeta("author", res.Author);
+            if (!string.IsNullOrWhiteSpace(res.Provider))
+            {
+                foreach (var k in new[] { "site", "platform", "source", "publisher", "channel" })
+                    if (fields.Any(f => f.Key == k) && string.IsNullOrWhiteSpace(GetMeta(k))) { SetMeta(k, res.Provider); break; }
+            }
+            if (res.DurationMinutes.HasValue && res.DurationMinutes.Value > 0
+                && fields.Any(f => f.Key == "duration") && string.IsNullOrWhiteSpace(GetMeta("duration")))
+                SetMeta("duration", res.DurationMinutes.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            if (!string.IsNullOrWhiteSpace(res.PublishedDate)
+                && fields.Any(f => f.Key == "date") && string.IsNullOrWhiteSpace(GetMeta("date")))
+                SetMeta("date", res.PublishedDate);
+            var suggested = string.IsNullOrWhiteSpace(res.SuggestedType)
+                ? BookmarkEmbedService.SuggestType(dom, res.Otype) : res.SuggestedType;
+            if (!_isEdit && !_typeTouched && suggested != _type)
+            {
+                _type = suggested;
+                _tpl = BookmarkQuery.TypeTpl.TryGetValue(suggested, out var t) ? t : "detailed";
+                _typeTouched = true;
+            }
+            _fetchOk = true;
+            _fetchProvider = res.Provider;
+            _fetchMsg = L["bmk.fetchOk1"] + $" <b>{System.Net.WebUtility.HtmlEncode(res.Provider)}</b> " + L["bmk.fetchOk2"];
+        }
+        finally { _fetching = false; }
+    }
+
+    private string BuildMetadataJson(bool editing)
+    {
+        var obj = editing && _metaSource != null
+            ? (JsonObject)_metaSource.DeepClone()
+            : new JsonObject();
+        var fields = BookmarkTypeSchema.For(_type);
+        foreach (var fd in fields)
+        {
+            var v = GetMeta(fd.Key);
+            if (string.IsNullOrEmpty(v)) { obj.Remove(fd.Key); continue; }
+            if (fd.Type is "number" or "rating" or "progress" &&
+                double.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var n))
+                obj[fd.Key] = JsonValue.Create(n);
+            else
+                obj[fd.Key] = v;
+        }
+        if (!string.IsNullOrWhiteSpace(_siteIcon)) obj["siteIcon"] = _siteIcon.Trim();
+        if (_previewOk) obj["previewOk"] = true;
+        return obj.ToJsonString();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_saving) return;
+        AddTag(_tagInput);
+        var text = (_text ?? string.Empty).Trim();
+        var url = _link.Trim();
+        if (url.Length == 0 && text.Length > 0) url = ExtractUrl(text);
+
+        if (!_isEdit && text.Length == 0 && url.Length == 0 && _imgs.Count == 0 && _files.Count == 0)
+        {
+            _err = L["bmk.writeFirst"];
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var codeish = Regex.IsMatch(text, @"```|^\s*(function|const |let |var |def |class |import |#include|public |private )", RegexOptions.Multiline);
+            var kind = _type;
+            if (!_isEdit && !_typeTouched)
+            {
+                kind = codeish ? "snippet"
+                    : (_imgs.Count > 0 && url.Length == 0 ? "image"
+                    : (url.Length > 0 ? (IsVideoUrl(url) ? "video" : "link") : "note"));
+                _tpl = BookmarkQuery.TypeTpl.TryGetValue(kind, out var kt) ? kt : "detailed";
+            }
+
+            var title = _title.Trim();
+            if (title.Length == 0)
+            {
+                var firstLine = text.Split('\n').FirstOrDefault(l => l.Trim() != string.Empty && l.Trim() != url) ?? string.Empty;
+                title = url.Length > 0 ? BookmarkEmbedService.AutoTitle(url) : (firstLine.Length > 70 ? firstLine[..70] : firstLine);
+            }
+            if (title.Length == 0) title = _files.Count > 0 ? _files[0] : L["bmk.untitled"];
+
+            var desc = NoteText.Clamp(_desc);
+            // A note's body belongs in Notes; only other item types use the captured
+            // text as a card description when the user left the description empty.
+            if (desc.Length == 0 && text.Length > 0 && !_isEdit && kind != "note")
+                desc = NoteText.Clamp(url.Length > 0 ? text.Replace(url, string.Empty) : text);
+            var notes = _notes;
+            if (string.IsNullOrWhiteSpace(notes) && kind == "note" && text.Length > 0) notes = text;
+            if (kind == "note")
+            {
+                var normalized = NoteText.Normalize(desc, notes);
+                desc = normalized.Description;
+                notes = normalized.Notes;
+            }
+
+            var tags = _tags.ToList();
+            if (!_isEdit) tags.AddRange(Suggested);
+            tags = tags.Distinct().ToList();
+
+            var thumb = _thumbUrl.Trim();
+            if (string.IsNullOrEmpty(thumb)) thumb = _imgs.Count > 0 ? _imgs[0] : string.Empty;
+            if (string.IsNullOrEmpty(thumb))
+            {
+                var imgKey = BookmarkTypeSchema.For(kind).FirstOrDefault(f => f.Type == "image")?.Key;
+                if (imgKey != null && _meta.TryGetValue(imgKey, out var iv) && iv.StartsWith("http")) thumb = iv;
+            }
+
+            var metaJson = BuildMetadataJson(_isEdit);
+            if (!_isEdit)
+            {
+                var obj = JsonNode.Parse(metaJson) as JsonObject ?? new JsonObject();
+                if (_imgs.Count > 1)
+                    obj["gallery"] = new JsonArray(_imgs.Skip(1).Select(u => JsonValue.Create(u)).ToArray());
+                if (_files.Count > 0)
+                    obj["files"] = new JsonArray(_files.Select(f => JsonValue.Create(f)).ToArray());
+                metaJson = obj.ToJsonString();
+            }
+            else if (BookmarkTypeSchema.For(kind).Any(f => f.Key == "url"))
+            {
+                var obj = JsonNode.Parse(metaJson) as JsonObject ?? new JsonObject();
+                if (url.Length > 0) obj["url"] = url; else obj.Remove("url");
+                metaJson = obj.ToJsonString();
+            }
+
+            string savedId;
+            BookmarkItem saved;
+            if (_isEdit)
+            {
+                var it = State.Items.FirstOrDefault(i => i.Id == _editId);
+                if (it == null) return;
+                it.Title = title; it.Type = kind; it.Url = url; it.Description = desc; it.Notes = notes;
+                it.Thumb = thumb; it.TagsJson = JsonSerializer.Serialize(tags);
+                it.FolderIdsJson = JsonSerializer.Serialize(string.IsNullOrEmpty(_folderId) ? new List<string>() : new List<string> { _folderId });
+                it.PageIdsJson = JsonSerializer.Serialize(string.IsNullOrEmpty(_pageId) ? new List<string>() : new List<string> { _pageId });
+                it.CollectionIdsJson = JsonSerializer.Serialize(_colIds);
+                it.MetadataJson = metaJson; it.Tpl = _tpl;
+                it.Favorite = _fav; it.Pinned = _pin;
+                await State.SaveItemAsync(it);
+                saved = it; savedId = it.Id;
+            }
+            else
+            {
+                saved = new BookmarkItem
+                {
+                    Title = title, Type = kind, Url = url, Description = desc, Notes = notes,
+                    Thumb = thumb, TagsJson = JsonSerializer.Serialize(tags),
+                    FolderIdsJson = JsonSerializer.Serialize(string.IsNullOrEmpty(_folderId) ? new List<string>() : new List<string> { _folderId }),
+                    PageIdsJson = JsonSerializer.Serialize(string.IsNullOrEmpty(_pageId) ? new List<string>() : new List<string> { _pageId }),
+                    CollectionIdsJson = JsonSerializer.Serialize(_colIds),
+                    MetadataJson = metaJson,
+                    Tpl = string.IsNullOrEmpty(_tpl) ? (BookmarkQuery.TypeTpl.TryGetValue(kind, out var tt) ? tt : "detailed") : _tpl,
+                    Favorite = _fav, Pinned = _pin,
+                    CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+                };
+                await State.SaveItemAsync(saved);
+                savedId = saved.Id;
+            }
+
+            foreach (var t in tags)
+                if (!State.Tags.Any(x => x.Name == t))
+                    await State.SaveTagAsync(new BookmarkTag { Name = t });
+
+            if (_isEdit)
+            {
+                _ = ArchiveInBackground(savedId);
+                await OnUpdated.InvokeAsync(savedId);
+            }
+            else
+            {
+                _ = EnrichInBackground(savedId, url);
+                _ = ArchiveInBackground(savedId);
+                await OnSaved.InvokeAsync(savedId);
+            }
+        }
+        catch (Exception ex) { _err = ex.Message; }
+        finally { _saving = false; }
+    }
+
+    private async Task EnrichInBackground(string id, string url)
+    {
+        if (string.IsNullOrEmpty(url)) return;
+        try
+        {
+            var res = await Embed.FetchAsync(url);
+            if (res == null) return;
+            var it = State.Items.FirstOrDefault(i => i.Id == id);
+            if (it == null) return;
+            var touched = false;
+            if ((string.IsNullOrEmpty(it.Title) || it.Title == BookmarkEmbedService.AutoTitle(url)) && !string.IsNullOrEmpty(res.Title))
+            {
+                it.Title = res.Title;
+                touched = true;
+            }
+            if (string.IsNullOrEmpty(it.Description) && !string.IsNullOrEmpty(res.Desc))
+            {
+                it.Description = NoteText.Clamp(res.Desc);
+                touched = true;
+            }
+            if (string.IsNullOrEmpty(it.Thumb) && !string.IsNullOrEmpty(res.Image))
+            {
+                it.Thumb = res.Image;
+                touched = true;
+            }
+            try
+            {
+                var m = JsonNode.Parse(string.IsNullOrWhiteSpace(it.MetadataJson) ? "{}" : it.MetadataJson) as JsonObject
+                    ?? new JsonObject();
+                var metaTouched = false;
+                if (!string.IsNullOrWhiteSpace(res.Icon) && string.IsNullOrWhiteSpace(m["siteIcon"]?.ToString()))
+                {
+                    m["siteIcon"] = res.Icon.Trim();
+                    metaTouched = true;
+                }
+                if (m["previewOk"]?.GetValue<bool>() != true)
+                {
+                    m["previewOk"] = true;
+                    metaTouched = true;
+                }
+                if (metaTouched)
+                {
+                    it.MetadataJson = m.ToJsonString();
+                    touched = true;
+                }
+            }
+            catch { }
+            if (touched)
+            {
+                it.UpdatedAt = DateTime.UtcNow;
+                await State.SaveItemAsync(it);
+            }
+        }
+        catch { }
+    }
+
+    private async Task ArchiveInBackground(string id)
+    {
+        try
+        {
+            var item = State.Items.FirstOrDefault(i => i.Id == id);
+            if (item == null) return;
+            var remoteThumb = item.Thumb;
+            var thumbRes = await Archiver.TrySaveThumbLocalAsync(item.Id, remoteThumb);
+            var typeAtStart = item.Type;
+            var urlAtStart = item.Url;
+            var archiveable = typeAtStart is "link" or "article" or "website" or "documentation"
+                or "post" or "tool" or "research" or "reference" or "course" or "book" or "ebook";
+            string? archiveDir = null;
+            var archiveWords = 0;
+            if (archiveable && !string.IsNullOrWhiteSpace(urlAtStart))
+            {
+                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(45));
+                var (dir, words) = await Archiver.ArchiveArticleAsync(item.Id, urlAtStart.Trim(), cts.Token);
+                archiveDir = dir;
+                archiveWords = words;
+            }
+
+            // Re-read after the awaits: edits may have landed while work was running.
+            var latest = State.Items.FirstOrDefault(i => i.Id == id);
+            if (latest == null) return;
+            var touched = false;
+            JsonObject m;
+            try
+            {
+                m = JsonNode.Parse(string.IsNullOrWhiteSpace(latest.MetadataJson) ? "{}" : latest.MetadataJson) as JsonObject ?? new JsonObject();
+            }
+            catch { m = new JsonObject(); }
+
+            if (!string.IsNullOrWhiteSpace(thumbRes.LocalPath))
+            {
+                if (string.Equals(latest.Thumb, remoteThumb, StringComparison.Ordinal))
+                {
+                    m["thumbLocal"] = thumbRes.LocalPath;
+                    if (!string.IsNullOrWhiteSpace(remoteThumb)) m["thumbSource"] = remoteThumb;
+                    m.Remove("thumbError");
+                    touched = true;
+                }
+            }
+            else if (thumbRes.Reason != "already-local"
+                && string.Equals(latest.Thumb, remoteThumb, StringComparison.Ordinal))
+            {
+                m["thumbError"] = thumbRes.Reason ?? "unknown";
+                touched = true;
+            }
+
+            if (archiveable && string.Equals(latest.Url, urlAtStart, StringComparison.Ordinal))
+            {
+                if (!string.IsNullOrWhiteSpace(archiveDir) && archiveWords > 0)
+                {
+                    m["archivePath"] = archiveDir;
+                    m["archivedAt"] = DateTime.UtcNow.ToString("o");
+                    m["wordCount"] = JsonValue.Create(archiveWords);
+                    m.Remove("archiveError");
+                    touched = true;
+                }
+                else
+                {
+                    m["archiveError"] = "fetch-failed";
+                    touched = true;
+                }
+            }
+            if (touched)
+            {
+                latest.MetadataJson = m.ToJsonString();
+                latest.UpdatedAt = DateTime.UtcNow;
+                await State.SaveItemAsync(latest);
+            }
+        }
+        catch { }
+    }
+}

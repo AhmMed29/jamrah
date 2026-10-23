@@ -1,0 +1,551 @@
+@namespace Jamrah.Presentation.Bookmarks
+@using System.Text.Json
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@using Jamrah.Files.Core
+@using Jamrah.Infrastructure
+@using Markdig
+@using Microsoft.JSInterop
+@inject BookmarkStateService State
+@inject LocalizationService L
+@inject IJSRuntime JS
+
+@if (_item != null)
+{
+    var g = _d;
+    var tags = BookmarkQuery.TagsOf(_item);
+    var rels = BookmarkQuery.RelationsOf(_item);
+    var embed = BookmarkTemplates.EmbedHtml(_item.Url, g.Domain);
+    var previewOk = false;
+    try { previewOk = g.Meta["previewOk"]?.GetValue<bool>() == true; } catch { }
+    var allowEmbed = embed != null && (previewOk || !string.IsNullOrEmpty(g.Img));
+    var localPath = LocalFileActions.PathFor(_item);
+    var localRel = LocalRel(_item);
+    var localKind = localRel == null ? string.Empty : LocalFileService.KindFor(localRel);
+    var localUrl = localRel == null ? null : AppPaths.LibraryUrlFor(localRel);
+    var isNote = string.Equals(_item.Type, "note", StringComparison.OrdinalIgnoreCase);
+    var offline = ReaderHtml();
+    var hasVisual = localUrl != null || allowEmbed || !string.IsNullOrEmpty(g.Img) || !string.IsNullOrEmpty(_item.Url) || localPath != null;
+    var mediaBg = !string.IsNullOrEmpty(g.Img) ? g.Img
+        : localKind is "image" or "video" or "audio" ? localUrl : null;
+
+    <div class="modal-wrap pvm-wrap" @onkeydown="OnKey" tabindex="-1" @ref="_wrapRef" @onclick="Close">
+        <div class="modal pvm" role="dialog" aria-modal="true" dir="@L.Dir" @onclick:stopPropagation="true">
+            <button class="pvm-x" @onclick="Close" title="@(L["com.close"])">@((MarkupString)BookmarkIcons.Svg("x", 16))</button>
+
+            <div class="pvm-body">
+                <div class="pvm-grid @(isNote ? "note" : "")">
+                    @if (hasVisual && !isNote)
+                    {
+                        <div class="pvm-media">
+                            @if (!string.IsNullOrEmpty(mediaBg))
+                            {
+                                <img class="pvm-bg" src="@mediaBg" alt="" onerror="this.remove()" />
+                            }
+                            @if (localKind == "video" && localUrl != null)
+                            {
+                                <div class="pvm-player">
+                                    <video controls preload="metadata" poster="@g.Img" src="@localUrl"></video>
+                                </div>
+                            }
+                            else if (localKind == "audio" && localUrl != null)
+                            {
+                                <div class="pvm-audio">
+                                    @if (!string.IsNullOrEmpty(g.Img)) { <img src="@g.Img" alt="" /> }
+                                    else if (!string.IsNullOrEmpty(g.SiteIcon))
+                                    {
+                                        <span class="pvm-aicon pvm-aicon-img">
+                                            @((MarkupString)BookmarkIcons.Svg("music", 28))
+                                            <img src="@g.SiteIcon" alt="" onerror="this.remove()" />
+                                        </span>
+                                    }
+                                    else { <span class="pvm-aicon">@((MarkupString)BookmarkIcons.Svg("play", 30))</span> }
+                                    <audio controls preload="metadata" src="@localUrl"></audio>
+                                </div>
+                            }
+                            else if (localKind == "image" && localUrl != null)
+                            {
+                                <div class="pvm-image"><img src="@localUrl" alt="@_item.Title" /></div>
+                            }
+                            else if (allowEmbed)
+                            {
+                                <div class="pvm-embed">@((MarkupString)embed!)</div>
+                            }
+                            else if (!string.IsNullOrEmpty(g.Img))
+                            {
+                                <div class="pvm-image"><img src="@g.Img" alt="@_item.Title" /></div>
+                            }
+                            else if (localPath != null)
+                            {
+                                <div class="pvm-file">
+                                    <span class="pvm-ficon">@((MarkupString)BookmarkIcons.Svg(string.IsNullOrEmpty(g.FileIconKind) ? "file" : g.FileIconKind, 34))</span>
+                                    <b dir="auto">@System.IO.Path.GetFileName(localPath)</b>
+                                    <span class="pvm-fext">@g.FileExt</span>
+                                    <button class="btn sm pri" @onclick="OpenFile">@((MarkupString)BookmarkIcons.Svg("external", 13)) @L["bmk.openFile"]</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <button class="pvm-web" @onclick="OpenUrl">
+                                    <span class="pvm-wicon">
+                                        @((MarkupString)BookmarkIcons.Svg("globe", 26))
+                                        @if (!string.IsNullOrEmpty(g.SiteIcon))
+                                        {
+                                            <img src="@g.SiteIcon" alt="" onerror="this.remove()" />
+                                        }
+                                    </span>
+                                    <b dir="auto">@(string.IsNullOrEmpty(_d.Domain) ? _item.Title : _d.Domain)</b>
+                                    <span>@L["bmk.open"] · @((MarkupString)BookmarkIcons.Svg("external", 11))</span>
+                                </button>
+                            }
+                        </div>
+                    }
+
+                    <div class="pvm-info">
+                        <div class="pvm-kicker">
+                            @((MarkupString)BookmarkIcons.Svg(g.Icon, 14))
+                            <span>@(string.IsNullOrEmpty(g.Site) ? g.Type : g.Site)</span>
+                        </div>
+                        <h1 dir="auto">@_item.Title</h1>
+                        @if (!string.IsNullOrEmpty(_d.MetaLine) || !string.IsNullOrEmpty(_d.Domain))
+                        {
+                            <div class="pvm-meta">
+                                @if (!string.IsNullOrEmpty(_d.MetaLine)) { <span>@_d.MetaLine</span> }
+                                @if (!string.IsNullOrEmpty(_d.Domain)) { <span class="pvm-dom">@_d.Domain</span> }
+                            </div>
+                        }
+                        <div class="pvm-acts">
+                            @if (!string.IsNullOrEmpty(_item.Url))
+                            {
+                                <button class="btn sm pri" @onclick="OpenUrl">@((MarkupString)BookmarkIcons.Svg("external", 13)) @L["bmk.open"]</button>
+                                <button class="btn sm" @onclick="CopyLink">@((MarkupString)BookmarkIcons.Svg("copy", 13)) @L["bmk.copyLink"]</button>
+                            }
+                            else if (localPath != null)
+                            {
+                                <button class="btn sm pri" @onclick="OpenFile">@((MarkupString)BookmarkIcons.Svg("external", 13)) @L["bmk.openFile"]</button>
+                                @if (OperatingSystem.IsWindows())
+                                {
+                                    <button class="btn sm" @onclick="ShowInFolder">@((MarkupString)BookmarkIcons.Svg("folder", 13)) @L["bmk.showInFolder"]</button>
+                                }
+                            }
+                            <button class="btn sm @(_item.Favorite ? "on" : "")" @onclick="ToggleFav">@((MarkupString)BookmarkIcons.Svg("star", 13)) @(_item.Favorite ? L["bmk.unfav"] : L["bmk.fav"])</button>
+                            <button class="btn sm @(_item.Pinned ? "on" : "")" @onclick="TogglePin">@((MarkupString)BookmarkIcons.Svg("pin", 13)) @(_item.Pinned ? L["bmk.unpin"] : L["bmk.pin"])</button>
+                            <button class="btn sm" @onclick="Edit">@((MarkupString)BookmarkIcons.Svg("edit", 13)) @L["com.edit"]</button>
+                            <button class="btn sm dgr" @onclick="Trash" title="@L["nav.trash"]">@((MarkupString)BookmarkIcons.Svg("trash", 13))</button>
+                        </div>
+
+                        @if (isNote)
+                        {
+                            <div class="pvm-note-main" dir="auto">@((MarkupString)BookmarkTemplates.Md(string.IsNullOrWhiteSpace(_item.Notes) ? _d.Desc : _item.Notes))</div>
+                        }
+                        else if (!string.IsNullOrEmpty(_d.DescShort))
+                        {
+                            <div class="pvm-sum" dir="auto">
+                                <b>@L["bmk.summary"]</b>
+                                @_d.DescShort
+                            </div>
+                        }
+                        <div class="pvm-sections">
+                            <details class="pvm-acc">
+                                <summary>@L["bmk.infoOrg"]<span class="pvm-count">@L["bmk.metadata"]</span></summary>
+                                <div class="pvm-acc-b">
+                                    <div class="pvm-where">
+                                        <span class="pvm-lab">@L["bmk.where"]</span>
+                                        @if (WhereTokens().Count == 0)
+                                        {
+                                            <span class="pvm-inbox">Inbox · unsorted</span>
+                                        }
+                                        @foreach (var t in WhereTokens())
+                                        {
+                                            <button class="pvm-crumb" @onclick="() => NavigateCrumb(t.Ctx, t.Id)">@t.Label</button>
+                                        }
+                                    </div>
+                                    <div class="pvm-where">
+                                        <span class="pvm-lab">@L["bmk.savedLbl"]</span>
+                                        <span>@BookmarkCardData.FmtDate(_item.CreatedAt, L.Lang) · @BookmarkCardData.FmtAgo(_item.CreatedAt, L.Lang)</span>
+                                    </div>
+
+                                    @if (_d.Progress is > 0 and < 100)
+                                    {
+                                        <div class="pvm-progress">
+                                            <span class="pvm-lab">@L["bmk.sortProgress"]</span>
+                                            <span class="pvm-bar"><i style="width:@(_d.Progress)%"></i></span>
+                                            <b>@_d.Progress%</b>
+                                        </div>
+                                    }
+
+                                    @if (MediaRows().Count > 0)
+                                    {
+                                        <div class="pvm-sec">
+                                            <h4>@(L.Lang == "ar" ? "الوسائط" : "Media")</h4>
+                                            <div class="pvm-rows">
+                                                @foreach (var row in MediaRows())
+                                                {
+                                                    <div class="pvm-row">
+                                                        <span class="pvm-rk">@row.Key</span>
+                                                        <span class="pvm-rv" dir="auto">@((MarkupString)row.Value)</span>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+
+                                    @if (tags.Count > 0)
+                                    {
+                                        <div class="pvm-sec">
+                                            <h4>@L["bmk.tagsOrg"]</h4>
+                                            <div class="tags">
+                                                @foreach (var t in tags)
+                                                {
+                                                    <span class="chip" @((MarkupString)BookmarkQuery.TagStyleAttr(t, State.Tags))>@t</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </details>
+                    @if (!isNote)
+                    {
+                        <details class="pvm-acc">
+                            <summary>@L["com.notes"]<span class="pvm-count">@(string.IsNullOrEmpty(_item.Notes) ? L["bmk.noNotes"] : "")</span></summary>
+                            <div class="pvm-acc-b">
+                                @if (_noteEdit)
+                                {
+                                    <textarea dir="auto" @bind="_noteText"></textarea>
+                                    <div class="pvm-nbtns">
+                                        <button class="btn sm pri" @onclick="SaveNote">@L["bmk.saveNote"]</button>
+                                        <button class="btn sm" @onclick="() => _noteEdit = false">@L["com.cancel"]</button>
+                                    </div>
+                                }
+                                else if (!string.IsNullOrEmpty(_item.Notes))
+                                {
+                                    <div class="notes-r" dir="auto">@((MarkupString)BookmarkTemplates.Md(_item.Notes))</div>
+                                    <button class="btn sm" @onclick="StartNoteEdit">@L["bmk.editSmall"]</button>
+                                }
+                                else
+                                {
+                                    <p class="pvm-empty">@L["bmk.noNotes"] <span class="pvm-link" @onclick="StartNoteEdit">@L["bmk.writeOne"]</span></p>
+                                }
+                            </div>
+                        </details>
+                    }
+
+                    <details class="pvm-acc">
+                        <summary>@L["bmk.related"]<span class="pvm-count">@rels.Count</span></summary>
+                        <div class="pvm-acc-b">
+                            <div class="pvm-relgrid">
+                                @foreach (var rid in rels)
+                                {
+                                    var r = State.Items.FirstOrDefault(x => x.Id == rid);
+                                    @if (r != null)
+                                    {
+                                        var rg = BookmarkCardData.From(r, L.Lang);
+                                        var initial = string.IsNullOrEmpty(r.Title) ? "?" : r.Title.Trim()[..1].ToUpperInvariant();
+                                        <div class="pvm-rel" @onclick="() => OpenRelated(r.Id)">
+                                            @if (!string.IsNullOrEmpty(rg.Img))
+                                            {
+                                                <img src="@rg.Img" alt="" />
+                                            }
+                                            else
+                                            {
+                                                <span class="pvm-relic" style="background:@RelColor(r.Title)">@initial</span>
+                                            }
+                                            <span class="pvm-relt"><b dir="auto">@r.Title</b><small>@(string.IsNullOrEmpty(rg.Domain) ? rg.Type : rg.Domain)</small></span>
+                                            <span class="pvm-relx" @onclick:stopPropagation="true" @onclick="() => RemoveRelation(rid)">@((MarkupString)BookmarkIcons.Svg("x", 12))</span>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                            @if (rels.Count == 0)
+                            {
+                                <p class="pvm-empty">@L["bmk.relateHint"]</p>
+                            }
+                            <div class="pvm-reladd">
+                                <select @bind="_relateId">
+                                    <option value="">@L["bmk.relateTo"]</option>
+                                    @foreach (var it in State.Items.Where(i => !i.Deleted && i.Id != _item.Id).OrderBy(i => i.Title).Take(200))
+                                    {
+                                        <option value="@it.Id">@it.Title</option>
+                                    }
+                                </select>
+                                <button class="btn sm" @onclick="AddRelation">@L["bmk.relateBtn"]</button>
+                            </div>
+                        </div>
+                    </details>
+
+                    @if (!string.IsNullOrWhiteSpace(offline))
+                    {
+                        <details class="pvm-acc">
+                            <summary>@(L.Lang == "ar" ? "المحفوظ أوفلاين" : "Saved offline")<span class="pvm-count">@_readerWords @(L.Lang == "ar" ? "كلمة" : "words")</span></summary>
+                            <div class="pvm-acc-b reader">@((MarkupString)offline)</div>
+                        </details>
+                    }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string? ItemId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<string> OnEdit { get; set; }
+    [Parameter] public EventCallback<string> OnOpen { get; set; }
+    [Parameter] public EventCallback<(string Ctx, string? Id, string? Tag)> OnNavigate { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+    [Parameter] public EventCallback<string> OnDelete { get; set; }
+
+    private BookmarkItem? _item;
+    private BookmarkCardData _d = null!;
+    private ElementReference _wrapRef;
+    private bool _noteEdit;
+    private string _noteText = string.Empty;
+    private string _relateId = string.Empty;
+    private string? _readerCacheId;
+    private DateTime _readerCacheTs;
+    private string? _readerHtml;
+    private int _readerWords;
+
+    private static readonly string[] RelColors = new[] { "#7c3aed", "#0a66c2", "#181715", "#0f766e", "#b45309", "#be185d", "#4338ca", "#15803d" };
+
+    private static string RelColor(string? s)
+    {
+        if (string.IsNullOrEmpty(s)) return RelColors[2];
+        var h = 0;
+        foreach (var c in s) h = (h * 31 + c) % 997;
+        return RelColors[h % RelColors.Length];
+    }
+
+    protected override void OnParametersSet()
+    {
+        var next = string.IsNullOrEmpty(ItemId) ? null : State.Items.FirstOrDefault(i => i.Id == ItemId);
+        if (next != _item)
+        {
+            _item = next;
+            _noteEdit = false;
+            _noteText = string.Empty;
+            _relateId = string.Empty;
+        }
+        if (_item != null) _d = BookmarkCardData.From(_item, L.Lang);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try { await _wrapRef.FocusAsync(); } catch { }
+    }
+
+    private async Task OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") await Close();
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private static string? LocalRel(BookmarkItem it)
+    {
+        var rel = ItemMeta.Get(it.MetadataJson, "localFile");
+        if (string.IsNullOrWhiteSpace(rel) || System.IO.Path.IsPathRooted(rel)) return null;
+        var abs = System.IO.Path.Combine(AppPaths.Layout.Root, rel.Replace('/', System.IO.Path.DirectorySeparatorChar));
+        return System.IO.File.Exists(abs) ? rel.Replace('\\', '/').TrimStart('/') : null;
+    }
+
+    private bool HasLocalMedia()
+    {
+        var rel = _item == null ? null : LocalRel(_item);
+        return rel != null && LocalFileService.KindFor(rel) is "video" or "audio" or "image";
+    }
+
+    private List<(string Key, string Value)> MediaRows()
+    {
+        var rows = new List<(string, string)>();
+        if (_item == null) return rows;
+        foreach (var fd in BookmarkTypeSchema.For(_item.Type))
+        {
+            var val = BookmarkTemplates.MetaValue(_item.Type, fd.Key, _d.Meta[fd.Key], L.Lang);
+            if (val != null) rows.Add((LocalizationService.MetaLabel(fd.Key, L.Lang, fd.Label), val));
+        }
+        if (!string.IsNullOrEmpty(_item.Url))
+            rows.Add((L["bmk.link"], NetworkGuard.IsAllowedHttpUri(_item.Url)
+                ? $"<a class=\"pvm-url\" href=\"{System.Net.WebUtility.HtmlEncode(_item.Url)}\" target=\"_blank\" rel=\"noopener\">{System.Net.WebUtility.HtmlEncode(_item.Url)}</a>"
+                : System.Net.WebUtility.HtmlEncode(_item.Url)));
+        rows.Add((L["bmk.added"], System.Net.WebUtility.HtmlEncode(BookmarkCardData.FmtDate(_item.CreatedAt, L.Lang))));
+        rows.Add((L["bmk.updated"], System.Net.WebUtility.HtmlEncode(BookmarkCardData.FmtAgo(_item.UpdatedAt, L.Lang))));
+        return rows;
+    }
+
+    private List<(string Label, string Ctx, string? Id)> WhereTokens()
+    {
+        var tokens = new List<(string, string, string?)>();
+        if (_item == null) return tokens;
+        var fids = BookmarkQuery.FoldersOf(_item);
+        if (fids.Count > 0)
+        {
+            var chain = new List<BookmarkFolder>();
+            var fd = State.Folders.FirstOrDefault(x => x.Id == fids[0]);
+            var n = 0;
+            while (fd != null && n++ < 50) { chain.Insert(0, fd); fd = State.Folders.FirstOrDefault(x => x.Id == fd.ParentId); }
+            if (chain.Count > 0)
+            {
+                var coll = State.Collections.FirstOrDefault(c => c.Id == chain[0].CollectionId);
+                if (coll != null) tokens.Add((coll.Name, "collection", coll.Id));
+                tokens.AddRange(chain.Select(x => (x.Name, "folder", (string?)x.Id)));
+                return tokens;
+            }
+        }
+        foreach (var cid in BookmarkQuery.CollectionsOf(_item))
+        {
+            var c = State.Collections.FirstOrDefault(x => x.Id == cid);
+            if (c != null) tokens.Add((c.Name, "collection", c.Id));
+        }
+        return tokens;
+    }
+
+    private async Task NavigateCrumb(string ctx, string? id)
+    {
+        await OnNavigate.InvokeAsync((ctx, id, null));
+        await Close();
+    }
+
+    private async Task OpenUrl()
+    {
+        if (_item == null || string.IsNullOrWhiteSpace(_item.Url)) return;
+        try { await Microsoft.Maui.ApplicationModel.Launcher.OpenAsync(_item.Url); } catch { }
+    }
+
+    private async Task OpenFile()
+    {
+        var path = _item == null ? null : LocalFileActions.PathFor(_item);
+        if (path != null) await LocalFileActions.OpenAsync(path);
+    }
+
+    private void ShowInFolder()
+    {
+        var path = _item == null ? null : LocalFileActions.PathFor(_item);
+        if (path != null) LocalFileActions.ShowInExplorer(path);
+    }
+
+    private async Task CopyLink()
+    {
+        if (_item == null) return;
+        var text = string.IsNullOrEmpty(_item.Url) ? LocalFileActions.PathFor(_item) : _item.Url;
+        if (string.IsNullOrEmpty(text)) return;
+        try { await JS.InvokeAsync<bool>("bmInterop.copyText", new object[] { text }); } catch { }
+    }
+
+    private async Task ToggleFav()
+    {
+        if (_item == null) return;
+        await State.ToggleFavoriteAsync(_item.Id);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task TogglePin()
+    {
+        if (_item == null) return;
+        await State.TogglePinAsync(_item.Id);
+        await OnChanged.InvokeAsync();
+    }
+
+    private Task Edit() => _item == null ? Task.CompletedTask : OnEdit.InvokeAsync(_item.Id);
+
+    private Task Trash() => _item == null ? Task.CompletedTask : OnDelete.InvokeAsync(_item.Id);
+
+    private void StartNoteEdit()
+    {
+        _noteText = _item?.Notes ?? string.Empty;
+        _noteEdit = true;
+    }
+
+    private async Task SaveNote()
+    {
+        if (_item == null) return;
+        _item.Notes = _noteText;
+        _noteEdit = false;
+        await State.SaveItemAsync(_item);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task RemoveRelation(string rid)
+    {
+        if (_item == null) return;
+        var rels = BookmarkQuery.RelationsOf(_item);
+        rels.Remove(rid);
+        _item.RelationsJson = JsonSerializer.Serialize(rels);
+        await State.SaveItemAsync(_item);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task AddRelation()
+    {
+        if (_item == null || string.IsNullOrEmpty(_relateId)) return;
+        var rels = BookmarkQuery.RelationsOf(_item);
+        if (!rels.Contains(_relateId))
+        {
+            rels.Add(_relateId);
+            _item.RelationsJson = JsonSerializer.Serialize(rels);
+            await State.SaveItemAsync(_item);
+            await OnChanged.InvokeAsync();
+        }
+        _relateId = string.Empty;
+    }
+
+    private async Task OpenRelated(string id) => await OnOpen.InvokeAsync(id);
+
+    private string? ReaderHtml()
+    {
+        if (_item == null) return null;
+        if (_readerCacheId == _item.Id && _readerCacheTs == _item.UpdatedAt) return _readerHtml;
+        _readerCacheId = _item.Id;
+        _readerCacheTs = _item.UpdatedAt;
+        _readerHtml = null;
+        _readerWords = 0;
+        try
+        {
+            var m = System.Text.Json.Nodes.JsonNode.Parse(
+                string.IsNullOrWhiteSpace(_item.MetadataJson) ? "{}" : _item.MetadataJson)
+                as System.Text.Json.Nodes.JsonObject;
+            var dir = m?["archivePath"]?.GetValue<string>();
+            if (m?["wordCount"] != null)
+                try { _readerWords = m["wordCount"]!.GetValue<int>(); } catch { }
+            if (string.IsNullOrWhiteSpace(dir)) return null;
+            if (!SafePath.IsUnderRoot(AppPaths.Layout.ArchiveDir, dir)) return null;
+            var mdFile = System.IO.Path.Combine(dir, "article.md");
+            string html;
+            if (System.IO.File.Exists(mdFile))
+            {
+                var md = System.IO.File.ReadAllText(mdFile);
+                if (string.IsNullOrWhiteSpace(md)) return null;
+                html = Markdown.ToHtml(md, new MarkdownPipelineBuilder().UseAdvancedExtensions().UseTaskLists().Build());
+            }
+            else
+            {
+                var htmlFile = System.IO.Path.Combine(dir, "article.html");
+                if (!System.IO.File.Exists(htmlFile)) return null;
+                var raw = System.IO.File.ReadAllText(htmlFile);
+                if (string.IsNullOrWhiteSpace(raw)) return null;
+                var legacy = new HtmlAgilityPack.HtmlDocument();
+                legacy.LoadHtml(raw);
+                html = legacy.DocumentNode.SelectSingleNode("//body")?.InnerHtml.Trim() ?? raw;
+            }
+
+            html = ArchiveSanitizer.Sanitize(html);
+            try
+            {
+                var doc = new HtmlAgilityPack.HtmlDocument();
+                doc.LoadHtml(html);
+                foreach (var img in doc.DocumentNode.SelectNodes("//img[@data-remote-src]") ?? Enumerable.Empty<HtmlAgilityPack.HtmlNode>())
+                {
+                    if (string.IsNullOrWhiteSpace(img.GetAttributeValue("onerror", string.Empty)))
+                        img.SetAttributeValue("onerror", "this.onerror=null;this.src=this.getAttribute('data-remote-src');");
+                }
+                _readerHtml = doc.DocumentNode.InnerHtml.Trim();
+            }
+            catch { _readerHtml = ArchiveSanitizer.Sanitize(html); }
+        }
+        catch { _readerHtml = null; }
+        return _readerHtml;
+    }
+}

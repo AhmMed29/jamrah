@@ -1,0 +1,29 @@
+/* bookmark-mobile.css — mobile layout for the Bookmarks page only (v2 parity).
+   Rules use the same palette via var(--bg/--surface/--ink/--line...) — zero new colors.
+   Two separate selectors (NOT comma-joined with @media):
+     1) narrow screens on any platform,
+     2) Android phones (html.maui-android is set in index.html) at any width. */
+@media (max-width: 768px) {
+    .bmk .bmk-main { padding: 18px 14px 90px; }
+    .bmk .bmk-top { padding: 0 12px; }
+    .bmk .qwrap { max-width: none; }
+    .bmk .f2 { grid-template-columns: 1fr; }
+    .bmk .toolbar { flex-wrap: wrap; }
+    .bmk .hrow .card { width: 210px; }
+    .bmk .hrow.wide .card { width: 250px; }
+    /* v2 parity (bookmark-v2.html @media 1100/900): single column, preview as bottom sheet */
+    .bmk .q-grid { grid-template-columns: 1fr; }
+    .bmk .bv-grid { grid-template-columns: 1fr; }
+    .bmk .nv-b { padding: 24px 22px 30px; }
+    .bmk .modal { width: 100%; border-radius: 16px 16px 0 0; }
+    .bmk .tb-b { grid-template-columns: 1fr; }
+}
+html.maui-android .bmk .bmk-col-list { padding-bottom: 110px; }
+html.maui-android .bmk .btn { min-height: 44px; }
+html.maui-android .bmk .ibtn { min-height: 44px; min-width: 44px; }
+/* v2 parity: preview becomes a bottom sheet on phones */
+@media (max-width: 768px) {
+    .bmk .bmk-app3.hasPv .bmk-view { left: 0; top: auto; width: auto; max-width: none; max-height: 88dvh;
+        border-left: 0; border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; }
+    .bmk .bmk-app3 .bmk-rz { display: none; }
+}

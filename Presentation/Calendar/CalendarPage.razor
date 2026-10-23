@@ -1,0 +1,505 @@
+﻿@namespace Jamrah.Presentation.Calendar
+@implements IDisposable
+@using Microsoft.JSInterop
+@using Jamrah.Core.Entities
+@using Jamrah.Core.Interfaces
+@using Jamrah.Application.Services
+@inject ICalendarStateService StateService
+@inject Jamrah.Application.Services.LocalizationService L
+@inject IJSRuntime JS
+
+<div class="cal-wrapper" style="display:flex;height:100vh;background:var(--bg,#FAFAF9);font-family:'Tajawal',sans-serif;" @onkeydown="OnKeyDown" tabindex="0">
+    <div class="cal-main" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;">
+        <div class="cal-header" style="min-height:52px;background:var(--card,#FFFFFF);border-bottom:1px solid var(--border,#E7E5E4);display:flex;align-items:center;justify-content:space-between;padding:6px 14px;gap:12px;flex-shrink:0;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <button class="btn" style="height:32px;padding:0 12px;border-radius:10px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:12px;" @onclick="() => StateService.Today()">@L["cal.today"]</button>
+                <button class="btn nav-btn" style="height:32px;width:32px;border-radius:10px;border:1px solid var(--border);background:var(--card);cursor:pointer;" @onclick="() => StateService.Previous()">‹</button>
+                <button class="btn nav-btn" style="height:32px;width:32px;border-radius:10px;border:1px solid var(--border);background:var(--card);cursor:pointer;" @onclick="() => StateService.Next()">›</button>
+                <b style="font-size:13px;">@GetToolbarTitle()</b>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <div class="seg" style="display:flex;background:var(--card2,#F5F5F4);border:1px solid var(--border);border-radius:10px;padding:2px;gap:2px;">
+                    <button style="padding:6px 12px;border:none;border-radius:8px;background:@(StateService.CurrentView==ViewMode.Month?"var(--text,#1C1917)":"transparent");color:@(StateService.CurrentView==ViewMode.Month?"#fff":"var(--muted)") ;cursor:pointer;font-size:12px;" @onclick="() => StateService.SetView(ViewMode.Month)">@L["cal.month"]</button>
+                    <button style="padding:6px 12px;border:none;border-radius:8px;background:@(StateService.CurrentView==ViewMode.Week?"var(--text,#1C1917)":"transparent");color:@(StateService.CurrentView==ViewMode.Week?"#fff":"var(--muted)");cursor:pointer;font-size:12px;" @onclick="() => StateService.SetView(ViewMode.Week)">@L["cal.week"]</button>
+                    <button style="padding:6px 12px;border:none;border-radius:8px;background:@(StateService.CurrentView==ViewMode.Day?"var(--text,#1C1917)":"transparent");color:@(StateService.CurrentView==ViewMode.Day?"#fff":"var(--muted)");cursor:pointer;font-size:12px;" @onclick="() => StateService.SetView(ViewMode.Day)">@L["cal.day"]</button>
+                </div>
+                <button class="btn primary" style="height:32px;padding:0 12px;border-radius:10px;border:1px solid var(--text);background:var(--text,#1C1917);color:#fff;cursor:pointer;font-size:12px;" @onclick="() => StateService.OpenCreateEvent()">@L["cal.newEvent"]</button>
+            </div>
+        </div>
+        <div style="flex:1;display:flex;overflow:hidden;padding:0;">
+            <div class="cal-card" style="flex:1;background:var(--card,#FFFFFF);border:1px solid var(--border,#E7E5E4);border-radius:16px;margin:12px;display:flex;flex-direction:column;overflow:hidden;">
+                <div style="flex:1;overflow:auto;">
+                    @if (StateService.CurrentView == ViewMode.Month)
+                    {
+                        <MonthView SelectedDate="StateService.SelectedDate" Events="StateService.CurrentEvents" Calendars="StateService.Calendars" />
+                    }
+                    else if (StateService.CurrentView == ViewMode.Week)
+                    {
+                        <WeekView SelectedDate="StateService.SelectedDate" Events="StateService.CurrentEvents" Calendars="StateService.Calendars" />
+                    }
+                    else
+                    {
+                        <DayView SelectedDate="StateService.SelectedDate" Events="StateService.CurrentEvents" Calendars="StateService.Calendars" />
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ─── Event Form (centered) ─── *@
+@if (StateService.IsEventFormOpen && StateService.SelectedEvent != null)
+{
+    <div class="cal-overlay" @onclick="() => StateService.CloseModals()">
+        <div class="cal-modal" @onclick:stopPropagation="true">
+            <button class="cal-x" @onclick="() => StateService.CloseModals()">✕</button>
+            <h3>@(_wasNew ? L["cal.createTitle"] : L["cal.editTitle"])</h3>
+            <input @ref="_titleRef" class="fld @(_titleErr ? "err" : "")" placeholder="@L["cal.titlePh"]" value="@StateService.SelectedEvent.Title" @oninput="e => StateService.SelectedEvent.Title = e.Value?.ToString() ?? string.Empty" @onkeydown="OnFieldKeyDown" />
+            <div style="display:flex;align-items:center;gap:8px;margin:8px 0;">
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;"><input type="checkbox" checked="@StateService.SelectedEvent.IsAllday" @onchange="e => StateService.SelectedEvent.IsAllday = (bool)(e.Value ?? false)" /> @L["com.allday"]</label>
+                @if (!_allDayHidden) { <span style="font-size:11px;color:var(--muted);">@L["cal.duration"]: <b>@DurationLabel()</b></span> }
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:11px;color:var(--muted);min-width:28px;">@L["cal.from"]</span>
+                    <input class="fld" type="date" style="flex:1;min-width:0;" value="@_startDate.ToString("yyyy-MM-dd")" @onchange="e => ParseDate(e.Value?.ToString(), true)" @onkeydown="OnFieldKeyDown" />
+                    @if (!StateService.SelectedEvent.IsAllday)
+                    {
+                        <input class="fld" type="time" style="max-width:108px;" value="@_startTime.ToString(@"hh\:mm")" @onchange="e => ParseTime(e.Value?.ToString(), true)" @onkeydown="OnFieldKeyDown" />
+                    }
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:11px;color:var(--muted);min-width:28px;">@L["cal.to"]</span>
+                    <input class="fld" type="date" style="flex:1;min-width:0;" value="@_endDate.ToString("yyyy-MM-dd")" @onchange="e => ParseDate(e.Value?.ToString(), false)" @onkeydown="OnFieldKeyDown" />
+                    @if (!StateService.SelectedEvent.IsAllday)
+                    {
+                        <input class="fld" type="time" style="max-width:108px;" value="@_endTime.ToString(@"hh\:mm")" @onchange="e => ParseTime(e.Value?.ToString(), false)" @onkeydown="OnFieldKeyDown" />
+                    }
+                </div>
+            </div>
+            @if (!StateService.SelectedEvent.IsAllday)
+            {
+                <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
+                    <button class="chip" @onclick="() => SetDuration(30)">+30m</button>
+                    <button class="chip" @onclick="() => SetDuration(60)">+1h</button>
+                    <button class="chip" @onclick="() => SetDuration(120)">+2h</button>
+                </div>
+            }
+            <div style="font-size:11px;color:var(--muted);margin:8px 0 4px 0;">@L["cal.location"]</div>
+            <input class="fld" placeholder="@L["cal.locationPh"]" value="@StateService.SelectedEvent.Location" @oninput="e => StateService.SelectedEvent.Location = e.Value?.ToString() ?? string.Empty" @onkeydown="OnFieldKeyDown" />
+            <div style="font-size:11px;color:var(--muted);margin:8px 0 4px 0;">@L["cal.description"]</div>
+            <textarea class="fld" rows="3" placeholder="@L["cal.descriptionPh"]" @oninput="e => StateService.SelectedEvent.Body = e.Value?.ToString() ?? string.Empty">@StateService.SelectedEvent.Body</textarea>
+            <details style="margin-top:8px;border:1px solid var(--border);border-radius:10px;padding:8px 10px;" @(IsRecurringSelection() ? "open" : "")>
+                <summary style="font-size:12px;cursor:pointer;">🔁 @L["cal.repeat"]: <b>@FreqLabel()</b></summary>
+                <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+                    <select class="fld" style="max-width:150px;" value="@_freq" @onchange="OnFreqChange">
+                        <option value="NONE">@L["cal.repNone"]</option>
+                        <option value="DAILY">@L["cal.repDaily"]</option>
+                        <option value="WEEKLY">@L["cal.repWeekly"]</option>
+                        <option value="MONTHLY">@L["cal.repMonthly"]</option>
+                        <option value="YEARLY">@L["cal.repYearly"]</option>
+                    </select>
+                    @if (_freq != "NONE")
+                    {
+                        <label style="font-size:12px;display:flex;align-items:center;gap:6px;">@L["cal.every"] <input type="number" min="1" max="99" value="@_interval" @onchange="e => { if (int.TryParse(e.Value?.ToString(), out var v)) _interval = Math.Clamp(v, 1, 99); }" style="width:60px;" class="fld" /></label>
+                    }
+                </div>
+                @if (_freq == "WEEKLY")
+                {
+                    <div style="font-size:11px;color:var(--muted);margin:8px 0 4px 0;">@L["cal.weekdays"]</div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        @foreach (var d in WeekDays())
+                        {
+                            <button class="chip @(_byDays.Contains(d) ? "on" : "")" @onclick="() => ToggleDay(d)">@L.MiniDayLetter(d)</button>
+                        }
+                    </div>
+                }
+                @if (_freq != "NONE")
+                {
+                    <div style="font-size:11px;color:var(--muted);margin:8px 0 4px 0;">@L["cal.ends"]</div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                        <button class="chip @(_endMode == "never" ? "on" : "")" @onclick='() => _endMode = "never"'>@L["cal.endsNever"]</button>
+                        <button class="chip @(_endMode == "until" ? "on" : "")" @onclick='() => _endMode = "until"'>@L["cal.endsUntil"]</button>
+                        <button class="chip @(_endMode == "count" ? "on" : "")" @onclick='() => _endMode = "count"'>@L["cal.endsAfter"]</button>
+                        @if (_endMode == "until")
+                        {
+                            <input type="date" class="fld" style="max-width:160px;" value="@_until.ToString("yyyy-MM-dd")" @onchange="e => { if (DateTime.TryParse(e.Value?.ToString(), out var d)) _until = d; }" />
+                        }
+                        @if (_endMode == "count")
+                        {
+                            <input type="number" min="1" max="365" value="@_count" @onchange="e => { if (int.TryParse(e.Value?.ToString(), out var v)) _count = Math.Clamp(v, 1, 365); }" class="fld" style="max-width:80px;" />
+                            <span style="font-size:11px;">@L["cal.occurrences"]</span>
+                        }
+                    </div>
+                    <div style="font-size:11px;color:var(--muted);margin:8px 0 4px 0;">@L["cal.excludeDay"]</div>
+                    <div class="exc-list">
+                        @foreach (var ex in _exceptions)
+                        {
+                            <span class="chip on">@ex <b @onclick="() => RemoveException(ex)" style="cursor:pointer;">✕</b></span>
+                        }
+                    </div>
+                    <div style="display:flex;gap:6px;margin-top:6px;">
+                        <input type="date" class="fld" style="max-width:170px;" value="@_newException" @onchange="e => _newException = e.Value?.ToString() ?? string.Empty" />
+                        <button class="chip" @onclick="AddException">@L["cal.addException"]</button>
+                    </div>
+                }
+            </details>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;">
+                <button class="btn" style="height:36px;padding:0 16px;border-radius:10px;border:1px solid var(--border);background:var(--card);cursor:pointer;" @onclick="() => StateService.CloseModals()">@L["cal.cancel"]</button>
+                <button class="btn primary" style="height:36px;padding:0 16px;border-radius:10px;border:none;background:var(--text,#1C1917);color:#fff;cursor:pointer;" @onclick="OnSaveClicked">@L["cal.save"]</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ─── Detail (centered) ─── *@
+@if (StateService.IsEventDetailOpen && StateService.SelectedEvent != null)
+{
+    <div class="cal-overlay" @onclick="() => StateService.CloseModals()">
+        <div class="cal-modal cal-modal-sm" @onclick:stopPropagation="true">
+            <button class="cal-x" @onclick="() => StateService.CloseModals()">✕</button>
+            <div style="height:4px;border-radius:2px;margin-bottom:12px;background:@GetEventDetailColor();"></div>
+            <div style="font-size:16px;font-weight:700;">@StateService.SelectedEvent.Title</div>
+            <div style="font-size:12px;color:var(--muted);margin:6px 0;">@StateService.SelectedEvent.Start.ToString("ddd, MMM d", L.Culture) @(StateService.SelectedEvent.IsAllday ? "• " + L["com.allday"] : $"• {StateService.SelectedEvent.Start:HH:mm} – {StateService.SelectedEvent.End:HH:mm}") @(IsRecurringEvent(StateService.SelectedEvent) ? "• 🔁" : "")</div>
+            @if (!string.IsNullOrWhiteSpace(StateService.SelectedEvent.Location))
+            {
+                <div style="font-size:12px;margin-top:4px;">📍 @StateService.SelectedEvent.Location</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(StateService.SelectedEvent.Body))
+            {
+                <div style="font-size:12px;margin-top:6px;white-space:pre-wrap;">@StateService.SelectedEvent.Body</div>
+            }
+            <div style="display:flex;gap:8px;margin-top:14px;">
+                <button class="btn" style="flex:1;height:34px;border-radius:10px;border:1px solid var(--border);background:var(--card);cursor:pointer;" @onclick="EditCurrentEvent">✎ @L["cal.edit"]</button>
+                <button class="btn" style="flex:1;height:34px;border-radius:10px;border:none;background:#FEE2E2;color:#B91C1C;cursor:pointer;" @onclick="OnDeleteClicked">🗑 @L["cal.delete"]</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ─── SeeMore (centered) ─── *@
+@if (StateService.IsSeeMoreOpen && StateService.SeeMoreDate.HasValue)
+{
+    <div class="cal-overlay" @onclick="() => StateService.CloseModals()">
+        <div class="cal-modal cal-modal-sm" @onclick:stopPropagation="true">
+            <button class="cal-x" @onclick="() => StateService.CloseModals()">✕</button>
+            <h3>@StateService.SeeMoreDate.Value.Day — @StateService.SeeMoreDate.Value.ToString("ddd", L.Culture).ToUpper()</h3>
+            @foreach (var evt in GetSeeMoreEvents())
+            {
+                var captured = evt;
+                <div style="padding:8px 10px;border-radius:8px;margin:4px 0;cursor:pointer;font-size:12px;@GetEventStyle(captured)" @onclick="() => { StateService.IsSeeMoreOpen = false; StateService.OpenEventDetail(captured); }">@captured.Title</div>
+            }
+        </div>
+    </div>
+}
+
+@* ─── Scope dialog (centered) ─── *@
+@if (_scopeOpen)
+{
+    <div class="cal-overlay" @onclick="() => _scopeOpen = false">
+        <div class="cal-modal cal-modal-sm" @onclick:stopPropagation="true">
+            <button class="cal-x" @onclick="() => _scopeOpen = false">✕</button>
+            <h3>@L["cal.scopeTitle"]</h3>
+            <div class="scope-btns">
+                <button @onclick='() => OnScopePicked("single")'>@L["cal.scopeSingle"]</button>
+                <button @onclick='() => OnScopePicked("all")'>@L["cal.scopeAll"]</button>
+                <button @onclick='() => OnScopePicked("future")'>@L["cal.scopeFuture"]</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _scopeOpen;
+    private string _scopeAction = "save";
+    private string? _editScope;
+    private bool _formInit;
+    private bool _wasNew = true;
+    private bool _titleErr;
+    private bool _allDayHidden => StateService.SelectedEvent?.IsAllday ?? false;
+    private ElementReference _titleRef;
+    private bool _titleFocused;
+
+    private DateTime _startDate = DateTime.Today;
+    private DateTime _endDate = DateTime.Today;
+    private TimeSpan _startTime = new TimeSpan(9, 0, 0);
+    private TimeSpan _endTime = new TimeSpan(10, 0, 0);
+    private string _freq = "NONE";
+    private int _interval = 1;
+    private HashSet<DayOfWeek> _byDays = new();
+    private string _endMode = "never";
+    private DateTime _until = DateTime.Today.AddMonths(3);
+    private int _count = 10;
+    private List<string> _exceptions = new();
+    private string _newException = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            StateService.OnStateChanged += HandleStateChanged;
+            L.OnLanguageChanged += HandleStateChanged;
+            await StateService.InitAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Calendar INIT FAIL: {ex}");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (StateService.IsEventFormOpen && !_titleFocused)
+        {
+            _titleFocused = true;
+            try { await _titleRef.FocusAsync(); } catch { }
+        }
+        if (!StateService.IsEventFormOpen) _titleFocused = false;
+    }
+
+    private void HandleStateChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            EnsureFormInit();
+            StateHasChanged();
+        });
+    }
+
+    private void EnsureFormInit()
+    {
+        if (StateService.IsEventFormOpen && StateService.SelectedEvent != null && !_formInit)
+        {
+            _formInit = true;
+            _titleErr = false;
+            _editScope = null;
+            var e = StateService.SelectedEvent;
+            _wasNew = string.IsNullOrEmpty(e.Title) && string.IsNullOrEmpty(e.RecurrenceRule) && string.IsNullOrEmpty(e.RecurrenceId) && !e.Id.Contains('_');
+            _startDate = e.Start.Date;
+            _endDate = e.End.Date;
+            _startTime = e.Start.TimeOfDay;
+            _endTime = e.End.TimeOfDay;
+            var rule = RecurrenceExpander.TryParse(e.RecurrenceRule);
+            if (rule == null) { _freq = "NONE"; _interval = 1; _byDays = new(); _endMode = "never"; }
+            else
+            {
+                _freq = rule.Freq;
+                _interval = rule.Interval;
+                _byDays = new HashSet<DayOfWeek>(rule.ByDays);
+                if (rule.Count.HasValue) { _endMode = "count"; _count = rule.Count.Value; }
+                else if (rule.Until.HasValue) { _endMode = "until"; _until = rule.Until.Value; }
+                else _endMode = "never";
+            }
+            _exceptions = new List<string>(e.ExceptionDates);
+            _newException = string.Empty;
+        }
+        if (!StateService.IsEventFormOpen) _formInit = false;
+    }
+
+    private string GetToolbarTitle()
+    {
+        var d = StateService.SelectedDate;
+        if (StateService.CurrentView == ViewMode.Week)
+        {
+            var start = d.Date.AddDays(-(int)d.DayOfWeek);
+            var end = start.AddDays(6);
+            if (start.Month == end.Month) return $"{start:MMMM d} – {end:d, yyyy}";
+            return $"{start:MMM d} – {end:MMM d, yyyy}";
+        }
+        if (StateService.CurrentView == ViewMode.Day) return d.ToString("MMMM d, yyyy", L.Culture);
+        return d.ToString("MMMM yyyy", L.Culture);
+    }
+
+    private void ParseDate(string? raw, bool isStart)
+    {
+        if (DateTime.TryParse(raw, out var dt))
+        {
+            if (isStart) { _startDate = dt.Date; if (_endDate < _startDate) _endDate = _startDate; }
+            else _endDate = dt.Date;
+        }
+    }
+
+    private void ParseTime(string? raw, bool isStart)
+    {
+        if (TimeSpan.TryParse(raw, out var ts))
+        {
+            if (isStart) _startTime = ts;
+            else _endTime = ts;
+        }
+    }
+
+    private void SetDuration(int mins)
+    {
+        _endTime = _startTime.Add(TimeSpan.FromMinutes(mins));
+        if (_endTime.TotalHours >= 24) _endTime -= TimeSpan.FromHours(24);
+    }
+
+    private string DurationLabel()
+    {
+        var s = _startDate.Add(_startTime);
+        var e = _endDate.Add(_endTime);
+        if (e <= s) return "1h";
+        var ts = e - s;
+        if (ts.TotalHours >= 1) return $"{(int)ts.TotalHours}h{(ts.Minutes > 0 ? $" {ts.Minutes}m" : "")}";
+        return $"{ts.Minutes}m";
+    }
+
+    private List<DayOfWeek> WeekDays() => new() { DayOfWeek.Saturday, DayOfWeek.Sunday, DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday };
+    private void ToggleDay(DayOfWeek d) { if (!_byDays.Add(d)) _byDays.Remove(d); }
+    private void OnFreqChange(ChangeEventArgs e)
+    {
+        _freq = e.Value?.ToString() ?? "NONE";
+        if (_freq == "WEEKLY" && _byDays.Count == 0 && StateService.SelectedEvent != null)
+            _byDays.Add(StateService.SelectedEvent.Start.DayOfWeek);
+    }
+    private bool IsRecurringSelection() => _freq != "NONE";
+    private string FreqLabel() => _freq switch { "DAILY" => L["cal.repDaily"], "WEEKLY" => L["cal.repWeekly"], "MONTHLY" => L["cal.repMonthly"], "YEARLY" => L["cal.repYearly"], _ => L["cal.repNone"] };
+    private void AddException()
+    {
+        if (DateTime.TryParse(_newException, out var d))
+        {
+            var key = d.ToString("yyyy-MM-dd");
+            if (!_exceptions.Contains(key)) _exceptions.Add(key);
+            _newException = string.Empty;
+        }
+    }
+    private void RemoveException(string k) => _exceptions.Remove(k);
+
+    private static bool IsRecurringEvent(CalendarEvent e) =>
+        !string.IsNullOrEmpty(e.RecurrenceRule) || !string.IsNullOrEmpty(e.RecurrenceId) || e.Id.Contains('_');
+
+    private string BuildRRule()
+    {
+        if (_freq == "NONE") return string.Empty;
+        return RecurrenceExpander.Build(_freq, _interval, _byDays,
+            _endMode == "count" ? _count : null,
+            _endMode == "until" ? _until : null);
+    }
+
+    private void ComposeIntoSelected()
+    {
+        var e = StateService.SelectedEvent!;
+        var start = _startDate.Add(_startTime);
+        var end = _endDate.Add(_endTime);
+        if (end <= start) end = start.AddHours(1);
+        e.Start = start;
+        e.End = end;
+        e.RecurrenceRule = BuildRRule();
+        e.ExceptionDates = new List<string>(_exceptions);
+        e.SyncJson();
+    }
+
+    private async Task OnFieldKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await OnSaveClicked();
+    }
+
+    private async Task OnSaveClicked()
+    {
+        var e = StateService.SelectedEvent;
+        if (e == null) return;
+        if (string.IsNullOrWhiteSpace(e.Title)) { _titleErr = true; return; }
+        if (!_wasNew && IsRecurringEvent(e) && _editScope == null)
+        {
+            _scopeAction = "save";
+            _scopeOpen = true;
+            return;
+        }
+        await DoSave();
+    }
+
+    private async Task DoSave()
+    {
+        var e = StateService.SelectedEvent;
+        if (e == null) return;
+        ComposeIntoSelected();
+        if (_wasNew || _editScope == null)
+        {
+            await StateService.SaveEventAsync(e);
+            return;
+        }
+        if (_editScope == "single") await StateService.SaveSingleOccurrenceAsync(e);
+        else if (_editScope == "future") await StateService.SplitFutureAsync(e);
+        else await StateService.SaveSeriesEditAsync(e);
+    }
+
+    private void OnDeleteClicked()
+    {
+        var e = StateService.SelectedEvent;
+        if (e == null) return;
+        if (!_wasNew && IsRecurringEvent(e))
+        {
+            _scopeAction = "delete";
+            _scopeOpen = true;
+            return;
+        }
+        _ = DeleteCurrentEvent();
+    }
+
+    private async Task OnScopePicked(string scope)
+    {
+        _editScope = scope;
+        _scopeOpen = false;
+        var e = StateService.SelectedEvent;
+        if (e == null) return;
+        if (_scopeAction == "delete")
+        {
+            if (scope == "single") await StateService.DeleteSingleOccurrenceAsync(e);
+            else if (scope == "future") await StateService.DeleteFutureAsync(e);
+            else await StateService.DeleteSeriesAsync(!string.IsNullOrEmpty(e.RecurrenceId) ? e.RecurrenceId : e.Id);
+        }
+        else
+        {
+            await DoSave();
+        }
+    }
+
+    private void EditCurrentEvent()
+    {
+        if (StateService.SelectedEvent != null) StateService.OpenEditEvent(StateService.SelectedEvent);
+    }
+
+    private async Task DeleteCurrentEvent()
+    {
+        if (StateService.SelectedEvent != null) await StateService.DeleteEventAsync(StateService.SelectedEvent.Id);
+    }
+
+    private string GetEventDetailColor()
+    {
+        var evt = StateService.SelectedEvent;
+        if (!string.IsNullOrEmpty(evt?.BackgroundColor)) return evt.BackgroundColor;
+        var cal = StateService.Calendars.FirstOrDefault(c => c.Id == evt?.CalendarId);
+        return cal?.BackgroundColor ?? "#2196F3";
+    }
+
+    private List<CalendarEvent> GetSeeMoreEvents()
+    {
+        if (!StateService.SeeMoreDate.HasValue) return new();
+        var day = StateService.SeeMoreDate.Value.Date;
+        return StateService.CurrentEvents.Where(e => e.IsVisible && !(e.End < day || e.Start > day.AddDays(1).AddTicks(-1))).ToList();
+    }
+
+    private string GetEventStyle(CalendarEvent evt)
+    {
+        var cal = StateService.Calendars.FirstOrDefault(c => c.Id == evt.CalendarId);
+        string bg = !string.IsNullOrEmpty(evt.BackgroundColor) ? evt.BackgroundColor : (cal?.BackgroundColor ?? "#2196F3");
+        string fg = !string.IsNullOrEmpty(evt.Color) ? evt.Color : (cal?.Color ?? "#FFFFFF");
+        string border = !string.IsNullOrEmpty(evt.BorderColor) ? evt.BorderColor : (cal?.BorderColor ?? "#0D47A1");
+        return $"background-color:{bg}; color:{fg}; border-left:3px solid {border};";
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            if (_scopeOpen) _scopeOpen = false;
+            else StateService.CloseModals();
+        }
+    }
+
+    public void Dispose()
+    {
+        StateService.OnStateChanged -= HandleStateChanged;
+        L.OnLanguageChanged -= HandleStateChanged;
+    }
+}

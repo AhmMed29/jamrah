@@ -1,0 +1,205 @@
+@using Jamrah.Application.Services
+@using Jamrah.Files.Core
+@inject BookmarkStateService State
+@inject LocalFileService LocalFiles
+@inject LocalizationService L
+
+@if (IsOpen)
+{
+    <div class="modal-wrap">
+        <div class="modal">
+            <div class="m-h">
+                <span class="m-t">@L["bmk.importTitle"]</span>
+                <button class="m-x" @onclick="Close">@((MarkupString)BookmarkIcons.Svg("x", 16))</button>
+            </div>
+            <div class="m-b">
+                @if (_paths.Count == 0)
+                {
+                    <div style="display:flex;gap:8px;margin-bottom:12px">
+                        <button class="btn" @onclick="PickFilesAsync">@((MarkupString)BookmarkIcons.Svg("upload", 13)) @L["bmk.importFiles"]</button>
+                        <button class="btn" @onclick="PickFolderAsync">@((MarkupString)BookmarkIcons.Svg("folder", 13)) @L["bmk.importFolder"]</button>
+                    </div>
+                }
+                else
+                {
+                    <div style="max-height:140px;overflow:auto;margin-bottom:12px;font-size:13px">
+                        @foreach (var p in _paths)
+                        {
+                            <div style="padding:2px 0" dir="auto">@System.IO.Path.GetFileName(System.IO.Path.TrimEndingDirectorySeparator(p))</div>
+                        }
+                    </div>
+                }
+                <div class="fld"><label>@L["bmk.importDest"]</label>
+                    <select @bind="_destFolderId">
+                        <option value="">@L["bmk.importInbox"]</option>
+                        @foreach (var f in State.Folders.Where(f => f.SourcePath == null && !f.IsArchived))
+                        {
+                            <option value="@f.Id">@f.Name</option>
+                        }
+                    </select>
+                </div>
+                <div style="display:flex;gap:12px;margin-bottom:16px;font-size:13px">
+                    <label><input type="radio" name="importMode" checked="@(_mode == ImportMode.Copy)" @onchange="() => _mode = ImportMode.Copy" /> @L["bmk.importModeCopy"]</label>
+                    <label><input type="radio" name="importMode" checked="@(_mode == ImportMode.Move)" @onchange="() => _mode = ImportMode.Move" /> @L["bmk.importModeMove"]</label>
+                </div>
+                @if (_busy || _status.Length > 0)
+                {
+                    <div style="font-size:13px;margin-bottom:12px">@_status</div>
+                }
+            </div>
+            <div class="m-f">
+                <button class="btn" @onclick="Close" disabled="@_busy">@L["bmk.importCancel"]</button>
+                <button class="btn pri" @onclick="StartImportAsync" disabled="@(_busy || _paths.Count == 0)">@L["bmk.importStart"]</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public string? InitialFolderId { get; set; }
+    [Parameter] public IReadOnlyList<string>? PendingPaths { get; set; }
+    [Parameter] public EventCallback<string> OnCompleted { get; set; }
+
+    private readonly List<string> _paths = new();
+    private string _destFolderId = "";
+    private ImportMode _mode = ImportMode.Copy;
+    private bool _busy;
+    private string _status = "";
+    private bool _wasOpen;
+    private IReadOnlyList<string>? _lastPending;
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !_wasOpen)
+        {
+            _destFolderId = InitialFolderId != null && State.Folders.Any(f => f.Id == InitialFolderId && f.SourcePath == null && !f.IsArchived)
+                ? InitialFolderId
+                : "";
+            _mode = ImportMode.Copy;
+            _paths.Clear();
+            _status = "";
+        }
+        _wasOpen = IsOpen;
+
+        if (IsOpen && PendingPaths != null && !ReferenceEquals(PendingPaths, _lastPending))
+        {
+            _lastPending = PendingPaths;
+            if (PendingPaths.Count > 0) AddPaths(PendingPaths);
+        }
+    }
+
+    /// <summary>Phase 1 supports file drops/picks; folder linking lands in Phase 2.</summary>
+    public async Task PickFilesAsync()
+    {
+        try
+        {
+            var result = await FilePicker.Default.PickMultipleAsync(new PickOptions
+            {
+                PickerTitle = L["bmk.importFiles"],
+            });
+            if (result == null) return;
+            foreach (var f in result)
+            {
+                var path = f.FullPath;
+                if (!string.IsNullOrEmpty(path) && File.Exists(path)) _paths.Add(path);
+            }
+            StateHasChanged();
+        }
+        catch { _status = L.Get("bmk.importPickFailed"); }
+    }
+
+    public async Task PickFolderAsync()
+    {
+#if WINDOWS
+        try
+        {
+            var platformWindow = Microsoft.Maui.Controls.Application.Current?.Windows
+                .FirstOrDefault()?.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
+            if (platformWindow == null)
+            {
+                _status = L.Get("bmk.importPickFailed");
+                return;
+            }
+
+            var picker = new Windows.Storage.Pickers.FolderPicker
+            {
+                SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary,
+            };
+            picker.FileTypeFilter.Add("*");
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(platformWindow);
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+            var folder = await picker.PickSingleFolderAsync();
+            if (folder != null && Directory.Exists(folder.Path)
+                && !_paths.Contains(folder.Path, StringComparer.OrdinalIgnoreCase))
+            {
+                _paths.Add(folder.Path);
+            }
+            StateHasChanged();
+        }
+        catch { _status = L.Get("bmk.importPickFailed"); }
+#else
+        _status = L.Get("bmk.importPickFailed");
+        await Task.CompletedTask;
+#endif
+    }
+
+    /// <summary>Used by the drag-drop bridge with real shell paths. Callers outside the Blazor event pipeline must trigger a render (the drag-drop bridge passes paths via a parameter instead).</summary>
+    public void AddPaths(IEnumerable<string> paths)
+    {
+        foreach (var p in paths) if (!_paths.Contains(p, StringComparer.OrdinalIgnoreCase)) _paths.Add(p);
+    }
+
+    private async Task StartImportAsync()
+    {
+        if (_busy) return;
+        if (_paths.Count == 0) return;
+        _busy = true;
+        var batch = _paths.ToList();
+        try
+        {
+            var progress = new Progress<(int Index, int Total, string FileName, long Bytes, long TotalBytes)>(p =>
+            {
+                _status = $"{p.Index}/{p.Total} — {p.FileName}";
+                InvokeAsync(StateHasChanged);
+            });
+            var report = await LocalFiles.ImportAsync(batch, string.IsNullOrEmpty(_destFolderId) ? null : _destFolderId,
+                _mode, () => State.Folders, progress);
+            var failed = new HashSet<string>(report.FailedSources, StringComparer.OrdinalIgnoreCase);
+            var removable = new HashSet<string>(batch.Where(p => !failed.Contains(p)), StringComparer.OrdinalIgnoreCase);
+            _paths.RemoveAll(removable.Contains);
+            _busy = false;
+            var msg = report.Imported > 0
+                ? L.Get("bmk.importDone", report.Imported)
+                : report.FoldersCreated > 0
+                    ? L.Get("bmk.importFolders", report.FoldersCreated)
+                    : L.Get("bmk.importDone", 0);
+            if (report.Imported > 0 && report.FoldersCreated > 0)
+                msg += " · " + L.Get("bmk.importFolders", report.FoldersCreated);
+            if (report.SkippedDuplicates > 0) msg += " · " + L.Get("bmk.importSkipped", report.SkippedDuplicates);
+            if (report.Errors.Count > 0) msg += " · " + L.Get("bmk.importErrors", report.Errors.Count);
+            if (_paths.Count > 0)
+            {
+                _status = msg + " · " + L.Get("bmk.importRemaining", _paths.Count);
+                return;   // Blazor re-renders after this handler completes; dialog stays open with the remaining paths
+            }
+            if (OnCompleted.HasDelegate)
+                await OnCompleted.InvokeAsync(msg);
+            else
+                await OnClose.InvokeAsync();
+        }
+        catch
+        {
+            _busy = false;
+            _status = L.Get("bmk.importFailed");
+        }
+    }
+
+    private async Task Close()
+    {
+        if (_busy) return;
+        _paths.Clear();
+        await OnClose.InvokeAsync();
+    }
+}

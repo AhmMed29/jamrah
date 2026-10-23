@@ -1,0 +1,159 @@
+/* mobile-pomodoro.css - Pomodoro Page Mobile Overrides (layout/sizing only, no theme colors changed) */
+@media (max-width: 768px) {
+  /* Stack layout, one scroller */
+  .app-container {
+    flex-direction: column !important;
+    padding: 12px !important;
+    gap: 12px !important;
+    overflow-y: auto !important;
+    height: 100% !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Mobile order: controls(1) -> sessions(2) -> prayer(3). left-panel is pass-through. */
+  .left-panel {
+    display: contents !important;
+  }
+
+  /* Sticky timer card pinned on top while sessions scroll under it */
+  .pomo-controls {
+    order: 1 !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 5 !important;
+    width: 100% !important;
+    flex-shrink: 0 !important;
+    background: var(--card, #FFFFFF);
+    border: 1px solid var(--border, #E7E5E4);
+    border-radius: 16px;
+    padding: 12px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 8px !important;
+  }
+
+  .right-panel {
+    order: 2 !important;
+    flex: none !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .pomo-extra {
+    order: 3 !important;
+    width: 100% !important;
+    background: var(--card, #FFFFFF);
+    border: 1px solid var(--border, #E7E5E4);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Today card compact to save sticky height (sub line duplicates the date) */
+  .today-card { padding: 10px !important; }
+  .today-card-date { font-size: 12px !important; margin-bottom: 4px !important; }
+  .today-card-time { font-size: 18px !important; }
+  .today-card-sub { display: none !important; }
+
+  /* Timer box: single row, adjust buttons always visible for touch */
+  .timer-box {
+    padding: 10px 8px !important;
+    gap: 8px !important;
+    flex-wrap: nowrap !important;
+  }
+  .timer-value, .timer-val {
+    font-size: 32px !important;
+  }
+  .timer-adjust, .timer-adjust--left, .timer-adjust--right {
+    opacity: 1 !important;
+    position: static !important;
+    transform: none !important;
+    pointer-events: auto !important;
+  }
+  .timer-center { order: 2; flex: 1 1 auto !important; min-width: 0 !important; }
+  .timer-adjust--left { order: 1; }
+  .timer-adjust--right { order: 3; }
+  .adj-btn { width: 44px !important; height: 44px !important; }
+  .adj-btn--large { width: 44px !important; height: 44px !important; }
+  .adj-btn--small { width: 36px !important; height: 36px !important; min-height: 36px !important; }
+
+  /* Durations wrap */
+  .durations {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .dur-btn {
+    min-height: 44px;
+    flex: 1 1 calc(25% - 8px) !important;
+    min-width: 60px;
+  }
+
+  /* Actions */
+  .action-btn, .act {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  /* Timer info compact */
+  .timer-info { gap: 4px !important; padding-top: 8px !important; font-size: 11px !important; }
+  .info-row { padding: 2px 0 !important; }
+
+  /* Prayer section */
+  .prayer-countdown-timer { font-size: 20px !important; }
+  .prayer-table { font-size: 12px !important; }
+  .prayer-table td, .prayer-table th { padding: 8px 4px !important; }
+
+  /* View modes static on mobile: avoids sticky-on-sticky clash with the timer card */
+  .view-modes, .view-tabs {
+    position: static !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .view-btn { min-height: 44px; white-space: nowrap; }
+
+  /* Toggle groups compact, no hover tooltips on touch */
+  .toggle-group { margin: 0 !important; }
+  .toggle-header { gap: 8px !important; padding: 8px !important; }
+  .day-histogram { height: 14px !important; }
+  .hist-tip { display: none !important; }
+  .toggle-meta { font-size: 10px !important; padding: 3px 8px !important; }
+
+  /* Session row: compressed single line (tag + name + time + delete) */
+  .session-item {
+    grid-template-columns: 52px minmax(0,1fr) 70px 36px !important;
+    gap: 6px !important;
+    padding: 8px 6px !important;
+  }
+  .session-tag { font-size: 10px !important; }
+  .session-time { font-size: 11px !important; }
+  /* Delete was hover-only (opacity:0) so it was unreachable on touch */
+  .session-del {
+    opacity: 1 !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+  }
+
+  /* Sound modal: single column bottom sheet on mobile */
+  .sound-modal-overlay { align-items: flex-end !important; }
+  .sound-modal { width: 100% !important; max-height: 88dvh !important; border-radius: 16px 16px 0 0 !important; }
+  .sound-modal-body { grid-template-columns: 1fr !important; }
+
+  /* Tall stacked modals scroll inside the bottom sheet */
+  .modal-group { overflow-y: auto !important; }
+}
+
+@media (max-width: 380px) {
+  .timer-value, .timer-val { font-size: 28px !important; }
+  .dur-btn { font-size: 11px !important; padding: 0 8px !important; }
+  .session-item {
+    grid-template-columns: 46px minmax(0,1fr) 64px 32px !important;
+  }
+  .session-del {
+    width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+}

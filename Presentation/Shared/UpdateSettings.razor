@@ -1,0 +1,100 @@
+@namespace Jamrah.Presentation.Shared
+@using Jamrah.Core.Interfaces
+@inject IUpdateService Updates
+@inject Jamrah.Application.Services.LocalizationService L
+@implements IDisposable
+
+<div class="qcard" style="max-width:640px;margin-top:16px">
+    <div class="q-k">@L["upd.title"]</div>
+    <div class="q-meta">@L.Get("upd.current", Updates.CurrentVersion)</div>
+
+    @if (Updates.IsSupported)
+    {
+        <div style="margin-top:12px;font-size:13px;line-height:1.6;color:var(--ink2,#374151);">
+            @StatusText
+        </div>
+        @if (_state.LastChecked is not null && !_state.IsBusy)
+        {
+            <div style="margin-top:5px;font-size:11px;color:var(--ink3,#6b7280);">
+                @L.Get("upd.lastChecked", _state.LastChecked.Value.ToLocalTime().ToString("g", L.Culture))
+            </div>
+        }
+        @if (_state.Stage is UpdateStage.Downloading or UpdateStage.Installing)
+        {
+            <div style="height:7px;border-radius:999px;background:var(--line,#e5e7eb);overflow:hidden;margin-top:10px;">
+                <div style="height:100%;width:@Percent%;background:#b45309;transition:width .15s linear;"></div>
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(_state.Error))
+        {
+            <div style="margin-top:10px;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:8px 10px;font-size:12px;">
+                @_state.Error
+            </div>
+        }
+
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+            <button class="btn sm" @onclick="CheckAsync" disabled="@_state.IsBusy">
+                @(_state.Stage == UpdateStage.Checking ? L["upd.checking"] : L["upd.check"])
+            </button>
+            @if (_state.Stage == UpdateStage.Available)
+            {
+                <button class="btn pri sm" @onclick="DownloadAsync">@L["upd.download"]</button>
+            }
+            else if (_state.Stage is UpdateStage.ReadyToInstall or UpdateStage.InstallerOpened)
+            {
+                <button class="btn pri sm" @onclick="InstallAsync">@InstallLabel</button>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="q-meta" style="margin-top:10px">@L["upd.notInstalled"]</div>
+    }
+
+    <p class="hint" style="margin-top:10px">@L["upd.settingsHint"]</p>
+</div>
+
+@code {
+    private UpdateState _state = new();
+
+    private int Percent => (int)Math.Round(Math.Clamp(_state.Progress, 0, 1) * 100);
+
+    private string InstallLabel => OperatingSystem.IsAndroid()
+        ? L["upd.installAndroid"]
+        : L["upd.install"];
+
+    private string StatusText => _state.Stage switch
+    {
+        UpdateStage.Checking => L["upd.checking"],
+        UpdateStage.UpToDate => L["upd.upToDate"],
+        UpdateStage.Available => L.Get("upd.available", _state.Version ?? ""),
+        UpdateStage.Downloading => L["upd.downloading"],
+        UpdateStage.ReadyToInstall => L["upd.ready"],
+        UpdateStage.Installing => L["upd.installing"],
+        UpdateStage.InstallerOpened => L["upd.installerOpened"],
+        UpdateStage.Unsupported => L["upd.notInstalled"],
+        UpdateStage.Error => _state.Error ?? L["upd.error"],
+        _ => L["upd.settingsHint"]
+    };
+
+    protected override void OnInitialized()
+    {
+        _state = Updates.State;
+        Updates.Changed += OnChanged;
+    }
+
+    private void OnChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            _state = Updates.State;
+            StateHasChanged();
+        });
+    }
+
+    private Task CheckAsync() => Updates.CheckAsync();
+    private Task DownloadAsync() => Updates.DownloadAsync();
+    private Task InstallAsync() => Updates.InstallAsync();
+
+    public void Dispose() => Updates.Changed -= OnChanged;
+}

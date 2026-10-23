@@ -20,6 +20,7 @@ public partial class MainPage : ContentPage
     private readonly LocalizationService _lang;
     private readonly ShellIntegrationService _shellIntegration;
     private readonly ShellIpcService _shellIpc;
+    private readonly IUpdateService _updateService;
     // Single-WebView fixed-sidebar layout: one BlazorWebView hosting AppMainLayout
     // (sidebar rendered once, 5 pages Keep-Alive inside Blazor).
     private BlazorWebView? _mainWebView;
@@ -31,7 +32,7 @@ public partial class MainPage : ContentPage
     private WebView2? _dropWiredView;
 #endif
 
-    public MainPage(ICalendarStateService calendarState, ISettingsRepository settingsRepository, IAppNavService navService, IClipAgentService clipAgent, ITranslatorService translator, LocalizationService lang, ShellIntegrationService shellIntegration, ShellIpcService shellIpc)
+    public MainPage(ICalendarStateService calendarState, ISettingsRepository settingsRepository, IAppNavService navService, IClipAgentService clipAgent, ITranslatorService translator, LocalizationService lang, ShellIntegrationService shellIntegration, ShellIpcService shellIpc, IUpdateService updateService)
     {
         InitializeComponent();
         _calendarState = calendarState;
@@ -42,6 +43,7 @@ public partial class MainPage : ContentPage
         _lang = lang;
         _shellIntegration = shellIntegration;
         _shellIpc = shellIpc;
+        _updateService = updateService;
         Loaded += OnPageLoaded;
     }
 
@@ -60,6 +62,7 @@ public partial class MainPage : ContentPage
         SplashLayer.IsVisible = false;
         EnsureMainWebView();
         _navService.SetCurrent("tasks");
+        StartUpdateCheck();
         await Task.CompletedTask;
         return;
 #else
@@ -89,6 +92,15 @@ public partial class MainPage : ContentPage
         await Task.Delay(350);
         SplashLayer.IsVisible = false;
         _navService.SetCurrent("tasks");
+        StartUpdateCheck();
+    }
+
+    private void StartUpdateCheck()
+    {
+        _ = Task.Run(async () =>
+        {
+            try { await _updateService.CheckAsync(); } catch { }
+        });
     }
 
     private async Task LoadSplashAsync()
@@ -98,6 +110,7 @@ public partial class MainPage : ContentPage
             using var stream = await FileSystem.OpenAppPackageFileAsync("wwwroot/splash.html");
             using var reader = new StreamReader(stream);
             var html = await reader.ReadToEndAsync();
+            var version = Microsoft.Maui.ApplicationModel.AppInfo.Current.VersionString;
             if (_lang.Lang == "en")
             {
                 html = html.Replace("<html lang=\"ar\" dir=\"rtl\">", "<html lang=\"en\" dir=\"ltr\">")
@@ -108,6 +121,8 @@ public partial class MainPage : ContentPage
                     .Replace("جاري التحميل...", "Loading...")
                     .Replace("الإصدار 4.3.0 • جميع بياناتك محلية وآمنة", "Version 4.3.0 • All your data is local and safe");
             }
+            html = html.Replace("الإصدار 4.3.0", $"الإصدار {version}")
+                .Replace("Version 4.3.0", $"Version {version}");
             SplashView.Source = new HtmlWebViewSource { Html = html };
         }
         catch { }

@@ -1,0 +1,137 @@
+@namespace Jamrah.Presentation.Shared
+@using Jamrah.Core.Interfaces
+@inject IUpdateService Updates
+@inject Jamrah.Application.Services.LocalizationService L
+@implements IDisposable
+
+@if (ShouldShow)
+{
+    <div dir="@L.Dir" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.48);padding:20px;">
+        <div role="dialog" aria-modal="true" aria-labelledby="upd-title"
+             style="width:min(460px,100%);background:var(--card,#fff);color:var(--ink,#1f2937);border:1px solid var(--line,#e5e7eb);border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.28);padding:22px;">
+            <div style="display:flex;align-items:flex-start;gap:12px;">
+                <div style="width:42px;height:42px;border-radius:12px;background:#fef3c7;color:#b45309;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-2h2v2Zm0-4h-2V7h2v6Z"/></svg>
+                </div>
+                <div style="min-width:0;flex:1;">
+                    <div id="upd-title" style="font-weight:800;font-size:17px;">@L["upd.newTitle"]</div>
+                    <div style="color:var(--ink3,#6b7280);font-size:13px;margin-top:4px;">
+                        @L.Get("upd.newBody", _state.Version ?? "")
+                    </div>
+                </div>
+            </div>
+
+            @if (_state.Stage == UpdateStage.Downloading)
+            {
+                <div style="margin-top:18px;font-size:13px;color:var(--ink2,#374151);">
+                    @L["upd.downloading"] @Percent%
+                </div>
+                <div style="height:8px;border-radius:999px;background:var(--line,#e5e7eb);overflow:hidden;margin-top:9px;">
+                    <div style="height:100%;width:@(Percent)%;background:var(--accent,#b45309);transition:width .15s linear;"></div>
+                </div>
+            }
+            else if (_state.Stage == UpdateStage.ReadyToInstall)
+            {
+                <div style="margin-top:16px;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;font-size:13px;">
+                    @L["upd.ready"]
+                </div>
+            }
+            else if (_state.Stage == UpdateStage.Installing)
+            {
+                <div style="margin-top:16px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;font-size:13px;">
+                    @L["upd.installing"]
+                </div>
+            }
+            else
+            {
+                @if (_state.DownloadSizeBytes is > 0)
+                {
+                    <div style="margin-top:14px;font-size:12px;color:var(--ink3,#6b7280);">
+                        @L.Get("upd.downloadSize", FormatSize(_state.DownloadSizeBytes))
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(_state.Notes))
+                {
+                    <div style="margin-top:14px;font-size:12px;font-weight:700;color:var(--ink2,#374151);">@L["upd.releaseNotes"]</div>
+                    <div style="margin-top:5px;max-height:150px;overflow:auto;white-space:pre-wrap;font-size:12px;line-height:1.65;color:var(--ink2,#374151);">@_state.Notes</div>
+                }
+            }
+
+            @if (!string.IsNullOrWhiteSpace(_state.Error))
+            {
+                <div style="margin-top:14px;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:9px 11px;font-size:12px;">
+                    @_state.Error
+                </div>
+            }
+
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap;">
+                @if (_state.Stage == UpdateStage.Available)
+                {
+                    <button style="@SecondaryButton" @onclick="Close">@L["upd.later"]</button>
+                    <button style="@PrimaryButton" @onclick="DownloadAsync">@L["upd.download"]</button>
+                }
+                else if (_state.Stage == UpdateStage.ReadyToInstall)
+                {
+                    <button style="@SecondaryButton" @onclick="Close">@L["upd.later"]</button>
+                    <button style="@PrimaryButton" @onclick="InstallAsync">@InstallLabel</button>
+                }
+                else if (_state.Stage == UpdateStage.Downloading)
+                {
+                    <button style="@SecondaryButton" @onclick="Close">@L["upd.later"]</button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private const string PrimaryButton =
+        "border:0;border-radius:10px;padding:10px 15px;background:#b45309;color:#fff;font-weight:700;font-size:13px;cursor:pointer;";
+    private const string SecondaryButton =
+        "border:1px solid var(--line,#d1d5db);border-radius:10px;padding:10px 15px;background:transparent;color:var(--ink2,#374151);font-weight:600;font-size:13px;cursor:pointer;";
+
+    private UpdateState _state = new();
+
+    private bool ShouldShow => _state.PromptVisible
+        && _state.Stage is (UpdateStage.Available
+            or UpdateStage.Downloading
+            or UpdateStage.ReadyToInstall
+            or UpdateStage.Installing);
+
+    private int Percent => (int)Math.Round(Math.Clamp(_state.Progress, 0, 1) * 100);
+
+    private string InstallLabel => OperatingSystem.IsAndroid()
+        ? L["upd.installAndroid"]
+        : L["upd.install"];
+
+    protected override void OnInitialized()
+    {
+        _state = Updates.State;
+        Updates.Changed += OnChanged;
+    }
+
+    private void OnChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            _state = Updates.State;
+            StateHasChanged();
+        });
+    }
+
+    private Task DownloadAsync() => Updates.DownloadAsync();
+    private Task InstallAsync() => Updates.InstallAsync();
+
+    private void Close() => Updates.DismissPrompt();
+
+    private string FormatSize(long? bytes)
+    {
+        if (bytes is not > 0) return L["upd.unknownSize"];
+        const double mb = 1024d * 1024d;
+        return bytes >= mb
+            ? $"{bytes.Value / mb:0.0} MB"
+            : $"{bytes.Value / 1024d:0} KB";
+    }
+
+    public void Dispose() => Updates.Changed -= OnChanged;
+}

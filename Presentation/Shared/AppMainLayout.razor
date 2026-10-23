@@ -49,6 +49,7 @@
     <div class="shell-scrim @(_slim ? "off" : "")" @onclick="() => _slim = true"></div>
 </div>
 <MobileTabBar />
+<UpdatePrompt />
 @if (_slim && (!_isMobile || Nav.CurrentPage == "bookmarks"))
 {
     <button class="page-shell-expand @(L.Dir == "rtl" ? "rtl" : "")" @onclick="() => _slim = false" title="@L["nav.openSidebar"]">

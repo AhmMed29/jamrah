@@ -1,10 +1,16 @@
 using Jamrah.Core.Interfaces;
 using Jamrah.Infrastructure.Repositories;
 using Jamrah.Application.Services;
+using Jamrah.Application.Services.Updates;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls.Hosting;
 using Microsoft.Maui.Hosting;
+#if WINDOWS
+using Jamrah.Platforms.Windows;
+#elif ANDROID
+using Jamrah.Platforms.Android;
+#endif
 
 namespace Jamrah
 {
@@ -24,6 +30,11 @@ namespace Jamrah
             builder.Services.AddSingleton<PrayerTimesService>();
             builder.Services.AddSingleton<PomodoroSoundService>();
             builder.Services.AddSingleton<LocalizationService>();
+#if WINDOWS
+            builder.Services.AddSingleton<IUpdateService, WindowsUpdateService>();
+#elif ANDROID
+            builder.Services.AddSingleton<IUpdateService, AndroidUpdateService>();
+#endif
             
             // Register Data Access Layer
             builder.Services.AddSingleton<PomodoroRepository>();

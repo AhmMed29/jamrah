@@ -5,14 +5,31 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release tag (e.g. v4.3.1). Leave empty to build only."
+        description: "Release version/tag (e.g. v5.0.1). Leave empty to build only."
         required: false
         default: ""
 
 permissions:
   contents: read
 
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+  VPK_VERSION: "1.2.161"
+  REPO_URL: "https://github.com/AhmMed29/jamrah"
+
 jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with: { dotnet-version: "9.0.x" }
+      - name: Run update tests
+        run: dotnet test Jamrah.Updates.Tests\Jamrah.Updates.Tests.csproj --nologo -v:minimal
+
   build-apk:
     runs-on: windows-latest
     steps:
@@ -20,40 +37,174 @@ jobs:
         with: { persist-credentials: false }
       - name: Setup .NET 9
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
-        with: { dotnet-version: '9.0.x' }
+        with: { dotnet-version: "9.0.x" }
       - name: Install MAUI
         run: dotnet workload install maui
       - name: Setup Java 21
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
-        with: { distribution: temurin, java-version: '21' }
-      - name: Publish APK
-        run: dotnet publish Jamrah.csproj -f net9.0-android -c Release
+        with: { distribution: temurin, java-version: "21" }
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $v = "${{ github.event.inputs.version }}"
+          if ([string]::IsNullOrWhiteSpace($v)) { $v = "5.0.0" }
+          $v = $v.Trim().TrimStart("v", "V")
+          $parts = $v.Split(".")
+          if ($parts.Length -ne 3) { throw "Version must be semver, for example v5.0.1." }
+          $code = ([int]$parts[0] * 10000) + ([int]$parts[1] * 100) + [int]$parts[2]
+          "version=$v" >> $env:GITHUB_OUTPUT
+          "code=$code" >> $env:GITHUB_OUTPUT
+
+      - name: Prepare signing key
+        shell: pwsh
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:KEYSTORE_BASE64)) { throw "ANDROID_KEYSTORE_BASE64 is missing." }
+          if ([string]::IsNullOrWhiteSpace($env:STORE_PASSWORD)) { throw "ANDROID_KEYSTORE_PASSWORD is missing." }
+          if ([string]::IsNullOrWhiteSpace($env:KEY_PASSWORD)) { throw "ANDROID_KEY_PASSWORD is missing." }
+          if ([string]::IsNullOrWhiteSpace($env:KEY_ALIAS)) { throw "ANDROID_KEY_ALIAS is missing." }
+          $path = Join-Path $env:RUNNER_TEMP "jamrah-release.keystore"
+          $clean = $env:KEYSTORE_BASE64 -replace "\s", ""
+          [IO.File]::WriteAllBytes($path, [Convert]::FromBase64String($clean))
+          "KEYSTORE_PATH=$path" >> $env:GITHUB_ENV
+
+      - name: Publish signed APK
+        shell: pwsh
+        env:
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          dotnet publish Jamrah.csproj -f net9.0-android -c Release `
+            -p:AndroidPackageFormats=apk `
+            -p:ApplicationDisplayVersion=${{ steps.version.outputs.version }} `
+            -p:ApplicationVersion=${{ steps.version.outputs.code }} `
+            -p:AndroidKeyStore=true `
+            -p:AndroidSigningKeyStore=$env:KEYSTORE_PATH `
+            -p:AndroidSigningStorePass=$env:STORE_PASSWORD `
+            -p:AndroidSigningKeyAlias=$env:KEY_ALIAS `
+            -p:AndroidSigningKeyPass=$env:KEY_PASSWORD
+          if ($LASTEXITCODE -ne 0) { throw "Android publish failed." }
+          $apk = Get-ChildItem -Path bin\Release -Recurse -Filter "*-Signed.apk" | Select-Object -First 1
+          if (-not $apk) { throw "Signed APK not found." }
+          New-Item -ItemType Directory -Force -Path artifacts\android | Out-Null
+          Copy-Item $apk.FullName "artifacts\android\Jamrah-${{ steps.version.outputs.version }}.apk"
+
       - name: Upload APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: jamrah-apk
-          path: bin/Release/**/publish/*.apk
+          path: artifacts/android/*.apk
+          if-no-files-found: error
 
-  build-exe:
+  build-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: { persist-credentials: false }
       - name: Setup .NET 9
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
-        with: { dotnet-version: '9.0.x' }
+        with: { dotnet-version: "9.0.x" }
       - name: Install MAUI
         run: dotnet workload install maui
-      - name: Publish EXE
-        run: dotnet publish Jamrah.csproj -f net9.0-windows10.0.19041.0 -c Release -p:WindowsPackageType=None
-      - name: Upload EXE
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $v = "${{ github.event.inputs.version }}"
+          if ([string]::IsNullOrWhiteSpace($v)) { $v = "5.0.0" }
+          $v = $v.Trim().TrimStart("v", "V")
+          $parts = $v.Split(".")
+          if ($parts.Length -ne 3) { throw "Version must be semver, for example v5.0.1." }
+          $code = ([int]$parts[0] * 10000) + ([int]$parts[1] * 100) + [int]$parts[2]
+          "version=$v" >> $env:GITHUB_OUTPUT
+          "code=$code" >> $env:GITHUB_OUTPUT
+
+      - name: Publish Windows app
+        shell: pwsh
+        run: |
+          dotnet publish Jamrah.csproj -f net9.0-windows10.0.19041.0 -c Release `
+            -p:RuntimeIdentifierOverride=win-x64 `
+            -p:WindowsPackageType=None `
+            -p:WindowsAppSDKSelfContained=true `
+            -p:SelfContained=true `
+            -p:ApplicationDisplayVersion=${{ steps.version.outputs.version }} `
+            -p:ApplicationVersion=${{ steps.version.outputs.code }} `
+            -o publish\win
+          if ($LASTEXITCODE -ne 0) { throw "Windows publish failed." }
+
+          Remove-Item publish\win\.playwright\node\darwin-arm64,publish\win\.playwright\node\darwin-x64,publish\win\.playwright\node\linux-arm64,publish\win\.playwright\node\linux-x64 -Recurse -Force -ErrorAction SilentlyContinue
+
+      - name: Install Velopack CLI
+        shell: pwsh
+        run: |
+          dotnet tool install --global vpk --version $env:VPK_VERSION
+          "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
+
+      - name: Download previous Velopack release
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path releases | Out-Null
+          vpk download github --repoUrl $env:REPO_URL --outputDir releases --token ${{ secrets.GITHUB_TOKEN }}
+          if ($LASTEXITCODE -ne 0) {
+            Write-Warning "No previous Velopack release found; building a full package only."
+          }
+
+      - name: Pack Windows release
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          Get-ChildItem releases -Filter "*-${{ steps.version.outputs.version }}-*" -ErrorAction SilentlyContinue | Remove-Item -Force
+          $notes = "Jamrah ${{ steps.version.outputs.version }}`n`nتحديث تلقائي جديد. Windows يستخدم تحديثات delta، وAndroid ينزّل APK كامل."
+          Set-Content -LiteralPath artifacts\release-notes.md -Value $notes -Encoding utf8
+
+          $icon = Get-ChildItem -Path obj\Release -Recurse -Filter appicon.ico -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($icon) { Copy-Item $icon.FullName artifacts\appicon.ico }
+
+          $packArgs = @(
+            "pack",
+            "--packId", "jamrah.ahmmed29",
+            "--packVersion", "${{ steps.version.outputs.version }}",
+            "--packDir", "publish\win",
+            "--runtime", "win-x64",
+            "--mainExe", "Jamrah.exe",
+            "--packTitle", "Jamrah",
+            "--packAuthors", "Ahmmed",
+            "--outputDir", "releases",
+            "--releaseNotes", "artifacts\release-notes.md"
+          )
+          if (Test-Path artifacts\appicon.ico) {
+            $packArgs += @("--icon", "artifacts\appicon.ico")
+          }
+          vpk @packArgs
+          if ($LASTEXITCODE -ne 0) { throw "Velopack pack failed." }
+
+          $version = "${{ steps.version.outputs.version }}"
+          New-Item -ItemType Directory -Force -Path artifacts\win | Out-Null
+          Copy-Item releases\releases.win.json artifacts\win
+          Copy-Item releases\assets.win.json artifacts\win -ErrorAction SilentlyContinue
+          Copy-Item releases\RELEASES artifacts\win -ErrorAction SilentlyContinue
+          Get-ChildItem releases -Filter "*Setup*.exe" | Copy-Item -Destination artifacts\win
+          Get-ChildItem releases -Filter "*-$version-full.nupkg" | Copy-Item -Destination artifacts\win
+          Get-ChildItem releases -Filter "*-$version-delta.nupkg" | Copy-Item -Destination artifacts\win -ErrorAction SilentlyContinue
+          Get-ChildItem releases -Filter "*-$version-Portable.zip" | Copy-Item -Destination artifacts\win -ErrorAction SilentlyContinue
+
+      - name: Upload Windows release files
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: jamrah-exe
-          path: bin/Release/**/publish/*.exe
+          name: jamrah-windows-release
+          path: artifacts/win/*
+          if-no-files-found: error
 
   release:
-    needs: [build-apk, build-exe]
+    needs: [test, build-apk, build-windows]
     runs-on: windows-latest
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.version != ''
     permissions:
@@ -61,30 +212,98 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: { persist-credentials: false }
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with: { dotnet-version: "9.0.x" }
+      - name: Install Velopack CLI
+        shell: pwsh
+        run: |
+          dotnet tool install --global vpk --version $env:VPK_VERSION
+          "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
+
       - name: Download APK
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: jamrah-apk
-          path: ./artifacts/apk
-      - name: Download EXE
+          path: artifacts/android
+      - name: Download Windows release files
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: jamrah-exe
-          path: ./artifacts/exe
-      - name: List artifacts (debug)
-        run: Get-ChildItem -Path ./artifacts -Recurse | Format-Table -AutoSize
-      - name: Create Release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-        with:
-          tag_name: ${{ github.event.inputs.version }}
-          name: "Jamrah ${{ github.event.inputs.version }}"
-          body: "Built from ${{ github.sha }}"
-          draft: false
-          prerelease: false
-          files: |
-            ./artifacts/apk/**/*.apk
-            ./artifacts/exe/**/*.exe
-            ./artifacts/**/*.apk
-            ./artifacts/**/*.exe
+          name: jamrah-windows-release
+          path: artifacts/win
+
+      - name: Prepare Android manifest and release notes
+        shell: pwsh
+        run: |
+          $v = "${{ github.event.inputs.version }}".Trim().TrimStart("v", "V")
+          $parts = $v.Split(".")
+          if ($parts.Length -ne 3) { throw "Version must be semver, for example v5.0.1." }
+          $code = ([int]$parts[0] * 10000) + ([int]$parts[1] * 100) + [int]$parts[2]
+          $tag = "v$v"
+          "APP_VERSION=$v" >> $env:GITHUB_ENV
+          "APP_VERSION_CODE=$code" >> $env:GITHUB_ENV
+          "APP_TAG=$tag" >> $env:GITHUB_ENV
+
+          New-Item -ItemType Directory -Force -Path artifacts\release | Out-Null
+          $sourceApk = Get-ChildItem artifacts\android -Filter *.apk | Select-Object -First 1
+          if (-not $sourceApk) { throw "APK artifact not found." }
+          $apkName = "Jamrah-$v.apk"
+          $apkPath = Join-Path artifacts\release $apkName
+          Copy-Item $sourceApk.FullName $apkPath
+
+          $hash = (Get-FileHash -LiteralPath $apkPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          $size = (Get-Item -LiteralPath $apkPath).Length
+          $apkUrl = "https://github.com/AhmMed29/jamrah/releases/download/$tag/$apkName"
+
+          $manifest = [ordered]@{
+            version = $v
+            versionCode = $code
+            apkUrl = $apkUrl
+            sha256 = $hash
+            sizeBytes = $size
+            notes = "Jamrah $v"
+          }
+          $manifest | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath artifacts\release\version.json -Encoding utf8
+          "$hash  $apkName" | Set-Content -LiteralPath artifacts\release\SHA256SUMS.txt -Encoding utf8
+
+          $body = @"
+          ## Jamrah $tag
+
+          تحديث جديد مع دعم التحديث التلقائي.
+
+          - Windows: تحديثات delta تلقائية عبر Velopack.
+          - Android: تنزيل APK كامل والتثبيت من النظام.
+
+          APK SHA-256: ``$hash``
+          "@
+          Set-Content -LiteralPath artifacts\release\release-body.md -Value $body -Encoding utf8
+
+      - name: Create release if needed
+        shell: pwsh
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view $env:APP_TAG --repo AhmMed29/jamrah *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $env:APP_TAG --repo AhmMed29/jamrah --title "Jamrah $env:APP_TAG" --notes-file artifacts\release\release-body.md --target "${{ github.sha }}"
+          } else {
+            gh release edit $env:APP_TAG --repo AhmMed29/jamrah --title "Jamrah $env:APP_TAG" --notes-file artifacts\release\release-body.md
+          }
+          if ($LASTEXITCODE -ne 0) { throw "Could not create or update the GitHub release." }
+
+      - name: Upload Velopack assets
+        shell: pwsh
+        run: |
+          vpk upload github --repoUrl $env:REPO_URL --outputDir artifacts\win --token ${{ secrets.GITHUB_TOKEN }} --publish --merge --releaseName "Jamrah $env:APP_TAG" --tag $env:APP_TAG
+          if ($LASTEXITCODE -ne 0) { throw "Velopack upload failed." }
+
+      - name: Upload APK and version manifest
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $apk = "artifacts\release\Jamrah-$env:APP_VERSION.apk"
+          gh release upload $env:APP_TAG $apk artifacts\release\version.json artifacts\release\SHA256SUMS.txt artifacts\win\releases.win.json --repo AhmMed29/jamrah --clobber
+          if ($LASTEXITCODE -ne 0) { throw "Android release upload failed." }
+          gh release edit $env:APP_TAG --repo AhmMed29/jamrah --title "Jamrah $env:APP_TAG" --notes-file artifacts\release\release-body.md
+          if ($LASTEXITCODE -ne 0) { throw "Release notes update failed." }

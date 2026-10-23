@@ -162,7 +162,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path artifacts | Out-Null
           Get-ChildItem releases -Filter "*-${{ steps.version.outputs.version }}-*" -ErrorAction SilentlyContinue | Remove-Item -Force
-          $notes = "Jamrah ${{ steps.version.outputs.version }}`n`nتحديث تلقائي جديد. Windows يستخدم تحديثات delta، وAndroid ينزّل APK كامل."
+          $notes = "Jamrah ${{ steps.version.outputs.version }}`n`nAutomatic updates are now available. Windows uses delta updates, and Android downloads the full APK."
           Set-Content -LiteralPath artifacts\release-notes.md -Value $notes -Encoding utf8
 
           $icon = Get-ChildItem -Path obj\Release -Recurse -Filter appicon.ico -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -194,7 +194,7 @@ jobs:
           Get-ChildItem releases -Filter "*Setup*.exe" | Copy-Item -Destination artifacts\win
           Get-ChildItem releases -Filter "*-$version-full.nupkg" | Copy-Item -Destination artifacts\win
           Get-ChildItem releases -Filter "*-$version-delta.nupkg" | Copy-Item -Destination artifacts\win -ErrorAction SilentlyContinue
-          Get-ChildItem releases -Filter "*-$version-Portable.zip" | Copy-Item -Destination artifacts\win -ErrorAction SilentlyContinue
+          Get-ChildItem releases -Filter "*-Portable.zip" | Copy-Item -Destination artifacts\win -ErrorAction SilentlyContinue
 
       - name: Upload Windows release files
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -269,10 +269,10 @@ jobs:
           $body = @"
           ## Jamrah $tag
 
-          تحديث جديد مع دعم التحديث التلقائي.
+          A new automatic update is available.
 
-          - Windows: تحديثات delta تلقائية عبر Velopack.
-          - Android: تنزيل APK كامل والتثبيت من النظام.
+          - Windows: delta updates via Velopack.
+          - Android: full APK download with SHA-256 verification.
 
           APK SHA-256: ``$hash``
           "@

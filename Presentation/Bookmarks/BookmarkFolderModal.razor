@@ -1,0 +1,168 @@
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@inject BookmarkStateService State
+@inject LocalizationService L
+@implements IDisposable
+
+<div class="modal-wrap">
+    <div class="modal">
+        <div class="m-h">
+            <span class="m-t">@Title</span>
+            <button class="m-x" @onclick="() => OnClose.InvokeAsync()">@((MarkupString)BookmarkIcons.Svg("x", 16))</button>
+        </div>
+        <div class="m-b">
+            <div class="fld"><label>@L["bmk.fName"] <i>*</i></label><input type="text" dir="auto" @bind="_name" placeholder="@(IsSmart ? L["bmk.fNameExSmart"] : L["bmk.fNameEx"])" /></div>
+            @if (Mode != "folder")
+            {
+                <div class="fld"><label>@L["bmk.fIcon"]</label>
+                    <div class="icpick">
+                        <div class="icp-row">
+                            @foreach (var ic in IconPresets)
+                            {
+                                <button type="button" class="icp @(_icon == ic ? "on" : "")" @onclick="() => _icon = ic">
+                                    @((MarkupString)BookmarkIcons.FdIcon(ic, "folder"))
+                                </button>
+                            }
+                        </div>
+                        <input @bind="_icon" placeholder="@L["bmk.fIconPh"]" />
+                    </div>
+                </div>
+            }
+            @if (IsSmart)
+            {
+                <div class="fld"><label>@L["bmk.includeTypes"]</label>
+                    <div class="tcheck">
+                        @foreach (var t in BookmarkQuery.Types.Keys)
+                        {
+                            <button type="button" class="chip @(_types.Contains(t) ? "on" : "")" @onclick="() => ToggleType(t)">@BookmarkQuery.TypeName(t, L.Lang)</button>
+                        }
+                    </div>
+                </div>
+                <div class="fld"><label>@L["bmk.mustTags"]</label>
+                    <input type="text" @bind="_tagsText" placeholder="backend, reference" />
+                </div>
+                <div class="fld"><label class="ck"><input type="checkbox" @bind="_favOnly" /> @L["bmk.favOnly"]</label></div>
+            }
+        </div>
+        <div class="m-f">
+            @if (IsEdit)
+            {
+                <button class="btn @(_confirmDelete ? "dgr" : "")" style="margin-inline-end:auto" @onclick="Delete">
+                    @(_confirmDelete ? L["bmk.confirmAgain"] : L["com.delete"])
+                </button>
+            }
+            <button class="btn" @onclick="() => OnClose.InvokeAsync()">@L["com.cancel"]</button>
+            <button class="btn pri" @onclick="Save" disabled="@(string.IsNullOrWhiteSpace(_name))">@L["com.save"]</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Mode { get; set; } = "folder"; // folder | collection | smart
+    [Parameter] public string? FolderId { get; set; }
+    [Parameter] public string? CollectionId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<string> OnSaved { get; set; }
+
+    private string _name = string.Empty;
+    private string _icon = string.Empty;
+    private List<string> _types = new();
+    private string _tagsText = string.Empty;
+    private bool _favOnly;
+    private bool _confirmDelete;
+
+    private static readonly string[] IconPresets = new[]
+        { "code", "layers", "folder", "globe", "📚", "🎬", "🚀", "📖", "📘", "💻", "👤", "star", "spark" };
+
+    private bool IsSmart => Mode == "smart" || (Mode == "collection" && CollectionId != null && BookmarkQuery.ParseSmart(State.Collections.FirstOrDefault(c => c.Id == CollectionId)?.SmartJson) != null);
+    private bool IsEdit => FolderId != null || CollectionId != null;
+    private string Title => Mode == "folder" ? (FolderId == null ? L["bmk.newFolder"] : L["bmk.editFolder"])
+        : IsSmart ? (CollectionId == null ? L["bmk.newSmartCol"] : L["bmk.editSmartCol"])
+        : (CollectionId == null ? L["bmk.newCollection"] : L["bmk.editCollection"]);
+
+    protected override void OnInitialized()
+    {
+        L.OnLanguageChanged += OnLang;
+        if (FolderId != null)
+        {
+            var f = State.Folders.FirstOrDefault(x => x.Id == FolderId);
+            if (f != null) { _name = f.Name; _icon = f.Icon; }
+        }
+        else if (CollectionId != null)
+        {
+            var c = State.Collections.FirstOrDefault(x => x.Id == CollectionId);
+            if (c != null)
+            {
+                _name = c.Name; _icon = c.Icon;
+                var s = BookmarkQuery.ParseSmart(c.SmartJson);
+                if (s != null)
+                {
+                    _types = s["types"]?.AsArray().Select(x => x?.ToString() ?? string.Empty).Where(x => x != string.Empty).ToList() ?? new();
+                    _tagsText = string.Join(", ", s["tags"]?.AsArray().Select(x => x?.ToString() ?? string.Empty) ?? Enumerable.Empty<string>());
+                    _favOnly = s["favorite"]?.GetValue<bool>() ?? false;
+                }
+            }
+        }
+    }
+
+    private void OnLang() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        L.OnLanguageChanged -= OnLang;
+    }
+
+    private void ToggleType(string t)
+    {
+        if (!_types.Remove(t)) _types.Add(t);
+    }
+
+    private async Task Save()
+    {
+        if (Mode == "folder")
+        {
+            var existing = FolderId != null ? State.Folders.FirstOrDefault(x => x.Id == FolderId) : null;
+            if (existing != null)
+            {
+                await State.RenameFolderAsync(existing.Id, _name.Trim());
+            }
+            else
+            {
+                var target = new BookmarkFolder
+                {
+                    Id = FolderId ?? Guid.NewGuid().ToString(),
+                    CollectionId = string.IsNullOrEmpty(CollectionId) ? null : CollectionId,
+                };
+                target.Name = _name.Trim();
+                await State.SaveFolderAsync(target);
+            }
+        }
+        else
+        {
+            var c = CollectionId != null
+                ? State.Collections.FirstOrDefault(x => x.Id == CollectionId) ?? new BookmarkCollection { Id = CollectionId }
+                : new BookmarkCollection();
+            c.Name = _name.Trim(); c.Icon = _icon.Trim();
+            c.SmartJson = IsSmart
+                ? new System.Text.Json.Nodes.JsonObject
+                {
+                    ["types"] = new System.Text.Json.Nodes.JsonArray(_types.Select(t => System.Text.Json.Nodes.JsonValue.Create(t)).ToArray()),
+                    ["tags"] = new System.Text.Json.Nodes.JsonArray(_tagsText.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(t => System.Text.Json.Nodes.JsonValue.Create(t)).ToArray()),
+                    ["favorite"] = _favOnly,
+                }.ToJsonString()
+                : null;
+            await State.SaveCollectionAsync(c);
+        }
+        await OnSaved.InvokeAsync(L["bmk.savedToast"]);
+    }
+
+    private async Task Delete()
+    {
+        if (!_confirmDelete) { _confirmDelete = true; return; }
+        // NOTE: delete moves the container to the Archive page (soft flag);
+        // permanent removal happens from the Archive page itself.
+        if (FolderId != null) await State.ArchiveFolderAsync(FolderId);
+        else if (CollectionId != null) await State.ArchiveCollectionAsync(CollectionId);
+        await OnSaved.InvokeAsync(L["bmk.archivedToast"]);
+    }
+}

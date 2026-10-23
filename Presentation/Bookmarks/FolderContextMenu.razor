@@ -1,0 +1,238 @@
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@using Microsoft.JSInterop
+@inject BookmarkStateService State
+@inject LocalizationService L
+@inject IJSRuntime JS
+
+@if (_folder != null)
+{
+    <div class="ctx-scrim" @onclick="Close"></div>
+    <div class="ctx-menu" @ref="_menuRef"
+         style="@(_fallback ? "left:8px;top:8px" : "left:8px;top:8px;visibility:hidden")"
+         dir="@L.Dir" @onclick:stopPropagation="true">
+        <button class="ctx-i" @onclick="NewNote">
+            @((MarkupString)BookmarkIcons.Svg("note", 15))<span>@T("ملاحظة جديدة", "New note")</span>
+        </button>
+        <button class="ctx-i" @onclick="NewFolder">
+            @((MarkupString)BookmarkIcons.Svg("plus", 15))<span>@T("فولدر جديد", "New folder")</span>
+        </button>
+        <div class="ctx-sep"></div>
+        <button class="ctx-i" @onclick="Copy" disabled="@_busy">
+            @((MarkupString)BookmarkIcons.Svg("copy", 15))<span>@T("اعمل نسخة", "Make a copy")</span>
+        </button>
+        <div class="ctx-subwrap">
+            <button class="ctx-i" @onclick="() => _moveOpen = !_moveOpen">
+                @((MarkupString)BookmarkIcons.Svg("folder", 15))<span>@T("انقل الفولدر إلى…", "Move folder to…")</span>
+                <span class="ctx-chev @(_moveOpen ? "open" : "")">@((MarkupString)BookmarkIcons.Svg("chevD", 12))</span>
+            </button>
+            @if (_moveOpen)
+            {
+                <div class="ctx-sub">
+                    <button class="ctx-i" @onclick="() => MoveTo(null)">@T("المستوى الأعلى", "Top level")</button>
+                    @foreach (var t in MoveTargets)
+                    {
+                        var tid = t.Id;
+                        <button class="ctx-i" style="padding-inline-start:@(10 + t.Depth * 14)px" @onclick="() => MoveTo(tid)">@t.Name</button>
+                    }
+                    @if (MoveTargets.Count == 0)
+                    {
+                        <div class="ctx-empty">@T("مفيش فولدرات تانية", "No other folders")</div>
+                    }
+                </div>
+            }
+        </div>
+        <button class="ctx-i" @onclick="SearchInFolder">
+            @((MarkupString)BookmarkIcons.Svg("search", 15))<span>@T("ابحث جوه الفولدر", "Search in folder")</span>
+        </button>
+        <div class="ctx-sep"></div>
+        <button class="ctx-i" @onclick="CopyPath">
+            @((MarkupString)BookmarkIcons.Svg("copy", 15))<span>@T("انسخ المسار", "Copy path")</span>
+        </button>
+        <button class="ctx-i" @onclick="ShowInExplorer">
+            @((MarkupString)BookmarkIcons.Svg("folder", 15))<span>@T("افتح في المستكشف", "Show in system explorer")</span>
+        </button>
+        <div class="ctx-sep"></div>
+        <button class="ctx-i" @onclick="Rename">
+            @((MarkupString)BookmarkIcons.Svg("edit", 15))<span>@T("إعادة تسمية…", "Rename…")</span>
+        </button>
+        <button class="ctx-i dgr" @onclick="Delete">
+            @((MarkupString)BookmarkIcons.Svg("trash", 15))<span>@T("حذف", "Delete")</span>
+        </button>
+    </div>
+}
+
+@code {
+    [Parameter] public string FolderId { get; set; } = string.Empty;
+    [Parameter] public double X { get; set; }
+    [Parameter] public double Y { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<string> OnNewNote { get; set; }
+    [Parameter] public EventCallback<string> OnSearchInFolder { get; set; }
+    [Parameter] public EventCallback<string> OnToast { get; set; }
+
+    private BookmarkFolder? _folder;
+    private bool _moveOpen;
+    private bool _busy;
+    private bool _fallback;
+    private ElementReference _menuRef;
+
+    private List<(string Id, string Name, int Depth)> MoveTargets = new();
+
+    protected override void OnParametersSet()
+    {
+        _folder = State.Folders.FirstOrDefault(f => f.Id == FolderId);
+        MoveTargets = new();
+        if (_folder == null) return;
+        var col = _folder.CollectionId ?? string.Empty;
+        var seen = new HashSet<string>(StringComparer.Ordinal) { FolderId };
+        void Walk(string? parentId, int depth)
+        {
+            foreach (var f in State.Folders
+                .Where(x => !x.IsArchived && (x.CollectionId ?? string.Empty) == col
+                    && (x.ParentId ?? string.Empty) == (parentId ?? string.Empty))
+                .OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase))
+            {
+                if (!seen.Add(f.Id) || IsDescendant(f.Id, FolderId)) continue;
+                MoveTargets.Add((f.Id, f.Name, depth));
+                Walk(f.Id, depth + 1);
+            }
+        }
+        Walk(null, 0);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_folder == null) return;
+        try
+        {
+            await JS.InvokeVoidAsync("bmShell.placeCtxMenu", _menuRef, X, Y);
+        }
+        catch
+        {
+            if (_fallback) return;
+            _fallback = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private string T(string ar, string en) => L.Lang == "ar" ? ar : en;
+
+    private bool IsDescendant(string candidateId, string? ancestorId)
+    {
+        if (string.IsNullOrEmpty(ancestorId)) return false;
+        var p = State.Folders.FirstOrDefault(x => x.Id == candidateId)?.ParentId;
+        var n = 0;
+        while (!string.IsNullOrEmpty(p) && n++ < 50)
+        {
+            if (p == ancestorId) return true;
+            p = State.Folders.FirstOrDefault(x => x.Id == p)?.ParentId;
+        }
+        return false;
+    }
+
+    private string FolderPath()
+    {
+        var rel = State.LocalFiles?.FolderChainFor(FolderId, State.Folders) ?? string.Empty;
+        return string.IsNullOrEmpty(rel)
+            ? Infrastructure.AppPaths.Layout.LibraryDir
+            : System.IO.Path.Combine(Infrastructure.AppPaths.Layout.LibraryDir, rel.Replace('/', System.IO.Path.DirectorySeparatorChar));
+    }
+
+    private async Task Close() => await OnClose.InvokeAsync();
+
+    private async Task NewNote()
+    {
+        await OnClose.InvokeAsync();
+        await OnNewNote.InvokeAsync(FolderId);
+    }
+
+    private async Task NewFolder()
+    {
+        var id = await State.CreateFolderAsync(FolderId);
+        await OnClose.InvokeAsync();
+        if (id != null)
+        {
+            await RevealAncestors(id);
+            State.RenameFolderId = id;
+            await OnToast.InvokeAsync(T("تم إنشاء فولدر جديد", "New folder created"));
+        }
+    }
+
+    private async Task RevealAncestors(string id)
+    {
+        var p = State.Folders.FirstOrDefault(f => f.Id == id)?.ParentId;
+        var guard = 0;
+        while (!string.IsNullOrEmpty(p) && guard++ < 50)
+        {
+            var f = State.Folders.FirstOrDefault(x => x.Id == p);
+            if (f == null) break;
+            if (!f.IsOpen)
+            {
+                f.IsOpen = true;
+                try { await State.SaveFolderAsync(f); } catch { }
+            }
+            p = f.ParentId;
+        }
+    }
+
+    private async Task Copy()
+    {
+        if (_busy) return;
+        _busy = true;
+        var id = await State.CopyFolderAsync(FolderId);
+        _busy = false;
+        await OnClose.InvokeAsync();
+        await OnToast.InvokeAsync(id != null
+            ? T("اتعملت نسخة كاملة ✓", "Full copy created ✓")
+            : T("مقدرتش أعمل نسخة", "Could not copy folder"));
+    }
+
+    private async Task MoveTo(string? parentId)
+    {
+        var ok = await State.MoveFolderAsync(FolderId, parentId);
+        await OnClose.InvokeAsync();
+        await OnToast.InvokeAsync(ok ? T("اتنقل الفولدر ✓", "Folder moved ✓") : T("مقدرتش أنقل الفولدر", "Could not move folder"));
+    }
+
+    private async Task SearchInFolder()
+    {
+        await OnClose.InvokeAsync();
+        await OnSearchInFolder.InvokeAsync(FolderId);
+    }
+
+    private async Task CopyPath()
+    {
+        var path = FolderPath();
+        try { await JS.InvokeVoidAsync("bmInterop.copyText", path); } catch { }
+        await OnClose.InvokeAsync();
+        await OnToast.InvokeAsync(T("اتنسخ المسار ✓", "Path copied ✓"));
+    }
+
+    private async Task ShowInExplorer()
+    {
+        var path = FolderPath();
+        try
+        {
+            if (!System.IO.Directory.Exists(path) && State.LocalFiles != null)
+                State.LocalFiles.EnsureFolderDirectory(FolderId, State.Folders);
+        }
+        catch { }
+        LocalFileActions.ShowFolderInExplorer(path);
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task Rename()
+    {
+        await OnClose.InvokeAsync();
+        await RevealAncestors(FolderId);
+        State.RenameFolderId = FolderId;
+    }
+
+    private async Task Delete()
+    {
+        await State.ArchiveFolderAsync(FolderId);
+        await OnClose.InvokeAsync();
+        await OnToast.InvokeAsync(T("اتنقل للأرشيف", "Moved to Archive"));
+    }
+}

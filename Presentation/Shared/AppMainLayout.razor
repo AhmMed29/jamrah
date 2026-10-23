@@ -1,0 +1,191 @@
+@namespace Jamrah.Presentation.Shared
+@using System.Globalization
+@using Jamrah.Presentation.Tasks
+@using Jamrah.Presentation.Calendar
+@using Jamrah.Presentation.Pomodoro
+@using Jamrah.Presentation.Planning
+@using Jamrah.Presentation.Bookmarks
+@using Microsoft.JSInterop
+@inject Jamrah.Core.Interfaces.IAppNavService Nav
+@inject Jamrah.Application.Services.LocalizationService L
+@inject Jamrah.Core.Interfaces.ISettingsRepository Settings
+@inject Jamrah.Application.Services.LocalDropBridge DropBridge
+@inject IJSRuntime JS
+@implements IDisposable
+
+@* Fixed sidebar layout: ONE sidebar for the whole app, content area switches
+   between the 5 pages (all mounted = Keep-Alive, only one visible).
+   Same CSS classes as PageShell so appshell.css applies with zero visual change. *@
+<div class="page-shell @(_slim ? "slim" : "") @(L.Dir == "rtl" ? "rtl" : "")" style="@($"--sbw:{_sbW}px")">
+    <AppSidebar OnToggleSidebar="() => _slim = !_slim"
+                OnNavigate="OnSidebarNavigate"
+                OnNewCollection='() => HandleFolderModal(("collection", null, null))'
+                OnNewSmart='() => HandleFolderModal(("smart", null, null))'
+                OnNewNote='id => _bm?.OpenSaveModal(null, id, "note")'
+                OnToast='msg => _bm?.ShowToast(msg)'
+                OnCollectionMenu='id => HandleFolderModal(("collection", null, id))'
+                OnNewFolderInCollection='cid => HandleFolderModal(("folder", null, cid))'
+                OnNewPageInCollection='cid => HandlePageModal(("page", null, cid, null, null))'
+                OnNewSubPage='pid => HandlePageModal(("page", null, null, null, pid))'
+                OnPageMenu='pid => HandlePageModal(("page", pid, null, null, null))' />
+    <div class="sb-rz" title="@(L.Lang == "ar" ? "اسحب لتغيير عرض القائمة" : "Drag to resize the sidebar")"></div>
+    <div class="page-shell-frame" dir="@L.Dir" lang="@L.Lang">
+        <div style="display:@(Nav.CurrentPage == "tasks" ? "block" : "none");height:100%;min-height:0;min-width:0;overflow:hidden;">
+            <TaskPage />
+        </div>
+        <div style="display:@(Nav.CurrentPage == "pomodoro" ? "block" : "none");height:100%;min-height:0;min-width:0;overflow:hidden;">
+            <PomodoroPage />
+        </div>
+        <div style="display:@(Nav.CurrentPage == "calendar" ? "block" : "none");height:100%;min-height:0;min-width:0;overflow:hidden;">
+            <CalendarPage />
+        </div>
+        <div style="display:@(Nav.CurrentPage == "planning" ? "block" : "none");height:100%;min-height:0;min-width:0;overflow:hidden;">
+            <PlanningPage />
+        </div>
+        <div style="display:@(Nav.CurrentPage == "bookmarks" ? "block" : "none");height:100%;min-height:0;min-width:0;overflow:hidden;">
+            <BookmarkPage @ref="_bm" />
+        </div>
+    </div>
+    <div class="shell-scrim @(_slim ? "off" : "")" @onclick="() => _slim = true"></div>
+</div>
+<MobileTabBar />
+@if (_slim && (!_isMobile || Nav.CurrentPage == "bookmarks"))
+{
+    <button class="page-shell-expand @(L.Dir == "rtl" ? "rtl" : "")" @onclick="() => _slim = false" title="@L["nav.openSidebar"]">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3,6 L21,6 L21,8 L3,8 L3,6 Z M3,11 L21,11 L21,13 L3,13 L3,11 Z M3,16 L21,16 L21,18 L3,18 L3,16 Z"/></svg>
+    </button>
+}
+
+@code {
+    private bool _slim;
+    private bool _isMobile;
+    private double _sbW = 200;
+    private BookmarkPage? _bm;
+    private DotNetObjectReference<AppMainLayout>? _sbRef;
+
+    // Bookmarks modal forwarding (moved verbatim from ShellBookmarksPage).
+    private Task HandleFolderModal((string Mode, string? FolderId, string? CollectionId) m)
+    {
+        if (_bm != null) _bm.OpenFolderModal(m.Mode, m.FolderId, m.CollectionId);
+        return Task.CompletedTask;
+    }
+
+    private Task HandlePageModal((string Mode, string? PageId, string? CollectionId, string? FolderId, string? ParentPageId) m)
+    {
+        if (_bm != null) _bm.OpenPageModal(m.Mode, m.PageId, m.CollectionId, m.FolderId, m.ParentPageId);
+        return Task.CompletedTask;
+    }
+
+    private async Task OnSidebarNavigate((string Ctx, string? Id, string? Tag) t)
+    {
+        if (_bm != null) await _bm.Navigate(t);
+        if (_isMobile) _slim = true;
+    }
+
+    protected override void OnInitialized()
+    {
+        Nav.PageRequested += OnPageRequested;
+        Nav.Changed += OnNavChanged;
+        L.OnLanguageChanged += OnLang;
+    }
+
+    // UNIFIED zoom applied from Blazor after first render: guaranteed to run on the
+    // real document (no native early-ExecuteScript race). Native NavigationCompleted
+    // re-apply stays as backup.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        // Android phones: start with the sidebar collapsed (it opens as a drawer).
+        // jamrahMobile returns false on desktop, so Windows behavior is unchanged.
+        try
+        {
+            _isMobile = await JS.InvokeAsync<bool>("jamrahMobile.shouldAutoCollapse");
+            if (_isMobile)
+            {
+                _slim = true;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch { }
+        try
+        {
+            var raw = await Settings.GetAsync("bookmarkSidebarWidth");
+            if (double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var w))
+                _sbW = Math.Max(170, Math.Min(420, w));
+            await InvokeAsync(StateHasChanged);
+        }
+        catch { }
+        try
+        {
+            _sbRef?.Dispose();
+            _sbRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("bmSidebar.init", _sbRef, _sbW);
+        }
+        catch { }
+        try
+        {
+            var z = await Settings.GetUnifiedZoomAsync();
+            _zoomRef?.Dispose();
+            _zoomRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("jamrahZoom.init", "unified", z, _zoomRef);
+        }
+        catch { }
+        try
+        {
+            _dropRef?.Dispose();
+            _dropRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("jamrahLocalDrop.register", _dropRef);
+        }
+        catch { }
+    }
+
+    private DotNetObjectReference<AppMainLayout>? _zoomRef;
+    private DotNetObjectReference<AppMainLayout>? _dropRef;
+
+    // Called from JS on every zoom change (Ctrl +/-/wheel/0): persists directly
+    // via the repository instead of relying on the WebView message channel.
+    [JSInvokable]
+    public async Task ReportZoom(double zoom)
+    {
+        try { await Settings.SetUnifiedZoomAsync(Math.Round(zoom, 2)); } catch { }
+    }
+
+    [JSInvokable]
+    public async Task ReportSidebarWidth(double width)
+    {
+        _sbW = Math.Max(170, Math.Min(420, width));
+        try { await Settings.SetAsync("bookmarkSidebarWidth", _sbW.ToString("0", CultureInfo.InvariantCulture)); } catch { }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public void OnLocalDrop(string[] paths) => DropBridge.Raise(paths);
+
+    private void OnPageRequested(string page)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            Nav.SetCurrent(page);
+            StateHasChanged();
+            // UNIFIED zoom: keep the single document zoom, just update JS currentPage
+            // so Ctrl+0/Ctrl+/- apply to the right context and persist to zoom_unified.
+            try { await JS.InvokeVoidAsync("jamrahZoom.switchPage", page); } catch { }
+        });
+    }
+
+    private void OnNavChanged() => InvokeAsync(StateHasChanged);
+    private void OnLang() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        _zoomRef?.Dispose();
+        _zoomRef = null;
+        _sbRef?.Dispose();
+        _sbRef = null;
+        _dropRef?.Dispose();
+        _dropRef = null;
+        Nav.PageRequested -= OnPageRequested;
+        Nav.Changed -= OnNavChanged;
+        L.OnLanguageChanged -= OnLang;
+    }
+}

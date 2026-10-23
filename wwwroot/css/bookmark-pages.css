@@ -1,0 +1,72 @@
+/* ADDITIVE (new): styles for collection/page management additions only.
+   Existing sidebar/modal styles stay untouched. */
+
+/* + button next to the dots — same hover reveal behaviour as .dots */
+.page-shell .sb-i .sb-plus {
+    margin-left: auto;
+    opacity: 0;
+    color: var(--ink3);
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    flex: none;
+}
+.page-shell .sb-i .sb-plus:hover { background: var(--line2); color: var(--ink); }
+.page-shell .sb-i:hover .sb-plus { opacity: 1; }
+/* row has two trailing actions now: keep count visible until hover, then show actions */
+.page-shell .sb-i.has-dots .sb-plus + .dots { margin-left: 0; }
+.page-shell .sb-i.has-dots:hover .c { display: none; }
+
+/* + button inside a section header (e.g. Collections) */
+.page-shell .sb-sec-plus {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    color: var(--ink3);
+    flex: none;
+}
+.page-shell .sb-sec-plus:hover { background: var(--hover); color: var(--ink); }
+
+/* rows become positioning anchors for the small popup */
+.page-shell .sb-i.has-pop { position: relative; }
+
+/* small popup box that opens at the click position */
+.page-shell .sb-pop {
+    position: absolute;
+    top: calc(100% + 2px);
+    right: 6px;
+    z-index: 60;
+    min-width: 150px;
+    background: var(--surface);
+    border: 1px solid var(--line2);
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(24,23,21,.14);
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.page-shell .sb-pop button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 9px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink2);
+    text-align: left;
+}
+.page-shell .sb-pop button:hover { background: var(--hover); color: var(--ink); }
+
+/* transparent layer that closes the popup when clicking outside */
+.page-shell .sb-pop-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: transparent;
+}

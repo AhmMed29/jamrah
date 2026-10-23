@@ -1,0 +1,154 @@
+/* mobile-tasks.css — Android phone rules for the Tasks page (current classes).
+   Desktop is unaffected: every rule is scoped to html.maui-android.
+   Rule: on a phone, tasks NEVER sit side-by-side. Every row cell is a
+   full-width block stacked vertically; the only nesting allowed is a
+   subtask under its parent. */
+
+/* Long-press drag support: prevent text selection / callout from stealing the gesture */
+html.maui-android .today-free .task-row {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* While a touch drag is active, stop the list from scrolling under the finger */
+html.maui-android .today-free.ts-dragging {
+  touch-action: none;
+}
+
+/* Drop zone labels need to stay readable on a phone */
+html.maui-android .today-free.fDragging .task-row .dz span {
+  font-size: 10px;
+  padding: 3px 8px;
+}
+
+/* The ⋮ button is the primary task-actions entry on touch (always visible) */
+html.maui-android .task-more {
+  min-width: 40px;
+  min-height: 40px;
+}
+
+/* ── No side-by-side: every row cell is a full-width block ─────────────── */
+
+html.maui-android .today-row-grid {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+html.maui-android .today-cell {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* Neutralise the desktop hover-expand motion (a tap can leave :hover active
+   in the WebView, which would collapse siblings and hide their content) */
+html.maui-android .today-free .today-cell .task-main { display: block !important; }
+html.maui-android .today-free .today-cell .task-more { display: grid !important; }
+html.maui-android .today-free .today-cell .priority-dot { display: block !important; }
+html.maui-android .today-free .today-cell .today-sub { display: block !important; }
+
+/* Checkbox: keep a 28px square (the global 44px min-height rule distorts it)
+   while giving it a 44px touch area via a pseudo-element */
+html.maui-android .task-check {
+  width: 28px;
+  height: 28px;
+  min-height: 28px !important;
+  position: relative;
+}
+html.maui-android .task-check::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+html.maui-android .task-check svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Drag on touch: big vertical targets. Top half = before, bottom half = after,
+   a fixed strip on the inline-end = make subtask. The swap zone is hidden
+   because it would trade RowGroupId (side-by-side) with another task. */
+html.maui-android .today-free.fDragging .task-row .dz {
+  display: flex !important;
+  border-inline: 0 !important;
+  background: rgba(28,25,23,.04) !important;
+}
+html.maui-android .today-free.fDragging .task-row .dz-a {
+  inset-inline-start: 0 !important;
+  inset-inline-end: 56px !important;
+  top: 0 !important;
+  bottom: auto !important;
+  width: auto !important;
+  height: 50% !important;
+  border-radius: 8px 8px 0 0;
+  border-top: 1px dashed var(--border2) !important;
+}
+html.maui-android .today-free.fDragging .task-row .dz-b {
+  inset-inline-start: 0 !important;
+  inset-inline-end: 56px !important;
+  top: auto !important;
+  bottom: 0 !important;
+  width: auto !important;
+  height: 50% !important;
+  border-radius: 0 0 8px 8px;
+  border-bottom: 1px dashed var(--border2) !important;
+}
+html.maui-android .today-free.fDragging .task-row .dz-c {
+  inset-inline-start: auto !important;
+  inset-inline-end: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 56px !important;
+  height: auto !important;
+  border-inline-start: 1px dashed var(--border2) !important;
+  background: rgba(28,25,23,.08) !important;
+}
+html.maui-android .today-free.fDragging .task-row .dz-s {
+  display: none !important;
+}
+html.maui-android .today-free.fDragging .task-row .dz span {
+  font-size: 10px;
+  padding: 2px 6px;
+}
+html.maui-android .today-free.fDragging .task-row .dz-c span {
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+}
+html.maui-android .today-free.fDragging .task-row .dz.hot {
+  background: rgba(28,25,23,.14) !important;
+}
+
+/* ── Board: one stacked column, no horizontal squeeze ──────────────────── */
+
+html.maui-android .board {
+  grid-template-columns: 1fr !important;
+}
+
+/* Card actions were hover-only on desktop; keep them visible and tappable */
+html.maui-android .board-delete,
+html.maui-android .board-more {
+  opacity: 1 !important;
+  width: 32px;
+  height: 32px;
+}
+html.maui-android .board-delete {
+  inset-inline-start: auto !important;
+  inset-inline-end: 6px !important;
+}
+html.maui-android .board-more {
+  inset-inline-start: auto !important;
+  inset-inline-end: 42px !important;
+}
+html.maui-android .board-card-title {
+  padding-inline-end: 72px;
+}
+
+/* ── Eisenhower matrix: one stacked column ──────────────────────────────── */
+
+html.maui-android .matrix {
+  grid-template-columns: 1fr !important;
+}

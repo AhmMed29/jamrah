@@ -1,0 +1,22 @@
+/* Modern minimal Calendar overrides (redesign B). Loaded after tui-calendar.css. */
+.cal-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(28,25,23,.45);backdrop-filter:blur(2px);z-index:1000;padding:16px;}
+.cal-modal{width:min(460px,94vw);max-height:80vh;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;background:var(--card,#fff);border:1px solid var(--border,#E7E5E4);border-radius:18px;padding:12px 14px 10px;box-shadow:0 20px 50px rgba(0,0,0,.18);z-index:1001;position:relative;margin:auto;}
+.cal-modal::-webkit-scrollbar{display:none;}
+.cal-modal-sm{width:min(360px,94vw);}
+.cal-modal h3{margin:0 0 8px 0;font-size:14px;}
+.cal-x{position:absolute;top:10px;inset-inline-end:10px;width:28px;height:28px;border-radius:9px;border:1px solid var(--border);background:var(--card);cursor:pointer;}
+.chip{border:1px solid var(--border,#E7E5E4);border-radius:999px;padding:4px 10px;cursor:pointer;font-size:12px;background:var(--card,#fff);color:var(--muted,#78716C);}
+.chip.on{background:var(--text,#1C1917);color:#fff;border-color:var(--text,#1C1917);}
+.fld{width:100%;border:1px solid var(--border,#E7E5E4);border-radius:10px;padding:8px 10px;font-size:13px;background:var(--bg,#FAFAF9);color:var(--text,#1C1917);box-sizing:border-box;}
+textarea.fld{resize:vertical;}
+.fld.err{border-color:#DC2626;animation:shake .2s;}
+@@keyframes shake{25%{transform:translateX(-3px);}75%{transform:translateX(3px);}}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.scope-btns{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+.scope-btns button{border:1px solid var(--border);border-radius:10px;padding:10px;background:var(--card);cursor:pointer;font-size:13px;text-align:start;}
+.scope-btns button:hover{background:var(--card2,#F5F5F4);}
+.exc-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+/* View polish */
+.day-name-item{font-size:11px !important;color:var(--muted,#78716C);}
+.grid-cell-date{border-radius:50%;}
+.weekday-event{border-radius:8px !important;font-size:11px !important;padding:1px 6px !important;}

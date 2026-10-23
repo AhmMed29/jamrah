@@ -1,0 +1,148 @@
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@using Microsoft.JSInterop
+@inject BookmarkStateService State
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="sb-i sb-folder @(IsOn ? "on" : "") @(Folder.IsOpen ? "" : "closed") @(_dropHi ? "drop-hi" : "") has-dots"
+     draggable="true"
+     @onclick="Open"
+     @ondragstart="OnDragStart"
+     @ondragend="OnDragEnd"
+     @ondragover:preventDefault="true"
+     @ondragover="() => { if (!_dropHi) _dropHi = true; }"
+     @ondragleave="() => _dropHi = false"
+     @ondrop="OnDrop"
+     @ondrop:preventDefault="true"
+     @ondrop:stopPropagation="true"
+     @oncontextmenu:preventDefault="true"
+     @oncontextmenu="OpenMenu">
+    @if (Kids.Count > 0)
+    {
+        <span class="chev" @onclick:stopPropagation="true" @onclick="ToggleOpen">
+            @((MarkupString)BookmarkIcons.Svg("chevD", 13))
+        </span>
+    }
+    @((MarkupString)BookmarkIcons.Svg("folder", 15))
+    @if (State.RenameFolderId == Folder.Id)
+    {
+        <input id="sb-ren-@Folder.Id" class="sb-ren" dir="auto" value="@_editName" draggable="false"
+               @oninput="e => _editName = e.Value?.ToString() ?? string.Empty"
+               @onclick:stopPropagation="true" @onkeydown="RenameKey" @onblur="CommitRename" />
+    }
+    else
+    {
+        <span class="n" dir="auto">@Folder.Name</span>
+    }
+    <span class="dots" @onclick:stopPropagation="true" @onclick="OpenMenu">
+        @((MarkupString)BookmarkIcons.Svg("dots", 14))
+    </span>
+    @if (State.RenameFolderId != Folder.Id)
+    {
+        <span class="c">@BookmarkQuery.CountFolder(Folder.Id, State)</span>
+    }
+</div>
+@if (Kids.Count > 0 && Folder.IsOpen)
+{
+    <div class="atree-lvl">
+        @foreach (var k in Kids)
+        {
+            <BookmarkFolderRow Folder="k" OnNavigate="OnNavigate" OnFolderMenu="OnFolderMenu" />
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public BookmarkFolder Folder { get; set; } = null!;
+    [Parameter] public EventCallback<(string Ctx, string? Id, string? Tag)> OnNavigate { get; set; }
+    [Parameter] public EventCallback<(string Id, double X, double Y)> OnFolderMenu { get; set; }
+
+    private bool _dropHi;
+    private bool _focusRequested;
+    private string _editName = string.Empty;
+    private string? _renamingId;
+    private bool _committing;
+    private List<BookmarkFolder> Kids => State.Folders.Where(f => !f.IsArchived && f.ParentId == Folder.Id).ToList();
+    private bool IsOn => State.Route.Ctx == "folder" && State.Route.Id == Folder.Id;
+
+    protected override void OnInitialized()
+    {
+        State.OnStateChanged += OnState;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (State.RenameFolderId != _renamingId)
+        {
+            _renamingId = State.RenameFolderId;
+            _focusRequested = false;
+            _committing = false;
+            if (_renamingId == Folder.Id) _editName = Folder.Name;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (State.RenameFolderId != Folder.Id || _focusRequested) return;
+        _focusRequested = true;
+        try { await JS.InvokeVoidAsync("bmShell.focusRename", Folder.Id); } catch { }
+    }
+
+    private void OnState() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => State.OnStateChanged -= OnState;
+
+    private Task Open() => OnNavigate.InvokeAsync(("folder", Folder.Id, null));
+
+    private Task OpenMenu(Microsoft.AspNetCore.Components.Web.MouseEventArgs e) =>
+        OnFolderMenu.InvokeAsync((Folder.Id, e.ClientX, e.ClientY));
+
+    private void OnDragStart() => State.DragFolderId = Folder.Id;
+
+    private void OnDragEnd()
+    {
+        State.DragFolderId = null;
+        _dropHi = false;
+    }
+
+    private async Task OnDrop()
+    {
+        _dropHi = false;
+        var draggedId = State.DragFolderId;
+        State.DragFolderId = null;
+        if (string.IsNullOrEmpty(draggedId)) return;
+        await State.MoveFolderAsync(draggedId, Folder.Id);
+    }
+
+    private async Task ToggleOpen()
+    {
+        Folder.IsOpen = !Folder.IsOpen;
+        await State.SaveFolderAsync(Folder);
+    }
+
+    private async Task RenameKey(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await CommitRename();
+        }
+        else if (e.Key == "Escape")
+        {
+            State.RenameFolderId = null;
+            _renamingId = null;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CommitRename()
+    {
+        if (_committing || State.RenameFolderId != Folder.Id) return;
+        _committing = true;
+        var name = _editName;
+        State.RenameFolderId = null;
+        _renamingId = null;
+        await State.RenameFolderAsync(Folder.Id, name);
+        StateHasChanged();
+    }
+}

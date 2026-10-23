@@ -1,0 +1,630 @@
+@namespace Jamrah.Presentation.Goals
+@using Jamrah.Core.Entities
+@using Jamrah.Application.Services
+@using Microsoft.JSInterop
+@inject GoalStateService GoalState
+@inject LocalizationService L
+@inject IJSRuntime JS
+@implements IDisposable
+
+<section class="task-section">
+    <div class="section-header group-header @(_open ? "" : "closed")" @onclick="ToggleOpen">
+        <div class="section-title">
+            <span class="group-chevron">∨</span>
+            <span class="section-dot"></span>
+            <span>@GoalsTitle()</span>
+            <span class="section-count">@_rows.Count</span>
+        </div>
+        <div class="section-actions">
+            <button class="period-menu-btn" @onclick="OpenGoalsMenu" @onclick:stopPropagation="true" title="@L["tasks.periodSettings"]">⋯</button>
+        </div>
+    </div>
+    @if(_goalsMenu){
+        <div class="context-backdrop" @onclick="()=>_goalsMenu=false" style="position:fixed; inset:0; z-index:199;"></div>
+        <div class="period-popup" @onclick:stopPropagation="true">
+            <div class="period-popup-title">@GoalsTitle()</div>
+            <div class="field" style="margin-bottom:0;">
+                <label class="field-label">@L["tasks.periodName"]</label>
+                <input class="period-name-input" @bind="_editGoalsName" maxlength="40" />
+            </div>
+            <div class="period-popup-actions">
+                <button class="secondary-btn" @onclick="()=>_goalsMenu=false">@L["com.cancel"]</button>
+                <button class="primary-btn" @onclick="SaveGoalsName">@L["com.save"]</button>
+            </div>
+        </div>
+    }
+    @if(_open){
+        <div class="goal-tabs">
+            <button class="archive-toggle @(_tab=="day"?"active":"")" @onclick='()=>SetTab("day")'>@L["goals.today"]</button>
+            <button class="archive-toggle @(_tab=="week"?"active":"")" @onclick='()=>SetTab("week")'>@L["goals.week"]</button>
+            <button class="archive-toggle @(_tab=="month"?"active":"")" @onclick='()=>SetTab("month")'>@L["goals.month"]</button>
+            <button class="primary-btn goal-add" @onclick="OpenAdd"><span>+</span><span>@L["goals.add"]</span></button>
+        </div>
+        <div class="goal-nav">
+            <button class="day-nav-btn" @onclick="PrevPeriod" title="@L["tasks.prevDay"]">@L.PrevArrow</button>
+            <button class="day-nav-btn" @onclick="NextPeriod" title="@L["tasks.nextDay"]">@L.NextArrow</button>
+            <div class="goal-nav-label">@PeriodLabel()</div>
+            <button class="day-nav-btn" @onclick="OpenGoalsPicker" title="@L["tasks.pickDate"]">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:17px;height:17px;display:block">
+                    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                    <path d="M16 2v4M8 2v4M3 10h18"></path>
+                </svg>
+            </button>
+            <input type="date" id="goalDatePicker" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px" value="@_anchor.ToString("yyyy-MM-dd")" @onchange="OnGoalsDatePicked" />
+        </div>
+        @if(!_rows.Any()){
+            <div class="group-empty">@L["goals.empty"]</div>
+        } else {
+            <div class="goal-table-wrap">
+                <div class="goal-table">
+                    <div class="goal-head">
+                        <div>@L["goals.tags"]</div>
+                        <div>@L["goals.goal"]</div>
+                        <div>@L["goals.expected"]</div>
+                        <div>@L["goals.achieved"]</div>
+                        <div></div>
+                    </div>
+                    @foreach(var r in _rows){
+                        <div class="goal-row @(r.IsFailed ? "goal-failed" : "")" @onclick="()=>OpenEdit(r.Goal.Id)">
+                            <div><span class="goal-tag" style="background:@r.TagColor">@(string.IsNullOrWhiteSpace(r.TagName) ? L["goals.noTag"] : r.TagName)</span></div>
+                            <div class="goal-name">
+                                <span>@r.Goal.Title</span>
+                                <span class="goal-rec">@RecLabel(r.Goal.Recurrence)</span>
+                                @if(r.IsPersistent){
+                                    <span class="goal-deadline">@DeadlineText(r)</span>
+                                    <span class="goal-period">@PeriodLabel(r)</span>
+                                }
+                            </div>
+                            <div class="goal-val">@(r.Goal.Kind=="check" ? "—" : (r.HasExpected ? FmtVal(r.Expected!.Value, r.Goal.Unit) : "—"))</div>
+                            <div class="goal-val">
+                                @if(r.Goal.Kind=="check"){
+                                    <span>@(r.Achieved > 0 ? "✓" : "—")</span>
+                                } else {
+                                    <span>@FmtVal(r.Achieved, r.Goal.Unit)</span>
+                                }
+                                @if(r.HasExpected){
+                                    <span class="goal-progress"><span class="goal-progress-fill" style="width:@(r.Pct)%;background:@(r.Over ? "#1C1917" : r.TagColor)"></span></span>
+                                }
+                            </div>
+                            <div><button class="secondary-btn goal-record" disabled="@(!CanRecord())" @onclick="()=>OpenRecord(r.Goal.Id)" @onclick:stopPropagation="true">@(r.Goal.Kind=="check" && r.DoneToday ? "✓" : L["goals.record"])</button></div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</section>
+
+@if(_showForm){
+<div class="modal-overlay open" @onclick="CloseForm">
+    <div class="modal goal-modal" @onclick:stopPropagation="true">
+        <div class="modal-header">
+            <div class="modal-title">@(_editId==null ? L["goals.add"] : L["goals.edit"])</div>
+            <button class="icon-btn" @onclick="CloseForm">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="field">
+                <label class="field-label">@L["goals.goal"] *</label>
+                <input class="field-input" @bind="_fTitle" placeholder="@L["goals.titlePh"]" />
+            </div>
+            <div class="field">
+                <label class="field-label">@L["goals.tags"]</label>
+                <button type="button" class="secondary-btn" style="width:100%;" @onclick="()=> _pickTag = !_pickTag">
+                    @if(_fTagId.HasValue){<span class="goal-tag" style="background:@_fTagColor">@_fTagName</span>}else{<span>@L["goals.pickTag"]</span>}
+                </button>
+                @if(_pickTag){
+                    <div class="tag-pick-list">
+                        <button type="button" class="secondary-btn" @onclick="()=>PickTag(null)">@L["goals.noTag"]</button>
+                        @foreach(var t in GoalState.Tags.Where(t=>!t.IsArchived)){
+                            <button type="button" class="tag-pick" @onclick="()=>PickTag(t.Id)">
+                                <span class="goal-tag" style="background:@(string.IsNullOrWhiteSpace(t.Color)?"#A8A29E":t.Color)">@t.Name</span>
+                            </button>
+                        }
+                        <div class="tag-new">
+                            <input class="field-input" @bind="_newTagName" placeholder="@L["goals.tagNamePh"]" />
+                            <input type="color" value="@_newTagColor" @onchange='e=>_newTagColor=e.Value?.ToString()??"#A8A29E"' />
+                            <button type="button" class="secondary-btn" @onclick="CreateTag">+</button>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="field">
+                <label class="field-label">@L["goals.kind"]</label>
+                <div class="goal-tabs">
+                    <button type="button" class="archive-toggle @(_fKind=="amount"?"active":"")" @onclick='()=>_fKind="amount"'>@L["goals.kindAmount"]</button>
+                    <button type="button" class="archive-toggle @(_fKind=="check"?"active":"")" @onclick='()=>_fKind="check"'>@L["goals.kindCheck"]</button>
+                </div>
+            </div>
+            @if(_fKind=="amount"){
+            <div class="field">
+                <label class="field-label">@L["goals.expected"] (@L["goals.optional"])</label>
+                <div class="details-grid">
+                    <input class="field-input" inputmode="decimal" @bind="_fExp" placeholder="@L["goals.valuePh"]" />
+                    <input class="field-input" @bind="_fUnit" placeholder="@L["goals.unitPh"]" />
+                </div>
+            </div>
+            }
+            <div class="field">
+                <label class="goal-check"><input type="checkbox" @bind="_fUntilDone" /> @L["goals.untilDone"]</label>
+            </div>
+            @if(!_fUntilDone){
+            <div class="field">
+                <label class="field-label">@L["goals.recurrence"]</label>
+                <div class="goal-tabs">
+                    <button type="button" class="archive-toggle @(_fRec=="once"?"active":"")" @onclick='()=>_fRec="once"'>@L["goals.recOnce"]</button>
+                    <button type="button" class="archive-toggle @(_fRec=="daily"?"active":"")" @onclick='()=>_fRec="daily"'>@L["goals.recDaily"]</button>
+                </div>
+            </div>
+            <div class="details-grid">
+                <div class="field">
+                    <label class="field-label">@L["goals.start"]</label>
+                    <input class="field-input" type="date" @bind="_fStart" />
+                </div>
+                <div class="field">
+                    <label class="field-label">@L["goals.end"]</label>
+                    <input class="field-input" type="date" @bind="_fEnd" />
+                </div>
+            </div>
+            } else {
+            <div class="field">
+                <label class="field-label">@L["goals.deadline"]</label>
+                <input class="field-input" type="date" @bind="_fEnd" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
+            </div>
+            @if(_fKind=="amount"){
+            <div class="field">
+                <label class="field-label">@L["goals.kindAmount"]</label>
+                <div class="goal-tabs">
+                    <button type="button" class="archive-toggle @(_fRule=="any"?"active":"")" @onclick='()=>_fRule="any"'>@L["goals.ruleAny"]</button>
+                    <button type="button" class="archive-toggle @(_fRule=="half"?"active":"")" @onclick='()=>_fRule="half"'>@L["goals.ruleHalf"]</button>
+                </div>
+            </div>
+            }
+            }
+        </div>
+        <div class="modal-footer">
+            <button class="primary-btn" @onclick="SaveForm">@L["goals.save"]</button>
+            <button class="secondary-btn" @onclick="CloseForm">@L["com.cancel"]</button>
+            @if(_editId!=null){
+                <button class="goal-del" @onclick="AskDeleteGoal">@L["com.delete"]</button>
+            }
+        </div>
+    </div>
+</div>
+}
+
+@if(_confirmDelete){
+<div class="modal-overlay open" @onclick="()=>_confirmDelete=false" style="z-index:120;">
+    <div class="modal" @onclick:stopPropagation="true">
+        <div class="modal-header">
+            <div class="modal-title">@L["goals.deleteTitle"]</div>
+            <button class="icon-btn" @onclick="()=>_confirmDelete=false">×</button>
+        </div>
+        <div class="modal-body">
+            <div style="font-size:13px;font-weight:700;">@_confirmTitle</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;">@L["goals.deleteConfirm"]</div>
+        </div>
+        <div class="modal-footer">
+            <button class="goal-del" @onclick="ConfirmDelete">@L["goals.deleteYes"]</button>
+            <button class="secondary-btn" @onclick="()=>_confirmDelete=false">@L["goals.keep"]</button>
+        </div>
+    </div>
+</div>
+}
+
+@if(_recordId!=null){
+<div class="modal-overlay open" @onclick="()=>_recordId=null">
+    <div class="modal" @onclick:stopPropagation="true">
+        <div class="modal-header">
+            <div class="modal-title">@L["goals.record"] — @_recordTitle</div>
+            <button class="icon-btn" @onclick="()=>_recordId=null">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="field">
+                <label class="field-label">@L["goals.achieved"] (@_recordUnit)</label>
+                <input class="field-input" inputmode="decimal" @bind="_recordAmount" placeholder="@L["goals.valuePh"]" @onkeydown="OnRecordKeyDown" />
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="primary-btn" @onclick="SaveRecord">@L["goals.save"]</button>
+            <button class="secondary-btn" @onclick="()=>_recordId=null">@L["com.cancel"]</button>
+        </div>
+    </div>
+</div>
+}
+
+<style>
+    .goal-tabs { display: flex; gap: 6px; margin-bottom: 10px; align-items: center; }
+    .goal-add { margin-inline-start: auto; }
+    .goal-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .goal-nav-label { font-size: 12px; font-weight: 700; }
+    .day-nav-btn {
+        width: 32px; height: 32px; display: grid; place-items: center;
+        border-radius: 8px; color: var(--text-soft); background: transparent;
+    }
+    .day-nav-btn:hover { background: white; border: 1px solid var(--border); }
+    .goal-table-wrap { overflow-x: auto; }
+    .goal-table { min-width: 560px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .goal-head, .goal-row {
+        display: grid; gap: 8px; align-items: center;
+        grid-template-columns: 110px 1fr 90px 120px 90px;
+        padding: 8px 13px;
+    }
+    .goal-head { font-size: 10px; font-weight: 700; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .goal-row { border-bottom: 1px solid var(--border-light); cursor: pointer; min-height: 55px; }
+    .goal-row:last-child { border-bottom: 0; }
+    .goal-row:hover { background: var(--surface-soft); }
+    .goal-tag {
+        display: inline-block; font-size: 10px; font-weight: 700; color: #fff;
+        border-radius: 6px; padding: 2px 8px; max-width: 110px;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .goal-name { min-width: 0; font-size: 12px; font-weight: 500; }
+    .goal-name span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+    .goal-rec { font-size: 10px; color: var(--muted); }
+    .goal-val { font-size: 12px; font-weight: 700; }
+    .goal-progress { display: block; height: 6px; border-radius: 20px; background: var(--border); overflow: hidden; margin-top: 5px; }
+    .goal-progress-fill { display: block; height: 100%; border-radius: inherit; transition: width .25s ease; }
+    .goal-record { height: 30px; padding: 0 10px; font-size: 11px; }
+    .goal-record:disabled { opacity: .4; cursor: default; }
+    .tag-pick-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .tag-pick { background: transparent; padding: 0; }
+    .tag-new { display: flex; gap: 6px; width: 100%; margin-top: 4px; }
+    .tag-new .field-input { flex: 1; }
+    .tag-new input[type=color] { width: 40px; height: 34px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); cursor: pointer; }
+    .goal-del {
+        height: 32px; padding: 0 12px; border-radius: 10px;
+        background: var(--red-soft); color: var(--red); font-size: 12px; font-weight: 500;
+    }
+    .goal-period {
+        display: inline-block; font-size: 10px; font-weight: 700; color: #000;
+        background: #fff; border: 1px solid #000; border-radius: 6px;
+        padding: 1px 7px; margin-inline-start: 6px; vertical-align: middle;
+    }
+    .goal-deadline { font-size: 10px; color: var(--muted); margin-inline-start: 6px; }
+    .goal-row.goal-failed { opacity: .55; }
+    .goal-row.goal-failed .goal-name span:first-child { text-decoration: line-through; text-decoration-color: #dc2626; text-decoration-thickness: 2px; }
+    .goal-check { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .goal-modal { max-width: 450px; width: 100%; max-height: min(600px, calc(100vh - 60px)); overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; }
+    .goal-modal::-webkit-scrollbar { display: none; width: 0; height: 0; }
+    .goal-modal .modal-header { position: sticky; top: 0; background: var(--surface); z-index: 2; }
+    .goal-modal .modal-footer { position: sticky; bottom: 0; background: var(--surface); z-index: 2; }
+    @@media (max-width: 760px) {
+        .goal-head, .goal-row { grid-template-columns: 90px 1fr 70px 100px 80px; padding: 8px 10px; }
+    }
+</style>
+
+@code {
+    private bool _open;
+    private string _tab = "day"; // day | week | month
+    private DateTime _anchor = DateTime.Today;
+    private List<GoalRowView> _rows = new();
+
+    private bool _showForm;
+    private string? _editId;
+    private bool _confirmDelete;
+    private string _confirmTitle = "";
+    private string _fKind = "amount";
+    private string _fTitle = "";
+    private int? _fTagId;
+    private string _fTagName = "";
+    private string _fTagColor = "#A8A29E";
+    private string _fExp = "";
+    private string _fUnit = "";
+    private string _fRec = "once";
+    private DateTime _fStart = DateTime.Today;
+    private DateTime _fEnd = DateTime.Today;
+    private bool _fUntilDone;
+    private string _fRule = "any"; // any | half (persistent amount only)
+    private bool _pickTag;
+    private string _newTagName = "";
+    private string _newTagColor = "#A8A29E";
+
+    private string? _recordId;
+    private string _recordTitle = "";
+    private string _recordUnit = "";
+    private string _recordAmount = "";
+
+    private string _goalsName = "";
+    private bool _goalsMenu;
+    private string _editGoalsName = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GoalState.InitAsync();
+        GoalState.OnStateChanged += OnStateChanged;
+        L.OnLanguageChanged += OnLangChanged;
+        try {
+            _open = Microsoft.Maui.Storage.Preferences.Get("goals.open", false);
+            _goalsName = Microsoft.Maui.Storage.Preferences.Get("tasks.goalsName", "");
+            var t = Microsoft.Maui.Storage.Preferences.Get("goals.tab", "day");
+            if (t == "week" || t == "month") _tab = t;
+        } catch { }
+        await LoadRows();
+    }
+
+    private void OnLangChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnStateChanged() => InvokeAsync(async () => { await LoadRows(); StateHasChanged(); });
+
+    private async Task LoadRows()
+    {
+        if (_tab == "week") _rows = await GoalState.GetWeekRowsAsync(SaturdayOf(_anchor));
+        else if (_tab == "month") _rows = await GoalState.GetMonthRowsAsync(_anchor.Year, _anchor.Month);
+        else _rows = await GoalState.GetDayRowsAsync(_anchor);
+    }
+
+    private void ToggleOpen()
+    {
+        _open = !_open;
+        try { Microsoft.Maui.Storage.Preferences.Set("goals.open", _open); } catch { }
+    }
+
+    private string GoalsTitle()
+        => string.IsNullOrWhiteSpace(_goalsName) ? L["goals.title"] : _goalsName;
+
+    private void OpenGoalsMenu()
+    {
+        _editGoalsName = GoalsTitle();
+        _goalsMenu = true;
+    }
+
+    private void SaveGoalsName()
+    {
+        var name = (_editGoalsName ?? "").Trim();
+        _goalsName = (name == L["goals.title"]) ? "" : name;
+        try { Microsoft.Maui.Storage.Preferences.Set("tasks.goalsName", _goalsName); } catch { }
+        _goalsMenu = false;
+    }
+
+    private async Task SetTab(string tab)
+    {
+        _tab = tab;
+        try { Microsoft.Maui.Storage.Preferences.Set("goals.tab", tab); } catch { }
+        await LoadRows();
+    }
+
+    private static DateTime SaturdayOf(DateTime d)
+    {
+        int diff = (((int)d.DayOfWeek) + 1) % 7; // Saturday => 0
+        return d.Date.AddDays(-diff);
+    }
+
+    private async Task PrevPeriod()
+    {
+        _anchor = _tab == "week" ? _anchor.AddDays(-7) : _tab == "month" ? _anchor.AddMonths(-1) : _anchor.AddDays(-1);
+        await LoadRows();
+    }
+
+    private async Task NextPeriod()
+    {
+        _anchor = _tab == "week" ? _anchor.AddDays(7) : _tab == "month" ? _anchor.AddMonths(1) : _anchor.AddDays(1);
+        await LoadRows();
+    }
+
+    private string PeriodLabel()
+    {
+        if (L.Lang == "ar")
+        {
+            if (_tab == "week")
+            {
+                var sat = SaturdayOf(_anchor);
+                var fri = sat.AddDays(6);
+                return $"{L["goals.week"]} {System.Globalization.ISOWeek.GetWeekOfYear(_anchor)} • {sat.ToString("d/M", L.Culture)} – {fri.ToString("d/M", L.Culture)}";
+            }
+            if (_tab == "month") return _anchor.ToString("MMMM yyyy", L.Culture);
+            return _anchor.ToString("dddd، d MMMM", L.Culture);
+        }
+        if (_tab == "week")
+        {
+            var sat = SaturdayOf(_anchor);
+            var fri = sat.AddDays(6);
+            return $"{L["goals.week"]} {System.Globalization.ISOWeek.GetWeekOfYear(_anchor)} • {sat.ToString("M/d", L.Culture)} – {fri.ToString("M/d", L.Culture)}";
+        }
+        if (_tab == "month") return _anchor.ToString("MMMM yyyy", L.Culture);
+        return _anchor.ToString("dddd, d MMMM", L.Culture);
+    }
+
+    private async Task OpenGoalsPicker()
+    {
+        try { await JS.InvokeVoidAsync("eval", "var el=document.getElementById('goalDatePicker'); if(el.showPicker){el.showPicker();}else{el.click();}"); }
+        catch { }
+    }
+
+    private async Task OnGoalsDatePicked(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out var d)) { _anchor = d.Date; await LoadRows(); }
+    }
+
+    private bool PeriodContainsToday()
+    {
+        var today = DateTime.Today;
+        if (_tab == "week") { var sat = SaturdayOf(_anchor); return today >= sat && today <= sat.AddDays(6); }
+        if (_tab == "month") return today.Year == _anchor.Year && today.Month == _anchor.Month;
+        return today == _anchor.Date;
+    }
+
+    private bool CanRecord() => PeriodContainsToday();
+
+    private static string FmtNum(double v) => v % 1 == 0 ? ((int)v).ToString() : v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+    private static string FmtVal(double v, string unit) => string.IsNullOrWhiteSpace(unit) ? FmtNum(v) : FmtNum(v) + unit;
+
+    private string RecLabel(string rec) => rec == "daily" ? L["goals.recDaily"] : rec == "untilDone" ? L["goals.untilDone"] : L["goals.recOnce"];
+
+    private string DeadlineText(GoalRowView r)
+    {
+        var today = DateTime.Today;
+        var dl = r.Goal.EndDate.Date;
+        if (r.IsCompleted && r.CompletedDate.HasValue)
+        {
+            var cd = r.CompletedDate.Value.Date;
+            return L.Lang == "ar" ? $"تم {cd.ToString("d/M", L.Culture)}" : $"Done {cd.ToString("M/d", L.Culture)}";
+        }
+        if (r.IsFailed) return L["goals.overdue"];
+        int diff = (dl - today).Days;
+        if (diff < 0) return L["goals.overdue"];
+        if (diff == 0) return L.Lang == "ar" ? "استحقاق النهارده" : "Due today";
+        if (diff == 1) return L["goals.tomorrow"];
+        var dlStr = dl.ToString(L.Lang == "ar" ? "d/M" : "M/d", L.Culture);
+        return L.Lang == "ar" ? $"{L["goals.leftDays"]} {diff} • {dlStr}" : $"{diff} {L["goals.leftDays"]} • {dlStr}";
+    }
+
+    private string PeriodLabel(GoalRowView r)
+    {
+        var today = DateTime.Today;
+        var dl = r.Goal.EndDate.Date;
+        if (dl == today) return L["goals.todayLabel"];
+        var sat = SaturdayOf(today);
+        if (dl >= sat && dl <= sat.AddDays(6)) return L["goals.weekLabel"];
+        if (dl.Year == today.Year && dl.Month == today.Month) return L["goals.monthLabel"];
+        return dl.ToString(L.Lang == "ar" ? "d/M" : "M/d", L.Culture);
+    }
+
+    private void OpenAdd()
+    {
+        _editId = null;
+        _fKind = "amount";
+        _fTitle = "";
+        _fTagId = null; _fTagName = ""; _fTagColor = "#A8A29E";
+        _fExp = ""; _fUnit = "";
+        _fUntilDone = false;
+        _fRule = "any";
+        _fRec = _tab == "day" ? "once" : "daily";
+        if (_tab == "week") { var sat = SaturdayOf(_anchor); _fStart = sat; _fEnd = sat.AddDays(5); }
+        else if (_tab == "month") { _fStart = new DateTime(_anchor.Year, _anchor.Month, 1); _fEnd = new DateTime(_anchor.Year, _anchor.Month, DateTime.DaysInMonth(_anchor.Year, _anchor.Month)); }
+        else { _fStart = _anchor.Date; _fEnd = _fStart; }
+        _pickTag = false;
+        _showForm = true;
+    }
+
+    private void OpenEdit(string id)
+    {
+        var g = GoalState.Goals.FirstOrDefault(x => x.Id == id);
+        if (g == null) return;
+        _editId = id;
+        _fKind = g.Kind == "check" ? "check" : "amount";
+        _fTitle = g.Title;
+        _fTagId = g.PomodoroTagId; _fTagName = g.TagName; _fTagColor = g.TagColor;
+        _fExp = g.ExpectedValue?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+        _fUnit = g.Unit ?? "";
+        _fUntilDone = g.Recurrence == "untilDone";
+        _fRule = string.IsNullOrWhiteSpace(g.CompletionRule) ? "any" : g.CompletionRule;
+        _fRec = g.Recurrence == "daily" ? "daily" : "once";
+        _fStart = g.StartDate.Date;
+        _fEnd = g.EndDate.Date;
+        _pickTag = false;
+        _showForm = true;
+    }
+
+    private void CloseForm() => _showForm = false;
+
+    private void PickTag(int? id)
+    {
+        _fTagId = id;
+        if (id.HasValue)
+        {
+            var t = GoalState.Tags.FirstOrDefault(x => x.Id == id.Value);
+            _fTagName = t?.Name ?? "";
+            _fTagColor = string.IsNullOrWhiteSpace(t?.Color) ? "#A8A29E" : t!.Color;
+        }
+        else { _fTagName = ""; _fTagColor = "#A8A29E"; }
+        _pickTag = false;
+    }
+
+    private async Task CreateTag()
+    {
+        var name = (_newTagName ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(name)) return;
+        var id = await GoalState.CreateTagAsync(name, _newTagColor);
+        _newTagName = "";
+        if (id != 0) PickTag(id);
+    }
+
+    private static double? ParseNum(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return null;
+        if (double.TryParse(s.Trim().Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v) && v >= 0) return v;
+        return null;
+    }
+
+    private async Task SaveForm()
+    {
+        var title = (_fTitle ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(title)) return;
+        bool persistent = _fUntilDone;
+        var start = persistent ? DateTime.Today : _fStart.Date;
+        var end = _fEnd.Date;
+        if (persistent && end < DateTime.Today) end = DateTime.Today;
+        bool isCheck = _fKind == "check";
+        var goal = new GoalItem
+        {
+            Title = title,
+            Kind = isCheck ? "check" : "amount",
+            PomodoroTagId = _fTagId,
+            TagName = _fTagName ?? "",
+            TagColor = string.IsNullOrWhiteSpace(_fTagColor) ? "#A8A29E" : _fTagColor,
+            ExpectedValue = isCheck ? (double?)null : ParseNum(_fExp),
+            Unit = isCheck ? "" : (_fUnit ?? "").Trim(),
+            Recurrence = persistent ? "untilDone" : (_fRec == "daily" ? "daily" : "once"),
+            CompletionRule = persistent && !isCheck ? (_fRule == "half" ? "half" : "any") : null,
+            StartDate = start.Date,
+            EndDate = end.Date
+        };
+        if (_editId == null) await GoalState.AddGoalAsync(goal);
+        else
+        {
+            var existing = GoalState.Goals.FirstOrDefault(x => x.Id == _editId);
+            if (existing == null) { CloseForm(); return; }
+            goal.Id = existing.Id;
+            goal.CreatedAt = existing.CreatedAt;
+            if (persistent && existing.Recurrence == "untilDone")
+                goal.StartDate = existing.StartDate.Date; // preserve creation start on edit
+            await GoalState.UpdateGoalAsync(goal);
+        }
+        CloseForm();
+    }
+
+    private void AskDeleteGoal()
+    {
+        _confirmTitle = (_fTitle ?? "").Trim();
+        _confirmDelete = true;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (_editId == null) { _confirmDelete = false; return; }
+        await GoalState.DeleteGoalAsync(_editId);
+        _confirmDelete = false;
+        CloseForm();
+    }
+
+    private async Task OpenRecord(string id)
+    {
+        var g = GoalState.Goals.FirstOrDefault(x => x.Id == id);
+        if (g == null || !CanRecord()) return;
+        if (g.Kind == "check") { await GoalState.ToggleCheckAsync(id, DateTime.Today); return; }
+        _recordId = id;
+        _recordTitle = g.Title;
+        _recordUnit = g.Unit ?? "";
+        _recordAmount = "";
+    }
+
+    private async Task SaveRecord()
+    {
+        if (_recordId == null) return;
+        var v = ParseNum(_recordAmount);
+        if (!v.HasValue || v.Value <= 0) return;
+        await GoalState.RecordAsync(_recordId, DateTime.Today, v.Value);
+        _recordId = null;
+    }
+
+    private async Task OnRecordKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SaveRecord();
+    }
+
+    public void Dispose()
+    {
+        GoalState.OnStateChanged -= OnStateChanged;
+        L.OnLanguageChanged -= OnLangChanged;
+    }
+}

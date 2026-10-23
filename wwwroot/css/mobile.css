@@ -1,0 +1,179 @@
+/* mobile.css ΓÇö Global mobile overrides for Jamrah (Phone) */
+@media (max-width: 768px) {
+  * { -webkit-tap-highlight-color: transparent; }
+  html, body { overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
+  body { background:#FAFAF9; }
+
+  /* BottomSheet modals */
+  .modal-overlay { align-items: flex-end !important; justify-content: center !important; padding: 0 !important; }
+  .modal-group { width: 100% !important; flex-direction: column !important; max-height: 88dvh; gap:0 !important; }
+  .modal-box, .tags-modal-box { width:100% !important; border-radius:16px 16px 0 0 !important; max-height:88dvh; overflow-y:auto; box-shadow:0 -8px 32px rgba(0,0,0,.12) !important; }
+  .modal-box { border-bottom: none !important; }
+  .tags-modal-box { border-radius: 16px 16px 0 0 !important; order: 2; }
+  .modal-group .modal-box + .tags-modal-box { margin-top: -1px; }
+
+  /* BottomSheet for calendar popups */
+  .floating-layer { align-items: flex-end !important; }
+  .popup-container, .see-more-container { width:100% !important; max-width:100% !important; border-radius:16px 16px 0 0 !important; max-height:85dvh; overflow-y:auto; }
+  .popup-overlay { backdrop-filter: blur(6px) !important; }
+
+  /* Tap targets minimum 44px — narrow desktop windows keep the old behavior;
+     Android gets curated sizes below so compact controls aren't distorted. */
+  html:not(.maui-android) button,
+  html:not(.maui-android) .btn,
+  html:not(.maui-android) .dur-btn,
+  html:not(.maui-android) .view-btn,
+  html:not(.maui-android) .toggle-btn,
+  html:not(.maui-android) .add-col-btn { min-height:44px; }
+
+  /* Safe area */
+  .mobile-bottom-bar { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* Extra small: 360px */
+@media (max-width: 380px) {
+  .modal-box { padding:12px !important; }
+  .popup-container { padding:12px !important; }
+}
+
+/* Hide Calendar + Planning nav on Android phones only (narrow desktop windows keep them) */
+@media (max-width: 768px) {
+  html.maui-android .page-shell .sb-i.nav-calendar,
+  html.maui-android .page-shell .sb-i.nav-planning {
+    display: none !important;
+  }
+}
+
+/* Scrim behind the sidebar drawer — hidden by default, shown on Android phones only */
+.shell-scrim { display: none; }
+
+@media (max-width: 768px) {
+  /* Android phone: sidebar becomes an overlay drawer, content keeps full width.
+     position:fixed takes .app-sb out of the grid flow so the auto column collapses to 0. */
+  html.maui-android .page-shell .app-sb {
+    position: fixed;
+    top: 0; bottom: 0; left: 0;
+    z-index: 60;
+    width: min(80vw, 300px);
+    box-shadow: 8px 0 28px rgba(24,22,20,.18);
+    transition: transform .28s cubic-bezier(.25,.9,.3,1), opacity .25s ease;
+  }
+  html.maui-android .page-shell.slim .app-sb {
+    margin-left: 0;
+    transform: translateX(-105%);
+  }
+  html.maui-android .shell-scrim {
+    display: block;
+    position: fixed; inset: 0; z-index: 55;
+    background: rgba(24,22,20,.35);
+  }
+  html.maui-android .shell-scrim.off { display: none; }
+
+  /* Hover-only controls must be always visible on touch (no cursor means no :hover) */
+  html.maui-android .page-shell .sb-i .dots,
+  html.maui-android .page-shell .sb-i .sb-plus,
+  html.maui-android .bmk .favb,
+  html.maui-android .task-more,
+  html.maui-android .period-menu-btn {
+    opacity: 1 !important;
+  }
+
+  /* Bigger tap targets for the shell controls */
+  html.maui-android .page-shell .sb-coll { width: 40px; height: 40px; }
+  html.maui-android .page-shell-expand { width: 44px; height: 44px; left: 12px; }
+}
+
+/* ── Mobile design tokens (Android only — Windows never sees these) ─────── */
+
+html.maui-android {
+  --m-accent: #FF6B35;
+  --m-accent-soft: rgba(255,107,53,.12);
+  --m-tabbar-h: 54px;
+  --m-safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+/* Curated tap targets (replaces the old blanket 44px rule on Android) */
+html.maui-android .btn,
+html.maui-android .dur-btn,
+html.maui-android .view-btn,
+html.maui-android .toggle-btn,
+html.maui-android .add-col-btn,
+html.maui-android .sb-setbtn { min-height: 44px; }
+
+/* ── Bottom tab bar ─────────────────────────────────────────────────────── */
+
+.mobile-tabbar { display: none; }
+
+html.maui-android .mobile-tabbar {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 45;
+  display: flex;
+  align-items: stretch;
+  background: #fff;
+  border-top: 1px solid var(--line, #e9e6e0);
+  padding-bottom: var(--m-safe-b);
+  box-shadow: 0 -6px 20px rgba(24,22,20,.06);
+  font-family: 'Tajawal','Segoe UI',system-ui,sans-serif;
+}
+
+html.maui-android .mobile-tabbar .mtb-i {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: var(--m-tabbar-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 2px 5px;
+  border: 0;
+  background: none;
+  color: #a5a199;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.maui-android .mobile-tabbar .mtb-i svg { width: 22px; height: 22px; display: block; }
+html.maui-android .mobile-tabbar .mtb-i span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html.maui-android .mobile-tabbar .mtb-i.on { color: var(--m-accent); }
+html.maui-android .mobile-tabbar .mtb-i:active { background: rgba(24,22,20,.04); }
+
+html.maui-android .mobile-tabbar .mtb-i.on::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  width: 26px;
+  height: 2.5px;
+  border-radius: 0 0 3px 3px;
+  background: var(--m-accent);
+}
+
+/* Reserve the bar's height so page content is never hidden behind it */
+html.maui-android .page-shell-frame {
+  padding-bottom: calc(var(--m-tabbar-h) + var(--m-safe-b));
+  box-sizing: border-box;
+}
+
+/* ── RTL drawer: open from the right when the UI is Arabic ─────────────── */
+
+@media (max-width: 768px) {
+  html.maui-android .page-shell.rtl .app-sb {
+    left: auto;
+    right: 0;
+    box-shadow: -8px 0 28px rgba(24,22,20,.18);
+  }
+  html.maui-android .page-shell.rtl.slim .app-sb {
+    margin-left: 0;
+    transform: translateX(105%);
+  }
+  html.maui-android .page-shell-expand.rtl { left: auto; right: 12px; }
+}

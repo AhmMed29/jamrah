@@ -1,0 +1,1406 @@
+@namespace Jamrah.Presentation.Bookmarks
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@using Jamrah.Files.Core
+@using Microsoft.JSInterop
+@inject BookmarkStateService State
+@inject LocalDropBridge DropBridge
+@inject IJSRuntime JS
+@inject Jamrah.Core.Interfaces.IClipAgentService ClipAgent
+@inject IAppNavService Nav
+@inject Jamrah.Application.Services.LocalizationService L
+@inject Jamrah.Core.Interfaces.ISettingsRepository SettingsRepo
+@inject Jamrah.Core.Interfaces.IBookmarkRepository Repo
+@inject LocalFileService LocalFiles
+@inject ShellIpcService ShellIpc
+@implements IDisposable
+
+<div class="bmk">
+    <div class="bmk-frame">
+        <BookmarkTopBar Search="@State.Search" OnSearch="OnSearch" OnClearSearch="() => OnSearch(string.Empty)"
+                        OnAdd="() => OpenSaveModal()" OnImportFiles="OpenImport" />
+        @* Centered preview modal (replaces the old right pane + drawer). *@
+        <div class="bmk-app3">
+        <div class="bmk-col">
+        <main class="bmk-main">
+            @if (!_ready)
+            {
+                <div class="page"><div class="empty"><h3>@L["bmk.loading"]</h3></div></div>
+            }
+            else if (State.Route.Ctx == "home")
+            {
+                <div class="page">
+                    @* v2 parity (renderHomeFolders): folder-first home with kind cards *@
+                    <div style="max-width:620px;margin:4px auto 18px;position:relative">
+                        <span style="position:absolute;left:13px;top:11px;color:var(--ink3)">@((MarkupString)BookmarkIcons.Svg("search", 16))</span>
+                        <input dir="auto" value="@State.Search" @oninput="e => State.SetSearch(e.Value?.ToString() ?? string.Empty)" placeholder="@L["bmk.searchFolders"]" spellcheck="false" style="width:100%;height:42px;border:1px solid var(--line2);border-radius:12px;background:var(--surface);padding:0 14px 0 38px;font-size:14px;outline:none" />
+                    </div>
+                    @{
+                        var kcAll = KindCounts();
+                        var hq = (State.Search ?? "").Trim().ToLowerInvariant();
+                        bool HqMatch(string label) => string.IsNullOrEmpty(hq) || label.ToLowerInvariant().Contains(hq);
+                        var homeFolders = State.Folders
+                            .Where(f => !f.IsArchived && string.IsNullOrEmpty(f.ParentId) && (string.IsNullOrEmpty(hq) || f.Name.ToLowerInvariant().Contains(hq)))
+                            .OrderBy(f => f.Name).ToList();
+                        var homePins = HomePins();
+                        var homeFavs = HomeFavs();
+                    }
+                    <div class="fgrid">
+                        @if (HqMatch(L["bmk.tabAll"]))
+                        {
+                            <div class="card" @onclick='() => GoKind("all")' style="padding:20px;display:flex;align-items:center;gap:14px">
+                                <span style="width:48px;height:48px;border-radius:13px;background:var(--bg);display:grid;place-items:center;color:var(--ink2)">@((MarkupString)BookmarkIcons.Svg("layers", 22))</span>
+                                <span style="min-width:0"><b style="font-size:16px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">@L["bmk.tabAll"]</b><span class="mono" style="font-size:12px;color:var(--ink3)">@kcAll.All items</span></span>
+                            </div>
+                        }
+                        @if (HqMatch(L["bmk.kindVideo"]))
+                        {
+                            <div class="card" @onclick='() => GoKind("video")' style="padding:20px;display:flex;align-items:center;gap:14px">
+                                <span style="width:48px;height:48px;border-radius:13px;background:var(--bg);display:grid;place-items:center;color:var(--ink2)">@((MarkupString)BookmarkIcons.Svg("play", 22))</span>
+                                <span style="min-width:0"><b style="font-size:16px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">@L["bmk.kindVideo"]</b><span class="mono" style="font-size:12px;color:var(--ink3)">@kcAll.Video items</span></span>
+                            </div>
+                        }
+                        @if (HqMatch(L["bmk.kindAudio"]))
+                        {
+                            <div class="card" @onclick='() => GoKind("audio")' style="padding:20px;display:flex;align-items:center;gap:14px">
+                                <span style="width:48px;height:48px;border-radius:13px;background:var(--bg);display:grid;place-items:center;color:var(--ink2)">@((MarkupString)BookmarkIcons.Svg("music", 22))</span>
+                                <span style="min-width:0"><b style="font-size:16px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">@L["bmk.kindAudio"]</b><span class="mono" style="font-size:12px;color:var(--ink3)">@kcAll.Audio items</span></span>
+                            </div>
+                        }
+                        @if (HqMatch(L["bmk.kindText"]))
+                        {
+                            <div class="card" @onclick='() => GoKind("text")' style="padding:20px;display:flex;align-items:center;gap:14px">
+                                <span style="width:48px;height:48px;border-radius:13px;background:var(--bg);display:grid;place-items:center;color:var(--ink2)">@((MarkupString)BookmarkIcons.Svg("note", 22))</span>
+                                <span style="min-width:0"><b style="font-size:16px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">@L["bmk.kindText"]</b><span class="mono" style="font-size:12px;color:var(--ink3)">@kcAll.Text items</span></span>
+                            </div>
+                        }
+                        @foreach (var hfd in homeFolders)
+                        {
+                            var hfdId = hfd.Id;
+                            var hpv = BookmarkQuery.FolderPreviewImages(hfdId, State, 4);
+                            <div class="card @(_dropFolderId == hfdId ? "drop-hi" : "")" @onclick='() => Navigate(("folder", hfdId, null))' style="padding:20px;display:flex;align-items:center;gap:14px" title="@hfd.Name"
+                                 draggable="true" @ondragstart='() => State.DragFolderId = hfdId' @ondragend='() => State.DragFolderId = null'
+                                 @oncontextmenu:preventDefault="true" @oncontextmenu="e => OpenFolderCtx(hfdId, e)"
+                                 @ondragover:preventDefault="true" @ondragover="() => OnFolderDragOver(hfdId)" @ondragleave="() => OnFolderDragLeave(hfdId)"
+                                 @ondrop:preventDefault="true" @ondrop:stopPropagation="true" @ondrop="() => OnFolderDrop(hfdId)">
+                                @if (hpv.Count > 0)
+                                {
+                                    <span class="fcoll">@foreach (var p in hpv) { <img src="@p" loading="lazy" alt="" /> }</span>
+                                }
+                                else
+                                {
+                                    @((MarkupString)BookmarkIcons.Svg("folder", 22))
+                                }
+                                <span style="min-width:0;flex:1"><b dir="auto" style="font-size:16px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">@hfd.Name</b><span class="mono" style="font-size:12px;color:var(--ink3)">@BookmarkQuery.CountFolder(hfdId, State) items</span></span>
+                                <span class="dots" @onclick:stopPropagation="true" @onclick="e => OpenFolderCtx(hfdId, e)">@((MarkupString)BookmarkIcons.Svg("dots", 14))</span>
+                            </div>
+                        }
+                        <div class="card" @onclick="() => CreateFolderInline(null)" style="padding:20px;display:grid;place-items:center;color:var(--ink3);min-height:96px" title="@L["nav.newFolder"]">@((MarkupString)BookmarkIcons.Svg("plus", 22))</div>
+                    </div>
+                    @if (string.IsNullOrEmpty(hq) && homePins.Count > 0)
+                    {
+                        <section class="hsec" style="margin-top:24px">
+                            <div class="hsec-h">
+                                <span class="hsec-t">@L["nav.pinned"]</span>
+                                <a class="hsec-a" @onclick='() => Navigate(("pinned", null, null))'>@L["bmk.viewAll"]</a>
+                            </div>
+                            <div class="hrow">
+                                @foreach (var it in homePins)
+                                {
+                                    <BookmarkUniCard Item="it" OnOpen="OpenPreview" OnToggleFav="ToggleFav" FileCardStyle="_fileCardStyle" OnToast="ShowToast" OnContextMenu="e => OpenItemCtx(it.Id, e)" />
+                                }
+                            </div>
+                        </section>
+                    }
+                    @if (string.IsNullOrEmpty(hq) && homeFavs.Count > 0)
+                    {
+                        <section class="hsec" style="margin-top:24px">
+                            <div class="hsec-h">
+                                <span class="hsec-t">@L["nav.favorites"]</span>
+                                <a class="hsec-a" @onclick='() => Navigate(("favorites", null, null))'>@L["bmk.viewAll"]</a>
+                            </div>
+                            <div class="hrow">
+                                @foreach (var it in homeFavs)
+                                {
+                                    <BookmarkUniCard Item="it" OnOpen="OpenPreview" OnToggleFav="ToggleFav" FileCardStyle="_fileCardStyle" OnToast="ShowToast" OnContextMenu="e => OpenItemCtx(it.Id, e)" />
+                                }
+                            </div>
+                        </section>
+                    }
+                </div>
+            }
+            else if (State.Route.Ctx == "quran")
+            {
+                <div class="page">
+                    <div class="ph-row"><h1 class="ph-title">@L["bmk.quran"]</h1><span class="ph-sub">@L["bmk.khatmWird"]</span>
+                        <button class="btn sm" style="margin-left:auto" @onclick="NewKhatm">@L["bmk.newKhatm"]</button></div>
+                    @if (ActiveKhatm() == null)
+                    {
+                        <div class="empty"><h3>@L["bmk.noKhatm"]</h3><p>@L["bmk.noKhatmHint"]</p></div>
+                    }
+                    else
+                    {
+                        var qa = ActiveKhatm()!;
+                        <div class="q-grid">
+                            <div>
+                                <div class="qcard">
+                                    <div class="q-k">@L["bmk.currentPage"]</div>
+                                    <div class="q-big">@qa.Page <span>/ 604</span></div>
+                                    <div class="bar" style="margin-top:10px"><i style="width:@(qa.Page * 100 / 604)%"></i></div>
+                                    <div class="q-meta">@L.Get("bmk.juz", ((qa.Page - 1) / 20 + 1)) · @Math.Round(qa.Page * 100.0 / 604)% @L["bmk.completePct"]</div>
+                                    <div class="q-wir">
+                                        <div class="fld"><label>@L["bmk.pagesRead"]</label><input type="number" min="1" max="604" value="@_wridInput" @oninput="e => _wridInput = e.Value?.ToString() ?? string.Empty" /></div>
+                                        <button class="btn pri sm" @onclick="AddWrid">@L["bmk.logWird"]</button>
+                                    </div>
+                                    @if (TodayPages() > 0) { <div class="q-today" style="margin-top:10px">@L.Get("bmk.dailyWird", TodayPages()) ✓</div> }
+                                    <div class="q-wirhint">@L["bmk.wirdHint"]</div>
+                                </div>
+                                <div class="qcard" style="margin-top:16px">
+                                    <div class="q-k">@L["bmk.juz30"]</div>
+                                    <div class="q-juz" style="margin-top:10px">
+                                        @for (var j = 0; j < 30; j++)
+                                        {
+                                            var s = j * 20 + 1; var e2 = (j + 1) * 20;
+                                            var done = qa.Page > e2; var cur = qa.Page >= s && qa.Page <= e2;
+                                            <div class="qj @(done ? "done" : "") @(cur ? "cur" : "")"><b>@(j + 1)</b><span>@s-@e2</span></div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="qcard">
+                                <div class="q-k">@L["bmk.readingLog"]</div>
+                                @foreach (var l in State.QuranLogs.Where(x => x.KhatmId == qa.Id).OrderByDescending(x => x.At))
+                                {
+                                    var lid = l.Id;
+                                    <div class="q-stat"><span>@l.At.ToString("MMM d", L.Culture) · <b class="mono">@l.FromPage → @l.ToPage</b></span>
+                                        <button class="mini" @onclick="() => State.DeleteQuranLogAsync(lid)">@((MarkupString)BookmarkIcons.Svg("x", 12))</button></div>
+                                }
+                                @if (!State.QuranLogs.Any(x => x.KhatmId == qa.Id)) { <p style="color:var(--ink3);font-size:12.5px;margin-top:8px">@L["bmk.noEntries"]</p> }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else if (State.Route.Ctx == "clipboard")
+            {
+                <div class="page">
+                    <div class="ph-row"><h1 class="ph-title">@L["bmk.clipboard"]</h1><span class="ph-sub">@State.Clips.Count @L["bmk.savedClip"]</span></div>
+                    @if (ClipAgent.IsSupported)
+                    {
+                        <div class="clipcard" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                            <button class="btn sm @(_capOn ? "pri" : "")" @onclick="ToggleCapture">@(_capOn ? L["bmk.capOn"] : L["bmk.capOff"])</button>
+                            <button class="btn sm @(_autoOn ? "pri" : "")" @onclick="ToggleAutoStart">@(_autoOn ? "✓ " + L["bmk.startWin"] : L["bmk.startWin"])</button>
+                            <span class="clip-m">@(_agentRunning ? L["bmk.agentOn"] : L["bmk.agentIdle"]) · @L["bmk.autosave"]</span>
+                        </div>
+                    }
+                    <div class="clipcard">
+                        <textarea dir="auto" value="@_clipInput" @oninput="e => _clipInput = e.Value?.ToString() ?? string.Empty" placeholder="@L["bmk.clipPh"]" style="width:100%;min-height:64px;border:0;outline:none;font-size:13px;background:none;resize:vertical"></textarea>
+                        <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn pri sm" @onclick="AddClip">@L["bmk.saveClip"]</button></div>
+                    </div>
+                    @foreach (var c in State.Clips.OrderByDescending(x => x.Pinned).ThenByDescending(x => x.At))
+                    {
+                        var clip = c;
+                        <div class="clipcard @(clip.Pinned ? "pin" : "")">
+                            @if (clip.Kind == "image" && !string.IsNullOrEmpty(clip.FilePath))
+                            {
+                                var imgSrc = ClipImageSrc(clip);
+                                @if (!string.IsNullOrEmpty(imgSrc))
+                                {
+                                    <img src="@imgSrc" style="max-width:100%;border-radius:8px;display:block;cursor:pointer" @onclick="() => OpenClipFile(clip)" alt="" />
+                                }
+                            }
+                            else
+                            {
+                                <div class="clip-t" dir="auto">@clip.Text</div>
+                            }
+                            <div class="clip-f"><span class="clip-m">@BookmarkCardData.FmtAgo(clip.At, L.Lang)@(clip.Pinned ? " · " + L["bmk.pinnedClip"] : "")</span>
+                                <span class="clip-acts">
+                                    @if (clip.Kind == "image" && !string.IsNullOrEmpty(clip.FilePath))
+                                    {
+                                        <button class="btn sm" @onclick="() => OpenClipFile(clip)">@L["bmk.open"]</button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn sm" @onclick="() => CopyClip(clip.Text)">@L["bmk.copy"]</button>
+                                    }
+                                    <button class="btn sm" @onclick="() => ToggleClipPin(clip)">@(clip.Pinned ? L["bmk.unpin"] : L["bmk.pin"])</button>
+                                    <button class="btn sm dgr" @onclick="() => State.DeleteClipAsync(clip.Id)">@L["com.delete"]</button>
+                                </span></div>
+                        </div>
+                    }
+                    @if (State.Clips.Count == 0) { <div class="empty"><h3>@L["bmk.clipEmpty"]</h3><p>@L["bmk.clipEmptyHint"]</p></div> }
+                </div>
+            }
+            else if (State.Route.Ctx == "tags")
+            {
+                <div class="page">
+                    <div class="ph-row"><h1 class="ph-title">@L["nav.tags"]</h1><span class="ph-sub">@State.Tags.Count @L["bmk.tagsSub"]</span></div>
+                    @if (State.Tags.Count == 0) { <div class="empty"><h3>@L["bmk.noTags"]</h3><p>@L["bmk.noTagsHint"]</p></div> }
+                    @foreach (var t in State.Tags.OrderByDescending(t => BookmarkQuery.TagCount(t.Name, State)))
+                    {
+                        var tag = t;
+                        <div class="tagrow" @onclick='() => Navigate(("tag", null, tag.Name))'>
+                            <span class="cdot" style="background:@(string.IsNullOrEmpty(tag.Color) ? "#c9c5bc" : tag.Color)"></span>
+                            <b>#@tag.Name</b><span class="cnt">@BookmarkQuery.TagCount(tag.Name, State) @L["bmk.countItems"]</span>
+                            <span class="acts" @onclick:stopPropagation="true">
+                                <input type="color" value="@(string.IsNullOrEmpty(tag.Color) ? "#c9c5bc" : tag.Color)" @onchange="e => SaveTagColor(tag, e.Value?.ToString() ?? string.Empty)" style="width:30px;height:26px;border:1px solid var(--line);border-radius:6px;padding:1px;background:var(--surface)" title="Tag color" />
+                            </span>
+                        </div>
+                    }
+                </div>
+            }
+            else if (State.Route.Ctx == "templates")
+            {
+                <div class="page">
+                    <div class="ph-row"><h1 class="ph-title">@L["nav.templates"]</h1><span class="ph-sub">@L["bmk.tplSub"]</span></div>
+                    <div class="hcol">
+                        @foreach (var (id, name, cat) in GalleryTemplates)
+                        {
+                            <div class="tpl-tile">
+                                <div class="tn">@name <span style="color:var(--ink3);font-weight:600">· @cat</span></div>
+                                <div style="margin-top:10px;pointer-events:none">
+                                    <div class="card" data-static="1">@((MarkupString)BookmarkTemplates.Render(SampleItem(), id, State.Tags))</div>
+                                </div>
+                                <div class="tf"><span class="mono" style="font-size:11px;color:var(--ink3)">@id</span></div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else if (State.Route.Ctx == "settings")
+            {
+                <div class="page">
+                    <div class="ph-row"><h1 class="ph-title">@L["bmk.settings"]</h1><span class="ph-sub">@L["bmk.backupTitle"]</span></div>
+                    <div style="max-width:640px"><Jamrah.Presentation.Shared.LanguageSelector /></div>
+                    <div class="qcard" style="max-width:640px;margin-top:16px">
+                        <div class="q-k">@L["bmk.backupJson"]</div>
+                        <div class="q-meta">@State.Items.Count(i => !i.Deleted) @L["bmk.countItems"] · @State.Folders.Count @L["bmk.countFolders"] · @State.Collections.Count @L["bmk.countCollections"]</div>
+                        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+                            <button class="btn pri sm" @onclick="ExportBackup">@((MarkupString)BookmarkIcons.Svg("download", 13)) @L["bmk.export"]</button>
+                            <label class="btn sm" style="cursor:pointer">@((MarkupString)BookmarkIcons.Svg("upload", 13)) @L["bmk.import"]
+                                <InputFile OnChange="ImportFile" accept=".json,application/json" style="display:none" />
+                            </label>
+                            <button class="btn sm" @onclick="RunBackupAsync" disabled="@_backupRunning">@L["bmk.backup"]</button>
+                            @if (OperatingSystem.IsWindows())
+                            {
+                                <button class="btn sm" @onclick="OpenJamrahFolderAsync">@L["bmk.openJamrahFolder"]</button>
+                            }
+                        </div>
+                        <p class="hint" style="margin-top:10px">@L["bmk.importWarn"]</p>
+                    </div>
+                    <div class="qcard" style="max-width:640px;margin-top:16px">
+                        <div class="q-k">@L["bmk.searchOps"]</div>
+                        <div class="q-meta"><span class="mono">type:book</span> · <span class="mono">tag:backend</span> · <span class="mono">author:joel</span> · <span class="mono">favorite:true</span> · <span class="mono">year:2024</span></div>
+                    </div>
+                    <div class="qcard" style="max-width:640px;margin-top:16px">
+                        <div class="q-k">@L["bmk.zoomTitle"]</div>
+                        <div class="q-meta"><kbd>Ctrl +</kbd> <kbd>Ctrl -</kbd> <kbd>Ctrl 0</kbd> · <kbd>Ctrl</kbd> + @L["bmk.zoomHint"]</div>
+                    </div>
+                    <div class="qcard" style="max-width:640px;margin-top:16px">
+                        <div class="q-k">@(L.Lang == "ar" ? "شكل كروت الملفات" : "File cards style")</div>
+                        <div class="q-meta">@(L.Lang == "ar" ? "البرامج دايمًا بأيقونتها الحقيقية." : "Programs always show their real icon.")</div>
+                        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+                            <button class="btn sm @(_fileCardStyle == "preview" ? "pri" : "")" @onclick='() => SetFileCardStyle("preview")'>@(L.Lang == "ar" ? "معاينة (أول صفحة)" : "Preview (first page)")</button>
+                            <button class="btn sm @(_fileCardStyle == "icon" ? "pri" : "")" @onclick='() => SetFileCardStyle("icon")'>@(L.Lang == "ar" ? "أيقونة النوع" : "Type badge")</button>
+                            <button class="btn sm @(_fileCardStyle == "sheet" ? "pri" : "")" @onclick='() => SetFileCardStyle("sheet")'>@(L.Lang == "ar" ? "ورقة باسم الملف" : "Name sheet")</button>
+                        </div>
+                    </div>
+                    @* ADDITIVE: translator agent settings (no existing logic touched) *@
+                    <div style="max-width:640px"><TranslatorSettings /></div>
+                </div>
+            }
+            else if (State.Route.Ctx == "passwords")
+            {
+                @* PLACEHOLDER: passwords vault design comes later (sidebar row only for now) *@
+                <div class="page">
+                    <div class="ph-row"><h1 class="ph-title">@L["nav.passwords"]</h1><span class="ph-sub">@L["bmk.soon"]</span></div>
+                    <div class="empty"><h3>@L["nav.passwords"]</h3><p>@L["bmk.soonHint"]</p></div>
+                </div>
+            }
+            else
+            {
+                var items = SortedRouteItems();
+                var isTrash = State.Route.Ctx == "trash";
+                var col = State.Route.Ctx == "collection" ? State.Collections.FirstOrDefault(c => c.Id == State.Route.Id) : null;
+                var recursiveCount = State.Route.Ctx == "folder"
+                    ? BookmarkQuery.CountFolder(State.Route.Id ?? "", State)
+                    : State.Route.Ctx == "page" ? BookmarkQuery.CountPage(State.Route.Id ?? "", State) : 0;
+                var showRecursive = (State.Route.Ctx is "folder" or "page")
+                    && string.IsNullOrWhiteSpace(State.Search)
+                    && !State.Filters.HasActive
+                    && _locTab == "all" && _dateF == "all";
+                var headerCount = showRecursive ? recursiveCount : items.Count;
+                var hasNestedContent = showRecursive && recursiveCount > 0;
+                <div class="page">
+                    <div class="ph-row"><h1 class="ph-title" dir="auto">@BookmarkQuery.TitleFor(State.Route, State, L.Lang)</h1>
+                        <span class="ph-sub">@headerCount @L["bmk.countItems"]@(isTrash ? " · " + L["bmk.trashHint"] : "")</span>
+                        @if (col != null && BookmarkQuery.ParseSmart(col.SmartJson) == null)
+                        {
+                            <span style="margin-left:auto" class="mono"></span>
+                        }
+                    </div>
+                    @* ADDITIVE (new): archived collections/folders/pages with restore + permanent delete.
+                       Item delete flows here too (folder/collection/page delete = archive). *@
+                    @if (State.Route.Ctx == "archive")
+                    {
+                        @foreach (var ac in State.Collections.Where(c => c.IsArchived))
+                        {
+                            var acid = ac.Id;
+                            <div class="tagrow">
+                                @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(ac.Icon) ? "layers" : ac.Icon, "layers"))
+                                <b dir="auto">@ac.Name</b><span class="cnt">@L["bmk.collection"] · @L["bmk.archivedLbl"]</span>
+                                <span class="acts" @onclick:stopPropagation="true" style="margin-left:auto;display:flex;gap:6px">
+                                    <button class="btn sm" @onclick="() => State.RestoreCollectionAsync(acid)">@L["bmk.restore"]</button>
+                                    <button class="btn sm dgr" @onclick="() => State.DeleteCollectionAsync(acid)">@L["bmk.deleteForever"]</button>
+                                </span>
+                            </div>
+                        }
+                        @foreach (var af in State.Folders.Where(f => f.IsArchived))
+                        {
+                            var afid = af.Id;
+                            <div class="tagrow">
+                                @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(af.Icon) ? "folder" : af.Icon, "folder"))
+                                <b dir="auto">@af.Name</b><span class="cnt">@L["bmk.folder"] · @L["bmk.archivedLbl"]</span>
+                                <span class="acts" @onclick:stopPropagation="true" style="margin-left:auto;display:flex;gap:6px">
+                                    <button class="btn sm" @onclick="() => State.RestoreFolderAsync(afid)">@L["bmk.restore"]</button>
+                                    <button class="btn sm dgr" @onclick="() => State.DeleteFolderAsync(afid)">@L["bmk.deleteForever"]</button>
+                                </span>
+                            </div>
+                        }
+                        @foreach (var ap in State.Pages.Where(p => p.IsArchived))
+                        {
+                            var apid = ap.Id;
+                            <div class="tagrow">
+                                @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(ap.Icon) ? "note" : ap.Icon, "note"))
+                                <b dir="auto">@ap.Name</b><span class="cnt">@L["bmk.page"] · @L["bmk.archivedLbl"]</span>
+                                <span class="acts" @onclick:stopPropagation="true" style="margin-left:auto;display:flex;gap:6px">
+                                    <button class="btn sm" @onclick="() => State.RestorePageAsync(apid)">@L["bmk.restore"]</button>
+                                    <button class="btn sm dgr" @onclick="() => State.DeletePageAsync(apid)">@L["bmk.deleteForever"]</button>
+                                </span>
+                            </div>
+                        }
+                    }
+                    @* ADDITIVE (new): breadcrumb chain for a page route *@
+                    @if (State.Route.Ctx == "page")
+                    {
+                        var pchain = PageChain(State.Route.Id ?? "");
+                        @if (pchain.Count > 0)
+                        {
+                            <div class="crumbs">
+                                @for (var pi = 0; pi < pchain.Count; pi++)
+                                {
+                                    var pcd = pchain[pi];
+                                    var plast = pi == pchain.Count - 1;
+                                    var pcdId = pcd.Id;
+                                    @if (pi > 0) { <span>›</span> }
+                                    @if (plast)
+                                    {
+                                        <span class="crumb end">
+                                            @if (!string.IsNullOrEmpty(pcd.Icon)) { @((MarkupString)BookmarkIcons.FdIcon(pcd.Icon, "note")) } @pcd.Name
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="crumb" @onclick='() => Navigate(("page", pcdId, null))'>
+                                            @if (!string.IsNullOrEmpty(pcd.Icon)) { @((MarkupString)BookmarkIcons.FdIcon(pcd.Icon, "note")) } @pcd.Name
+                                        </span>
+                                    }
+                                }
+                            </div>
+                        }
+                    }
+                    @if (State.Route.Ctx == "folder")
+                    {
+                        var chain = FolderChain(State.Route.Id ?? "");
+                        @if (chain.Count > 0)
+                        {
+                            var firstColl = State.Collections.FirstOrDefault(c => c.Id == chain[0].CollectionId);
+                            <div class="crumbs">
+                                @if (firstColl != null)
+                                {
+                                    var fcid = firstColl.Id;
+                                    <span class="crumb" @onclick='() => Navigate(("collection", fcid, null))'>
+                                        @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(firstColl.Icon) ? "layers" : firstColl.Icon, "layers")) @firstColl.Name
+                                    </span>
+                                }
+                                @for (var ci = 0; ci < chain.Count; ci++)
+                                {
+                                    var cfd = chain[ci];
+                                    var last = ci == chain.Count - 1;
+                                    var cfdId = cfd.Id;
+                                    @if (ci > 0 || firstColl != null) { <span>›</span> }
+                                    @if (last)
+                                    {
+                                        <span class="crumb end">
+                                            @if (!string.IsNullOrEmpty(cfd.Icon)) { @((MarkupString)BookmarkIcons.FdIcon(cfd.Icon, "folder")) } @cfd.Name
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="crumb" @onclick='() => Navigate(("folder", cfdId, null))'>
+                                            @if (!string.IsNullOrEmpty(cfd.Icon)) { @((MarkupString)BookmarkIcons.FdIcon(cfd.Icon, "folder")) } @cfd.Name
+                                        </span>
+                                    }
+                                }
+                            </div>
+                        }
+                    }
+                    @if (!string.IsNullOrEmpty(State.Search))
+                    {
+                        <div class="res-head"><span>@L.Get("bmk.resultsFor", State.Search) — @items.Count @L["bmk.foundCount"]</span>
+                            <button class="btn sm" @onclick='() => OnSearch(string.Empty)'>@((MarkupString)BookmarkIcons.Svg("x", 12)) @L["bmk.clearAll"]</button></div>
+                    }
+                    @* v2 parity (childCardsHtml + htab + dpill): sub-folder cards + quick tabs + date pills *@
+                    @{
+                        var kids = ChildFolders();
+                    }
+                    @if (kids.Count > 0)
+                    {
+                        <div class="hrow" style="margin:2px 0 14px">
+                            @foreach (var kd in kids)
+                            {
+                                var kdid = kd.Id;
+                                var kdpv = BookmarkQuery.FolderPreviewImages(kdid, State, 3);
+                                <div class="card @(_dropFolderId == kdid ? "drop-hi" : "")" @onclick='() => Navigate(("folder", kdid, null))' style="min-width:160px;flex:none;padding:14px 16px;display:flex;align-items:center;gap:10px" title="@kd.Name"
+                                     draggable="true" @ondragstart='() => State.DragFolderId = kdid' @ondragend='() => State.DragFolderId = null'
+                                     @oncontextmenu:preventDefault="true" @oncontextmenu="e => OpenFolderCtx(kdid, e)"
+                                     @ondragover:preventDefault="true" @ondragover="() => OnFolderDragOver(kdid)" @ondragleave="() => OnFolderDragLeave(kdid)"
+                                     @ondrop:preventDefault="true" @ondrop:stopPropagation="true" @ondrop="() => OnFolderDrop(kdid)">
+                                    @if (kdpv.Count > 0)
+                                    {
+                                        <span class="fcoll sm">@foreach (var p in kdpv) { <img src="@p" loading="lazy" alt="" /> }</span>
+                                    }
+                                    else
+                                    {
+                                        @((MarkupString)BookmarkIcons.Svg("folder", 19))
+                                    }
+                                    <span style="min-width:0;flex:1"><b dir="auto" style="font-size:14px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">@kd.Name</b><span class="mono" style="font-size:11px;color:var(--ink3)">@BookmarkQuery.CountFolder(kd.Id, State) items</span></span>
+                                    <span class="dots" @onclick:stopPropagation="true" @onclick="e => OpenFolderCtx(kdid, e)">@((MarkupString)BookmarkIcons.Svg("dots", 14))</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                    @if (!isTrash)
+                    {
+                        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:4px">
+                            <button class="htab @(_locTab == "all" ? "on" : "")" @onclick='() => _locTab = "all"'>@L["bmk.tabAll"]</button>
+                            <button class="htab @(_locTab == "fav" ? "on" : "")" @onclick='() => _locTab = "fav"'>@L["bmk.tabFav"]</button>
+                            <button class="htab @(_locTab == "inbox" ? "on" : "")" @onclick='() => _locTab = "inbox"'>@L["bmk.tabInbox"]</button>
+                        </div>
+                        <div style="display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-bottom:14px">
+                            <button class="dpill @(_dateF == "all" ? "on" : "")" @onclick='() => _dateF = "all"'>@L["bmk.dateAll"]</button>
+                            <button class="dpill @(_dateF == "today" ? "on" : "")" @onclick='() => _dateF = "today"'>@L["bmk.dateToday"]</button>
+                            <button class="dpill @(_dateF == "week" ? "on" : "")" @onclick='() => _dateF = "week"'>@L["bmk.dateWeek"]</button>
+                            <button class="dpill @(_dateF == "month" ? "on" : "")" @onclick='() => _dateF = "month"'>@L["bmk.dateMonth"]</button>
+                        </div>
+                    }
+                    <BookmarkToolbar View="@_view" Sort="@_sort" TotalCount="@items.Count"
+                                     OnView="ChangeView" OnSort="ChangeSort" OnChanged="() => StateHasChanged()" />
+                    @if (isTrash && items.Count > 0)
+                    {
+                        <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+                            <button class="btn sm dgr" @onclick="EmptyTrash">@((MarkupString)BookmarkIcons.Svg("trash", 13)) @(_confirmEmptyTrash ? L["bmk.confirmAgain"] : L["bmk.emptyTrash"])</button>
+                        </div>
+                    }
+                    @* v2 parity (VIEWS): grid + list only; legacy views fall through to grid *@
+                    @if (_view != "list" && _view != "grid")
+                    {
+                        _view = "grid";
+                    }
+                    @if (items.Count == 0 && !hasNestedContent)
+                    {
+                        <BookmarkEmpty IsLibraryEmpty="@(State.Items.Count == 0)" Search="@State.Search"
+                                       OnAdd='() => OpenSaveModal()'
+                                       OnClearSearch='() => OnSearch(string.Empty)' />
+                    }
+                    else if (_view == "list")
+                    {
+                        @* v2 parity (listRows): icon/thumb rows, first 120 *@
+                        <div style="display:flex;flex-direction:column;gap:10px">
+                            @foreach (var it in items.Take(120))
+                            {
+                                var lid = it.Id;
+                                <BookmarkListRow Item="it" IsSelected="_previewId == lid" OnOpen="OpenPreview" OnContextMenu="e => OpenItemCtx(it.Id, e)" />
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        @* v2 parity (gridHalves): media cards left, text cards right, universal cards *@
+                        var gridMedia = items.Where(i => HasCardImg(i)).Take(60).ToList();
+                        var gridRest = items.Where(i => !HasCardImg(i)).Take(60).ToList();
+                        <div style="display:grid;gap:14px;grid-template-columns:1fr 1fr;align-items:start">
+                            <div style="display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));align-items:start;align-content:start">
+                                @foreach (var it in gridMedia)
+                                {
+                                    var gid = it.Id;
+                                    <BookmarkUniCard Item="it" IsSelected="_previewId == gid" OnOpen="OpenPreview" OnToggleFav="ToggleFav" FileCardStyle="_fileCardStyle" OnToast="ShowToast" OnContextMenu="e => OpenItemCtx(it.Id, e)" />
+                                }
+                            </div>
+                            <div style="display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));align-items:start;align-content:start">
+                                @foreach (var it in gridRest)
+                                {
+                                    var gid = it.Id;
+                                    <BookmarkUniCard Item="it" IsSelected="_previewId == gid" OnOpen="OpenPreview" OnToggleFav="ToggleFav" FileCardStyle="_fileCardStyle" OnToast="ShowToast" OnContextMenu="e => OpenItemCtx(it.Id, e)" />
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </main>
+        </div>
+        </div>
+        @if (_previewId != null)
+        {
+            <BookmarkPreviewModal ItemId="@_previewId"
+                                 OnClose="ClosePreview"
+                                 OnEdit="id => { _previewId = null; OpenSaveModal(id); }"
+                                 OnOpen="OpenPreview"
+                                 OnNavigate="Navigate"
+                                 OnChanged="() => StateHasChanged()"
+                                 OnDelete="TrashPreviewItem" />
+        }
+        @* v2 parity (quickCapture): unified capture/edit modal (also used by "New note"). *@
+        @if (_showQuick)
+        {
+            <BookmarkQuickCapture EditId="@_saveEditId"
+                                  PresetFolderId="@_saveFolderId"
+                                  PresetType="@_saveType"
+                                  OnClose="() => { _showQuick = false; _saveEditId = null; _saveFolderId = null; _saveType = null; }"
+                                  OnSaved="QuickSaved"
+                                  OnUpdated="QuickUpdated" />
+        }
+        @if (_folderModalMode != null)
+        {
+            <BookmarkFolderModal Mode="@_folderModalMode" FolderId="@_folderEditId" CollectionId="@_colEditId"
+                                 OnClose="() => _folderModalMode = null"
+                                 OnSaved="msg => { _folderModalMode = null; ShowToast(msg); }" />
+        }
+        @if (_ctxFolderId != null)
+        {
+            <FolderContextMenu FolderId="@_ctxFolderId" X="_ctxX" Y="_ctxY"
+                               OnClose="() => { _ctxFolderId = null; StateHasChanged(); }"
+                               OnNewNote='id => OpenSaveModal(null, id, "note")'
+                               OnSearchInFolder="SearchInFolder"
+                               OnToast="ShowToast" />
+        }
+        @if (_ctxItemId != null)
+        {
+            <ItemContextMenu ItemId="@_ctxItemId" X="_ctxX" Y="_ctxY"
+                             OnClose="() => { _ctxItemId = null; StateHasChanged(); }"
+                             OnToast="ShowToast"
+                             OnDeleteForever="DeleteItemForeverById" />
+        }
+        @* ADDITIVE (new): page create/edit modal *@
+        @if (_pageModalMode != null)
+        {
+            <BookmarkPageModal PageId="@_pageEditId" CollectionId="@_pageColId" FolderId="@_pageFolderId" ParentPageId="@_pageParentId"
+                               OnClose="() => _pageModalMode = null"
+                               OnSaved="msg => { _pageModalMode = null; ShowToast(msg); }" />
+        }
+        <LocalImportDialog IsOpen="_importOpen" InitialFolderId="@(State.Route.Ctx == "folder" ? State.Route.Id : null)"
+                           PendingPaths="_importDialogPaths"
+                           OnClose="() => _importOpen = false" OnCompleted="OnImportCompleted" />
+        @if (_toast != null)
+        {
+            <div class="bmk-toasts"><div class="toast">@_toast</div></div>
+        }
+    </div>
+</div>
+
+@code {
+    private bool _ready;
+    private string _view = "grid";
+    private string _sort = "added";
+    private string _fileCardStyle = "preview";
+    private readonly System.Threading.SemaphoreSlim _shellImportLock = new(1, 1);
+    private string? _dropFolderId;
+    private static readonly string[] TimeSorts = new[] { "added", "updated", "opened" };
+    private bool _showQuick;
+    private string? _folderModalMode;
+    private string? _folderEditId;
+    private string? _colEditId;
+    private string? _ctxFolderId;
+    private string? _ctxItemId;
+    private double _ctxX;
+    private double _ctxY;
+    private string? _saveEditId;
+    private string? _saveFolderId;
+    private string? _saveType;
+    // ADDITIVE (new): page modal state.
+    private string? _pageModalMode;
+    private string? _pageEditId;
+    private string? _pageColId;
+    private string? _pageFolderId;
+    private string? _pageParentId;
+    private bool _importOpen;
+    private IReadOnlyList<string>? _importDialogPaths;
+    private string? _toast;
+    private int _toastToken;
+    private bool _backupRunning;
+    // v2 parity: side preview selection (view3). Drawer (DetailId) stays for full details.
+    private string? _previewId;
+    private bool _confirmEmptyTrash;
+    // v2 parity (think-capture): session-only list filters. Defaults = no filtering.
+    private string _locTab = "all"; // all | fav | inbox
+    private string _dateF = "all"; // all | today | week | month
+    private string _kindF = "all"; // all | video | audio | text (home kind cards)
+    private string _wridInput = string.Empty;
+    private string _clipInput = string.Empty;
+
+    private static readonly (string Id, string Name, string Cat)[] GalleryTemplates = new[]
+    {
+        ("minimal", "Minimal Card", "Minimal"), ("minimalImage", "Minimal Image", "Minimal"),
+        ("linkcard", "Link", "Minimal"), ("post", "Post", "Minimal"), ("compact", "Compact Row", "Minimal"),
+        ("poster", "Poster", "Media"), ("cinematic", "Cinematic", "Media"), ("hero", "Hero", "Media"),
+        ("landscape", "Landscape", "Media"), ("photo", "Photo", "Media"), ("audio", "Audio", "Media"),
+        ("thumbGrid", "Thumbnail Grid", "Media"), ("book", "Book Cover", "Reading"),
+        ("reading", "Reading Progress", "Reading"), ("shelf", "Shelf", "Reading"),
+        ("note", "Note", "General"), ("dev", "Developer", "Developer"), ("file", "File", "Files"),
+        ("horizontal", "Horizontal", "General"), ("magazine", "Magazine", "General"),
+        ("detailed", "Detailed", "General"), ("metadata", "Metadata", "General"),
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        State.OnStateChanged += OnState;
+        DropBridge.FilesDropped += OnFilesDroppedFromShell;
+        ShellIpc.PathsReceived += OnShellPathsReceived;
+        L.OnLanguageChanged += OnLang;
+        await State.InitAsync();
+        try
+        {
+            var fcs = await SettingsRepo.GetAsync("fileCardStyle");
+            if (!string.IsNullOrEmpty(fcs)) _fileCardStyle = fcs;
+        }
+        catch { }
+        await LoadVS();
+        await LoadAgentState();
+        Nav.CurrentChanged += OnVisibilityChanged;
+        if (Nav.CurrentPage == "bookmarks")
+            StartClipTimer();
+        _ready = true;
+        _ = BackfillFileIconsAsync();
+        var pendingShellPaths = ShellIpc.DrainPending();
+        if (pendingShellPaths.Count > 0)
+            await ImportShellPathsAsync(pendingShellPaths);
+    }
+
+    private void OnState() => InvokeAsync(StateHasChanged);
+    private void OnLang() => InvokeAsync(StateHasChanged);
+    public void Dispose()
+    {
+        Nav.CurrentChanged -= OnVisibilityChanged;
+        DropBridge.FilesDropped -= OnFilesDroppedFromShell;
+        ShellIpc.PathsReceived -= OnShellPathsReceived;
+        _shellImportLock.Dispose();
+        try { _clipTimer?.Dispose(); } catch { }
+        State.OnStateChanged -= OnState;
+        L.OnLanguageChanged -= OnLang;
+    }
+
+    // ─── Clip refresh timer runs only while this page is visible ───
+
+    private void OnVisibilityChanged(string page)
+    {
+        if (page == "bookmarks")
+        {
+            StartClipTimer();
+            // UNIFIED: the bookmarks WebView is suspended while hidden on Windows
+            // (MainPage SuspendViewAsync), so a route set from another page's sidebar
+            // may not have re-rendered yet. Re-sync view state + re-render on return
+            // so the first click target shows immediately without a second click.
+            _ = InvokeAsync(async () =>
+            {
+                _confirmEmptyTrash = false;
+                await LoadVS();
+                StateHasChanged();
+            });
+        }
+        else StopClipTimer();
+    }
+
+    private void StartClipTimer()
+    {
+        if (_clipTimer != null) return;
+        _clipTimer = new System.Threading.Timer(async _ =>
+        {
+            try
+            {
+                if (State.Route.Ctx == "clipboard")
+                {
+                    await State.RefreshClipsAsync();
+                    _agentRunning = ClipAgent.IsAgentRunning();
+                }
+            }
+            catch { }
+        }, null, 5000, 5000);
+    }
+
+    private void StopClipTimer()
+    {
+        _clipTimer?.Dispose();
+        _clipTimer = null;
+    }
+
+    private bool _capOn = true;
+    private bool _autoOn = true;
+    private bool _agentRunning;
+    private System.Threading.Timer? _clipTimer;
+
+    private async Task LoadAgentState()
+    {
+        if (!ClipAgent.IsSupported) return;
+        try
+        {
+            _capOn = await ClipAgent.IsCaptureEnabledAsync();
+            _autoOn = await ClipAgent.IsAutoStartEnabledAsync();
+            _agentRunning = ClipAgent.IsAgentRunning();
+        }
+        catch { }
+    }
+
+    private async Task ToggleCapture()
+    {
+        _capOn = !_capOn;
+        await ClipAgent.SetCaptureEnabledAsync(_capOn);
+        try { _agentRunning = ClipAgent.IsAgentRunning(); } catch { }
+    }
+
+    private async Task ToggleAutoStart()
+    {
+        _autoOn = !_autoOn;
+        await ClipAgent.SetAutoStartEnabledAsync(_autoOn);
+    }
+
+    private Task OpenClipFile(BookmarkClip clip)
+    {
+        try
+        {
+            var path = System.IO.Path.Combine(ClipAgent.ClipsDir, clip.FilePath ?? string.Empty);
+            if (System.IO.File.Exists(path))
+                return Microsoft.Maui.ApplicationModel.Launcher.OpenAsync(new Microsoft.Maui.ApplicationModel.OpenFileRequest { File = new Microsoft.Maui.Storage.ReadOnlyFile(path) });
+        }
+        catch { }
+        return Task.CompletedTask;
+    }
+
+    // Windows: clips served by the WebView2 virtual host (jamrahclips.local).
+    // Android: no virtual host mapping exists, so the bytes are inlined as a data URI.
+    private readonly Dictionary<string, string> _clipImgCache = new();
+
+    private string ClipImageSrc(BookmarkClip clip)
+    {
+        var file = clip.FilePath ?? string.Empty;
+        if (string.IsNullOrEmpty(file)) return string.Empty;
+        if (ClipAgent.IsSupported) return "http://jamrahclips.local/" + file;
+        if (_clipImgCache.TryGetValue(file, out var cached)) return cached;
+        try
+        {
+            var bytes = System.IO.File.ReadAllBytes(System.IO.Path.Combine(ClipAgent.ClipsDir, file));
+            var ext = System.IO.Path.GetExtension(file).TrimStart('.').ToLowerInvariant();
+            var mime = ext switch
+            {
+                "jpg" or "jpeg" => "image/jpeg",
+                "gif" => "image/gif",
+                "webp" => "image/webp",
+                "bmp" => "image/bmp",
+                _ => "image/png",
+            };
+            var src = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+            _clipImgCache[file] = src;
+            return src;
+        }
+        catch { return string.Empty; }
+    }
+
+    private string VKey => State.Route.Ctx + (State.Route.Id != null ? ":" + State.Route.Id : "") + (State.Route.Tag != null ? ":" + State.Route.Tag : "");
+
+    private async Task LoadVS()
+    {
+        var vs = await State.GetViewStateAsync(VKey);
+        _view = string.IsNullOrEmpty(vs.View) ? "grid" : vs.View;
+        _sort = string.IsNullOrEmpty(vs.Sort) ? BookmarkQuery.DefaultSort(State.Route.Ctx) : vs.Sort;
+        if (!TimeSorts.Contains(_sort)) _sort = "added";
+    }
+
+    public async Task Navigate((string Ctx, string? Id, string? Tag) nav)
+    {
+        State.SetRoute(nav.Ctx, nav.Id, nav.Tag);
+        _confirmEmptyTrash = false;
+        _previewId = null;
+        _locTab = "all";
+        _dateF = "all";
+        _kindF = "all";
+        await LoadVS();
+        StateHasChanged();
+    }
+
+    // v2 parity: home kind cards filter the "all" route by media bucket.
+    private async Task GoKind(string k)
+    {
+        await Navigate(("all", null, null));
+        _kindF = k;
+        StateHasChanged();
+    }
+
+    private async Task OnSearch(string s)
+    {
+        var searchable = new[] { "all", "favorites", "pinned", "recent", "folder", "collection", "page", "tag", "archive", "trash" };
+        if (!string.IsNullOrEmpty(s) && !searchable.Contains(State.Route.Ctx))
+        {
+            State.SetRoute("all");
+            await LoadVS();
+        }
+        State.SetSearch(s);
+    }
+
+    private async Task OpenItem(string id)
+    {
+        State.SetDetail(id);
+        await State.TouchOpenedAsync(id);
+    }
+
+    // v2 parity (selectItem): card click opens the side preview, not the full drawer.
+    private async Task OpenPreview(string id)
+    {
+        _previewId = id;
+        await State.TouchOpenedAsync(id);
+        StateHasChanged();
+    }
+
+    private void ClosePreview()
+    {
+        if (State.DetailId != null && State.DetailId == _previewId) State.SetDetail(null);
+        _previewId = null;
+    }
+
+    private async Task TrashPreviewItem(string id)
+    {
+        await State.DeleteItemAsync(id, false);
+        if (State.DetailId == id) State.SetDetail(null);
+        _previewId = null;
+    }
+
+    private Task TogglePin(string id) => State.TogglePinAsync(id);
+
+    private Task ToggleFav(string id) => State.ToggleFavoriteAsync(id);
+
+    private async Task ChangeView(string v)
+    {
+        _view = v;
+        await State.SetViewStateAsync(VKey, _view, _sort);
+    }
+
+    private async Task ChangeSort(string s)
+    {
+        _sort = s;
+        await State.SetViewStateAsync(VKey, _view, _sort);
+    }
+
+    public void OpenFolderModal(string mode, string? folderId, string? colId)
+    {
+        _folderModalMode = mode;
+        _folderEditId = folderId;
+        _colEditId = colId;
+        // FIX: this is called from the sidebar chain (AppSidebar → PageShell →
+        // ShellBookmarksPage), which never re-renders this component — force it,
+        // otherwise the modal stays invisible until the next navigation/refresh.
+        StateHasChanged();
+    }
+
+    // ADDITIVE (new): opened by the sidebar + button / dots on pages.
+    public void OpenPageModal(string mode, string? pageId, string? colId, string? folderId, string? parentPageId)
+    {
+        _pageModalMode = mode;
+        _pageEditId = pageId;
+        _pageColId = colId;
+        _pageFolderId = folderId;
+        _pageParentId = parentPageId;
+        // FIX: same as above — sidebar-initiated, must trigger our own render.
+        StateHasChanged();
+    }
+
+    private void OpenImport()
+    {
+        _importDialogPaths = null;
+        _importOpen = true;
+    }
+
+    private void OnFilesDroppedFromShell(IReadOnlyList<string> paths)
+    {
+        if (Nav.CurrentPage != "bookmarks" || _showQuick) return; // BookmarkPage stays mounted (Keep-Alive); quick-capture zone owns drops while open
+        _ = InvokeAsync(() =>
+        {
+            _importDialogPaths = paths;
+            _importOpen = true;
+            StateHasChanged();
+        });
+    }
+
+    private async Task OnImportCompleted(string msg)
+    {
+        _importOpen = false;
+        await State.RefreshDataAsync();
+        ShowToast(msg);
+    }
+
+    private void OnShellPathsReceived(IReadOnlyList<string> paths)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            try { await ImportShellPathsAsync(paths); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("[shell-import] " + ex.Message); }
+        });
+    }
+
+    private async Task ImportShellPathsAsync(IReadOnlyList<string> paths)
+    {
+        await _shellImportLock.WaitAsync();
+        try
+        {
+            var report = await LocalFiles.ImportAsync(paths, null, ImportMode.Copy, () => State.Folders);
+            await State.RefreshDataAsync();
+            if (report.Imported > 0 || report.FoldersCreated > 0)
+            {
+                var parts = new System.Collections.Generic.List<string>();
+                if (report.Imported > 0)
+                    parts.Add(T($"تم إضافة {report.Imported} عنصر للإنبوكس", $"Added {report.Imported} to Inbox"));
+                if (report.FoldersCreated > 0)
+                    parts.Add(T($"{report.FoldersCreated} فولدر", $"{report.FoldersCreated} folder(s)"));
+                ShowToast(string.Join(" · ", parts));
+            }
+            else if (report.SkippedDuplicates > 0)
+                ShowToast(T("الملفات موجودة بالفعل في جمرة", "Already in Jamrah"));
+            else if (report.Errors.Count > 0)
+                ShowToast(T("تعذر استيراد بعض الملفات", "Some files could not be imported"));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("[shell-import] " + ex);
+            ShowToast(T("تعذر استيراد الملفات", "Could not import the files"));
+        }
+        finally
+        {
+            _shellImportLock.Release();
+        }
+    }
+
+    private string T(string ar, string en) => L.Lang == "ar" ? ar : en;
+
+    // v2 parity (capSave tail): land on the target folder (or Inbox), then select the new item.
+    private async Task QuickSaved(string id)
+    {
+        var saved = State.Items.FirstOrDefault(i => i.Id == id);
+        var folderId = saved != null
+            ? BookmarkQuery.FoldersOf(saved).FirstOrDefault()
+            : _saveFolderId;
+        _showQuick = false;
+        _saveEditId = null;
+        _saveFolderId = null;
+        _saveType = null;
+        if (!string.IsNullOrEmpty(folderId))
+        {
+            await Navigate(("folder", folderId, null));
+        }
+        else
+        {
+            await Navigate(("all", null, null));
+            _locTab = "inbox";
+        }
+        await OpenPreview(id);
+        ShowToast(folderId != null ? L["bmk.savedToast"] : L["bmk.savedInbox"]);
+    }
+
+    private async Task QuickUpdated(string id)
+    {
+        _showQuick = false;
+        _saveEditId = null;
+        _saveFolderId = null;
+        _saveType = null;
+        ShowToast(L["bmk.savedToast"]);
+        await OpenPreview(id);
+    }
+
+    private async Task SetFileCardStyle(string style)
+    {
+        _fileCardStyle = style;
+        try { await SettingsRepo.SetAsync("fileCardStyle", style); } catch { }
+        StateHasChanged();
+    }
+
+    private async Task BackfillFileIconsAsync()
+    {
+        try
+        {
+            var changed = await LocalFiles.BackfillFileIconsAsync();
+            if (changed > 0)
+                await InvokeAsync(async () => { await State.RefreshDataAsync(); StateHasChanged(); });
+        }
+        catch { }
+    }
+
+    private void OnFolderDragOver(string folderId)
+    {
+        if (_dropFolderId == folderId) return;
+        if (!string.IsNullOrEmpty(State.DragItemId) || !string.IsNullOrEmpty(State.DragFolderId))
+            _dropFolderId = folderId;
+    }
+
+    private void OnFolderDragLeave(string folderId)
+    {
+        if (_dropFolderId == folderId) _dropFolderId = null;
+    }
+
+    // ADDITIVE (new): unified save modal (sidebar "New note" / folder menu).
+    public void OpenSaveModal(string? editId = null, string? folderId = null, string? type = null)
+    {
+        if (folderId == null && string.IsNullOrEmpty(editId))
+        {
+            folderId = FolderTargeting.ResolveNewItemFolder(
+                State.Route.Ctx,
+                State.Route.Id,
+                State.Folders.Where(f => !f.IsArchived).Select(f => f.Id));
+        }
+        _saveEditId = editId;
+        _saveFolderId = folderId;
+        _saveType = type;
+        _showQuick = true;
+        StateHasChanged();
+    }
+
+    private async Task CreateFolderInline(string? parentId)
+    {
+        var id = await State.CreateFolderAsync(parentId);
+        if (id == null) return;
+        State.RenameFolderId = id;
+        StateHasChanged();
+    }
+
+    private void OpenFolderCtx(string id, MouseEventArgs e)
+    {
+        _ctxItemId = null;
+        _ctxFolderId = id;
+        _ctxX = e.ClientX;
+        _ctxY = e.ClientY;
+        StateHasChanged();
+    }
+
+    private void OpenItemCtx(string id, MouseEventArgs e)
+    {
+        _ctxFolderId = null;
+        _ctxItemId = id;
+        _ctxX = e.ClientX;
+        _ctxY = e.ClientY;
+        StateHasChanged();
+    }
+
+    private async Task SearchInFolder(string folderId)
+    {
+        await Navigate(("folder", folderId, null));
+        try
+        {
+            await Task.Delay(60);
+            await JS.InvokeVoidAsync("bmShell.focusSearch");
+        }
+        catch { }
+    }
+
+    private async Task OnFolderDrop(string folderId)
+    {
+        _dropFolderId = null;
+        var itemId = State.DragItemId;
+        var draggedFolderId = State.DragFolderId;
+        State.DragItemId = null;
+        State.DragFolderId = null;
+        if (!string.IsNullOrEmpty(itemId))
+        {
+            var ok = await State.MoveItemToFolderAsync(itemId, folderId);
+            ShowToast(ok
+                ? (L.Lang == "ar" ? "تم نقل العنصر إلى المجلد" : "Moved into folder")
+                : (L.Lang == "ar" ? "تعذر نقل العنصر" : "Could not move item"));
+        }
+        else if (!string.IsNullOrEmpty(draggedFolderId))
+        {
+            var ok = await State.MoveFolderAsync(draggedFolderId, folderId);
+            ShowToast(ok
+                ? (L.Lang == "ar" ? "اتنقل الفولدر ✓" : "Folder moved ✓")
+                : (L.Lang == "ar" ? "مقدرتش أنقل الفولدر" : "Could not move folder"));
+        }
+    }
+
+    public void ShowToast(string msg)
+    {
+        var t = ++_toastToken;
+        _toast = msg;
+        StateHasChanged();
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(3500);
+            if (_toastToken == t) await InvokeAsync(() => { _toast = null; StateHasChanged(); });
+        });
+    }
+
+    // ─── pure view helpers ───────────────────────────────────────────────────
+
+    private List<BookmarkItem> Alive() => State.Items.Where(i => !i.Deleted && !i.Archived).ToList();
+    private List<BookmarkItem> HomeRec() => Alive().OrderByDescending(i => i.CreatedAt).Take(8).ToList();
+    private List<BookmarkItem> HomeCont() => Alive().Where(i => (BookmarkCardData.From(i).Progress ?? 0) is > 0 and < 100).Take(8).ToList();
+    private List<BookmarkItem> HomeFavs() => Alive().Where(i => i.Favorite).Take(8).ToList();
+    private List<BookmarkItem> HomePins() => Alive().Where(i => i.Pinned).Take(8).ToList();
+    private List<BookmarkClip> HomeClips() => State.Clips.OrderByDescending(c => c.At).Take(6).ToList();
+    private BookmarkQuranKhatm? ActiveKhatm() => State.Khatms.OrderByDescending(k => k.StartedAt).FirstOrDefault();
+
+    private int TodayPages()
+    {
+        var today = DateTime.Today;
+        return State.QuranLogs.Where(l => l.At.Date == today).Sum(l => Math.Max(0, l.ToPage - l.FromPage));
+    }
+
+    private List<(string Type, int Count, int Max)> TypeStats()
+    {
+        var groups = Alive().GroupBy(i => i.Type).Select(g => (Type: g.Key, Count: g.Count())).OrderByDescending(x => x.Count).Take(10).ToList();
+        var max = groups.Count > 0 ? groups[0].Count : 1;
+        return groups.Select(x => (x.Type, x.Count, max)).ToList();
+    }
+
+    private string Greeting()
+    {
+        var h = DateTime.Now.Hour;
+        if (L.Lang == "ar")
+            return h < 5 ? "ليلة سعيدة" : h < 12 ? "صباح الخير" : "مساء الخير";
+        return h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+    }
+
+    private BookmarkItem SampleItem() => Alive().FirstOrDefault() ?? new BookmarkItem
+    {
+        Id = "x", Title = "A sample item", Type = "link", Description = "This is how your data will look.",
+        Url = "https://example.com", TagsJson = "[\"sample\"]", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+    };
+
+    private List<BookmarkFolder> FolderChain(string fid)
+    {
+        var chain = new List<BookmarkFolder>();
+        var fd = State.Folders.FirstOrDefault(x => x.Id == fid);
+        var n = 0;
+        while (fd != null && n++ < 50) { chain.Insert(0, fd); fd = State.Folders.FirstOrDefault(x => x.Id == fd.ParentId); }
+        return chain;
+    }
+
+    // ADDITIVE (new): page ancestry chain (parent pages, oldest first).
+    private List<LibraryPage> PageChain(string pid)
+    {
+        var chain = new List<LibraryPage>();
+        var p = State.Pages.FirstOrDefault(x => x.Id == pid);
+        var n = 0;
+        while (p != null && n++ < 50) { chain.Insert(0, p); p = State.Pages.FirstOrDefault(x => x.Id == p.ParentPageId); }
+        return chain;
+    }
+
+    private List<BookmarkItem> SortedRouteItems()
+    {
+        var items = BookmarkQuery.RouteItems(State);
+        // v2 parity: htab (All/Favorites/Inbox) + dpill (date) session filters.
+        if (State.Route.Ctx != "trash")
+        {
+            if (_locTab == "fav") items = items.Where(i => i.Favorite).ToList();
+            else if (_locTab == "inbox") items = items.Where(IsInboxItem).ToList();
+            var today = DateTime.Today;
+            if (_dateF == "today") items = items.Where(i => i.CreatedAt.Date == today).ToList();
+            else if (_dateF == "week") items = items.Where(i => i.CreatedAt >= today.AddDays(-7)).ToList();
+            else if (_dateF == "month") items = items.Where(i => i.CreatedAt.Year == today.Year && i.CreatedAt.Month == today.Month).ToList();
+        }
+        // v2 parity: home kind cards (All/Video/Audio/Text) filter the "all" route.
+        if (State.Route.Ctx == "all" && _kindF != "all")
+            items = items.Where(i => KindOf(i) == _kindF).ToList();
+        BookmarkQuery.ApplySort(items, _sort);
+        return items;
+    }
+
+    private static bool IsInboxItem(BookmarkItem i) =>
+        !i.Archived && BookmarkQuery.FoldersOf(i).Count == 0
+        && BookmarkQuery.CollectionsOf(i).Count == 0 && BookmarkQuery.PagesOf(i).Count == 0;
+
+    // v2 parity (gridHalves): split media cards from text cards.
+    private static bool HasCardImg(BookmarkItem i)
+    {
+        try { return !string.IsNullOrEmpty(BookmarkCardData.From(i).Img); }
+        catch { return false; }
+    }
+    private static string KindOf(BookmarkItem i) => i.Type switch
+    {
+        "video" or "movie" or "tvshow" or "anime" => "video",
+        "audio" or "music" or "podcast" => "audio",
+        "note" or "idea" => "text",
+        _ => "all",
+    };
+
+    private (int All, int Video, int Audio, int Text) KindCounts()
+    {
+        var alive = Alive();
+        return (alive.Count, alive.Count(i => KindOf(i) == "video"),
+            alive.Count(i => KindOf(i) == "audio"), alive.Count(i => KindOf(i) == "text"));
+    }
+
+    // v2 parity (childCardsHtml): direct sub-folders of the current collection/folder.
+    private List<BookmarkFolder> ChildFolders()
+    {
+        if (State.Route.Ctx == "collection" && State.Route.Id != "general")
+            return State.Folders.Where(f => !f.IsArchived && f.CollectionId == State.Route.Id && string.IsNullOrEmpty(f.ParentId)).OrderBy(f => f.Name).ToList();
+        if (State.Route.Ctx == "folder")
+            return State.Folders.Where(f => !f.IsArchived && f.ParentId == State.Route.Id).OrderBy(f => f.Name).ToList();
+        return new List<BookmarkFolder>();
+    }
+
+    private async Task EmptyTrash()
+    {
+        if (!_confirmEmptyTrash) { _confirmEmptyTrash = true; return; }
+        _confirmEmptyTrash = false;
+        foreach (var it in State.Items.Where(i => i.Deleted).ToList())
+            await DeleteItemForeverAsync(it);
+        ShowToast(L["bmk.trashEmptied"]);
+    }
+
+    private async Task AddWrid()
+    {
+        var qa = ActiveKhatm();
+        if (qa == null || !int.TryParse(_wridInput, out var n) || n <= 0) return;
+        var to = Math.Min(604, qa.Page + n);
+        await State.SaveQuranLogAsync(new BookmarkQuranLog { KhatmId = qa.Id, At = DateTime.UtcNow, FromPage = qa.Page, ToPage = to });
+        qa.Page = to;
+        await State.SaveKhatmAsync(qa);
+        _wridInput = string.Empty;
+        ShowToast(L["bmk.wirdSaved"]);
+    }
+
+    private async Task NewKhatm()
+    {
+        await State.SaveKhatmAsync(new BookmarkQuranKhatm { StartedAt = DateTime.UtcNow, Page = 1 });
+        ShowToast(L["bmk.khatmStarted"]);
+    }
+
+    private async Task AddClip()
+    {
+        if (string.IsNullOrWhiteSpace(_clipInput)) return;
+        await State.SaveClipAsync(new BookmarkClip { Text = _clipInput.Trim(), At = DateTime.UtcNow });
+        _clipInput = string.Empty;
+        ShowToast(L["bmk.clipSaved"]);
+    }
+
+    private async Task ToggleClipPin(BookmarkClip clip)
+    {
+        clip.Pinned = !clip.Pinned;
+        await State.SaveClipAsync(clip);
+    }
+
+    private async Task CopyClip(string text)
+    {
+        try
+        {
+            var ok = await JS.InvokeAsync<bool>("bmInterop.copyText", text);
+            ShowToast(ok ? L["bmk.copied"] : L["bmk.copyFailed"]);
+        }
+        catch { ShowToast(L["bmk.copyFailed"]); }
+    }
+
+    private async Task SaveTagColor(BookmarkTag tag, string color)
+    {
+        tag.Color = TagColor.Normalize(color) ?? string.Empty;
+        await State.SaveTagAsync(tag);
+    }
+
+    private async Task DeleteItemForeverById(string id)
+    {
+        var it = State.Items.FirstOrDefault(i => i.Id == id);
+        if (it == null) return;
+        await DeleteItemForeverAsync(it);
+        ShowToast(L.Lang == "ar" ? "تم حذف العنصر نهائيًا" : "Item permanently deleted");
+    }
+
+    // Permanent delete removes managed library files from disk. Linked files outside the
+    // library are left untouched; only their card is deleted.
+    private async Task DeleteItemForeverAsync(BookmarkItem it)
+    {
+        var rel = ItemMeta.Get(it.MetadataJson, "localFile");
+        if (!string.IsNullOrEmpty(rel))
+        {
+            var path = LocalFileActions.ManagedPathFor(rel);
+            if (path != null)
+            {
+                try { await Task.Run(() => FileOps.DeletePermanently(path)); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine("[BookmarkPage] permanent delete failed: " + ex.Message); }
+            }
+        }
+        await State.DeleteItemAsync(it.Id, true);
+        if (State.DetailId == it.Id) State.SetDetail(null);
+        if (_previewId == it.Id) _previewId = null;
+    }
+
+    private async Task RunBackupAsync()
+    {
+        if (_backupRunning) return;
+        _backupRunning = true;
+        var snapshot = System.IO.Path.Combine(Jamrah.Infrastructure.AppPaths.Layout.BackupsDir, "jamrah_bookmarks.db3");
+        try
+        {
+            var layout = Jamrah.Infrastructure.AppPaths.Layout;
+            var snapshotResult = await Repo.CreateSnapshotAsync(snapshot);
+            if (string.IsNullOrEmpty(snapshotResult) || !System.IO.File.Exists(snapshot))
+            {
+                ShowToast(L["bmk.backupFailed"]);
+                return;
+            }
+            var zip = System.IO.Path.Combine(layout.BackupsDir, $"jamrah-backup-{DateTime.Now:yyyyMMdd-HHmmss}.zip");
+            await Jamrah.Files.Core.BackupArchive.CreateAsync(layout.LibraryDir, snapshot, zip);
+            ShowToast(L.Get("bmk.backupDone", zip));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[backup] {ex}");
+            ShowToast(L["bmk.backupFailed"]);
+        }
+        finally
+        {
+            try { System.IO.File.Delete(snapshot); } catch { }
+            _backupRunning = false;
+        }
+    }
+
+    private Task OpenJamrahFolderAsync()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                    "explorer.exe", $"\"{Jamrah.Infrastructure.AppPaths.Layout.Root}\"") { UseShellExecute = true });
+            }
+            catch { }
+        }
+        return Task.CompletedTask;
+    }
+
+    private async Task ExportBackup()
+    {
+        try
+        {
+            var json = await State.ExportJsonAsync();
+            await JS.InvokeVoidAsync("bmInterop.download", "athenaeum-backup.json", json);
+            ShowToast(L["bmk.exported"]);
+        }
+        catch { ShowToast(L["bmk.exportFailed"]); }
+    }
+
+    private async Task ImportFile(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs e)
+    {
+        try
+        {
+            using var s = e.File.OpenReadStream(10_000_000);
+            using var r = new System.IO.StreamReader(s);
+            await State.ImportJsonAsync(await r.ReadToEndAsync());
+            ShowToast(L["bmk.imported"]);
+        }
+        catch { ShowToast(L["bmk.invalidBackup"]); }
+    }
+}

@@ -1,0 +1,71 @@
+@namespace Jamrah.Presentation.Bookmarks
+@using Jamrah.Application.Services
+@using Jamrah.Core.Entities
+@inject BookmarkStateService State
+@inject LocalizationService L
+
+@* v2 parity (listRows): icon/thumb row with tags and timestamp *@
+<div class="lrow @(IsSelected ? "sel" : "")"
+     @oncontextmenu:preventDefault="true" @oncontextmenu="e => OnContextMenu.InvokeAsync(e)"
+     @onclick="() => OnOpen.InvokeAsync(Item.Id)">
+    @if (_d.IsPdf && !string.IsNullOrEmpty(_d.Img))
+    {
+        <img src="@_d.Img" loading="lazy" alt="" />
+    }
+    else if (!string.IsNullOrEmpty(_d.AppIcon))
+    {
+        <img src="@_d.AppIcon" loading="lazy" alt="" />
+    }
+    else if (!string.IsNullOrEmpty(_d.Img))
+    {
+        <img src="@_d.Img" loading="lazy" alt="" />
+    }
+    else
+    {
+        <span class="ri">@((MarkupString)BookmarkIcons.Svg(RowIcon, 18))</span>
+    }
+    <span style="min-width:0;flex:1">
+        <b dir="auto">@Item.Title</b>
+        <span style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
+            @if (_d.Tags.Count > 0)
+            {
+                foreach (var t in _d.Tags.Take(3))
+                {
+                    <span class="chip" @((MarkupString)BookmarkQuery.TagStyleAttr(t, State.Tags))>@t</span>
+                }
+            }
+            else
+            {
+                <span style="font-size:11px;color:var(--ink3)">@(!string.IsNullOrEmpty(_d.Domain) ? _d.Domain : Item.Type)</span>
+            }
+        </span>
+    </span>
+    <span class="la">@BookmarkCardData.FmtAgo(Item.CreatedAt, L.Lang)</span>
+</div>
+
+@code {
+    [Parameter] public BookmarkItem Item { get; set; } = null!;
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public EventCallback<string> OnOpen { get; set; }
+    [Parameter] public EventCallback<Microsoft.AspNetCore.Components.Web.MouseEventArgs> OnContextMenu { get; set; }
+
+    private BookmarkCardData _d = null!;
+
+    protected override void OnParametersSet()
+    {
+        _d = BookmarkCardData.From(Item);
+    }
+
+    // v2 parity (listRows tic map), mapped onto our item types.
+    private string RowIcon => Item.Type switch
+    {
+        "video" or "movie" or "tvshow" or "anime" => "play",
+        "image" => "image",
+        "audio" or "music" or "podcast" => "music",
+        "snippet" => "code",
+        "repo" => "git",
+        "research" => "filetext",
+        "note" or "idea" => "note",
+        _ => string.IsNullOrEmpty(_d.Url) ? "bookmark" : "link",
+    };
+}

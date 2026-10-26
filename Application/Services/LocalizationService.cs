@@ -107,6 +107,7 @@ namespace Jamrah.Application.Services
             ["tasks.doing"] = ("○ قيد التنفيذ", "○ In progress"),
             ["tasks.notesPh"] = ("أضف أي تفاصيل تحتاجها...", "Add any details you need..."),
             ["tasks.doneAt"] = ("تم الإنجاز:", "Completed:"),
+            ["tasks.recurrenceCleanupToast"] = ("تم تنظيف المهام المتكررة — اتحذفت {0} نسخة مكررة ✓", "Recurring tasks cleaned up — {0} duplicate copies removed ✓"),
             ["tasks.inArchive"] = ("هذه المهمة موجودة في الأرشيف.", "This task is in the archive."),
             ["tasks.archiveTitle"] = ("أرشفة", "Archive"),
             ["tasks.deleteDay"] = ("حذف اليوم فقط", "Delete today only"),

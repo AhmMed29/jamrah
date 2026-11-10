@@ -308,6 +308,22 @@
                     @* ADDITIVE: translator agent settings (no existing logic touched) *@
                     <div style="max-width:640px"><TranslatorSettings /></div>
                     <Jamrah.Presentation.Shared.UpdateSettings />
+                    <div class="qcard" style="max-width:640px;margin-top:16px">
+                        <div class="q-k">@L["wn.linksTitle"]</div>
+                        <div class="q-meta">@L["wn.linksHint"]</div>
+                        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+                            <button type="button" @onclick="OpenLinkedIn"
+                                    style="display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);border-radius:10px;padding:0 14px;height:34px;background:var(--surface);color:#0a66c2;font-weight:700;font-size:13px;cursor:pointer;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.25V10.9H6.46M7.86 6.75a1.45 1.45 0 1 0 0 2.9 1.45 1.45 0 0 0 0-2.9z"/></svg>
+                                <span>@L["wn.linkedin"]</span>
+                            </button>
+                            <button type="button" @onclick="OpenRepository"
+                                    style="display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);border-radius:10px;padding:0 14px;height:34px;background:var(--surface);color:var(--ink);font-weight:700;font-size:13px;cursor:pointer;">
+                                @((MarkupString)BookmarkIcons.Svg("external", 14))
+                                <span>@L["wn.repo"]</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             }
             else if (State.Route.Ctx == "passwords")
@@ -1431,6 +1447,17 @@
             catch { }
         }
         return Task.CompletedTask;
+    }
+
+    private Task OpenLinkedIn() => OpenExternalAsync(AppLinks.LinkedIn);
+
+    private Task OpenRepository() => OpenExternalAsync(AppLinks.Repository);
+
+    // The WebView cannot follow an external address, so the platform launcher
+    // opens it in the system browser.
+    private static async Task OpenExternalAsync(string url)
+    {
+        try { await Microsoft.Maui.ApplicationModel.Launcher.OpenAsync(url); } catch { }
     }
 
     private async Task ExportBackup()

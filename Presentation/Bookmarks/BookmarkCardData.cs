@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -47,7 +48,24 @@ namespace Jamrah.Presentation.Bookmarks
 
         public static BookmarkCardData From(BookmarkItem it) => From(it, LocalizationService.CurrentLang);
 
+        // PERF: the bookmarks page rebuilds every card on each render (the grid
+        // filter asks for the card data, then the card asks for it again), and
+        // every rebuild re-parsed the metadata, re-deserialized the tags and
+        // re-read the thumbnail from disk. The memo below makes From() a
+        // dictionary hit; the key carries UpdatedAt and the language, so an
+        // edited item or a language switch is picked up on the next render.
+        private const int MemoLimit = 600;
+        private static readonly ConcurrentDictionary<(string Id, long Updated, string Lang), BookmarkCardData> _memo = new();
+
         public static BookmarkCardData From(BookmarkItem it, string lang)
+        {
+            if (it is null) throw new ArgumentNullException(nameof(it));
+            var key = (it.Id ?? string.Empty, it.UpdatedAt.Ticks, lang ?? string.Empty);
+            if (_memo.Count > MemoLimit) _memo.Clear();
+            return _memo.GetOrAdd(key, _ => Build(it, lang));
+        }
+
+        private static BookmarkCardData Build(BookmarkItem it, string lang)
         {
             JsonObject m;
             try { m = JsonNode.Parse(string.IsNullOrWhiteSpace(it.MetadataJson) ? "{}" : it.MetadataJson) as JsonObject ?? new JsonObject(); }
@@ -168,6 +186,12 @@ namespace Jamrah.Presentation.Bookmarks
         /// data: URIs so they render even where the WebView blocks file://. Returns null
         /// when the file is missing so the caller falls back to the remote URL.
         /// </summary>
+        // PERF: the data: URI was rebuilt on every render (read + base64 of the
+        // whole file each time). The cache below keeps it keyed by the file's
+        // mtime and size, so a regenerated cover is picked up automatically.
+        private const int ImgCacheLimit = 800;
+        private static readonly ConcurrentDictionary<string, string> _imgSrcCache = new();
+
         private static string? ResolveLocalImage(string? localPath)
         {
             if (string.IsNullOrWhiteSpace(localPath)) return null;
@@ -184,7 +208,20 @@ namespace Jamrah.Presentation.Bookmarks
             {
                 if (!System.IO.File.Exists(path)) return null;
                 var info = new System.IO.FileInfo(path);
-                if (info.Length > 0 && info.Length <= 300 * 1024)
+                var cacheKey = path + "|" + info.LastWriteTimeUtc.Ticks + "|" + info.Length;
+                if (_imgSrcCache.TryGetValue(cacheKey, out var cached)) return cached;
+
+                string src;
+                // PERF: files inside the thumbnail folder are served over the WebView
+                // virtual host, so the browser caches them and no base64 ends up in
+                // the Blazor DOM. Falls back to the inline data: URI when the host
+                // is unavailable (Android) or the file lives elsewhere.
+                var hostUrl = Jamrah.Infrastructure.AppPaths.ThumbsUrlForPath(path);
+                if (!string.IsNullOrEmpty(hostUrl))
+                {
+                    src = hostUrl;
+                }
+                else if (info.Length > 0 && info.Length <= 300 * 1024)
                 {
                     var mime = info.Extension.ToLowerInvariant() switch
                     {
@@ -195,9 +232,15 @@ namespace Jamrah.Presentation.Bookmarks
                         ".svg" => "image/svg+xml",
                         _ => "image/jpeg",
                     };
-                    return "data:" + mime + ";base64," + System.Convert.ToBase64String(System.IO.File.ReadAllBytes(path));
+                    src = "data:" + mime + ";base64," + System.Convert.ToBase64String(System.IO.File.ReadAllBytes(path));
                 }
-                return new System.Uri(path).AbsoluteUri;
+                else
+                {
+                    src = new System.Uri(path).AbsoluteUri;
+                }
+                if (_imgSrcCache.Count > ImgCacheLimit) _imgSrcCache.Clear();
+                _imgSrcCache[cacheKey] = src;
+                return src;
             }
             catch { return null; }
         }

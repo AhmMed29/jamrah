@@ -28,11 +28,54 @@ namespace Jamrah.Infrastructure
     public static class AppPaths
     {
         public const string HostLibrary = "jamrahlibrary.local";
+        public const string HostThumbs = "jamrahthumbs.local";
         private const string RootPreferenceKey = "jamrah_storage_root";
         private const string MigratedKey = "jamrah_migration_v1_done";
 
         private static volatile StorageLayout? _layout;
         private static readonly object Gate = new();
+
+        /// <summary>
+        /// True once the WebView has mapped <see cref="HostThumbs"/> to the thumbnail
+        /// folder. Thumbnails are then served as plain URLs instead of being inlined
+        /// as base64 data: URIs, which keeps the Blazor DOM small and lets the
+        /// browser cache them. False on platforms without a WebView virtual host
+        /// (Android) - callers fall back to the inline path.
+        /// </summary>
+        public static bool ThumbsHostReady { get; set; }
+
+        /// <summary>
+        /// Public URL for a file inside the thumbnail folder, served via the WebView
+        /// virtual host. Returns an empty string when the host is not available.
+        /// </summary>
+        public static string ThumbsUrlFor(string fileName)
+        {
+            if (!ThumbsHostReady) return string.Empty;
+            if (string.IsNullOrWhiteSpace(fileName)) return string.Empty;
+            var segments = fileName
+                .Replace('\\', '/')
+                .Split('/', StringSplitOptions.RemoveEmptyEntries)
+                .Select(Uri.EscapeDataString);
+            return "https://" + HostThumbs + "/" + string.Join('/', segments);
+        }
+
+        /// <summary>
+        /// Public URL for an absolute path that lives inside the thumbnail folder.
+        /// Returns an empty string when the path is outside it or the host is
+        /// unavailable, so callers can fall back to the inline data: URI.
+        /// </summary>
+        public static string ThumbsUrlForPath(string absolutePath)
+        {
+            if (!ThumbsHostReady) return string.Empty;
+            if (string.IsNullOrWhiteSpace(absolutePath)) return string.Empty;
+            string thumbsDir;
+            try { thumbsDir = Layout.ThumbsDir; }
+            catch { return string.Empty; }
+            if (!absolutePath.StartsWith(thumbsDir, StringComparison.OrdinalIgnoreCase)) return string.Empty;
+            var relative = absolutePath.Substring(thumbsDir.Length).TrimStart('\\', '/');
+            if (relative.Length == 0) return string.Empty;
+            return ThumbsUrlFor(relative);
+        }
 
         public static StorageLayout Layout
         {

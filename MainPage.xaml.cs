@@ -285,6 +285,20 @@ public partial class MainPage : ContentPage
             }
             catch { }
 
+            // Bookmark thumbnails (PDF covers and archived thumbs) served from the
+            // thumbnail folder. Without this they had to be inlined as base64 data:
+            // URIs, which put megabytes of base64 into the Blazor DOM on every
+            // render. Android has no WebView virtual host - there the inline path
+            // stays in use.
+            try
+            {
+                var thumbsDir = Jamrah.Infrastructure.AppPaths.Layout.ThumbsDir;
+                System.IO.Directory.CreateDirectory(thumbsDir);
+                core.SetVirtualHostNameToFolderMapping(Jamrah.Infrastructure.AppPaths.HostThumbs, thumbsDir, Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
+                Jamrah.Infrastructure.AppPaths.ThumbsHostReady = true;
+            }
+            catch { }
+
             // ADDITIVE: Explorer drag & drop with real paths (WebView2 gives no paths to JS).
             // Wired once per platform view: the view survives core recreation and the
             // handler resolves the live core at drop time, so re-adding would double-fire.

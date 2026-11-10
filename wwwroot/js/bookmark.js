@@ -366,3 +366,33 @@ window.pvmVideoInit = function (v) {
         show();
     } catch (e) {}
 };
+
+// PERF: the bookmarks grid/list used to render every card at once and were
+// hard-capped (60 media + 60 text cards, 120 list rows) - so anything past
+// the cap was invisible. Cards are now revealed progressively: this sentinel
+// sits at the end of the list and asks for the next batch when it scrolls
+// into view. The .NET side stops asking once everything is on screen.
+window.bmkWatchEnd = function (el, dotNetRef) {
+    try {
+        window.bmkUnwatchEnd();
+        if (!el || !dotNetRef) return;
+        // The bookmarks content scrolls inside .bmk-col, not the window, so the
+        // root is left unset (the viewport): the intersection is then computed
+        // against the visible area and the ancestor clipping, which works for
+        // both a window scroll and a nested scroll container.
+        var io = new IntersectionObserver(function (entries) {
+            for (var i = 0; i < entries.length; i++) {
+                if (!entries[i].isIntersecting) continue;
+                try { dotNetRef.invokeMethodAsync('OnEndReached'); } catch (e) {}
+            }
+        }, { root: null, rootMargin: '600px' });
+        io.observe(el);
+        window.__bmkEndObserver = io;
+    } catch (e) {}
+};
+
+window.bmkUnwatchEnd = function () {
+    try {
+        if (window.__bmkEndObserver) { window.__bmkEndObserver.disconnect(); window.__bmkEndObserver = null; }
+    } catch (e) {}
+};

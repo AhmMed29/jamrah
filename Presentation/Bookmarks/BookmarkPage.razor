@@ -556,7 +556,6 @@
         {
             <BookmarkPreviewModal ItemId="@_previewId"
                                  OnClose="ClosePreview"
-                                 OnEdit="id => { _previewId = null; OpenSaveModal(id); }"
                                  OnOpen="OpenPreview"
                                  OnNavigate="Navigate"
                                  OnChanged="() => StateHasChanged()"

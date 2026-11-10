@@ -276,9 +276,9 @@ namespace Jamrah.Presentation.Bookmarks
             var d = ((domain ?? BookmarkCardData.HostOf(url)) ?? string.Empty).ToLowerInvariant();
             System.Text.RegularExpressions.Match m;
             if ((m = System.Text.RegularExpressions.Regex.Match(url, @"(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{6,})")).Success)
-                return $"<iframe src=\"https://www.youtube-nocookie.com/embed/{m.Groups[1].Value}\" style=\"height:340px\" title=\"video\" loading=\"lazy\" allow=\"accelerometer;autoplay;encrypted-media;picture-in-picture;fullscreen\" allowfullscreen></iframe>";
+                return $"<iframe class=\"video-embed{(url.Contains("/shorts/") ? " shorts" : "")}\" src=\"https://www.youtube-nocookie.com/embed/{m.Groups[1].Value}\" style=\"height:340px\" title=\"video\" loading=\"lazy\" allow=\"accelerometer;autoplay;encrypted-media;picture-in-picture;fullscreen\" allowfullscreen></iframe>";
             if ((m = System.Text.RegularExpressions.Regex.Match(url, @"vimeo\.com\/(?:video\/)?(\d+)")).Success)
-                return $"<iframe src=\"https://player.vimeo.com/video/{m.Groups[1].Value}\" style=\"height:340px\" title=\"video\" loading=\"lazy\" allow=\"autoplay;fullscreen;picture-in-picture\" allowfullscreen></iframe>";
+                return $"<iframe class=\"video-embed\" src=\"https://player.vimeo.com/video/{m.Groups[1].Value}\" style=\"height:340px\" title=\"video\" loading=\"lazy\" allow=\"autoplay;fullscreen;picture-in-picture\" allowfullscreen></iframe>";
             if (d.Contains("twitter.com") || d == "x.com")
             {
                 m = System.Text.RegularExpressions.Regex.Match(url, @"status\/(\d+)");

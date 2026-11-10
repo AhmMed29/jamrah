@@ -19,6 +19,10 @@
     var previewOk = false;
     try { previewOk = g.Meta["previewOk"]?.GetValue<bool>() == true; } catch { }
     var allowEmbed = embed != null && (previewOk || !string.IsNullOrEmpty(g.Img));
+    var urlLower = (_item.Url ?? string.Empty).ToLowerInvariant();
+    var isShorts = urlLower.Contains("/shorts/");
+    var isWideEmbed = allowEmbed && !isShorts &&
+        (urlLower.Contains("youtube.com") || urlLower.Contains("youtu.be") || urlLower.Contains("vimeo.com"));
     var localPath = LocalFileActions.PathFor(_item);
     var localRel = LocalRel(_item);
     var localKind = localRel == null ? string.Empty : LocalFileService.KindFor(localRel);
@@ -30,8 +34,11 @@
         : localKind is "image" or "video" or "audio" ? localUrl : null;
 
     <div class="modal-wrap pvm-wrap" @onkeydown="OnKey" tabindex="-1" @ref="_wrapRef" @onclick="Close">
-        <div class="modal pvm" role="dialog" aria-modal="true" dir="@L.Dir" @onclick:stopPropagation="true">
-            <button class="pvm-x" @onclick="Close" title="@(L["com.close"])">@((MarkupString)BookmarkIcons.Svg("x", 16))</button>
+        <div class="modal pvm" @key="_item.Id" role="dialog" aria-modal="true" dir="@L.Dir" data-pvm-wide="@(isWideEmbed ? "1" : null)" data-pvm-editing="@(_editing ? "1" : null)" style="@(isWideEmbed ? "--pvm-ar:1.7778" : null)" @onclick:stopPropagation="true">
+            @if (!_editing)
+            {
+                <button class="pvm-x" @onclick="Close" title="@(L["com.close"])">@((MarkupString)BookmarkIcons.Svg("x", 16))</button>
+            }
 
             <div class="pvm-body">
                 <div class="pvm-grid @(isNote ? "note" : "")">
@@ -45,7 +52,22 @@
                             @if (localKind == "video" && localUrl != null)
                             {
                                 <div class="pvm-player">
-                                    <video controls preload="metadata" poster="@g.Img" src="@localUrl"></video>
+                                    <video preload="metadata" poster="@g.Img" src="@localUrl"
+                                           onloadedmetadata="window.pvmOrient&&pvmOrient(this);window.pvmVideoInit&&pvmVideoInit(this)"
+                                           onclick="this.paused?this.play():this.pause()"></video>
+                                    <div class="pvm-vbar" dir="ltr">
+                                        <button type="button" class="pvm-vbtn pvm-vplay" title="Play / pause">
+                                            <span class="pvm-vic-play">@((MarkupString)BookmarkIcons.Svg("play", 16))</span>
+                                            <span class="pvm-vic-pause">@((MarkupString)BookmarkIcons.Svg("pause", 16))</span>
+                                        </button>
+                                        <span class="pvm-vtime"><span class="pvm-vcur">0:00</span> / <span class="pvm-vdur">0:00</span></span>
+                                        <input class="pvm-vseek" type="range" min="0" max="1000" step="1" value="0" aria-label="Seek" />
+                                        <button type="button" class="pvm-vbtn pvm-vmute" title="Mute">
+                                            <span class="pvm-vic-vol">@((MarkupString)BookmarkIcons.Svg("volume", 16))</span>
+                                            <span class="pvm-vic-mute">@((MarkupString)BookmarkIcons.Svg("mute", 16))</span>
+                                        </button>
+                                        <button type="button" class="pvm-vbtn pvm-vfull" title="Fullscreen">@((MarkupString)BookmarkIcons.Svg("fullscreen", 15))</button>
+                                    </div>
                                 </div>
                             }
                             else if (localKind == "audio" && localUrl != null)
@@ -65,7 +87,7 @@
                             }
                             else if (localKind == "image" && localUrl != null)
                             {
-                                <div class="pvm-image"><img src="@localUrl" alt="@_item.Title" /></div>
+                                <div class="pvm-image"><img src="@localUrl" alt="@_item.Title" onload="window.pvmOrient&&pvmOrient(this)" /></div>
                             }
                             else if (allowEmbed)
                             {
@@ -73,7 +95,7 @@
                             }
                             else if (!string.IsNullOrEmpty(g.Img))
                             {
-                                <div class="pvm-image"><img src="@g.Img" alt="@_item.Title" /></div>
+                                <div class="pvm-image"><img src="@g.Img" alt="@_item.Title" onload="window.pvmOrient&&pvmOrient(this)" /></div>
                             }
                             else if (localPath != null)
                             {
@@ -101,7 +123,13 @@
                         </div>
                     }
 
-                    <div class="pvm-info">
+                    <div class="pvm-info @(_editing ? "editing" : "")">
+                        @if (_editing)
+                        {
+                            <BookmarkQuickCapture Inline="true" EditId="@_item.Id" OnClose="CancelEdit" OnUpdated="InlineUpdated" />
+                        }
+                        else
+                        {
                         <div class="pvm-kicker">
                             @((MarkupString)BookmarkIcons.Svg(g.Icon, 14))
                             <span>@(string.IsNullOrEmpty(g.Site) ? g.Type : g.Site)</span>
@@ -130,7 +158,7 @@
                             }
                             <button class="btn sm @(_item.Favorite ? "on" : "")" @onclick="ToggleFav">@((MarkupString)BookmarkIcons.Svg("star", 13)) @(_item.Favorite ? L["bmk.unfav"] : L["bmk.fav"])</button>
                             <button class="btn sm @(_item.Pinned ? "on" : "")" @onclick="TogglePin">@((MarkupString)BookmarkIcons.Svg("pin", 13)) @(_item.Pinned ? L["bmk.unpin"] : L["bmk.pin"])</button>
-                            <button class="btn sm" @onclick="Edit">@((MarkupString)BookmarkIcons.Svg("edit", 13)) @L["com.edit"]</button>
+                            <button class="btn sm" @onclick="StartEdit">@((MarkupString)BookmarkIcons.Svg("edit", 13)) @L["com.edit"]</button>
                             <button class="btn sm dgr" @onclick="Trash" title="@L["nav.trash"]">@((MarkupString)BookmarkIcons.Svg("trash", 13))</button>
                         </div>
 
@@ -281,6 +309,7 @@
                         </details>
                     }
                         </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -291,7 +320,6 @@
 @code {
     [Parameter] public string? ItemId { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
-    [Parameter] public EventCallback<string> OnEdit { get; set; }
     [Parameter] public EventCallback<string> OnOpen { get; set; }
     [Parameter] public EventCallback<(string Ctx, string? Id, string? Tag)> OnNavigate { get; set; }
     [Parameter] public EventCallback OnChanged { get; set; }
@@ -300,6 +328,8 @@
     private BookmarkItem? _item;
     private BookmarkCardData _d = null!;
     private ElementReference _wrapRef;
+    private bool _editing;
+    private bool _focusWrap;
     private bool _noteEdit;
     private string _noteText = string.Empty;
     private string _relateId = string.Empty;
@@ -324,6 +354,7 @@
         if (next != _item)
         {
             _item = next;
+            _editing = false;
             _noteEdit = false;
             _noteText = string.Empty;
             _relateId = string.Empty;
@@ -333,13 +364,16 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
+        if (!firstRender && !_focusWrap) return;
+        _focusWrap = false;
         try { await _wrapRef.FocusAsync(); } catch { }
     }
 
     private async Task OnKey(KeyboardEventArgs e)
     {
-        if (e.Key == "Escape") await Close();
+        if (e.Key != "Escape") return;
+        if (_editing) { CancelEdit(); return; }
+        await Close();
     }
 
     private Task Close() => OnClose.InvokeAsync();
@@ -449,7 +483,31 @@
         await OnChanged.InvokeAsync();
     }
 
-    private Task Edit() => _item == null ? Task.CompletedTask : OnEdit.InvokeAsync(_item.Id);
+    private void StartEdit()
+    {
+        if (_item == null) return;
+        _editing = true;
+        _focusWrap = true;
+    }
+
+    private void CancelEdit()
+    {
+        _editing = false;
+        _focusWrap = true;
+    }
+
+    private async Task InlineUpdated(string id)
+    {
+        _editing = false;
+        _focusWrap = true;
+        var it = State.Items.FirstOrDefault(i => i.Id == id);
+        if (it != null)
+        {
+            _item = it;
+            _d = BookmarkCardData.From(it, L.Lang);
+        }
+        await OnChanged.InvokeAsync();
+    }
 
     private Task Trash() => _item == null ? Task.CompletedTask : OnDelete.InvokeAsync(_item.Id);
 

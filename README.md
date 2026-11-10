@@ -14,10 +14,33 @@
 
 Jamrah is a local-first productivity app built with .NET 9 + MAUI (Blazor Hybrid). Everything is stored locally on your machine using SQLite — no accounts, no cloud, no tracking. The UI is RTL Arabic-first with a minimal warm stone design.
 
-> Download the latest version from **[Releases](https://github.com/AhmMed29/jamrah/releases)**.
+## Download
+
+**[Download](https://github.com/AhmMed29/jamrah/releases)** the latest version of Jamrah. Every release has its files attached to it, so always take them from the newest release.
+
+### Windows
+
+1. Download `jamrah.ahmmed29-win-Setup.exe` (about 160 MB).
+2. Run it and follow the installer.
+3. Open Jamrah from the Start menu.
+
+Installing with this file is the recommended way, because it lets the app offer you new versions by itself (Settings → App updates).
+
+Would rather not install anything? Download `jamrah.ahmmed29-win-Portable.zip`, extract it and run `Jamrah.exe`. A portable copy does not update itself, so you would have to download the new version again each time.
+
+### Android
+
+1. Download `Jamrah-<version>.apk` (about 55 MB).
+2. Open it. Android will ask whether this app is allowed to install apps — allow it once, then confirm the install.
+3. Open Jamrah from your list of apps.
+
+The app offers updates by itself as well (Settings → App updates). Installing an update asks for the same permission again.
 
 ## Table of Contents
 
+- [Download](#download)
+  - [Windows](#windows)
+  - [Android](#android)
 - [Features](#features)
   - [Tasks](#tasks)
   - [Goals](#goals)

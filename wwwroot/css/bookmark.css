@@ -756,6 +756,24 @@
   max-height:calc((100vh - 32px) / var(--z,1));
 }
 .bmk .pvm[data-pvm-wide="1"] .pvm-grid{grid-template-columns:var(--pvm-media-w) var(--pvm-info-w);gap:var(--pvm-gap)}
+/* Tall/portrait media (phone photos, vertical video, Shorts, PDF pages): the
+   modal takes the item's own shape, so the picture fills its box edge to edge
+   and no empty band is left above or below it. The real aspect ratio is
+   measured by pvmOrient and handed over as --pvm-ar; landscape media above is
+   not affected. Editing inside the details pane keeps its own layout. */
+.bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]){
+  --pvm-info-w:clamp(300px,calc(30vw / var(--z,1)),420px);
+  --pvm-gap:18px;
+  --pvm-mw-target:clamp(300px,calc(34vw / var(--z,1)),560px);
+  --pvm-mh-cap:min(calc((100vh - 32px) / var(--z,1)),900px);
+  --pvm-mh:min(var(--pvm-mh-cap),calc(var(--pvm-mw-target) / var(--pvm-ar,0.5625)));
+  --pvm-mw:calc(var(--pvm-mh) * var(--pvm-ar,0.5625));
+  width:calc(var(--pvm-mw) + var(--pvm-info-w) + var(--pvm-gap));
+  height:var(--pvm-mh);
+  max-width:calc(100vw / var(--z,1));
+  max-height:calc((100vh - 32px) / var(--z,1));
+}
+.bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]) .pvm-grid{grid-template-columns:var(--pvm-mw) var(--pvm-info-w);gap:var(--pvm-gap)}
 .bmk .pvm-grid{display:grid;grid-template-columns:minmax(0,1fr) clamp(220px,36%,400px);gap:18px;align-items:stretch;height:100%;direction:ltr}
 .bmk .pvm[dir="rtl"] .pvm-info{direction:rtl}
 .bmk .pvm-grid.note{display:block;max-width:860px;height:100%;margin:0 auto}
@@ -845,6 +863,8 @@
   .bmk .pvm{width:calc(100vw / var(--z,1));height:calc(100vh / var(--z,1));max-width:none;max-height:calc(100vh / var(--z,1));border-radius:0}
   .bmk .pvm[data-pvm-wide="1"]{width:calc(100vw / var(--z,1));height:calc(100vh / var(--z,1));max-width:none;max-height:calc(100vh / var(--z,1))}
   .bmk .pvm[data-pvm-wide="1"] .pvm-grid{grid-template-columns:minmax(0,1fr) clamp(220px,36%,400px)}
+  .bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]){width:calc(100vw / var(--z,1));height:calc(100vh / var(--z,1));max-width:none;max-height:calc(100vh / var(--z,1))}
+  .bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]) .pvm-grid{grid-template-columns:minmax(0,1fr) clamp(220px,36%,400px)}
   .bmk .pvm-x{top:12px;right:12px}
 }
 /* Stack only when the window itself is genuinely narrow (phones/small windows).
@@ -856,10 +876,14 @@
   .bmk .pvm-body{overflow-y:auto;padding:0}
   .bmk .pvm-grid{display:flex;flex-direction:column;height:auto;gap:12px}
   .bmk .pvm[data-pvm-wide="1"] .pvm-grid{display:flex;flex-direction:column;height:auto;gap:12px}
+  .bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]){width:calc(96vw / var(--z,1));height:auto;max-height:calc((100vh - 32px) / var(--z,1))}
+  .bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]) .pvm-grid{display:flex;flex-direction:column;height:auto;gap:12px}
   .bmk .pvm-grid.note{height:auto}
   .bmk .pvm-media{height:min(calc(56vh / var(--z,1)),520px);min-height:0;flex:none}
   .bmk .pvm[data-pvm-wide="1"] .pvm-media{width:100%;height:min(calc(56vh / var(--z,1)),520px)}
+  .bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]) .pvm-media{width:100%;height:min(calc(56vh / var(--z,1)),520px)}
   .bmk .pvm[data-pvm-wide="1"] .pvm-info{height:auto}
+  .bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]) .pvm-info{height:auto}
   .bmk .pvm-info{height:auto;overflow:visible;padding:20px 16px 26px;border-radius:16px}
   .bmk .pvm-info h1{font-size:22px;padding-right:0}
   .bmk .pvm-relgrid{grid-template-columns:1fr}

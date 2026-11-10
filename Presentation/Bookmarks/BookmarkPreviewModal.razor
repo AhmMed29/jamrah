@@ -23,6 +23,9 @@
     var isShorts = urlLower.Contains("/shorts/");
     var isWideEmbed = allowEmbed && !isShorts &&
         (urlLower.Contains("youtube.com") || urlLower.Contains("youtu.be") || urlLower.Contains("vimeo.com"));
+    // Shorts are portrait embeds: JavaScript cannot measure an iframe, so the
+    // 9:16 ratio is supplied here and the modal sizes itself from it.
+    var isTallEmbed = allowEmbed && isShorts;
     var localPath = LocalFileActions.PathFor(_item);
     var localRel = LocalRel(_item);
     var localKind = localRel == null ? string.Empty : LocalFileService.KindFor(localRel);
@@ -34,7 +37,7 @@
         : localKind is "image" or "video" or "audio" ? localUrl : null;
 
     <div class="modal-wrap pvm-wrap" @onkeydown="OnKey" tabindex="-1" @ref="_wrapRef" @onclick="Close">
-        <div class="modal pvm" @key="_item.Id" role="dialog" aria-modal="true" dir="@L.Dir" data-pvm-wide="@(isWideEmbed ? "1" : null)" data-pvm-editing="@(_editing ? "1" : null)" style="@(isWideEmbed ? "--pvm-ar:1.7778" : null)" @onclick:stopPropagation="true">
+        <div class="modal pvm" @key="_item.Id" role="dialog" aria-modal="true" dir="@L.Dir" data-pvm-wide="@(isWideEmbed ? "1" : isTallEmbed ? "0" : null)" data-pvm-editing="@(_editing ? "1" : null)" style="@(isWideEmbed ? "--pvm-ar:1.7778" : isTallEmbed ? "--pvm-ar:0.5625" : null)" @onclick:stopPropagation="true">
             @if (!_editing)
             {
                 <button class="pvm-x" @onclick="Close" title="@(L["com.close"])">@((MarkupString)BookmarkIcons.Svg("x", 16))</button>

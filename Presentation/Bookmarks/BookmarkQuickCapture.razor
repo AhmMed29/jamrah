@@ -16,8 +16,8 @@
 @implements IDisposable
 
 @* Unified capture / edit modal: one QuickCapture surface for creating and editing items. *@
-<div class="modal-wrap">
-    <div class="modal addm capm">
+<div class="@(Inline ? "pvm-edit" : "modal-wrap")">
+    <div class="modal addm capm @(Inline ? "pvm-edit-card" : "")">
         <div class="m-h">
             <span class="m-t">@(_isEdit ? L["bmk.editItem"] : L["bmk.quickCapture"])</span>
             @if (!_isEdit)
@@ -75,33 +75,41 @@
                 <div class="embfail" style="margin-top:10px">@_err<button class="embx" @onclick="() => _err = null">×</button></div>
             }
 
-            <div class="fld" style="margin-top:10px">
-                <label style="display:flex;align-items:center;gap:8px">
-                    <span>@L["bmk.description"]</span>
-                    <span class="hint" style="margin-left:auto;font-variant-numeric:tabular-nums">@_desc.Length/@NoteText.DescriptionMax</span>
-                </label>
-                <input dir="auto" value="@_desc" @oninput="DescriptionInput" maxlength="@NoteText.DescriptionMax"
-                       placeholder="@L["bmk.descPh"]" spellcheck="false" />
-                <p class="hint" style="margin:4px 0 0">@L["bmk.descHint"]</p>
-            </div>
+            @if (!_isEdit)
+            {
+                <div class="fld" style="margin-top:10px">
+                    <label style="display:flex;align-items:center;gap:8px">
+                        <span>@L["bmk.description"]</span>
+                        <span class="hint" style="margin-left:auto;font-variant-numeric:tabular-nums">@_desc.Length/@NoteText.DescriptionMax</span>
+                    </label>
+                    <input dir="auto" value="@_desc" @oninput="DescriptionInput" maxlength="@NoteText.DescriptionMax"
+                           placeholder="@L["bmk.descPh"]" spellcheck="false" />
+                    <p class="hint" style="margin:4px 0 0">@L["bmk.descHint"]</p>
+                </div>
+            }
 
             <button type="button" class="advT @(_detailsOpen ? "open" : "")" @onclick="() => _detailsOpen = !_detailsOpen">
                 @((MarkupString)BookmarkIcons.Svg("sliders", 14))<span>@L["bmk.advOptions"]</span>
-                <span class="advn">@(L.Lang == "ar" ? "النوع، الفولدر، الكولكشن، لينك، نوت..." : "type, folder, collections, link, notes...")</span>
+                <span class="advn">@(_isEdit
+                    ? (L.Lang == "ar" ? "الفولدر، لينك، صورة مصغرة، خيارات" : "folder, link, thumbnail, flags")
+                    : (L.Lang == "ar" ? "النوع، الفولدر، الكولكشن، لينك، نوت..." : "type, folder, collections, link, notes..."))</span>
                 @((MarkupString)BookmarkIcons.Svg("chevD", 13))
             </button>
             @if (_detailsOpen)
             {
                 <div class="advB">
-                    <div class="f2">
-                        <div class="fld"><label>@L["bmk.type"]</label>
-                            <select value="@_type" @onchange="TypeChanged">
-                                @foreach (var t in BookmarkQuery.Types.Keys)
-                                {
-                                    <option value="@t">@BookmarkQuery.TypeName(t, L.Lang)</option>
-                                }
-                            </select>
-                        </div>
+                    <div class="f2 @(_isEdit ? "one" : "")">
+                        @if (!_isEdit)
+                        {
+                            <div class="fld"><label>@L["bmk.type"]</label>
+                                <select value="@_type" @onchange="TypeChanged">
+                                    @foreach (var t in BookmarkQuery.Types.Keys)
+                                    {
+                                        <option value="@t">@BookmarkQuery.TypeName(t, L.Lang)</option>
+                                    }
+                                </select>
+                            </div>
+                        }
                         <div class="fld"><label>@L["bmk.folder"]</label>
                             <select @bind="_folderId">
                                 <option value="">@L["bmk.noneOpt"]</option>
@@ -117,25 +125,28 @@
                             </select>
                         </div>
                     </div>
-                    <div class="f2">
-                        <div class="fld"><label>@L["bmk.page"]</label>
-                            <select @bind="_pageId">
-                                <option value="">@L["bmk.noneOpt"]</option>
-                                @foreach (var pg in State.Pages.Where(p => !p.IsArchived)) { <option value="@pg.Id">@PageLabel(pg.Id)</option> }
-                            </select>
-                        </div>
-                        <div class="fld"><label>@L["bmk.collections"]</label>
-                            <div class="tcheck" style="padding-top:3px">
-                                @foreach (var c in State.Collections)
-                                {
-                                    <button type="button" class="chip @(_colIds.Contains(c.Id) ? "on" : "")" @onclick="() => ToggleCol(c.Id)">
-                                        @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(c.Icon) ? (BookmarkQuery.ParseSmart(c.SmartJson) != null ? "spark" : "layers") : c.Icon, "layers")) @c.Name
-                                    </button>
-                                }
-                                @if (State.Collections.Count == 0) { <span class="hint">@L["bmk.noCollections"]</span> }
+                    @if (!_isEdit)
+                    {
+                        <div class="f2">
+                            <div class="fld"><label>@L["bmk.page"]</label>
+                                <select @bind="_pageId">
+                                    <option value="">@L["bmk.noneOpt"]</option>
+                                    @foreach (var pg in State.Pages.Where(p => !p.IsArchived)) { <option value="@pg.Id">@PageLabel(pg.Id)</option> }
+                                </select>
+                            </div>
+                            <div class="fld"><label>@L["bmk.collections"]</label>
+                                <div class="tcheck" style="padding-top:3px">
+                                    @foreach (var c in State.Collections)
+                                    {
+                                        <button type="button" class="chip @(_colIds.Contains(c.Id) ? "on" : "")" @onclick="() => ToggleCol(c.Id)">
+                                            @((MarkupString)BookmarkIcons.FdIcon(string.IsNullOrEmpty(c.Icon) ? (BookmarkQuery.ParseSmart(c.SmartJson) != null ? "spark" : "layers") : c.Icon, "layers")) @c.Name
+                                        </button>
+                                    }
+                                    @if (State.Collections.Count == 0) { <span class="hint">@L["bmk.noCollections"]</span> }
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    }
                     <div class="fld"><label>@L["bmk.linkEmbed"]</label>
                         <div class="embedrow">
                             <input type="url" value="@_link" @oninput="e => _link = e.Value?.ToString() ?? string.Empty" placeholder="@L["bmk.linkPh"]" spellcheck="false" />
@@ -156,7 +167,10 @@
                             <div class="embprev"><img src="@_thumbUrl" alt="" /><div><b>@(_fetchProvider ?? L["bmk.coverLbl"])</b><span>@L["bmk.coverHint"]</span></div></div>
                         }
                     </div>
-                    <div class="fld"><label>@L["com.notes"] <span style="text-transform:none;letter-spacing:0;font-weight:500">(markdown)</span></label><textarea dir="auto" style="min-height:70px" @bind="_notes"></textarea></div>
+                    @if (!_isEdit)
+                    {
+                        <div class="fld"><label>@L["com.notes"] <span style="text-transform:none;letter-spacing:0;font-weight:500">(markdown)</span></label><textarea dir="auto" style="min-height:70px" @bind="_notes"></textarea></div>
+                    }
                     <div class="fld"><label>@L["bmk.thumbnail"]</label>
                         <div class="upl">
                             @if (!string.IsNullOrEmpty(_thumbUrl)) { <img class="imgpv" src="@_thumbUrl" style="width:44px;height:34px" alt="" /> }
@@ -212,6 +226,7 @@
 
 @code {
     [Parameter] public string? EditId { get; set; }
+    [Parameter] public bool Inline { get; set; }
     [Parameter] public string? PresetFolderId { get; set; }
     [Parameter] public string? PresetType { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }

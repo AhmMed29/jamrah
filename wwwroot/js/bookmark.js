@@ -243,3 +243,156 @@ window.bmPv = window.bmPv || {
         } catch (e) {}
     }
 };
+// Landscape media (regular video / wide image) expands the preview modal;
+// portrait media (Shorts, vertical video, phone photos) keeps the tall layout.
+// Called from img onload / video onloadedmetadata in BookmarkPreviewModal.
+window.pvmOrient = function (el) {
+    try {
+        var p = el && el.closest ? el.closest('.pvm') : null;
+        if (!p) return;
+        var w = el.naturalWidth || el.videoWidth || 0;
+        var h = el.naturalHeight || el.videoHeight || 0;
+        if (!w || !h) return;
+        var ar = w / h;
+        p.style.setProperty('--pvm-ar', ar.toFixed(4));
+        p.setAttribute('data-pvm-wide', ar >= 1.05 ? '1' : '0');
+    } catch (e) {}
+};
+
+// Custom local-video controls. Chromium's native control bar renders its
+// progress fill/thumb misaligned under the app's root CSS zoom, so the
+// preview uses a small DOM bar driven by this initializer.
+window.pvmVideoInit = function (v) {
+    try {
+        if (!v || v.dataset.pvInit === '1') return;
+        var p = v.closest('.pvm-player');
+        if (!p) return;
+        var bar = p.querySelector('.pvm-vbar');
+        if (!bar) return;
+        v.dataset.pvInit = '1';
+        p.classList.add('pv-ready');
+
+        var play = bar.querySelector('.pvm-vplay');
+        var seek = bar.querySelector('.pvm-vseek');
+        var cur = bar.querySelector('.pvm-vcur');
+        var dur = bar.querySelector('.pvm-vdur');
+        var mute = bar.querySelector('.pvm-vmute');
+        var full = bar.querySelector('.pvm-vfull');
+        var hideT = null;
+
+        function fmt(s) {
+            if (!isFinite(s) || s < 0) s = 0;
+            s = Math.floor(s);
+            var m = Math.floor(s / 60), sec = s % 60, h = Math.floor(m / 60);
+            if (h > 0) return h + ':' + String(m % 60).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+            return m + ':' + String(sec).padStart(2, '0');
+        }
+        function paint() {
+            var d = v.duration || 0, t = v.currentTime || 0;
+            cur.textContent = fmt(t);
+            dur.textContent = fmt(d);
+            var pct = d > 0 ? (t / d) * 100 : 0;
+            seek.value = d > 0 ? Math.round((t / d) * 1000) : 0;
+            seek.style.setProperty('--p', pct.toFixed(3) + '%');
+        }
+        function sync() {
+            p.classList.toggle('playing', !v.paused);
+            p.classList.toggle('muted', v.muted || v.volume === 0);
+            paint();
+        }
+        function show() {
+            p.classList.add('show-bar');
+            if (hideT) { clearTimeout(hideT); hideT = null; }
+            if (v.paused) return;
+            hideT = setTimeout(function () {
+                if (!v.paused && !bar.contains(document.activeElement)) p.classList.remove('show-bar');
+            }, 2400);
+        }
+        function toggle() {
+            if (v.paused) {
+                var pr = v.play();
+                if (pr && pr.catch) pr.catch(function () {});
+            } else {
+                v.pause();
+            }
+        }
+
+        play.addEventListener('click', function (e) { e.stopPropagation(); toggle(); show(); });
+        v.addEventListener('click', function () { show(); });
+        v.addEventListener('play', function () { sync(); show(); });
+        v.addEventListener('pause', function () { sync(); show(); });
+        v.addEventListener('ended', function () { sync(); show(); });
+        v.addEventListener('volumechange', sync);
+        v.addEventListener('loadedmetadata', paint);
+        v.addEventListener('timeupdate', paint);
+        v.addEventListener('progress', paint);
+        seek.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+        seek.addEventListener('input', function () {
+            var d = v.duration || 0;
+            if (d > 0) { v.currentTime = (Number(seek.value) / 1000) * d; paint(); }
+        });
+        mute.addEventListener('click', function (e) {
+            e.stopPropagation();
+            v.muted = !v.muted;
+            if (!v.muted && v.volume === 0) v.volume = 1;
+            sync(); show();
+        });
+        full.addEventListener('click', function (e) {
+            e.stopPropagation();
+            try {
+                if (document.fullscreenElement) document.exitFullscreen();
+                else if (p.requestFullscreen) p.requestFullscreen();
+                else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+            } catch (err) {}
+            show();
+        });
+        v.addEventListener('dblclick', function (e) {
+            e.preventDefault();
+            try {
+                if (document.fullscreenElement) document.exitFullscreen();
+                else if (p.requestFullscreen) p.requestFullscreen();
+            } catch (err) {}
+        });
+        p.addEventListener('mousemove', show);
+        p.addEventListener('mouseenter', show);
+        p.addEventListener('mouseleave', function () {
+            if (!v.paused && !bar.contains(document.activeElement)) p.classList.remove('show-bar');
+        });
+        p.addEventListener('touchstart', show, { passive: true });
+        bar.addEventListener('mouseenter', function () { p.classList.add('show-bar'); if (hideT) { clearTimeout(hideT); hideT = null; } });
+        bar.addEventListener('mouseleave', show);
+
+        sync();
+        show();
+    } catch (e) {}
+};
+
+// PERF: the bookmarks grid/list used to render every card at once and were
+// hard-capped (60 media + 60 text cards, 120 list rows) - so anything past
+// the cap was invisible. Cards are now revealed progressively: this sentinel
+// sits at the end of the list and asks for the next batch when it scrolls
+// into view. The .NET side stops asking once everything is on screen.
+window.bmkWatchEnd = function (el, dotNetRef) {
+    try {
+        window.bmkUnwatchEnd();
+        if (!el || !dotNetRef) return;
+        // The bookmarks content scrolls inside .bmk-col, not the window, so the
+        // root is left unset (the viewport): the intersection is then computed
+        // against the visible area and the ancestor clipping, which works for
+        // both a window scroll and a nested scroll container.
+        var io = new IntersectionObserver(function (entries) {
+            for (var i = 0; i < entries.length; i++) {
+                if (!entries[i].isIntersecting) continue;
+                try { dotNetRef.invokeMethodAsync('OnEndReached'); } catch (e) {}
+            }
+        }, { root: null, rootMargin: '600px' });
+        io.observe(el);
+        window.__bmkEndObserver = io;
+    } catch (e) {}
+};
+
+window.bmkUnwatchEnd = function () {
+    try {
+        if (window.__bmkEndObserver) { window.__bmkEndObserver.disconnect(); window.__bmkEndObserver = null; }
+    } catch (e) {}
+};

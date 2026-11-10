@@ -707,12 +707,73 @@
 .bmk .mn-t,.bmk .mn-d,.bmk .mi-t,.bmk .lk-t,.bmk .lk-d,.bmk .pst-t,.bmk .pst-c,.bmk .cp-t,.bmk .pp-t,.bmk .cn-t,.bmk .ls-t,.bmk .ph-t,.bmk .au-t,.bmk .tg-t,.bmk .bk-t,.bmk .bk-fb-t,.bmk .bk-fb-a,.bmk .rd-t,.bmk .sh-t,.bmk .nt-t,.bmk .nt-c,.bmk .dev-t,.bmk .dev-d,.bmk .fl-n,.bmk .hz-t,.bmk .hz-d,.bmk .mg-t,.bmk .mg-d,.bmk .dt-t,.bmk .dt-d,.bmk .mt-t,.bmk .mt-v{unicode-bidi:plaintext}
 
 /* -- Centered item preview modal (replaces the old right pane + drawer) -- */
-.bmk .pvm{position:relative;width:min(1500px,calc(96vw / var(--z,1)));height:min(calc((100vh - 32px) / var(--z,1)),900px);max-height:calc((100vh - 32px) / var(--z,1));display:block;overflow:visible;border-radius:0;background:transparent;box-shadow:none;padding:0;container:pvm / inline-size}
+.bmk .pvm{position:relative;width:min(1500px,calc(96vw / var(--z,1)));height:min(calc((100vh - 32px) / var(--z,1)),900px);max-width:min(450px,calc(100vw / var(--z,1)));max-height:calc((100vh - 32px) / var(--z,1));display:block;overflow:visible;border:0;border-radius:0;background:transparent;box-shadow:none;padding:0}
 .bmk .pvm-x{position:absolute;top:14px;right:14px;z-index:8;width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink2);box-shadow:0 4px 16px rgba(0,0,0,.12)}
 .bmk .pvm-x:hover{background:var(--hover);color:var(--ink)}
 .bmk .pvm-kicker{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);min-width:0;margin-bottom:9px;padding-right:38px}
 .bmk .pvm-kicker svg{color:var(--ink3)}
 .bmk .pvm-body{height:100%;min-height:0;overflow:hidden;padding:0;overscroll-behavior:contain}
+/* The dialog focuses its scroll containers (Chrome focusable scrollers); the
+   browser paints a 1px focus ring around the whole modal when they are focused.
+   Kill both outline and border on the shell and every layer, focused or not.
+   Buttons/links keep their focus ring. */
+.bmk .pvm-wrap,
+.bmk .pvm,
+.bmk .pvm-body,
+.bmk .pvm-grid,
+.bmk .pvm-media,
+.bmk .pvm-info,
+.bmk .pvm-embed,
+.bmk .pvm-embed iframe,
+.bmk .pvm-wrap:focus,
+.bmk .pvm-wrap:focus-visible,
+.bmk .pvm:focus,
+.bmk .pvm:focus-visible,
+.bmk .pvm-body:focus,
+.bmk .pvm-body:focus-visible,
+.bmk .pvm-grid:focus,
+.bmk .pvm-grid:focus-visible,
+.bmk .pvm-media:focus,
+.bmk .pvm-media:focus-visible,
+.bmk .pvm-info:focus,
+.bmk .pvm-info:focus-visible,
+.bmk .pvm-embed:focus,
+.bmk .pvm-embed:focus-visible,
+.bmk .pvm-embed iframe:focus,
+.bmk .pvm-embed iframe:focus-visible{outline:0!important;border:0!important}
+/* Landscape media (regular YouTube/Vimeo, wide images/videos): grow the modal
+   so the media is large and fills its column. Portrait media (Shorts, vertical
+   video, phone photos) keeps the default tall layout above. */
+.bmk .pvm[data-pvm-wide="1"]{
+  --pvm-info-w:clamp(300px,calc(24vw / var(--z,1)),400px);
+  --pvm-gap:18px;
+  --pvm-max-w:min(1500px,calc(96vw / var(--z,1)));
+  --pvm-max-h:min(calc((100vh - 32px) / var(--z,1)),900px);
+  --pvm-media-w:min(calc(var(--pvm-max-w) - var(--pvm-info-w) - var(--pvm-gap)),calc(var(--pvm-max-h) * var(--pvm-ar,1.7778)));
+  width:calc(var(--pvm-media-w) + var(--pvm-info-w) + var(--pvm-gap));
+  height:calc(var(--pvm-media-w) / var(--pvm-ar,1.7778));
+  max-width:calc(100vw / var(--z,1));
+  max-height:calc((100vh - 32px) / var(--z,1));
+}
+.bmk .pvm[data-pvm-wide="1"] .pvm-grid{grid-template-columns:var(--pvm-media-w) var(--pvm-info-w);gap:var(--pvm-gap)}
+/* Tall/portrait media (phone photos, vertical video, Shorts, PDF pages): the
+   modal takes the item's own shape, so the picture fills its box edge to edge
+   and no empty band is left above or below it. The real aspect ratio is
+   measured by pvmOrient and handed over as --pvm-ar; landscape media above is
+   not affected. Editing inside the details pane keeps its own layout. */
+.bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]){
+  --pvm-info-w:clamp(300px,calc(30vw / var(--z,1)),420px);
+  --pvm-gap:18px;
+  --pvm-mw-target:clamp(300px,calc(34vw / var(--z,1)),560px);
+  --pvm-mh-cap:min(calc((100vh - 32px) / var(--z,1)),900px);
+  --pvm-mh:min(var(--pvm-mh-cap),calc(var(--pvm-mw-target) / var(--pvm-ar,0.5625)));
+  --pvm-mw:calc(var(--pvm-mh) * var(--pvm-ar,0.5625));
+  width:calc(var(--pvm-mw) + var(--pvm-info-w) + var(--pvm-gap));
+  height:var(--pvm-mh);
+  max-width:calc(100vw / var(--z,1));
+  max-height:calc((100vh - 32px) / var(--z,1));
+}
+.bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]) .pvm-grid{grid-template-columns:var(--pvm-mw) var(--pvm-info-w);gap:var(--pvm-gap)}
 .bmk .pvm-grid{display:grid;grid-template-columns:minmax(0,1fr) clamp(220px,36%,400px);gap:18px;align-items:stretch;height:100%;direction:ltr}
 .bmk .pvm[dir="rtl"] .pvm-info{direction:rtl}
 .bmk .pvm-grid.note{display:block;max-width:860px;height:100%;margin:0 auto}
@@ -720,11 +781,14 @@
 .bmk .pvm-media{position:relative;width:100%;height:100%;min-width:0;max-width:100%;border-radius:18px;overflow:hidden;background:#0f0e0d;min-height:0;display:flex;align-items:center;justify-content:center;box-shadow:0 18px 54px rgba(18,16,13,.24)}
 .bmk .pvm-bg{position:absolute;inset:-45px;width:calc(100% + 90px);height:calc(100% + 90px);object-fit:cover;filter:blur(34px) brightness(.46) saturate(.9);transform:scale(1.08);pointer-events:none}
 .bmk .pvm-player{position:relative;z-index:1;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
-.bmk .pvm-player video{max-width:100%;max-height:100%;width:auto;height:auto;display:block;background:#000}
+.bmk .pvm-player video{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;display:block;background:#000}
 .bmk .pvm-image{position:relative;z-index:1;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:transparent}
-.bmk .pvm-image img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block}
-.bmk .pvm-embed{position:relative;z-index:1;width:100%;height:100%;background:#000;display:flex;align-items:center;justify-content:center}
+.bmk .pvm-image img{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;display:block}
+.bmk .pvm-embed{position:relative;z-index:1;width:100%;height:100%;background:#000;display:flex;align-items:center;justify-content:center;container-type:size}
 .bmk .pvm-embed iframe{width:100%;height:100%!important;border:0;display:block;background:#000}
+/* YouTube/Vimeo: keep the whole frame visible inside the column. */
+.bmk .pvm-embed iframe.video-embed{width:min(100cqw,calc(100cqh * 16 / 9))!important;height:min(100cqh,calc(100cqw * 9 / 16))!important;max-width:100%;max-height:100%;margin:auto}
+.bmk .pvm-embed iframe.video-embed.shorts{width:min(100cqw,calc(100cqh * 9 / 16))!important;height:min(100cqh,calc(100cqw * 16 / 9))!important}
 .bmk .pvm-audio{position:relative;z-index:1;width:100%;height:100%;padding:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;background:rgba(15,14,13,.72)}
 .bmk .pvm-audio img{width:min(46%,260px);aspect-ratio:1/1;height:auto;object-fit:cover;border-radius:16px;box-shadow:0 18px 44px rgba(0,0,0,.45)}
 .bmk .pvm-aicon{position:relative;width:120px;height:120px;border-radius:50%;display:grid;place-items:center;color:#fff;background:#ffffff17;overflow:hidden}
@@ -796,17 +860,30 @@
 .bmk .pvm-acc-b.reader img{max-width:100%;height:auto;border-radius:8px}
 .bmk .pvm-acc-b.reader h1,.bmk .pvm-acc-b.reader h2,.bmk .pvm-acc-b.reader h3{color:var(--ink);line-height:1.3;margin:16px 0 8px}
 @media (max-width:900px){
-  .bmk .pvm{width:calc(100vw / var(--z,1));height:calc(100vh / var(--z,1));max-height:calc(100vh / var(--z,1));border-radius:0}
+  .bmk .pvm{width:calc(100vw / var(--z,1));height:calc(100vh / var(--z,1));max-width:none;max-height:calc(100vh / var(--z,1));border-radius:0}
+  .bmk .pvm[data-pvm-wide="1"]{width:calc(100vw / var(--z,1));height:calc(100vh / var(--z,1));max-width:none;max-height:calc(100vh / var(--z,1))}
+  .bmk .pvm[data-pvm-wide="1"] .pvm-grid{grid-template-columns:minmax(0,1fr) clamp(220px,36%,400px)}
+  .bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]){width:calc(100vw / var(--z,1));height:calc(100vh / var(--z,1));max-width:none;max-height:calc(100vh / var(--z,1))}
+  .bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]) .pvm-grid{grid-template-columns:minmax(0,1fr) clamp(220px,36%,400px)}
   .bmk .pvm-x{top:12px;right:12px}
 }
-/* Stack only when the modal itself is genuinely narrow (phones/small windows).
-   The modal's layout width is 96vw / --z, so a high desktop zoom must NOT be
-   mistaken for a phone: keep media left + info right down to 480px. */
-@container pvm (max-width:480px){
+/* Stack only when the window itself is genuinely narrow (phones/small windows).
+   A @container query here measured the modal's layout width (96vw / --z), so a
+   high desktop zoom shrank that width and triggered the stacked layout early.
+   A viewport media query is zoom-independent: keep media left + info right on
+   any desktop window, stack only below phone width. */
+@media (max-width:520px){
   .bmk .pvm-body{overflow-y:auto;padding:0}
   .bmk .pvm-grid{display:flex;flex-direction:column;height:auto;gap:12px}
+  .bmk .pvm[data-pvm-wide="1"] .pvm-grid{display:flex;flex-direction:column;height:auto;gap:12px}
+  .bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]){width:calc(96vw / var(--z,1));height:auto;max-height:calc((100vh - 32px) / var(--z,1))}
+  .bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]) .pvm-grid{display:flex;flex-direction:column;height:auto;gap:12px}
   .bmk .pvm-grid.note{height:auto}
   .bmk .pvm-media{height:min(calc(56vh / var(--z,1)),520px);min-height:0;flex:none}
+  .bmk .pvm[data-pvm-wide="1"] .pvm-media{width:100%;height:min(calc(56vh / var(--z,1)),520px)}
+  .bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]) .pvm-media{width:100%;height:min(calc(56vh / var(--z,1)),520px)}
+  .bmk .pvm[data-pvm-wide="1"] .pvm-info{height:auto}
+  .bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]) .pvm-info{height:auto}
   .bmk .pvm-info{height:auto;overflow:visible;padding:20px 16px 26px;border-radius:16px}
   .bmk .pvm-info h1{font-size:22px;padding-right:0}
   .bmk .pvm-relgrid{grid-template-columns:1fr}
@@ -819,3 +896,51 @@
 .bmk .modal.capm .advB{border-top:1px solid var(--line);margin-top:4px;padding-top:14px}
 .bmk .modal.capm .m-f{align-items:center}
 .bmk .modal.capm .m-f .btn:first-child{margin-inline-end:auto}
+
+/* ===== Inline edit inside the preview details pane ===== */
+.bmk .pvm[data-pvm-editing="1"]{width:min(880px,calc(96vw / var(--z,1)));max-width:calc(100vw / var(--z,1))}
+.bmk .pvm[data-pvm-editing="1"] .pvm-grid{grid-template-columns:minmax(0,1fr) clamp(330px,42%,470px)}
+.bmk .pvm[data-pvm-wide="1"][data-pvm-editing="1"]{
+  --pvm-info-w:clamp(340px,calc(30vw / var(--z,1)),470px);
+  --pvm-media-w:min(calc(var(--pvm-max-w) - var(--pvm-info-w) - var(--pvm-gap)),calc(var(--pvm-max-h) * var(--pvm-ar,1.7778)));
+  width:calc(var(--pvm-media-w) + var(--pvm-info-w) + var(--pvm-gap));
+}
+.bmk .pvm-info.editing{padding:0;overflow:hidden;display:flex;flex-direction:column}
+.bmk .pvm-edit{width:100%;height:100%;min-height:0;display:flex;flex-direction:column}
+.bmk .modal.capm.pvm-edit-card{width:100%;max-width:none;max-height:none;height:100%;min-height:0;border-radius:18px;box-shadow:none;background:var(--surface);animation:none;overflow:hidden;display:flex;flex-direction:column}
+.bmk .pvm-edit-card>.m-h{position:static;flex:none;padding:16px 20px}
+.bmk .pvm-edit-card>.m-b{flex:1;min-height:0;overflow-y:auto;padding:16px 20px 20px;scrollbar-width:thin}
+.bmk .pvm-edit-card>.m-f{position:static;flex:none;padding:12px 20px;background:var(--surface)}
+.bmk .pvm-edit-card .m-t{font-size:17px}
+.bmk .pvm-edit-card .f2{grid-template-columns:1fr;gap:0}
+.bmk .f2.one{grid-template-columns:1fr}
+@media (max-width:520px){
+  .bmk .pvm[data-pvm-editing="1"]{width:calc(96vw / var(--z,1));max-width:calc(100vw / var(--z,1));height:auto;max-height:calc((100vh - 32px) / var(--z,1))}
+  .bmk .pvm[data-pvm-editing="1"] .pvm-grid{display:flex;flex-direction:column;height:auto}
+  .bmk .pvm-info.editing{height:auto;overflow:visible;padding:0}
+  .bmk .pvm-edit{height:auto}
+  .bmk .pvm-edit-card{height:auto;max-height:none}
+  .bmk .pvm-edit-card>.m-b{overflow:visible;max-height:none}
+}
+
+/* ===== Local video player (custom controls: native ones misalign under CSS zoom) ===== */
+.bmk .pvm-player video{outline:0!important;border:0!important}
+.bmk .pvm-player video:focus,
+.bmk .pvm-player video:focus-visible{outline:0!important}
+.bmk .pvm-vbar{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;align-items:center;gap:10px;padding:12px 14px 10px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.82));opacity:1;transition:opacity .18s ease}
+.bmk .pvm-player.pv-ready .pvm-vbar{opacity:0;pointer-events:none}
+.bmk .pvm-player.pv-ready.show-bar .pvm-vbar{opacity:1;pointer-events:auto}
+.bmk .pvm-vbtn{width:30px;height:30px;flex:none;display:grid;place-items:center;border:0;border-radius:8px;background:#ffffff1f;color:#fff;cursor:pointer}
+.bmk .pvm-vbtn:hover{background:#ffffff38}
+.bmk .pvm-vic-pause,.bmk .pvm-vic-mute{display:none}
+.bmk .pvm-player.playing .pvm-vic-play{display:none}
+.bmk .pvm-player.playing .pvm-vic-pause{display:inline-flex}
+.bmk .pvm-player.muted .pvm-vic-vol{display:none}
+.bmk .pvm-player.muted .pvm-vic-mute{display:inline-flex}
+.bmk .pvm-vtime{flex:none;font-family:var(--mono);font-size:11.5px;font-weight:600;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bmk .pvm-vseek{flex:1;min-width:50px;height:4px;margin:0;border-radius:99px;appearance:none;-webkit-appearance:none;cursor:pointer;outline:none;background:linear-gradient(to right,#fff var(--p,0%),#ffffff42 var(--p,0%))}
+.bmk .pvm-vseek::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border:0;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.45)}
+.bmk .pvm-vseek::-moz-range-thumb{width:12px;height:12px;border:0;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.45)}
+.bmk .pvm-vseek::-moz-range-track{height:4px;border-radius:99px;background:transparent}
+.bmk .pvm-player:fullscreen{width:100vw;height:100vh;background:#000}
+.bmk .pvm-player:fullscreen video{width:100vw;height:100vh}

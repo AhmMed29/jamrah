@@ -516,9 +516,9 @@
                     }
                     else if (_view == "list")
                     {
-                        @* v2 parity (listRows): icon/thumb rows, first 120 *@
+                        @* v2 parity (listRows): icon/thumb rows, revealed progressively *@
                         <div style="display:flex;flex-direction:column;gap:10px">
-                            @foreach (var it in items.Take(120))
+                            @foreach (var it in items.Take(_listLimit))
                             {
                                 var lid = it.Id;
                                 <BookmarkListRow Item="it" IsSelected="_previewId == lid" OnOpen="OpenPreview" OnContextMenu="e => OpenItemCtx(it.Id, e)" />
@@ -528,8 +528,8 @@
                     else
                     {
                         @* v2 parity (gridHalves): media cards left, text cards right, universal cards *@
-                        var gridMedia = items.Where(i => HasCardImg(i)).Take(60).ToList();
-                        var gridRest = items.Where(i => !HasCardImg(i)).Take(60).ToList();
+                        var gridMedia = items.Where(i => HasCardImg(i)).Take(_gridLimit).ToList();
+                        var gridRest = items.Where(i => !HasCardImg(i)).Take(_gridLimit).ToList();
                         <div style="display:grid;gap:14px;grid-template-columns:1fr 1fr;align-items:start">
                             <div style="display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));align-items:start;align-content:start">
                                 @foreach (var it in gridMedia)
@@ -547,6 +547,8 @@
                             </div>
                         </div>
                     }
+                    @* PERF: sentinel for progressive card loading - see bmkWatchEnd in bookmark.js *@
+                    <div @ref="_endRef" style="height:1px;width:100%"></div>
                 </div>
             }
         </main>
@@ -556,7 +558,6 @@
         {
             <BookmarkPreviewModal ItemId="@_previewId"
                                  OnClose="ClosePreview"
-                                 OnEdit="id => { _previewId = null; OpenSaveModal(id); }"
                                  OnOpen="OpenPreview"
                                  OnNavigate="Navigate"
                                  OnChanged="() => StateHasChanged()"
@@ -615,6 +616,17 @@
     private string _view = "grid";
     private string _sort = "added";
     private string _fileCardStyle = "preview";
+
+    // PERF: cards are revealed progressively instead of rendering the whole
+    // folder at once (the old code hard-capped the grid at 60+60 cards and the
+    // list at 120 rows, hiding anything past the cap).
+    private const int BatchSize = 24;
+    private int _gridLimit = BatchSize;
+    private int _listLimit = BatchSize;
+    private ElementReference _endRef;
+    private DotNetObjectReference<BookmarkPage>? _selfRef;
+    private bool _watchEnd;
+
     private readonly System.Threading.SemaphoreSlim _shellImportLock = new(1, 1);
     private string? _dropFolderId;
     private static readonly string[] TimeSorts = new[] { "added", "updated", "opened" };
@@ -697,6 +709,7 @@
         ShellIpc.PathsReceived -= OnShellPathsReceived;
         _shellImportLock.Dispose();
         try { _clipTimer?.Dispose(); } catch { }
+        try { _selfRef?.Dispose(); } catch { }
         State.OnStateChanged -= OnState;
         L.OnLanguageChanged -= OnLang;
     }
@@ -834,8 +847,44 @@
         _locTab = "all";
         _dateF = "all";
         _kindF = "all";
+        ResetBatches();
         await LoadVS();
         StateHasChanged();
+    }
+
+    // PERF: progressive card loading - the sentinel at the end of the grid asks
+    // for the next batch when it scrolls into view.
+    private void ResetBatches()
+    {
+        _gridLimit = BatchSize;
+        _listLimit = BatchSize;
+        _watchEnd = true;
+    }
+
+    [JSInvokable]
+    public async Task OnEndReached()
+    {
+        // PERF: the end-of-list sentinel fires whenever it scrolls into view.
+        // Stop once everything is on screen: the observer re-fires after every
+        // render, so a short page would otherwise keep re-rendering forever.
+        var total = SortedRouteItems().Count;
+        if (_gridLimit >= total) return;
+        _gridLimit += BatchSize;
+        _listLimit += BatchSize;
+        _watchEnd = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_watchEnd) return;
+        _watchEnd = false;
+        try
+        {
+            _selfRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("bmkWatchEnd", _endRef, _selfRef);
+        }
+        catch { }
     }
 
     // v2 parity: home kind cards filter the "all" route by media bucket.
@@ -891,12 +940,14 @@
     private async Task ChangeView(string v)
     {
         _view = v;
+        ResetBatches();
         await State.SetViewStateAsync(VKey, _view, _sort);
     }
 
     private async Task ChangeSort(string s)
     {
         _sort = s;
+        ResetBatches();
         await State.SetViewStateAsync(VKey, _view, _sort);
     }
 

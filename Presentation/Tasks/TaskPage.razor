@@ -169,7 +169,7 @@
                     <textarea class="field-textarea" @bind="_editNotes" placeholder="@L["tasks.notesPh"]"></textarea>
                 </div>
                 @if(_selectedTask.CompletedAt!=null){
-                    <div style="font-size:10px;color:var(--muted);padding-top:5px;">@L["tasks.doneAt"] @FormatDateTime(_selectedTask.CompletedAt.Value)</div>
+                    <div style="font-size:10px;color:var(--muted);padding-top:5px;">@L["tasks.doneAt"] @FormatDateTime(LocalTime(_selectedTask.CompletedAt.Value))</div>
                 }
                 @if(_selectedTask.ArchivedAt!=null){
                     <div style="margin-top:12px;padding:10px;background:var(--surface-soft);border-radius:8px;font-size:10px;color:var(--muted);">@L["tasks.inArchive"]</div>
@@ -187,6 +187,10 @@
             </div>
         }
     </aside>
+    @if (_taskToast != null)
+    {
+        <div class="task-toast">@_taskToast</div>
+    }
 </div>
 
 @if(_showCreateModal){
@@ -2230,6 +2234,8 @@
     private string _editNotes = "";
 
     private int _todayCount, _upcomingCount, _noDateCount, _completedCount, _archivedCount;
+    private string? _taskToast;
+    private int _taskToastToken;
     private int _archDoneCount, _archDeletedCount;
     private string _archKind = "done"; // done | deleted
     private int _dayTotal, _dayCompleted, _dayPercent;
@@ -2313,7 +2319,7 @@
                    && !t.IsRecurring;
         });
         _noDateCount = active.Count(t => (t.DueDate==null && t.ScheduledDate==null) && !t.IsDone);
-        _completedCount = active.Count(t => t.IsDone && (((t.DueDate ?? t.ScheduledDate)?.Date==_currentDate.Date) || (t.DueDate==null && t.ScheduledDate==null && t.CompletedAt?.Date==_currentDate.Date)));
+        _completedCount = active.Count(t => t.IsDone && (((t.DueDate ?? t.ScheduledDate)?.Date==_currentDate.Date) || (t.DueDate==null && t.ScheduledDate==null && LocalTime(t.CompletedAt)?.Date==_currentDate.Date)));
         _archivedCount = tasks.Count(t => t.ArchivedAt!=null);
         _archDoneCount = tasks.Count(t => t.ArchivedAt!=null && t.IsDone);
         _archDeletedCount = tasks.Count(t => t.ArchivedAt!=null && !t.IsDone);
@@ -2652,7 +2658,8 @@
             IsRecurring=isRec,
             EisenhowerQuadrant=2,
             Notes=_newNotes?.Trim()??"",
-            TemplateId = isRec ? newId : null
+            TemplateId = isRec ? newId : null,
+            RecurrenceStartDate = isRec ? due : null
         };
         await TaskState.AddTaskAsync(task);
         _showCreateModal=false;
@@ -2740,6 +2747,21 @@
     private string FormatDate(DateTime d) => L.Lang == "ar" ? d.ToString("dddd، d MMMM", L.Culture) : d.ToString("dddd, d MMMM", L.Culture);
     private string FormatShortDate(DateTime? d) => d==null?"": d.Value.ToString("d MMM", L.Culture);
     private string FormatDateTime(DateTime d) => d.ToString("d MMM hh:mm tt", L.Culture);
+    private static DateTime LocalTime(DateTime utc) => DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime();
+    private static DateTime? LocalTime(DateTime? utc) => utc.HasValue ? LocalTime(utc.Value) : null;
+
+    private void ShowTaskToast(string message)
+    {
+        var token = ++_taskToastToken;
+        _taskToast = message;
+        StateHasChanged();
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(4000);
+            if (_taskToastToken == token)
+                await InvokeAsync(() => { _taskToast = null; StateHasChanged(); });
+        });
+    }
     private string PriorityLabel(string p) => p switch{ "low"=>L["tasks.priLow"],"medium"=>L["tasks.priMed"],"high"=>L["tasks.priHigh"],"urgent"=>L["tasks.priUrgent"], _=>L["tasks.priMed"]};
     private string RepeatLabel(string r) => r switch{ "daily"=>L["tasks.repDaily"],"weekly"=>L["tasks.repWeekly"],"monthly"=>L["tasks.repMonthly"], _=>""};
 
@@ -2807,7 +2829,7 @@
                     @if(task.DueDate!=null && task.DueDate?.Date != _currentDate.Date){<span class="task-meta-item">▣ @FormatShortDate(task.DueDate)</span>}
                     @if(!string.IsNullOrWhiteSpace(task.RecurrenceDays) && task.RecurrenceDays!="none"){<span class="task-meta-item">↻ @RepeatLabel(task.RecurrenceDays)</span>}
                     @if(!string.IsNullOrWhiteSpace(task.Notes)){<span class="task-meta-item">▤ @L["tasks.notesMeta"]</span>}
-                    @if(task.IsDone && task.CompletedAt!=null){<span class="task-meta-item">✓ @task.CompletedAt?.ToLocalTime().ToString(@"hh\:mm")</span>}
+                    @if(task.IsDone && task.CompletedAt!=null){<span class="task-meta-item">✓ @LocalTime(task.CompletedAt.Value).ToString(@"hh\:mm")</span>}
                 </div>
             </div>
             @{
@@ -2975,6 +2997,10 @@
             await JS.InvokeVoidAsync("jamrahTouchDrag.init", _touchRef);
         }
         catch { }
+
+        var removed = TaskState.ConsumeStartupCleanupCount();
+        if (removed > 0)
+            ShowTaskToast(L.Get("tasks.recurrenceCleanupToast", removed));
     }
 
     [Microsoft.JSInterop.JSInvokable]
@@ -3168,7 +3194,7 @@
     private RenderFragment CompletedView => @<text>
         @{
             var today = _currentDate.Date;
-            var tasks=ActiveTasks().Where(t=>t.IsDone && (((t.DueDate ?? t.ScheduledDate)?.Date==today) || (t.DueDate==null && t.ScheduledDate==null && t.CompletedAt?.Date==today))).OrderByDescending(t=>t.CompletedAt ?? t.UpdatedAt).ToList();
+            var tasks=ActiveTasks().Where(t=>t.IsDone && (((t.DueDate ?? t.ScheduledDate)?.Date==today) || (t.DueDate==null && t.ScheduledDate==null && LocalTime(t.CompletedAt)?.Date==today))).OrderByDescending(t=>t.CompletedAt ?? t.UpdatedAt).ToList();
         }
         @if(!tasks.Any()){
             <div class="task-list"><div class="empty"><div class="empty-icon">✓</div><div class="empty-title">@L["tasks.noDone"]</div><div class="empty-text">@L["tasks.historyHint"]</div></div></div>

@@ -32,6 +32,8 @@ namespace Jamrah.Core.Entities
         
         public string RecurrenceDays { get; set; } = string.Empty;
         
+        public DateTime? RecurrenceStartDate { get; set; }
+
         public DateTime? ScheduledDate { get; set; }
         
         public TimeSpan? ScheduledTime { get; set; }

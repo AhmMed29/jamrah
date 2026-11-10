@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Jamrah.Core.Entities;
 using Jamrah.Core.Interfaces;
+using Microsoft.Maui.Storage;
 
 namespace Jamrah.Application.Services
 {
@@ -41,6 +43,15 @@ namespace Jamrah.Application.Services
             => !string.IsNullOrWhiteSpace(t.TemplateId)
             && t.Id != t.TemplateId;
 
+        private static DateTime LocalDate(DateTime value)
+            => DateTime.SpecifyKind(value, DateTimeKind.Utc).ToLocalTime().Date;
+
+        private static DateTime Anchor(AppTask tpl)
+        {
+            var day = tpl.RecurrenceStartDate?.Date ?? tpl.DueDate?.Date ?? tpl.ScheduledDate?.Date;
+            return day ?? (tpl.CreatedAt == default ? DateTime.Today : LocalDate(tpl.CreatedAt));
+        }
+
         public void SetView(string view) { CurrentView = view; CurrentLayout = "list"; NotifyStateChanged(); }
         public void SetLayout(string layout) { CurrentLayout = layout; NotifyStateChanged(); }
         public void SetSelectedTask(string? id) { SelectedTaskId = id; NotifyStateChanged(); }
@@ -65,7 +76,22 @@ namespace Jamrah.Application.Services
             await RefreshDataAsync();
         }
 
+        private readonly SemaphoreSlim _refreshLock = new SemaphoreSlim(1, 1);
+
         public async Task RefreshDataAsync()
+        {
+            await _refreshLock.WaitAsync();
+            try
+            {
+                await RefreshDataCoreAsync();
+            }
+            finally
+            {
+                _refreshLock.Release();
+            }
+        }
+
+        private async Task RefreshDataCoreAsync()
         {
             Folders = await _repository.GetFoldersAsync();
             Columns = await _repository.GetColumnsAsync();
@@ -75,7 +101,7 @@ namespace Jamrah.Application.Services
 
             // --- أي مهمة منجزة → تفضل مكانها (لا أرشفة تلقائية) ---
             // ترجيع منجز اليوم من الأرشيف لمرة واحدة (مقيد بتاريخ اليوم، بلا مسح)
-            foreach (var t in Tasks.Where(x => x.IsDone && x.ArchivedAt != null && x.CompletedAt != null && x.CompletedAt.Value.Date == DateTime.Today).ToList())
+            foreach (var t in Tasks.Where(x => x.IsDone && x.ArchivedAt != null && x.CompletedAt != null && LocalDate(x.CompletedAt.Value) == DateTime.Today).ToList())
             {
                 t.ArchivedAt = null;
                 await _repository.SaveTaskAsync(t);
@@ -142,6 +168,8 @@ namespace Jamrah.Application.Services
                         Tasks.Add(inst);
                     }
                 }
+                if (!tpl.RecurrenceStartDate.HasValue && day.HasValue)
+                    tpl.RecurrenceStartDate = day.Value.Date;
                 tpl.DueDate = null;
                 tpl.ScheduledDate = null;
                 tpl.IsDone = false;
@@ -155,6 +183,20 @@ namespace Jamrah.Application.Services
             {
                 Tasks = await _repository.GetTasksAsync();
                 changed = false;
+            }
+
+            // --- One-time cleanup: delete wrong-day copies of recurring series ---
+            bool cleanupNeeded = false;
+            try { cleanupNeeded = !Preferences.Get("tasks.recurrenceCleanupV1", false); } catch { }
+            if (cleanupNeeded)
+            {
+                var removed = await CleanupRecurringInstancesAsync();
+                if (removed > 0)
+                {
+                    _startupCleanupCount = removed;
+                    Tasks = await _repository.GetTasksAsync();
+                }
+                try { Preferences.Set("tasks.recurrenceCleanupV1", true); } catch { }
             }
 
             // --- إزالة التكرارات (Hotfix للـ 3 مهام) ---
@@ -201,7 +243,7 @@ namespace Jamrah.Application.Services
             var dailyTemplates = Tasks.Where(t => t.ArchivedAt==null && t.RecurrenceDays=="daily" && !string.IsNullOrWhiteSpace(t.TemplateId) && t.Id==t.TemplateId).ToList();
             foreach (var tpl in dailyTemplates)
             {
-                var tplStart = tpl.DueDate?.Date ?? tpl.ScheduledDate?.Date ?? tpl.CreatedAt.Date;
+                var tplStart = Anchor(tpl);
                 // لا نولد قبل تاريخ إنشاء القالب
                 var start = tplStart > monthStart ? tplStart : monthStart;
                 for (var d = start; d <= monthEnd; d = d.AddDays(1))
@@ -239,7 +281,7 @@ namespace Jamrah.Application.Services
             var weeklyTemplates = Tasks.Where(t => t.ArchivedAt==null && t.RecurrenceDays=="weekly" && !string.IsNullOrWhiteSpace(t.TemplateId) && t.Id==t.TemplateId).ToList();
             foreach(var tpl in weeklyTemplates)
             {
-                var tplDate = tpl.DueDate?.Date ?? tpl.ScheduledDate?.Date ?? tpl.CreatedAt.Date;
+                var tplDate = Anchor(tpl);
                 for (var d = monthStart; d <= monthEnd; d = d.AddDays(1))
                 {
                     if (d.DayOfWeek != tplDate.DayOfWeek) continue;
@@ -275,7 +317,7 @@ namespace Jamrah.Application.Services
             foreach(var tpl in monthlyTemplates)
             {
                 // Hidden template never represents a month itself — always generate the current month
-                var tplDate = tpl.DueDate?.Date ?? tpl.ScheduledDate?.Date ?? tpl.CreatedAt.Date;
+                var tplDate = Anchor(tpl);
                 var targetDay = Math.Min(tplDate.Day, DateTime.DaysInMonth(now.Year, now.Month));
                 var d = new DateTime(now.Year, now.Month, targetDay);
                 if (d < tplDate) continue;
@@ -320,6 +362,65 @@ namespace Jamrah.Application.Services
             await ApplyTemplateLayoutsAsync();
 
             NotifyStateChanged();
+        }
+
+        private int _startupCleanupCount = -1;
+
+        public int ConsumeStartupCleanupCount()
+        {
+            var n = _startupCleanupCount;
+            _startupCleanupCount = -1;
+            return n;
+        }
+
+        private async Task<int> CleanupRecurringInstancesAsync()
+        {
+            var removed = 0;
+            var templates = Tasks.Where(t => !string.IsNullOrWhiteSpace(t.TemplateId) && t.Id == t.TemplateId
+                && (t.RecurrenceDays == "daily" || t.RecurrenceDays == "weekly" || t.RecurrenceDays == "monthly")).ToList();
+
+            foreach (var tpl in templates)
+            {
+                var instances = Tasks.Where(x => x.TemplateId == tpl.Id && x.Id != tpl.Id).ToList();
+                var days = instances
+                    .Select(x => (x.DueDate ?? x.ScheduledDate)?.Date)
+                    .Where(d => d.HasValue)
+                    .Select(d => d!.Value)
+                    .ToList();
+
+                if (!tpl.RecurrenceStartDate.HasValue)
+                {
+                    var createdLocal = tpl.CreatedAt == default ? DateTime.Today : LocalDate(tpl.CreatedAt);
+                    var first = days.Where(d => d >= createdLocal).OrderBy(d => d).FirstOrDefault();
+                    if (first == default)
+                        first = days.Count > 0 ? days.OrderBy(d => d).Last() : createdLocal;
+                    tpl.RecurrenceStartDate = first;
+                    await _repository.SaveTaskAsync(tpl);
+                }
+
+                var anchor = tpl.RecurrenceStartDate!.Value.Date;
+                foreach (var inst in instances)
+                {
+                    if (inst.IsDone) continue;
+                    var day = (inst.DueDate ?? inst.ScheduledDate)?.Date;
+                    if (!day.HasValue) continue;
+
+                    bool wrong = tpl.RecurrenceDays switch
+                    {
+                        "daily" => day.Value < anchor,
+                        "weekly" => day.Value.DayOfWeek != anchor.DayOfWeek,
+                        "monthly" => day.Value < anchor
+                                     || day.Value.Day != Math.Min(anchor.Day, DateTime.DaysInMonth(day.Value.Year, day.Value.Month)),
+                        _ => false
+                    };
+                    if (!wrong) continue;
+
+                    await _repository.DeleteTaskAsync(inst.Id);
+                    Tasks.Remove(inst);
+                    removed++;
+                }
+            }
+            return removed;
         }
 
         public async Task AddFolderAsync(string name, string color)
@@ -486,10 +587,15 @@ namespace Jamrah.Application.Services
             {
                 task.TemplateId = null;
                 task.IsRecurring = false;
+                task.RecurrenceStartDate = null;
                 await _repository.SaveTaskAsync(task);
                 await RefreshDataAsync();
                 return;
             }
+            if (!string.IsNullOrWhiteSpace(task.RecurrenceDays) && task.RecurrenceDays != "none")
+                task.RecurrenceStartDate ??= TaskDay(task) ?? (task.CreatedAt == default ? DateTime.Today : LocalDate(task.CreatedAt));
+            else
+                task.RecurrenceStartDate = null;
             await _repository.SaveTaskAsync(task);
             if (IsTemplate(task))
             {

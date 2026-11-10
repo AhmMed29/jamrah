@@ -1,7 +1,9 @@
 @namespace Jamrah.Presentation.Shared
 @using Jamrah.Core.Interfaces
+@using Jamrah.Presentation.Bookmarks
 @inject IUpdateService Updates
 @inject Jamrah.Application.Services.LocalizationService L
+@inject Jamrah.Application.Services.ChangelogService Changelog
 @implements IDisposable
 
 <div class="qcard" style="max-width:640px;margin-top:16px">
@@ -32,17 +34,30 @@
             </div>
         }
 
-        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center;">
             <button class="btn sm" @onclick="CheckAsync" disabled="@_state.IsBusy">
                 @(_state.Stage == UpdateStage.Checking ? L["upd.checking"] : L["upd.check"])
             </button>
             @if (_state.Stage == UpdateStage.Available)
             {
-                <button class="btn pri sm" @onclick="DownloadAsync">@L["upd.download"]</button>
+                @* Colourful "Update" call to action - only when an update is really there. *@
+                <button type="button" @onclick="DownloadAsync"
+                        style="display:inline-flex;align-items:center;gap:8px;border:0;border-radius:11px;padding:9px 17px;font-size:13px;font-weight:800;color:#fff;cursor:pointer;background:linear-gradient(90deg,#ff6b35,#f59e0b);box-shadow:0 6px 16px rgba(255,107,53,.32);">
+                    @((MarkupString)BookmarkIcons.Svg("download", 15))
+                    <span>@L["wn.updateBtn"]</span>
+                    @if (!string.IsNullOrWhiteSpace(_state.Version))
+                    {
+                        <span style="font-size:11px;font-weight:700;opacity:.9;">@_state.Version</span>
+                    }
+                </button>
             }
             else if (_state.Stage is UpdateStage.ReadyToInstall or UpdateStage.InstallerOpened)
             {
-                <button class="btn pri sm" @onclick="InstallAsync">@InstallLabel</button>
+                <button type="button" @onclick="InstallAsync"
+                        style="display:inline-flex;align-items:center;gap:8px;border:0;border-radius:11px;padding:9px 17px;font-size:13px;font-weight:800;color:#fff;cursor:pointer;background:linear-gradient(90deg,#ff6b35,#f59e0b);box-shadow:0 6px 16px rgba(255,107,53,.32);">
+                    @((MarkupString)BookmarkIcons.Svg("download", 15))
+                    <span>@InstallLabel</span>
+                </button>
             }
         </div>
     }
@@ -50,6 +65,16 @@
     {
         <div class="q-meta" style="margin-top:10px">@L["upd.notInstalled"]</div>
     }
+
+    @* The change log is always available - even for a portable copy that cannot
+       update itself. *@
+    <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center;">
+        <button type="button" @onclick="OpenChangelog"
+                style="display:inline-flex;align-items:center;gap:8px;border:0;border-radius:11px;padding:9px 15px;font-size:12.5px;font-weight:700;color:#fff;cursor:pointer;background:linear-gradient(90deg,#7c3aed,#4f46e5);box-shadow:0 6px 16px rgba(109,40,217,.26);">
+            @((MarkupString)BookmarkIcons.Svg("spark", 15))
+            <span>@L["wn.changelogBtn"]</span>
+        </button>
+    </div>
 
     <p class="hint" style="margin-top:10px">@L["upd.settingsHint"]</p>
 </div>
@@ -95,6 +120,8 @@
     private Task CheckAsync() => Updates.CheckAsync();
     private Task DownloadAsync() => Updates.DownloadAsync();
     private Task InstallAsync() => Updates.InstallAsync();
+
+    private void OpenChangelog() => Changelog.RequestOpen();
 
     public void Dispose() => Updates.Changed -= OnChanged;
 }

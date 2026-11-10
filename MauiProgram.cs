@@ -67,6 +67,7 @@ namespace Jamrah
             builder.Services.AddSingleton<LocalFileService>();
             builder.Services.AddSingleton<ItemClipboardService>();
             builder.Services.AddSingleton<LocalDropBridge>();
+            builder.Services.AddSingleton<Jamrah.Application.Services.ChangelogService>();
             // Link preview + archiving (B): shared HttpClient then layered providers.
             builder.Services.AddSingleton(sp =>
             {

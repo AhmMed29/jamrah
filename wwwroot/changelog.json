@@ -1,6 +1,38 @@
 {
   "releases": [
     {
+      "version": "5.0.2",
+      "date": "2026-11-11",
+      "items": [
+        {
+          "type": "feature",
+          "emoji": "🔗",
+          "title": {
+            "en": "LinkedIn and repository links inside the app",
+            "ar": "روابط لينكدإن والمستودع جوّه التطبيق"
+          },
+          "desc": {
+            "en": "Settings has a new Links card with your LinkedIn profile and the repository, and the \"What's new\" window carries a LinkedIn button next to the GitHub one.",
+            "ar": "صفحة الإعدادات بقت فيها كارت روابط جديد فيه صفحتك على لينكدإن والمستودع، ونافذة \"جديد جمرة\" بقت فيها زرار لينكدإن جنب زرار GitHub."
+          },
+          "tags": [ "Links" ]
+        },
+        {
+          "type": "fix",
+          "emoji": "🐛",
+          "title": {
+            "en": "The external links now really open",
+            "ar": "الروابط الخارجية بقت تفتح فعلاً"
+          },
+          "desc": {
+            "en": "The GitHub button in the change log did nothing when you clicked it, because the app window cannot follow an external address by itself. Both links now open in your default browser.",
+            "ar": "زرار GitHub في نافذة الجديد كان مش بيعمل حاجة لما تدوس عليه، لأن نافذة التطبيق لوحدها مش بتقدر تفتح رابط برّه. دلوقتي الاتنين بي فتحوا في المتصفح الافتراضي بتاعك."
+          },
+          "tags": [ "Fixes" ]
+        }
+      ]
+    },
+    {
       "version": "5.0.1",
       "date": "2026-11-10",
       "items": [

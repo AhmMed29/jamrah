@@ -1,0 +1,172 @@
+{
+  "releases": [
+    {
+      "version": "5.0.1",
+      "date": "2026-11-10",
+      "items": [
+        {
+          "type": "feature",
+          "emoji": "✨",
+          "title": {
+            "en": "The preview window now fits the item",
+            "ar": "نافذة المعاينة بقت بتاخد حجم العنصر"
+          },
+          "desc": {
+            "en": "Tall items - phone photos, PDF pages, vertical videos - no longer appear tiny with an empty band above and below. The window is now built from the item's real proportions, so the picture fills it completely.",
+            "ar": "العناصر الطولية - صور الموبايل، صفحات PDF، الفيديوهات العمودية - مبقتش تظهر صغيرة وفي فراغ فوق وتحت. دلوقتي النافذة بتتبني من مقاس العنصر الحقيقي، فالصورة بتملأ المساحة كلها."
+          },
+          "tags": [ "Bookmarks" ]
+        },
+        {
+          "type": "feature",
+          "emoji": "📝",
+          "title": {
+            "en": "Edit right inside the preview",
+            "ar": "عدّل من جوّه نافذة المعاينة"
+          },
+          "desc": {
+            "en": "Edit an item directly in the details pane next to the image or video - the media stays visible while you type, and the preview stays open so you see every change as you make it.",
+            "ar": "عدّل العنصر من جوّه لوحة التفاصيل اللي جنب الصورة أو الفيديو - الوسائط بتفضل ظاهرة وانت بتكتب، ونافذة المعاينة بتفضل مفتوحة عشان تشوف كل تعديل على طول."
+          },
+          "tags": [ "Bookmarks" ]
+        },
+        {
+          "type": "feature",
+          "emoji": "🎬",
+          "title": {
+            "en": "New controls for local videos",
+            "ar": "أزرار تحكم جديدة للفيديوهات المحلية"
+          },
+          "desc": {
+            "en": "Play/pause, a working seek bar, mute and fullscreen for videos stored on your machine. The native control bar used to drift out of place under the app's zoom.",
+            "ar": "تشغيل/إيقاف، شريط تمرير شغال، كتم الصوت، وملء الشاشة للفيديوهات اللي على جهازك. شريط التحكم الأصلي كان بيتزحلقش صح مع تكبير التطبيق."
+          },
+          "tags": [ "Bookmarks", "Videos" ]
+        },
+        {
+          "type": "fix",
+          "emoji": "🐛",
+          "title": {
+            "en": "The white frame around the preview is gone",
+            "ar": "الإطار الأبيض اللي حوالين نافذة المعاينة اختفى"
+          },
+          "desc": {
+            "en": "That thin white rectangle around the window was a focus ring, not a border. It no longer shows up.",
+            "ar": "المستطيل الأبيض الرفيع اللي حوالين النافذة كان حلقة تركيز مش إطار. دلوقتي مبقتش ظاهر."
+          },
+          "tags": [ "Bookmarks" ]
+        },
+        {
+          "type": "fix",
+          "emoji": "🐛",
+          "title": {
+            "en": "Recurring tasks no longer repeat early",
+            "ar": "المهام المتكررة مبقتش تتكرر بدري"
+          },
+          "desc": {
+            "en": "A recurring task set to happen once a day was sometimes shown again on the second day.",
+            "ar": "المهمة المتكررة اللي متظبطة مرة في اليوم كانت بتظهر تاني في اليوم التاني."
+          },
+          "tags": [ "Tasks" ]
+        },
+        {
+          "type": "improvement",
+          "emoji": "⚡",
+          "title": {
+            "en": "The bookmarks library opens much faster",
+            "ar": "مكتبة البوكمارك بقت بتفتح أسرع بكتير"
+          },
+          "desc": {
+            "en": "Thumbnails are no longer re-encoded and stuffed into the page on every render. Opening a folder went from about 250 ms to 20-50 ms, and cards now appear as you scroll instead of all at once.",
+            "ar": "الصور المصغرة مبقتش تتحوّل وتتحش في الصفحة مع كل تحديث. فتح أي مجلد بقى بياخد حوالي 20-50 مللي بدل 250، والكروت بقت تظهر وانت بتزحلق بدل ما تطلع كلها مرة واحدة."
+          },
+          "tags": [ "Performance" ]
+        }
+      ]
+    },
+    {
+      "version": "5.0.0",
+      "date": "2026-10-23",
+      "items": [
+        {
+          "type": "feature",
+          "emoji": "🔄",
+          "title": {
+            "en": "Automatic updates",
+            "ar": "تحديثات تلقائية"
+          },
+          "desc": {
+            "en": "The app checks for a new version when it starts and can download and install it for you - a small delta package on Windows, a checksum-verified APK on Android.",
+            "ar": "التطبيق بيتأكد لو فيه نسخة جديدة لما يفتح، ويقدر ينزّلها وي installّها لوحده - حزمة فرق صغيرة على ويندوز، وملف APK متأكد منchecksum على أندرويد."
+          },
+          "tags": [ "Updates" ]
+        },
+        {
+          "type": "feature",
+          "emoji": "🌍",
+          "title": {
+            "en": "Arabic and English",
+            "ar": "عربي وإنجليزي"
+          },
+          "desc": {
+            "en": "A full right-to-left Arabic interface with an English switch, and dates and numbers that follow your locale.",
+            "ar": "واجهة عربية كاملة من اليمين للشمال مع إمكانية التبديل للإنجليزي، وتواريخ وأرقام بتتبع لغتك."
+          },
+          "tags": [ "Localization" ]
+        },
+        {
+          "type": "feature",
+          "emoji": "🗂️",
+          "title": {
+            "en": "Collections, folders and nested pages",
+            "ar": "كولكشنات ومجلدات وصفحات متداخلة"
+          },
+          "desc": {
+            "en": "Sort your bookmarks into collections and folders, and give every page its own nested sub-pages.",
+            "ar": "نظم البوكمارك في كولكشنات ومجلدات، وخلي كل صفحة ليها صفحات فرعية متداخلة."
+          },
+          "tags": [ "Bookmarks" ]
+        },
+        {
+          "type": "feature",
+          "emoji": "📋",
+          "title": {
+            "en": "Clipboard agent",
+            "ar": "وكيل الحافظة"
+          },
+          "desc": {
+            "en": "Save whatever you copy straight into your library - the agent keeps working in the background.",
+            "ar": "احفظ أي حاجة بتنسخها على طول في مكتبتك - الوكيل بيفضل شغال في الخلفية."
+          },
+          "tags": [ "Bookmarks" ]
+        },
+        {
+          "type": "feature",
+          "emoji": "📄",
+          "title": {
+            "en": "PDF covers",
+            "ar": "أغلفة للملفات PDF"
+          },
+          "desc": {
+            "en": "Imported books and PDFs get a cover from their first page and a preview in the library.",
+            "ar": "الكتب وملفات PDF اللي بتستوردها بتاخد غلاف من الصفحة الأولى ومعاينة في المكتبة."
+          },
+          "tags": [ "Bookmarks" ]
+        },
+        {
+          "type": "fix",
+          "emoji": "⚡",
+          "title": {
+            "en": "Zoom and scrolling fixes",
+            "ar": "إصلاحات التكبير والتمرير"
+          },
+          "desc": {
+            "en": "The app zoom is remembered for next time, and the scroll bars no longer fight the layout.",
+            "ar": "تكبير التطبيق بيتحفظ عشان المرة الجاية، وأشرطة التمرير مبقتش بتخارض مع التصميم."
+          },
+          "tags": [ "Fixes" ]
+        }
+      ]
+    }
+  ]
+}

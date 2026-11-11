@@ -114,3 +114,25 @@
 .ctx-menu .ctx-sub{margin:2px 0 4px 8px;padding-left:6px;border-left:1px solid var(--line2);max-height:220px;overflow-y:auto}
 .ctx-menu .ctx-sub .ctx-i{font-weight:500;font-size:12.5px;padding:6px 8px}
 .ctx-menu .ctx-empty{font-size:12px;color:var(--ink3);padding:6px 10px}
+
+/* Android phones can report a desktop-sized CSS viewport. Keep the drawer
+   geometry tied to the platform marker rather than a fragile width query. */
+html.maui-android .page-shell .app-sb{
+    position:fixed;top:0;bottom:0;left:0;z-index:60;
+    width:min(80vw,300px);box-shadow:8px 0 28px rgba(24,22,20,.18);
+    transition:transform .28s cubic-bezier(.25,.9,.3,1),opacity .25s ease;
+}
+html.maui-android .page-shell.slim .app-sb{
+    margin-left:0;transform:translateX(-105%);
+}
+html.maui-android .shell-scrim{
+    display:block;position:fixed;inset:0;z-index:55;
+    background:rgba(24,22,20,.35);
+}
+html.maui-android .shell-scrim.off{display:none}
+html.maui-android .page-shell.rtl .app-sb{
+    left:auto;right:0;box-shadow:-8px 0 28px rgba(24,22,20,.18);
+}
+html.maui-android .page-shell.rtl.slim .app-sb{
+    margin-left:0;transform:translateX(105%);
+}

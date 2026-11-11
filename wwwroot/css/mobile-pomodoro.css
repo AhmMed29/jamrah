@@ -1,5 +1,5 @@
 /* mobile-pomodoro.css - Pomodoro Page Mobile Overrides (layout/sizing only, no theme colors changed) */
-@media (max-width: 768px) {
+@media (max-width: 768px), (pointer: coarse) and (hover: none) {
   /* Stack layout, one scroller */
   .app-container {
     flex-direction: column !important;

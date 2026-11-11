@@ -5,7 +5,10 @@ window.jamrahMobile = (function () {
     return {
         isAndroid: isAndroid,
         shouldAutoCollapse: function () {
-            return isAndroid() && window.innerWidth <= 768;
+            // Android WebView can expose a desktop-sized CSS viewport while
+            // running on a phone. The platform class is set before first paint,
+            // so it is a more reliable mobile signal than innerWidth.
+            return isAndroid();
         }
     };
 })();

@@ -1,0 +1,277 @@
+/* Android visual polish: touch-first cards, dialogs, and bottom sheets. */
+html.maui-android {
+  --android-surface: #fff;
+  --android-surface-soft: #f7f6f3;
+  --android-line: #e8e4dc;
+  --android-ink: #181715;
+  --android-muted: #716c64;
+  --android-shadow: 0 12px 34px rgba(24, 22, 20, .12);
+  --android-sheet-shadow: 0 -12px 34px rgba(24, 22, 20, .18);
+  --android-radius: 18px;
+}
+
+html.maui-android .card,
+html.maui-android .qcard,
+html.maui-android .clipcard,
+html.maui-android .tpl-tile,
+html.maui-android .tagrow,
+html.maui-android .board-card,
+html.maui-android .matrix-box,
+html.maui-android .session-item,
+html.maui-android .pomo-controls,
+html.maui-android .pomo-extra,
+html.maui-android .today-cell {
+  border-color: var(--android-line);
+  border-radius: var(--android-radius);
+  box-shadow: 0 2px 10px rgba(24, 22, 20, .04);
+}
+
+html.maui-android .card,
+html.maui-android .qcard,
+html.maui-android .clipcard,
+html.maui-android .tpl-tile,
+html.maui-android .tagrow,
+html.maui-android .board-card,
+html.maui-android .matrix-box {
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+html.maui-android .card:active,
+html.maui-android .qcard:active,
+html.maui-android .clipcard:active,
+html.maui-android .tpl-tile:active,
+html.maui-android .tagrow:active,
+html.maui-android .board-card:active {
+  transform: scale(.985);
+  box-shadow: 0 1px 5px rgba(24, 22, 20, .05);
+}
+
+/* Shared dialog treatment. The handle makes bottom sheets obvious and
+   gives users a visual cue that the surface is draggable/scrollable. */
+html.maui-android .modal-overlay,
+html.maui-android .modal-wrap,
+html.maui-android .floating-layer,
+html.maui-android .popup-overlay,
+html.maui-android .sound-modal-overlay,
+html.maui-android .nvwrap,
+html.maui-android .bvwrap,
+html.maui-android .pal-w {
+  padding: 12px 12px calc(12px + var(--m-safe-b)) !important;
+  align-items: flex-end;
+  box-sizing: border-box;
+}
+
+html.maui-android .modal-overlay .modal,
+html.maui-android .modal-box,
+html.maui-android .tags-modal-box,
+html.maui-android .bmk .modal,
+html.maui-android .sound-modal,
+html.maui-android .popup-container,
+html.maui-android .form-container,
+html.maui-android .detail-container,
+html.maui-android .bmk .nview,
+html.maui-android .bmk .bv,
+html.maui-android .bmk .pal {
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: calc(100dvh - 24px - var(--m-safe-b)) !important;
+  margin: 0 !important;
+  border: 1px solid var(--android-line);
+  border-radius: 22px !important;
+  background: var(--android-surface);
+  box-shadow: var(--android-sheet-shadow);
+  overflow: hidden;
+  position: relative;
+}
+
+html.maui-android .modal-overlay .modal,
+html.maui-android .modal-box,
+html.maui-android .tags-modal-box,
+html.maui-android .bmk .modal,
+html.maui-android .sound-modal,
+html.maui-android .popup-container,
+html.maui-android .form-container,
+html.maui-android .detail-container,
+html.maui-android .bmk .nview,
+html.maui-android .bmk .bv,
+html.maui-android .bmk .pal {
+  padding-top: 20px;
+}
+
+html.maui-android .modal-overlay .modal::before,
+html.maui-android .modal-box::before,
+html.maui-android .tags-modal-box::before,
+html.maui-android .bmk .modal::before,
+html.maui-android .sound-modal::before,
+html.maui-android .popup-container::before,
+html.maui-android .form-container::before,
+html.maui-android .detail-container::before,
+html.maui-android .bmk .nview::before,
+html.maui-android .bmk .bv::before,
+html.maui-android .bmk .pal::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 38px;
+  height: 4px;
+  border-radius: 99px;
+  transform: translateX(-50%);
+  background: #d8d3ca;
+  pointer-events: none;
+}
+
+html.maui-android .modal-header,
+html.maui-android .m-h,
+html.maui-android .d-h,
+html.maui-android .nv-h,
+html.maui-android .pal-in {
+  min-height: 56px;
+  padding-inline: 18px;
+  border-color: var(--android-line);
+}
+
+html.maui-android .modal-title,
+html.maui-android .m-t {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+html.maui-android .modal-body,
+html.maui-android .m-b,
+html.maui-android .d-b,
+html.maui-android .nv-b,
+html.maui-android .bmk .bv .m-b,
+html.maui-android .pal-r {
+  padding: 18px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+html.maui-android .modal-footer,
+html.maui-android .m-f,
+html.maui-android .d-f,
+html.maui-android .nv-f,
+html.maui-android .pal-f {
+  gap: 8px;
+  padding: 12px 18px calc(12px + var(--m-safe-b));
+  border-color: var(--android-line);
+  background: var(--android-surface);
+}
+
+html.maui-android .modal-footer > *,
+html.maui-android .m-f > *,
+html.maui-android .d-f > *,
+html.maui-android .nv-f > * {
+  min-height: 44px;
+}
+
+html.maui-android .modal-btn,
+html.maui-android .bmk .btn,
+html.maui-android .popup-button {
+  min-height: 44px;
+  border-radius: 12px;
+  padding-inline: 16px;
+  font-weight: 700;
+}
+
+html.maui-android .modal-btn.primary,
+html.maui-android .bmk .btn.pri,
+html.maui-android .popup-button.popup-confirm {
+  background: var(--m-accent);
+  border-color: var(--m-accent);
+  color: #fff;
+}
+
+html.maui-android .m-x,
+html.maui-android .d-x,
+html.maui-android .icon-btn,
+html.maui-android .popup-button.popup-close {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+html.maui-android .fld input,
+html.maui-android .fld select,
+html.maui-android .fld textarea,
+html.maui-android .popup-section-title input,
+html.maui-android .popup-section-item {
+  min-height: 46px;
+  border-radius: 12px;
+  border-color: var(--android-line);
+  background: var(--android-surface-soft);
+  padding-inline: 13px;
+}
+
+html.maui-android .fld textarea {
+  padding-block: 12px;
+}
+
+html.maui-android .bmk .drawer {
+  width: min(100%, 520px);
+  height: calc(100dvh - var(--m-safe-b));
+  top: auto;
+  bottom: 0;
+  left: 0;
+  border: 1px solid var(--android-line);
+  border-radius: 22px 22px 0 0;
+  box-shadow: var(--android-sheet-shadow);
+  transform: translateY(100%);
+}
+
+html.maui-android [dir="rtl"] .bmk .drawer {
+  left: auto;
+  right: 0;
+  border-right: 1px solid var(--android-line);
+  border-left: 0;
+}
+
+html.maui-android .bmk .dwrap.open .drawer {
+  transform: translateY(0);
+}
+
+html.maui-android .bmk .d-h {
+  padding-top: 20px;
+}
+
+html.maui-android .bmk .d-b {
+  padding: 18px 16px calc(24px + var(--m-tabbar-h) + var(--m-safe-b));
+}
+
+html.maui-android .bmk .d-sec,
+html.maui-android .bmk .mgrid,
+html.maui-android .bmk .d-desc,
+html.maui-android .bmk .d-t {
+  border-radius: 14px;
+}
+
+html.maui-android .bmk .mgrid {
+  padding: 4px 12px;
+  background: var(--android-surface-soft);
+}
+
+html.maui-android .bmk .popover,
+html.maui-android .bmk .ctx,
+html.maui-android .ctx-menu {
+  border-radius: 16px;
+  box-shadow: var(--android-shadow);
+  border-color: var(--android-line);
+  max-width: calc(100vw - 24px);
+}
+
+html.maui-android .bmk .po-i,
+html.maui-android .bmk .pal-i,
+html.maui-android .ctx-menu .ctx-i {
+  min-height: 44px;
+  border-radius: 11px;
+}
+
+html.maui-android .bmk .toast {
+  bottom: calc(var(--m-tabbar-h) + 18px + var(--m-safe-b));
+  border-radius: 14px;
+  padding: 12px 16px;
+  box-shadow: var(--android-shadow);
+}

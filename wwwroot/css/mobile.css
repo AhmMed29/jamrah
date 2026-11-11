@@ -1,5 +1,5 @@
 /* mobile.css ΓÇö Global mobile overrides for Jamrah (Phone) */
-@media (max-width: 768px) {
+@media (max-width: 768px), (pointer: coarse) and (hover: none) {
   * { -webkit-tap-highlight-color: transparent; }
   html, body { overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
   body { background:#FAFAF9; }
@@ -37,7 +37,7 @@
 }
 
 /* Hide Calendar + Planning nav on Android phones only (narrow desktop windows keep them) */
-@media (max-width: 768px) {
+@media (max-width: 768px), (pointer: coarse) and (hover: none) {
   html.maui-android .page-shell .sb-i.nav-calendar,
   html.maui-android .page-shell .sb-i.nav-planning {
     display: none !important;
@@ -47,7 +47,7 @@
 /* Scrim behind the sidebar drawer — hidden by default, shown on Android phones only */
 .shell-scrim { display: none; }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (pointer: coarse) and (hover: none) {
   /* Android phone: sidebar becomes an overlay drawer, content keeps full width.
      position:fixed takes .app-sb out of the grid flow so the auto column collapses to 0. */
   html.maui-android .page-shell .app-sb {
@@ -165,7 +165,7 @@ html.maui-android .page-shell-frame {
 
 /* ── RTL drawer: open from the right when the UI is Arabic ─────────────── */
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (pointer: coarse) and (hover: none) {
   html.maui-android .page-shell.rtl .app-sb {
     left: auto;
     right: 0;

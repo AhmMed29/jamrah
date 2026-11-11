@@ -275,3 +275,246 @@ html.maui-android .bmk .toast {
   padding: 12px 16px;
   box-shadow: var(--android-shadow);
 }
+
+/* Tasks: give the primary daily workflow stronger rhythm and separation. */
+html.maui-android .content {
+  padding: 14px 14px calc(88px + var(--m-safe-b)) !important;
+}
+
+html.maui-android .topbar {
+  min-height: 62px;
+  height: auto;
+  padding: 10px 14px;
+  gap: 10px;
+  background: rgba(255, 255, 255, .94);
+}
+
+html.maui-android .topbar-title h1 {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+html.maui-android .topbar-actions {
+  gap: 6px;
+}
+
+html.maui-android .view-capsule {
+  max-width: 46vw;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+html.maui-android .capsule-btn {
+  min-width: 44px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 11px;
+}
+
+html.maui-android .primary-btn,
+html.maui-android .secondary-btn,
+html.maui-android .today-btn,
+html.maui-android .day-nav-btn {
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+html.maui-android .day-header {
+  display: block;
+  padding: 16px;
+  border: 1px solid var(--android-line);
+  border-radius: var(--android-radius);
+  background: var(--android-surface);
+  box-shadow: 0 2px 10px rgba(24, 22, 20, .04);
+}
+
+html.maui-android .day-info {
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+html.maui-android .date-title {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+html.maui-android .day-progress {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--android-line);
+}
+
+html.maui-android .progress-bar {
+  height: 8px;
+  border-radius: 99px;
+}
+
+html.maui-android .quick-add {
+  min-height: 52px;
+  margin: 14px 0;
+  padding: 6px 12px;
+  border: 1px solid var(--android-line);
+  border-radius: 15px;
+  background: var(--android-surface);
+  box-shadow: 0 2px 10px rgba(24, 22, 20, .04);
+}
+
+html.maui-android .section-header {
+  min-height: 50px;
+  padding: 10px 12px;
+  border-radius: 13px;
+}
+
+html.maui-android .section-title {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+html.maui-android .task-row {
+  min-height: 64px;
+  margin: 6px 0;
+  padding: 10px 8px 10px 12px;
+  border: 1px solid var(--android-line);
+  border-radius: 14px;
+  background: var(--android-surface);
+  box-shadow: 0 2px 8px rgba(24, 22, 20, .035);
+}
+
+html.maui-android .task-row.selected {
+  border-color: var(--m-accent);
+  box-shadow: 0 0 0 2px var(--m-accent-soft);
+}
+
+html.maui-android .task-title {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+html.maui-android .task-meta {
+  margin-top: 5px;
+  gap: 8px;
+  font-size: 11px;
+}
+
+html.maui-android .task-more,
+html.maui-android .sub-toggle {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 11px;
+}
+
+html.maui-android .empty {
+  padding: 56px 20px;
+  border: 1px dashed var(--android-line);
+  border-radius: var(--android-radius);
+  background: var(--android-surface);
+}
+
+html.maui-android .context-menu,
+html.maui-android .period-popup {
+  max-width: calc(100vw - 24px);
+  border: 1px solid var(--android-line);
+  border-radius: 18px;
+  box-shadow: var(--android-shadow);
+}
+
+/* Pomodoro: make the timer the visual anchor instead of a dense control row. */
+html.maui-android .app-container {
+  padding: 14px 14px calc(76px + var(--m-safe-b)) !important;
+  gap: 14px !important;
+}
+
+html.maui-android .today-card {
+  padding: 16px;
+  background: linear-gradient(135deg, #fff, #f8f6f1);
+}
+
+html.maui-android .today-card-time {
+  font-size: 30px;
+  letter-spacing: .04em;
+}
+
+html.maui-android .timer-box {
+  min-height: 118px;
+  padding: 18px 12px !important;
+  border-radius: 18px;
+  background: var(--android-ink);
+  border-color: var(--android-ink);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(24, 22, 20, .16);
+}
+
+html.maui-android .timer-value,
+html.maui-android .timer-val {
+  font-size: 42px !important;
+  color: #fff;
+}
+
+html.maui-android .right-panel {
+  border-radius: 18px;
+  box-shadow: 0 2px 10px rgba(24, 22, 20, .05);
+}
+
+html.maui-android .view-modes {
+  padding: 8px;
+  gap: 5px;
+}
+
+html.maui-android .view-modes .view-btn {
+  min-height: 42px;
+  flex: 1 1 0;
+  border-radius: 11px;
+}
+
+html.maui-android .session-item {
+  min-height: 58px;
+  border-radius: 12px;
+  margin: 4px 8px;
+  padding: 8px 10px !important;
+  background: var(--android-surface-soft);
+}
+
+/* Calendar: make the toolbar and event surface read as one mobile workspace. */
+html.maui-android .cal-header {
+  min-height: 64px !important;
+  padding: 10px 12px !important;
+  gap: 8px !important;
+  background: var(--android-surface) !important;
+}
+
+html.maui-android .cal-header .btn,
+html.maui-android .cal-header .seg button {
+  min-height: 44px !important;
+  border-radius: 12px !important;
+}
+
+html.maui-android .cal-header .seg {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+html.maui-android .cal-card {
+  margin: 8px !important;
+  border-radius: 18px !important;
+  box-shadow: 0 2px 10px rgba(24, 22, 20, .05);
+}
+
+html.maui-android .cal-overlay {
+  align-items: flex-end;
+  padding: 12px 12px calc(12px + var(--m-safe-b));
+}
+
+html.maui-android .cal-modal {
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: calc(100dvh - 24px - var(--m-safe-b));
+  overflow-y: auto;
+  border-radius: 22px 22px 0 0 !important;
+  box-shadow: var(--android-sheet-shadow);
+}
+
+html.maui-android .cal-x {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+}

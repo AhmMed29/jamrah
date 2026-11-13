@@ -68,8 +68,8 @@
 .bmk .fchip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:6px;background:var(--ink);color:#fff}
 .bmk .fchip button{color:#ffffffaa;font-weight:800}.bmk .fchip button:hover{color:#fff}
 .bmk .v-list{display:flex;flex-direction:column;gap:10px}
-.bmk .v-masonry{column-gap:16px;columns:240px}
-.bmk .v-masonry .card{margin-bottom:16px;break-inside:avoid}
+.bmk .v-masonry{column-gap:14px;columns:190px}
+.bmk .v-masonry > .card{margin:0 0 14px;break-inside:avoid;width:100%}
 .bmk .hrow{display:flex;gap:16px;overflow-x:auto;padding:4px 2px 12px;scrollbar-width:thin}
 .bmk .hrow .card{width:248px;flex:none}
 .bmk .hrow.wide .card{width:312px}

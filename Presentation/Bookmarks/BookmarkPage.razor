@@ -543,8 +543,8 @@
                     }
                     else
                     {
-                        @* Unified grid: media, notes and files all flow together, newest first. *@
-                        <div style="display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));align-items:start;align-content:start">
+                        @* Unified masonry: media, notes and files all flow together, newest first. *@
+                        <div class="v-masonry">
                             @foreach (var it in items.Take(_gridLimit))
                             {
                                 var gid = it.Id;

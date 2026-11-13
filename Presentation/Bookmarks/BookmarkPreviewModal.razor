@@ -37,7 +37,7 @@
         : localKind is "image" or "video" or "audio" ? localUrl : null;
 
     <div class="modal-wrap pvm-wrap" @onkeydown="OnKey" tabindex="-1" @ref="_wrapRef" @onclick="Close">
-        <div class="modal pvm" @key="_item.Id" role="dialog" aria-modal="true" dir="@L.Dir" data-pvm-wide="@(isWideEmbed ? "1" : isTallEmbed ? "0" : null)" data-pvm-editing="@(_editing ? "1" : null)" style="@(isWideEmbed ? "--pvm-ar:1.7778" : isTallEmbed ? "--pvm-ar:0.5625" : null)" @onclick:stopPropagation="true">
+        <div class="modal pvm" @key="_item.Id" role="dialog" aria-modal="true" dir="@L.Dir" data-pvm-wide="@(isWideEmbed ? "1" : isTallEmbed ? "0" : null)" data-pvm-editing="@(_editing ? "1" : null)" data-pvm-note="@(isNote && !_editing ? "1" : null)" style="@(isWideEmbed ? "--pvm-ar:1.7778" : isTallEmbed ? "--pvm-ar:0.5625" : null)" @onclick:stopPropagation="true">
             @if (!_editing)
             {
                 <button class="pvm-x" @onclick="Close" title="@(L["com.close"])">@((MarkupString)BookmarkIcons.Svg("x", 16))</button>
@@ -126,6 +126,18 @@
                         </div>
                     }
 
+                    @* Notes read in two panes: the written body on the left, details on the right. *@
+                    @if (isNote && !_editing)
+                    {
+                        <div class="pvm-note-pane">
+                            <div class="pvm-note-zoom">
+                                <button class="btn sm ic" title="@L["bmk.zoomOut"]" @onclick="() => SetNoteZoom(-0.1)">A−</button>
+                                <span>@((int)Math.Round(_noteZoom * 100))%</span>
+                                <button class="btn sm ic" title="@L["bmk.zoomIn"]" @onclick="() => SetNoteZoom(0.1)">A+</button>
+                            </div>
+                            <div class="pvm-note-main" style="font-size:@NoteFontSize" dir="auto">@((MarkupString)BookmarkTemplates.Md(string.IsNullOrWhiteSpace(_item.Notes) ? _d.Desc : _item.Notes))</div>
+                        </div>
+                    }
                     <div class="pvm-info @(_editing ? "editing" : "")">
                         @if (_editing)
                         {
@@ -165,16 +177,7 @@
                             <button class="btn sm dgr" @onclick="Trash" title="@L["nav.trash"]">@((MarkupString)BookmarkIcons.Svg("trash", 13))</button>
                         </div>
 
-                        @if (isNote)
-                        {
-                            <div class="pvm-note-zoom">
-                                <button class="btn sm ic" title="@L["bmk.zoomOut"]" @onclick="() => SetNoteZoom(-0.1)">A−</button>
-                                <span>@((int)Math.Round(_noteZoom * 100))%</span>
-                                <button class="btn sm ic" title="@L["bmk.zoomIn"]" @onclick="() => SetNoteZoom(0.1)">A+</button>
-                            </div>
-                            <div class="pvm-note-main" style="font-size:@NoteFontSize" dir="auto">@((MarkupString)BookmarkTemplates.Md(string.IsNullOrWhiteSpace(_item.Notes) ? _d.Desc : _item.Notes))</div>
-                        }
-                        else if (!string.IsNullOrEmpty(_d.DescShort))
+                        @if (!isNote && !string.IsNullOrEmpty(_d.DescShort))
                         {
                             <div class="pvm-sum" dir="auto">
                                 <b>@L["bmk.summary"]</b>

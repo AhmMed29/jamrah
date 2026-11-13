@@ -1,6 +1,25 @@
 {
   "releases": [
     {
+      "version": "5.0.3",
+      "date": "2026-11-13",
+      "items": [
+        {
+          "type": "fix",
+          "emoji": "🛠️",
+          "title": {
+            "en": "Your old tasks and Pomodoro sessions are back",
+            "ar": "مهامك وجلسات البومودورو القديمة عادت"
+          },
+          "desc": {
+            "en": "Jamrah now restores the data written by the previous app version on first launch, so tasks, Pomodoro sessions, goals, calendar events and prayer times appear again. A backup of the current data is kept before anything is imported.",
+            "ar": "يقوم Jamrah الآن باستعادة البيانات التي كتبها الإصدار السابق عند أول تشغيل، لذلك تظهر المهام وجلسات البومودورو والأهداف وأحداث التقويم ومواقيت الصلاة مرة أخرى. يتم الاحتفاظ بنسخة احتياطية من البيانات الحالية قبل استيراد أي شيء."
+          },
+          "tags": [ "Fixes", "Data" ]
+        }
+      ]
+    },
+    {
       "version": "5.0.2",
       "date": "2026-11-11",
       "items": [

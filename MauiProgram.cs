@@ -99,6 +99,9 @@ namespace Jamrah
 
             SQLitePCL.Batteries_V2.Init();
 
+            // One-time recovery of data written under the pre-5.0 Windows app identity.
+            Jamrah.Infrastructure.LegacyDataMigration.RunOnce();
+
             return builder.Build();
         }
     }

@@ -544,7 +544,7 @@
                     else
                     {
                         @* Unified masonry: media, notes and files all flow together, newest first. *@
-                        <div class="v-masonry">
+                        <div class="v-masonry" @ref="_gridRef">
                             @foreach (var it in items.Take(_gridLimit))
                             {
                                 var gid = it.Id;
@@ -629,6 +629,7 @@
     private int _gridLimit = BatchSize;
     private int _listLimit = BatchSize;
     private ElementReference _endRef;
+    private ElementReference _gridRef;
     private DotNetObjectReference<BookmarkPage>? _selfRef;
     private bool _watchEnd;
 
@@ -882,6 +883,12 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Masonry: measure cards after every render so new batches and resized
+        // cards keep filling the gaps without leaving holes in the grid.
+        if (ShowsItemGrid && _view != "list")
+        {
+            try { await JS.InvokeVoidAsync("bmkMasonry", _gridRef); } catch { }
+        }
         if (!_watchEnd) return;
         _watchEnd = false;
         try
@@ -1254,6 +1261,9 @@
         while (p != null && n++ < 50) { chain.Insert(0, p); p = State.Pages.FirstOrDefault(x => x.Id == p.ParentPageId); }
         return chain;
     }
+
+    private bool ShowsItemGrid => State.Route.Ctx is "all" or "favorites" or "pinned" or "recent"
+        or "folder" or "collection" or "page" or "tag" or "archive" or "trash";
 
     private List<BookmarkItem> SortedRouteItems()
     {

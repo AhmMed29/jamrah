@@ -70,6 +70,14 @@
 .page-shell .sb-navi.closed .chev{transform:rotate(-90deg)}
 .page-shell .sb-navi.on .chev{color:#ffffff99}
 
+/* Library shortcuts: icon-only square buttons in a single row */
+.page-shell .sb-libs{display:flex;align-items:center;gap:6px;padding:4px 8px 2px;flex-wrap:wrap}
+.page-shell .sb-lib{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;color:var(--ink2);cursor:pointer;
+    background:var(--surface);border:1px solid var(--line);transition:background .14s,color .14s,border-color .14s}
+.page-shell .sb-lib:hover{background:var(--hover);color:var(--ink);border-color:var(--line2)}
+.page-shell .sb-lib.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.page-shell .sb-lib svg{vertical-align:0}
+
 /* Tree + misc */
 .page-shell .sb-sub{margin-left:15px;border-left:1px solid var(--line);padding-left:2px}
 /* v2 parity (bookmark-v2.html): straight indented tree line for nested folders */

@@ -58,6 +58,7 @@ namespace Jamrah.Infrastructure.Repositories
                 await EnsureColumnAsync("BookmarkCollections", "IsArchived", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
                 await EnsureColumnAsync("BookmarkItems", "PageIdsJson", "TEXT NOT NULL DEFAULT '[]'").ConfigureAwait(false);
                 await EnsureColumnAsync("BookmarkFolders", "SourcePath", "TEXT NULL").ConfigureAwait(false);
+                await EnsureColumnAsync("BookmarkFolders", "Pinned", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
 
                 var itemCount = await _database.Table<BookmarkItem>().CountAsync().ConfigureAwait(false);
                 var folderCount = await _database.Table<BookmarkFolder>().CountAsync().ConfigureAwait(false);

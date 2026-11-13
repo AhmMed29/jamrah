@@ -62,6 +62,7 @@ namespace Jamrah.Application.Services
             ["nav.pinned"] = ("المثبتة", "Pinned"),
             ["nav.recent"] = ("الأخيرة", "Recent"),
             ["nav.folders"] = ("المجلدات", "Folders"),
+            ["nav.pinned"] = ("مثبتة", "Pinned"),
             ["nav.collections"] = ("المجموعات — تحتوي مجلدات", "Collections — contain folders"),
             ["nav.newCollection"] = ("مجموعة جديدة", "New collection"),
             ["nav.newSmart"] = ("مجموعة ذكية جديدة", "New smart collection"),

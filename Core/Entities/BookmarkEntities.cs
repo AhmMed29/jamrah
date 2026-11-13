@@ -53,6 +53,8 @@ namespace Jamrah.Core.Entities
         public bool IsOpen { get; set; } = true;
         // ADDITIVE: soft-archive flag (delete moves here, Archive page restores).
         public bool IsArchived { get; set; } = false;
+        // ADDITIVE: pinned folders repeat in the sidebar's Pinned block.
+        public bool Pinned { get; set; } = false;
         public string? CollectionId { get; set; }
         public string? ParentId { get; set; }
         // ADDITIVE: non-null = linked live folder (Phase 2); null = normal/library folder.

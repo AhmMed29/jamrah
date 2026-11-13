@@ -63,7 +63,7 @@
     private string _editName = string.Empty;
     private string? _renamingId;
     private bool _committing;
-    private List<BookmarkFolder> Kids => State.Folders.Where(f => !f.IsArchived && f.ParentId == Folder.Id).ToList();
+    private List<BookmarkFolder> Kids => FolderSort.Sorted(State.Folders.Where(f => !f.IsArchived && f.ParentId == Folder.Id));
     private bool IsOn => State.Route.Ctx == "folder" && State.Route.Id == Folder.Id;
 
     protected override void OnInitialized()

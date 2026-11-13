@@ -47,6 +47,10 @@
 .page-shell .sb-sec .sb-sec-add{width:20px;height:20px;display:grid;place-items:center;border-radius:5px;color:var(--ink3);opacity:.45;transition:opacity .12s,background .12s}
 .page-shell .sb-sec:hover .sb-sec-add{opacity:1}
 .page-shell .sb-sec .sb-sec-add:hover{background:var(--line2);color:var(--ink)}
+/* Pinned folders: quick-access block above the alphabetical tree */
+.page-shell .sb-pin-hd{display:flex;align-items:center;gap:8px;padding:10px 17px 4px;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--ink3);user-select:none}
+.page-shell .sb-pin-hd::before,.page-shell .sb-pin-hd::after{content:"";flex:1;height:1px;background:var(--line)}
+.page-shell .sb-pin-sep{height:1px;margin:6px 14px 2px;background:var(--line)}
 
 /* Items */
 .page-shell .sb-i{display:flex;align-items:center;gap:9px;padding:6px 10px;margin:1px 8px;border-radius:8px;color:var(--ink2);cursor:pointer;font-weight:500;font-size:13.5px;user-select:none}

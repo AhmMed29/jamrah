@@ -270,6 +270,17 @@ namespace Jamrah.Application.Services
             }
         }
 
+        /// <summary>Pins/unpins a folder for the sidebar's quick-access block.</summary>
+        public async Task ToggleFolderPinAsync(string id)
+        {
+            var folder = Folders.FirstOrDefault(f => f.Id == id);
+            if (folder == null) return;
+            folder.Pinned = !folder.Pinned;
+            await _repository.SaveFolderAsync(folder);
+            Folders = await _repository.GetFoldersAsync();
+            NotifyStateChanged();
+        }
+
         /// <summary>Creates an empty folder (physical dir included) and returns its id.</summary>
         public async Task<string?> CreateFolderAsync(string? parentId, string baseName = "untitled")
         {

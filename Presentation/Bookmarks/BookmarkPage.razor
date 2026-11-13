@@ -184,7 +184,7 @@
             else if (State.Route.Ctx == "clipboard")
             {
                 <div class="page">
-                    <div class="ph-row"><h1 class="ph-title">@L["bmk.clipboard"]</h1><span class="ph-sub">@State.Clips.Count @L["bmk.savedClip"]</span></div>
+                    <div class="ph-row"><h1 class="ph-title">@L["bmk.clipboard"]</h1><span class="ph-sub">@State.ClipsTotal @L["bmk.savedClip"]</span></div>
                     @if (ClipAgent.IsSupported)
                     {
                         <div class="clipcard" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -197,38 +197,51 @@
                         <textarea dir="auto" value="@_clipInput" @oninput="e => _clipInput = e.Value?.ToString() ?? string.Empty" placeholder="@L["bmk.clipPh"]" style="width:100%;min-height:64px;border:0;outline:none;font-size:13px;background:none;resize:vertical"></textarea>
                         <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn pri sm" @onclick="AddClip">@L["bmk.saveClip"]</button></div>
                     </div>
-                    @foreach (var c in State.Clips.OrderByDescending(x => x.Pinned).ThenByDescending(x => x.At))
+                    @if (State.Clips.Count == 0)
                     {
-                        var clip = c;
-                        <div class="clipcard @(clip.Pinned ? "pin" : "")">
-                            @if (clip.Kind == "image" && !string.IsNullOrEmpty(clip.FilePath))
+                        <div class="empty"><h3>@L["bmk.clipEmpty"]</h3><p>@L["bmk.clipEmptyHint"]</p></div>
+                    }
+                    else
+                    {
+                        @* Paged masonry tiles (20 at a time): clicking a tile copies it back. *@
+                        <div class="v-masonry clipgrid" @ref="_clipGridRef">
+                            @foreach (var clip in ClipCards())
                             {
-                                var imgSrc = ClipImageSrc(clip);
-                                @if (!string.IsNullOrEmpty(imgSrc))
-                                {
-                                    <img src="@imgSrc" style="max-width:100%;border-radius:8px;display:block;cursor:pointer" @onclick="() => OpenClipFile(clip)" alt="" />
-                                }
-                            }
-                            else
-                            {
-                                <div class="clip-t" dir="auto">@clip.Text</div>
-                            }
-                            <div class="clip-f"><span class="clip-m">@BookmarkCardData.FmtAgo(clip.At, L.Lang)@(clip.Pinned ? " · " + L["bmk.pinnedClip"] : "")</span>
-                                <span class="clip-acts">
-                                    @if (clip.Kind == "image" && !string.IsNullOrEmpty(clip.FilePath))
+                                var c = clip;
+                                <div class="card clip-tile @(c.Pinned ? "pin" : "")" title="@L["bmk.copy"]" @onclick="() => CopyClipCard(c)">
+                                    @if (c.Kind == "image" && !string.IsNullOrEmpty(c.FilePath))
                                     {
-                                        <button class="btn sm" @onclick="() => OpenClipFile(clip)">@L["bmk.open"]</button>
+                                        var imgSrc = ClipImageSrc(c);
+                                        @if (!string.IsNullOrEmpty(imgSrc))
+                                        {
+                                            <img src="@imgSrc" alt="" />
+                                        }
                                     }
                                     else
                                     {
-                                        <button class="btn sm" @onclick="() => CopyClip(clip.Text)">@L["bmk.copy"]</button>
+                                        <div class="clip-t" dir="auto">@c.Text</div>
                                     }
-                                    <button class="btn sm" @onclick="() => ToggleClipPin(clip)">@(clip.Pinned ? L["bmk.unpin"] : L["bmk.pin"])</button>
-                                    <button class="btn sm dgr" @onclick="() => State.DeleteClipAsync(clip.Id)">@L["com.delete"]</button>
-                                </span></div>
+                                    <div class="clip-f">
+                                        <span class="clip-m">@BookmarkCardData.FmtAgo(c.At, L.Lang)</span>
+                                        <span class="clip-acts">
+                                            @if (c.Kind == "image" && !string.IsNullOrEmpty(c.FilePath))
+                                            {
+                                                <button class="btn sm ic" title="@L["bmk.open"]" @onclick:stopPropagation="true" @onclick="() => OpenClipFile(c)">@((MarkupString)BookmarkIcons.Svg("external", 12))</button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn sm ic" title="@L["bmk.copy"]" @onclick:stopPropagation="true" @onclick="() => CopyClip(c.Text)">@((MarkupString)BookmarkIcons.Svg("copy", 12))</button>
+                                            }
+                                            <button class="btn sm ic" title="@(c.Pinned ? L["bmk.unpin"] : L["bmk.pin"])" @onclick:stopPropagation="true" @onclick="() => ToggleClipPin(c)">@((MarkupString)BookmarkIcons.Svg("pin", 12))</button>
+                                            <button class="btn sm ic dgr" title="@L["com.delete"]" @onclick:stopPropagation="true" @onclick="() => State.DeleteClipAsync(c.Id)">@((MarkupString)BookmarkIcons.Svg("trash", 12))</button>
+                                        </span>
+                                    </div>
+                                </div>
+                            }
                         </div>
+                        @* PERF: asks for the next 20 clips when it scrolls into view. *@
+                        <div @ref="_clipEndRef" style="height:1px;width:100%"></div>
                     }
-                    @if (State.Clips.Count == 0) { <div class="empty"><h3>@L["bmk.clipEmpty"]</h3><p>@L["bmk.clipEmptyHint"]</p></div> }
                 </div>
             }
             else if (State.Route.Ctx == "tags")
@@ -628,6 +641,12 @@
     private const int BatchSize = 24;
     private int _gridLimit = BatchSize;
     private int _listLimit = BatchSize;
+    // PERF: the clipboard view is paged the same way (20 tiles at a time).
+    private const int ClipBatchSize = 20;
+    private int _clipLimit = ClipBatchSize;
+    private bool _watchClipEnd = true;
+    private ElementReference _clipGridRef;
+    private ElementReference _clipEndRef;
     private ElementReference _endRef;
     private ElementReference _gridRef;
     private DotNetObjectReference<BookmarkPage>? _selfRef;
@@ -865,6 +884,53 @@
         _gridLimit = BatchSize;
         _listLimit = BatchSize;
         _watchEnd = true;
+        _clipLimit = ClipBatchSize;
+        _watchClipEnd = true;
+    }
+
+    // Clips already loaded (paged in the DB), pinned first then newest.
+    private List<BookmarkClip> ClipCards() => State.Clips
+        .OrderByDescending(c => c.Pinned)
+        .ThenByDescending(c => c.At)
+        .Take(_clipLimit)
+        .ToList();
+
+    [JSInvokable]
+    public async Task OnClipEndReached()
+    {
+        // Reveal already-loaded clips first, then ask the database for the next page.
+        if (_clipLimit < State.Clips.Count)
+        {
+            _clipLimit += ClipBatchSize;
+            _watchClipEnd = true;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+        if (_clipLimit >= State.ClipsTotal) return;
+        if (!await State.LoadMoreClipsAsync(ClipBatchSize)) return;
+        _clipLimit += ClipBatchSize;
+        _watchClipEnd = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // Tile click: put the clip back on the system clipboard (images copy as an image).
+    private async Task CopyClipCard(BookmarkClip clip)
+    {
+        if (clip.Kind == "image" && !string.IsNullOrEmpty(clip.FilePath))
+        {
+            var src = ClipImageSrc(clip);
+            if (!string.IsNullOrEmpty(src))
+            {
+                try
+                {
+                    var ok = await JS.InvokeAsync<bool>("bmkCopyImage", src);
+                    ShowToast(ok ? L["bmk.copied"] : L["bmk.copyFailed"]);
+                }
+                catch { ShowToast(L["bmk.copyFailed"]); }
+                return;
+            }
+        }
+        await CopyClip(clip.Text);
     }
 
     [JSInvokable]
@@ -889,8 +955,27 @@
         {
             try { await JS.InvokeVoidAsync("bmkMasonry", _gridRef); } catch { }
         }
+        if (State.Route.Ctx == "clipboard")
+        {
+            if (State.Clips.Count > 0)
+            {
+                try { await JS.InvokeVoidAsync("bmkMasonry", _clipGridRef); } catch { }
+            }
+            if (_watchClipEnd)
+            {
+                _watchClipEnd = false;
+                try
+                {
+                    _selfRef ??= DotNetObjectReference.Create(this);
+                    await JS.InvokeVoidAsync("bmkWatchEnd", _clipEndRef, _selfRef, "OnClipEndReached");
+                }
+                catch { }
+            }
+        }
         if (!_watchEnd) return;
         _watchEnd = false;
+        // Only the item list renders the end-of-list sentinel.
+        if (!ShowsItemGrid || State.Route.Ctx == "clipboard") return;
         try
         {
             _selfRef ??= DotNetObjectReference.Create(this);

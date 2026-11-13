@@ -52,7 +52,11 @@ namespace Jamrah.Application.Services
         public List<BookmarkTemplate> CustomTemplates { get; private set; } = new();
         public List<BookmarkQuranKhatm> Khatms { get; private set; } = new();
         public List<BookmarkQuranLog> QuranLogs { get; private set; } = new();
+        /// <summary>Clips currently loaded for the clipboard view (paged, not the whole history).</summary>
         public List<BookmarkClip> Clips { get; private set; } = new();
+        /// <summary>Total number of clips in the database (for the header count + "more to load").</summary>
+        public int ClipsTotal { get; private set; }
+        public const int ClipPageSize = 20;
 
         // --- Session UI state (mirrors S in bookmark-design.html) ---
         public BookmarkRoute Route { get; private set; } = new();
@@ -108,7 +112,11 @@ namespace Jamrah.Application.Services
             CustomTemplates = await _repository.GetTemplatesAsync();
             Khatms = await _repository.GetKhatmsAsync();
             QuranLogs = await _repository.GetQuranLogsAsync();
-            Clips = await _repository.GetClipsAsync();
+            // Paged: keep whatever depth the clipboard view already loaded, never the
+            // whole history (that made opening the page slow).
+            var clipTake = Math.Max(Clips.Count, ClipPageSize);
+            Clips = await _repository.GetClipsPageAsync(0, clipTake);
+            ClipsTotal = await _repository.CountClipsAsync();
             await BackfillFolderColorsAsync();
             NotifyStateChanged();
         }
@@ -807,10 +815,51 @@ namespace Jamrah.Application.Services
             await RefreshDataAsync();
         }
 
-        public async Task RefreshClipsAsync()
+        /// <summary>Loads (or reloads) the first page of clips. Used when the clipboard view opens.</summary>
+        public async Task LoadClipsAsync(int limit = ClipPageSize)
         {
-            Clips = await _repository.GetClipsAsync();
+            Clips = await _repository.GetClipsPageAsync(0, Math.Max(1, limit));
+            ClipsTotal = await _repository.CountClipsAsync();
             NotifyStateChanged();
+        }
+
+        /// <summary>Appends the next page of clips. False when everything is already loaded.</summary>
+        public async Task<bool> LoadMoreClipsAsync(int limit = ClipPageSize)
+        {
+            if (Clips.Count >= ClipsTotal) return false;
+            var page = await _repository.GetClipsPageAsync(Clips.Count, Math.Max(1, limit));
+            if (page.Count == 0) return false;
+            Clips.AddRange(page);
+            NotifyStateChanged();
+            return true;
+        }
+
+        /// <summary>
+        /// Re-reads the loaded pages and only notifies when something actually changed, so the
+        /// clipboard timer stops re-rendering the whole page every tick.
+        /// </summary>
+        public async Task<bool> RefreshClipsAsync()
+        {
+            var total = await _repository.CountClipsAsync();
+            var take = Math.Max(Clips.Count, ClipPageSize);
+            var page = await _repository.GetClipsPageAsync(0, take);
+            if (total == ClipsTotal && SameClips(page, Clips)) return false;
+            Clips = page;
+            ClipsTotal = total;
+            NotifyStateChanged();
+            return true;
+        }
+
+        private static bool SameClips(List<BookmarkClip> a, List<BookmarkClip> b)
+        {
+            if (a.Count != b.Count) return false;
+            for (var i = 0; i < a.Count; i++)
+            {
+                if (a[i].Id != b[i].Id) return false;
+                if (a[i].Pinned != b[i].Pinned) return false;
+                if (!string.Equals(a[i].Text, b[i].Text, StringComparison.Ordinal)) return false;
+            }
+            return true;
         }
 
         public async Task SaveTagAsync(BookmarkTag tag)

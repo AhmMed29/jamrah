@@ -581,6 +581,16 @@
 .bmk .clip-acts{margin-left:auto;display:flex;gap:6px}
 .bmk .clip-save{display:flex;gap:8px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid #f0eee9;flex-wrap:wrap}
 .bmk .clip-save select{border:1px solid var(--line2);border-radius:7px;padding:5px 8px;font-size:12.5px;background:var(--surface);outline:none;max-width:190px}
+/* Clipboard: paged masonry tiles (click a tile to copy it back) */
+.bmk .clipgrid{margin-top:12px}
+.bmk .clip-tile{display:flex;flex-direction:column;gap:8px;padding:10px}
+.bmk .clip-tile.pin{border-color:#e8c9a4;background:#fffdf7}
+.bmk .clip-tile img{width:100%;display:block;border-radius:8px}
+.bmk .clip-tile .clip-t{max-height:none;color:var(--ink);display:-webkit-box;-webkit-line-clamp:8;-webkit-box-orient:vertical;overflow:hidden}
+.bmk .clip-tile .clip-f{margin-top:auto;gap:6px;flex-wrap:nowrap}
+.bmk .clip-tile .clip-acts{margin-left:auto;display:flex;gap:2px}
+.bmk .clip-tile .btn.ic{width:22px;height:22px;padding:0;display:grid;place-items:center;border-radius:6px;gap:0}
+.bmk .clip-tile .btn.ic svg{display:block}
 .bmk .popover,.bmk .ctx{position:fixed;z-index:70;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 44px rgba(20,18,15,.18);animation:pin .13s ease}
 .bmk .fp-backdrop{position:fixed;inset:0;z-index:69;background:transparent}
 @keyframes pin{from{opacity:0;transform:translateY(4px)}}

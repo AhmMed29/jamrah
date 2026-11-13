@@ -46,6 +46,9 @@ namespace Jamrah.Core.Interfaces
         Task DeleteQuranLogAsync(string id);
 
         Task<List<BookmarkClip>> GetClipsAsync();
+        // One page of clips (pinned first, then newest) for the paged clipboard view.
+        Task<List<BookmarkClip>> GetClipsPageAsync(int offset, int limit);
+        Task<int> CountClipsAsync();
         Task SaveClipAsync(BookmarkClip clip);
         Task DeleteClipAsync(string id);
 

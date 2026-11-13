@@ -680,6 +680,12 @@
 .bmk .uni-fv{font-size:11.5px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:2px 8px;color:var(--ink2)}
 .bmk .uni-fv b{color:var(--ink);font-weight:700}
 .bmk .tip{padding:14px 16px;background:linear-gradient(180deg,#fdfcf6,#fff)}
+/* Note tiles share the media footprint (16:10) so the grid keeps one rhythm */
+.bmk .card.uni-note{aspect-ratio:16/10;display:flex}
+.bmk .card.uni-note .tip{display:flex;flex-direction:column;width:100%;min-width:0}
+.bmk .card.uni-note .tip-t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bmk .card.uni-note .tip-c{display:-webkit-box;white-space:normal;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-overflow:clip}
+.bmk .card.uni-note .tags{margin-top:auto;padding-top:8px}
 .bmk .tip-t{font-weight:800;font-size:15px;line-height:1.3}
 .bmk .tip-c{font-size:13px;color:var(--ink2);line-height:1.6;margin-top:6px;white-space:nowrap;display:block;overflow:hidden;text-overflow:ellipsis}
 .bmk .vcode{font-family:var(--mono);font-size:11.5px;background:#141311;color:#e8e6e1;border-radius:0 0 10px 10px;padding:10px 13px;white-space:pre-wrap;word-break:break-word;max-height:150px;overflow:hidden}
@@ -820,7 +826,9 @@
 .bmk .pvm-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:7px;font-size:12.5px;color:var(--ink2);font-weight:600}
 .bmk .pvm-dom{color:var(--ink3);font-weight:600}
 .bmk .pvm-dom::before{content:'�';margin-right:8px;color:var(--line2)}
-.bmk .pvm-note-main{margin-top:18px;font-size:14.5px;line-height:1.75;color:var(--ink2);border:1px solid var(--line);background:#fdfcf8;border-radius:12px;padding:18px 20px;unicode-bidi:plaintext}
+.bmk .pvm-note-zoom{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:16px;font-size:11.5px;font-weight:700;color:var(--ink3)}
+.bmk .pvm-note-zoom .btn.ic{width:26px;height:26px;padding:0;display:grid;place-items:center;font-size:11.5px;font-weight:800}
+.bmk .pvm-note-main{margin-top:10px;font-size:14.5px;line-height:1.75;color:var(--ink2);border:1px solid var(--line);background:#fdfcf8;border-radius:12px;padding:18px 20px;unicode-bidi:plaintext}
 .bmk .pvm-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
 .bmk .pvm-acts .btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .bmk .pvm-where{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:11px;font-size:12.5px;color:var(--ink2);font-weight:600}

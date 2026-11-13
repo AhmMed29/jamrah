@@ -5,7 +5,7 @@
 @inject LocalizationService L
 
 @* v2 parity (uniCard): cinematic image card / code block / link row / tip note *@
-<div class="card @(HasImg ? "uni" : "") @(IsSelected ? "sel" : "") @(_dropHi ? "drop-hi" : "")"
+<div class="card @(HasImg ? "uni" : "") @(IsNote ? "uni-note" : "") @(IsSelected ? "sel" : "") @(_dropHi ? "drop-hi" : "")"
      draggable="@(CanDrag ? "true" : "false")"
      @ondragstart="OnDragStart" @ondragend="OnDragEnd"
      @ondragover:preventDefault="true" @ondragover="OnDragOver" @ondragleave="OnDragLeave"
@@ -135,6 +135,8 @@
     }
 
     private bool HasImg => !string.IsNullOrEmpty(_d.Img);
+    // A text-only item (note/idea) gets the same landscape footprint as media tiles.
+    private bool IsNote => !HasImg && !IsCode && !_d.IsLocalFile && string.IsNullOrEmpty(_d.Url);
     private bool IsVideo => Item.Type == "video";
     private bool IsCode => Item.Type == "snippet";
     private bool CanDrag => _d.IsLocalFile;

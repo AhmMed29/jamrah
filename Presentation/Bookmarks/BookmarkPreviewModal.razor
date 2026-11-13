@@ -167,7 +167,12 @@
 
                         @if (isNote)
                         {
-                            <div class="pvm-note-main" dir="auto">@((MarkupString)BookmarkTemplates.Md(string.IsNullOrWhiteSpace(_item.Notes) ? _d.Desc : _item.Notes))</div>
+                            <div class="pvm-note-zoom">
+                                <button class="btn sm ic" title="@L["bmk.zoomOut"]" @onclick="() => SetNoteZoom(-0.1)">A−</button>
+                                <span>@((int)Math.Round(_noteZoom * 100))%</span>
+                                <button class="btn sm ic" title="@L["bmk.zoomIn"]" @onclick="() => SetNoteZoom(0.1)">A+</button>
+                            </div>
+                            <div class="pvm-note-main" style="font-size:@NoteFontSize" dir="auto">@((MarkupString)BookmarkTemplates.Md(string.IsNullOrWhiteSpace(_item.Notes) ? _d.Desc : _item.Notes))</div>
                         }
                         else if (!string.IsNullOrEmpty(_d.DescShort))
                         {
@@ -335,6 +340,17 @@
     private bool _focusWrap;
     private bool _noteEdit;
     private string _noteText = string.Empty;
+    // Reader text size for notes, remembered between sessions.
+    private double _noteZoom = 1;
+    private const string NoteZoomKey = "jamrah_note_zoom";
+
+    private string NoteFontSize => (14.5 * _noteZoom).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "px";
+
+    private void SetNoteZoom(double delta)
+    {
+        _noteZoom = Math.Clamp(Math.Round(_noteZoom + delta, 2), 0.8, 2.0);
+        try { Microsoft.Maui.Storage.Preferences.Default.Set(NoteZoomKey, _noteZoom); } catch { }
+    }
     private string _relateId = string.Empty;
     private string? _readerCacheId;
     private DateTime _readerCacheTs;
@@ -363,6 +379,16 @@
             _relateId = string.Empty;
         }
         if (_item != null) _d = BookmarkCardData.From(_item, L.Lang);
+    }
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+            var saved = Microsoft.Maui.Storage.Preferences.Default.Get(NoteZoomKey, 1.0);
+            if (saved > 0) _noteZoom = saved;
+        }
+        catch { }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

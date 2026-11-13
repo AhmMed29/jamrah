@@ -504,7 +504,8 @@ namespace Jamrah.Application.Services
         }
 
         // ADDITIVE: real Windows icon / first-page preview so file cards do not look like notes.
-        private static bool ShouldExtractIcon(string kind) => kind is "generic" or "pdf" or "text";
+        // "video" too: Windows returns a filmstrip frame, which becomes the clip's cover.
+        private static bool ShouldExtractIcon(string kind) => kind is "generic" or "pdf" or "text" or "video";
 
         private static async Task<(string DataUri, string Kind)?> TryExtractIconAsync(
             string absolutePath, string kind, CancellationToken ct)

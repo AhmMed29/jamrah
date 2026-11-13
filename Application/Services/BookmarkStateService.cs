@@ -97,6 +97,27 @@ namespace Jamrah.Application.Services
         {
             await _repository.InitAsync();
             await RefreshDataAsync();
+            BackfillFileCoversInBackground();
+        }
+
+        /// <summary>
+        /// Files imported before covers existed (videos especially) get their Windows
+        /// thumbnail once, off the startup path, then the cards refresh themselves.
+        /// </summary>
+        private void BackfillFileCoversInBackground()
+        {
+            var files = LocalFiles;
+            if (files == null) return;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    if (await files.BackfillFileIconsAsync() <= 0) return;
+                    Items = await _repository.GetItemsAsync();
+                    NotifyStateChanged();
+                }
+                catch { }
+            });
         }
 
         public async Task RefreshDataAsync()

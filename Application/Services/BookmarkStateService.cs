@@ -98,6 +98,29 @@ namespace Jamrah.Application.Services
             await _repository.InitAsync();
             await RefreshDataAsync();
             BackfillFileCoversInBackground();
+            StartLibraryWatcher();
+        }
+
+        // LIVE SYNC: one watcher per session; it reconciles Explorer-side changes.
+        private LibraryWatcherService? _libraryWatcher;
+
+        /// <summary>
+        /// Starts watching the library folder and runs one catch-up pass, so changes made
+        /// while the app was closed (or missed events) are picked up at startup too.
+        /// </summary>
+        private void StartLibraryWatcher()
+        {
+            if (LocalFiles == null) return;
+            if (_libraryWatcher == null)
+            {
+                _libraryWatcher = new LibraryWatcherService(this);
+                _libraryWatcher.Start();
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try { await SyncLibraryFromDiskAsync(); } catch { }
+            });
         }
 
         /// <summary>
@@ -140,6 +163,198 @@ namespace Jamrah.Application.Services
             ClipsTotal = await _repository.CountClipsAsync();
             await BackfillFolderColorsAsync();
             NotifyStateChanged();
+        }
+
+        /// <summary>
+        /// LIVE SYNC: compares the real library folder with the database and applies whatever
+        /// Explorer (or any other program) changed — new files become cards, files deleted on
+        /// disk are flagged "missing" and leave the grid (they come back when restored), and
+        /// renamed files keep their card instead of showing up twice. Never deletes rows and
+        /// never touches items that are not managed local files.
+        /// Returns how many rows changed.
+        /// </summary>
+        public async Task<int> SyncLibraryFromDiskAsync(
+            IReadOnlyList<(string OldRel, string NewRel)>? renames = null,
+            IReadOnlyList<string>? deletedDirs = null,
+            System.Threading.CancellationToken ct = default)
+        {
+            var files = LocalFiles;
+            if (files == null) return 0;
+            var library = Infrastructure.AppPaths.Layout.LibraryDir;
+            if (!System.IO.Directory.Exists(library)) return 0;
+
+            var items = await _repository.GetItemsAsync();
+            var folders = await _repository.GetFoldersAsync();
+
+            var byRel = new Dictionary<string, BookmarkItem>(StringComparer.OrdinalIgnoreCase);
+            foreach (var it in items)
+            {
+                var rel = NormRel(ItemMeta.Get(it.MetadataJson, "localFile"));
+                if (string.IsNullOrEmpty(rel) || byRel.ContainsKey(rel)) continue;
+                byRel[rel] = it;
+            }
+
+            var folderByChain = new Dictionary<string, BookmarkFolder>(StringComparer.OrdinalIgnoreCase);
+            foreach (var f in folders)
+            {
+                if (f.IsArchived) continue;
+                string chain;
+                try { chain = NormRel(files.FolderChainFor(f.Id, folders)); } catch { continue; }
+                if (!string.IsNullOrEmpty(chain)) folderByChain[chain] = f;
+            }
+
+            var diskFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var diskDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            WalkLibrary(library, string.Empty, diskDirs, diskFiles, ct);
+
+            var changed = 0;
+
+            // 1) Renames keep the existing card (title + cover + folder stay as they were).
+            foreach (var (oldRaw, newRaw) in renames ?? Array.Empty<(string, string)>())
+            {
+                var oldRel = NormRel(oldRaw);
+                var newRel = NormRel(newRaw);
+                if (string.IsNullOrEmpty(oldRel) || string.IsNullOrEmpty(newRel) || oldRel == newRel) continue;
+                if (!byRel.TryGetValue(oldRel, out var it) || byRel.ContainsKey(newRel)) continue;
+
+                var oldTitle = System.IO.Path.GetFileNameWithoutExtension(oldRel);
+                it.MetadataJson = ItemMeta.Set(it.MetadataJson, "localFile", "Library/" + newRel);
+                it.MetadataJson = ItemMeta.Set(it.MetadataJson, "fileStatus", "ok");
+                if (string.IsNullOrWhiteSpace(it.Title) || it.Title == oldTitle)
+                    it.Title = System.IO.Path.GetFileNameWithoutExtension(newRel);
+                it.UpdatedAt = DateTime.UtcNow;
+                await _repository.SaveItemAsync(it);
+                byRel.Remove(oldRel);
+                byRel[newRel] = it;
+                changed++;
+            }
+
+            // 2) Files gone from disk are flagged, not deleted; restoring the file restores the card.
+            foreach (var kv in byRel)
+            {
+                var missing = !diskFiles.Contains(kv.Key);
+                var flagged = string.Equals(ItemMeta.Get(kv.Value.MetadataJson, "fileStatus"), "missing",
+                    StringComparison.OrdinalIgnoreCase);
+                if (missing == flagged) continue;
+                kv.Value.MetadataJson = ItemMeta.Set(kv.Value.MetadataJson, "fileStatus", missing ? "missing" : "ok");
+                await _repository.SaveItemAsync(kv.Value);
+                changed++;
+            }
+
+            // 3) Directories created in Explorer become folders in the tree (before the files
+            //    inside them, so those cards land in the right folder straight away).
+            foreach (var dirRel in diskDirs.OrderBy(d => d.Count(c => c == '/')).ThenBy(d => d, StringComparer.OrdinalIgnoreCase))
+            {
+                if (folderByChain.ContainsKey(dirRel)) continue;
+                var parentRel = ParentRel(dirRel);
+                string? parentId = null;
+                if (!string.IsNullOrEmpty(parentRel) && folderByChain.TryGetValue(parentRel, out var p)) parentId = p.Id;
+
+                var folder = new BookmarkFolder
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Name = dirRel[(dirRel.LastIndexOf('/') + 1)..],
+                    ParentId = parentId,
+                    IsOpen = true,
+                };
+                folder.Color = FolderColorFor(folder.Id);
+                await _repository.SaveFolderAsync(folder);
+                folderByChain[dirRel] = folder;
+                changed++;
+            }
+
+            // 4) Files that appeared in the library get a real card (kind, cover, folder).
+            foreach (var rel in diskFiles)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (byRel.ContainsKey(rel)) continue;
+
+                string? folderId = null;
+                var dirRel = ParentRel(rel);
+                if (!string.IsNullOrEmpty(dirRel) && folderByChain.TryGetValue(dirRel, out var parent)) folderId = parent.Id;
+                try
+                {
+                    var created = await files.IndexExistingFileAsync(rel, folderId, ct);
+                    if (created == null) continue;
+                    byRel[rel] = created;
+                    changed++;
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("[BookmarkStateService] live index failed: " + ex.Message);
+                }
+            }
+
+            // 5) Directories deleted in Explorer archive their folder (recoverable from Archive).
+            foreach (var raw in deletedDirs ?? Array.Empty<string>())
+            {
+                var rel = NormRel(raw);
+                if (string.IsNullOrEmpty(rel) || diskDirs.Contains(rel)) continue;
+                if (!folderByChain.TryGetValue(rel, out var root)) continue;
+
+                var seen = new HashSet<string>(StringComparer.Ordinal) { root.Id };
+                var queue = new Queue<BookmarkFolder>();
+                queue.Enqueue(root);
+                while (queue.Count > 0)
+                {
+                    var current = queue.Dequeue();
+                    if (!current.IsArchived)
+                    {
+                        current.IsArchived = true;
+                        await _repository.SaveFolderAsync(current);
+                        changed++;
+                    }
+                    foreach (var child in folders.Where(x => (x.ParentId ?? string.Empty) == current.Id))
+                        if (seen.Add(child.Id)) queue.Enqueue(child);
+                }
+            }
+
+            if (changed == 0) return 0;
+            Items = await _repository.GetItemsAsync();
+            Folders = await _repository.GetFoldersAsync();
+            NotifyStateChanged();
+            return changed;
+        }
+
+        /// <summary>"Library/a/b.jpg" / "a\\b.jpg" / "a/b.jpg" all become "a/b.jpg".</summary>
+        private static string NormRel(string? rel)
+        {
+            var r = (rel ?? string.Empty).Replace('\\', '/').Trim();
+            if (r.StartsWith("Library/", StringComparison.OrdinalIgnoreCase)) r = r.Substring("Library/".Length);
+            return r.Trim('/');
+        }
+
+        private static string ParentRel(string rel)
+        {
+            var slash = rel.LastIndexOf('/');
+            return slash < 0 ? string.Empty : rel[..slash];
+        }
+
+        private static void WalkLibrary(
+            string root, string prefix, HashSet<string> dirs, HashSet<string> files,
+            System.Threading.CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                foreach (var dir in System.IO.Directory.EnumerateDirectories(root))
+                {
+                    var name = System.IO.Path.GetFileName(dir);
+                    if (name.StartsWith(".", StringComparison.Ordinal) || name.StartsWith("$", StringComparison.Ordinal)) continue;
+                    var rel = prefix + name;
+                    dirs.Add(rel);
+                    WalkLibrary(dir, rel + "/", dirs, files, ct);
+                }
+                foreach (var file in System.IO.Directory.EnumerateFiles(root))
+                {
+                    var name = System.IO.Path.GetFileName(file);
+                    if (name.StartsWith(".part-", StringComparison.OrdinalIgnoreCase)) continue;
+                    files.Add(prefix + name);
+                }
+            }
+            catch (UnauthorizedAccessException) { }
+            catch (System.IO.IOException) { }
         }
 
         /// <summary>

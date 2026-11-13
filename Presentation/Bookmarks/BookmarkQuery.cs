@@ -159,7 +159,7 @@ namespace Jamrah.Presentation.Bookmarks
             var fids = CollectionFolderIds(cid, s.Folders);
             // ADDITIVE: also include items filed under this collection's pages.
             var pids = CollectionPageIds(cid, s.Pages);
-            return s.Items.Where(i => !i.Deleted && !i.Archived &&
+            return s.Items.Where(i => !i.Deleted && !i.Archived && !IsMissing(i) &&
                 (CollectionsOf(i).Contains(cid) || FoldersOf(i).Any(x => fids.Contains(x)) || PagesOf(i).Any(x => pids.Contains(x)))).ToList();
         }
 
@@ -189,12 +189,21 @@ namespace Jamrah.Presentation.Bookmarks
                 }
             }
             Add(pid);
-            return s.Items.Where(i => !i.Deleted && !i.Archived && PagesOf(i).Any(x => ids.Contains(x))).ToList();
+            return s.Items.Where(i => !i.Deleted && !i.Archived && !IsMissing(i) && PagesOf(i).Any(x => ids.Contains(x))).ToList();
         }
+
+        /// <summary>
+        /// LIVE SYNC: a managed file that vanished from the library folder keeps its row but
+        /// leaves the grid until the file is put back (the watcher clears the flag).
+        /// </summary>
+        public static bool IsMissing(BookmarkItem it) =>
+            string.Equals(ItemMeta.Get(it.MetadataJson, "fileStatus"), "missing", StringComparison.OrdinalIgnoreCase);
 
         public static List<BookmarkItem> BaseItems(BookmarkRoute r, BookmarkStateService s)
         {
-            var a = s.Items;
+            // Missing local files are hidden everywhere except the trash, where the user
+            // expects to still find what they deleted.
+            var a = s.Items.Where(i => !IsMissing(i)).ToList();
             return r.Ctx switch
             {
                 "all" => a.Where(i => !i.Deleted && !i.Archived).ToList(),
@@ -207,7 +216,7 @@ namespace Jamrah.Presentation.Bookmarks
                 "page" => ItemsInPage(r.Id ?? "", s),
                 "tag" => a.Where(i => !i.Deleted && !i.Archived && TagsOf(i).Contains(r.Tag ?? "")).ToList(),
                 "archive" => a.Where(i => i.Archived && !i.Deleted).ToList(),
-                "trash" => a.Where(i => i.Deleted).ToList(),
+                "trash" => s.Items.Where(i => i.Deleted).ToList(),
                 _ => a.Where(i => !i.Deleted && !i.Archived).ToList(),
             };
         }
@@ -218,7 +227,7 @@ namespace Jamrah.Presentation.Bookmarks
             if (c == null) return new List<BookmarkItem>();
             var smart = ParseSmart(c.SmartJson);
             return smart != null
-                ? s.Items.Where(i => SmartMatch(smart, i)).ToList()
+                ? s.Items.Where(i => !IsMissing(i) && SmartMatch(smart, i)).ToList()
                 : ItemsInCollection(c.Id, s);
         }
 

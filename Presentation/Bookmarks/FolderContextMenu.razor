@@ -17,12 +17,9 @@
         <button class="ctx-i" @onclick="NewFolder">
             @((MarkupString)BookmarkIcons.Svg("plus", 15))<span>@T("فولدر جديد", "New folder")</span>
         </button>
-        @if (string.IsNullOrEmpty(_folder.ParentId))
-        {
-            <button class="ctx-i" @onclick="TogglePin">
-                @((MarkupString)BookmarkIcons.Svg("pin", 15))<span>@(_folder.Pinned ? T("إلغاء التثبيت", "Unpin") : T("تثبيت فوق (Pin)", "Pin to top"))</span>
-            </button>
-        }
+        <button class="ctx-i" @onclick="TogglePin">
+            @((MarkupString)BookmarkIcons.Svg("pin", 15))<span>@(_folder.Pinned ? T("إلغاء التثبيت", "Unpin") : T("تثبيت فوق (Pin)", "Pin to top"))</span>
+        </button>
         <div class="ctx-sep"></div>
         <button class="ctx-i" @onclick="Copy" disabled="@_busy">
             @((MarkupString)BookmarkIcons.Svg("copy", 15))<span>@T("اعمل نسخة", "Make a copy")</span>

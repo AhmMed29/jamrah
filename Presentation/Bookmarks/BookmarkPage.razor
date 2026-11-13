@@ -543,24 +543,13 @@
                     }
                     else
                     {
-                        @* v2 parity (gridHalves): media cards left, text cards right, universal cards *@
-                        var gridMedia = items.Where(i => HasCardImg(i)).Take(_gridLimit).ToList();
-                        var gridRest = items.Where(i => !HasCardImg(i)).Take(_gridLimit).ToList();
-                        <div style="display:grid;gap:14px;grid-template-columns:1fr 1fr;align-items:start">
-                            <div style="display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));align-items:start;align-content:start">
-                                @foreach (var it in gridMedia)
-                                {
-                                    var gid = it.Id;
-                                    <BookmarkUniCard Item="it" IsSelected="_previewId == gid" OnOpen="OpenPreview" OnToggleFav="ToggleFav" FileCardStyle="_fileCardStyle" OnToast="ShowToast" OnContextMenu="e => OpenItemCtx(it.Id, e)" />
-                                }
-                            </div>
-                            <div style="display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));align-items:start;align-content:start">
-                                @foreach (var it in gridRest)
-                                {
-                                    var gid = it.Id;
-                                    <BookmarkUniCard Item="it" IsSelected="_previewId == gid" OnOpen="OpenPreview" OnToggleFav="ToggleFav" FileCardStyle="_fileCardStyle" OnToast="ShowToast" OnContextMenu="e => OpenItemCtx(it.Id, e)" />
-                                }
-                            </div>
+                        @* Unified grid: media, notes and files all flow together, newest first. *@
+                        <div style="display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));align-items:start;align-content:start">
+                            @foreach (var it in items.Take(_gridLimit))
+                            {
+                                var gid = it.Id;
+                                <BookmarkUniCard Item="it" IsSelected="_previewId == gid" OnOpen="OpenPreview" OnToggleFav="ToggleFav" FileCardStyle="_fileCardStyle" OnToast="ShowToast" OnContextMenu="e => OpenItemCtx(it.Id, e)" />
+                            }
                         </div>
                     }
                     @* PERF: sentinel for progressive card loading - see bmkWatchEnd in bookmark.js *@
@@ -1290,12 +1279,6 @@
         !i.Archived && BookmarkQuery.FoldersOf(i).Count == 0
         && BookmarkQuery.CollectionsOf(i).Count == 0 && BookmarkQuery.PagesOf(i).Count == 0;
 
-    // v2 parity (gridHalves): split media cards from text cards.
-    private static bool HasCardImg(BookmarkItem i)
-    {
-        try { return !string.IsNullOrEmpty(BookmarkCardData.From(i).Img); }
-        catch { return false; }
-    }
     private static string KindOf(BookmarkItem i) => i.Type switch
     {
         "video" or "movie" or "tvshow" or "anime" => "video",

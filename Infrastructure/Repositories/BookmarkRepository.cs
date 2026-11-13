@@ -181,6 +181,28 @@ namespace Jamrah.Infrastructure.Repositories
         }
 
         public async Task<List<BookmarkClip>> GetClipsAsync() => await AllAsync<BookmarkClip>();
+
+        /// <summary>
+        /// One page of clips for the clipboard view: pinned first, then newest. Paging
+        /// happens in SQLite so the app never loads the whole clip history just to show it.
+        /// </summary>
+        public async Task<List<BookmarkClip>> GetClipsPageAsync(int offset, int limit)
+        {
+            await InitAsync().ConfigureAwait(false);
+            if (limit <= 0) return new List<BookmarkClip>();
+            return await _database!.Table<BookmarkClip>()
+                .OrderByDescending(c => c.Pinned)
+                .ThenByDescending(c => c.At)
+                .Skip(Math.Max(0, offset))
+                .Take(limit)
+                .ToListAsync().ConfigureAwait(false);
+        }
+
+        public async Task<int> CountClipsAsync()
+        {
+            await InitAsync().ConfigureAwait(false);
+            return await _database!.Table<BookmarkClip>().CountAsync().ConfigureAwait(false);
+        }
         public async Task SaveClipAsync(BookmarkClip c) => await SaveAsync(c);
         public async Task DeleteClipAsync(string id)
         {

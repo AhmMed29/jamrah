@@ -372,10 +372,10 @@ window.pvmVideoInit = function (v) {
 // the cap was invisible. Cards are now revealed progressively: this sentinel
 // sits at the end of the list and asks for the next batch when it scrolls
 // into view. The .NET side stops asking once everything is on screen.
-window.bmkWatchEnd = function (el, dotNetRef) {
+window.bmkWatchEnd = function (el, dotNetRef, method) {
     try {
-        window.bmkUnwatchEnd();
         if (!el || !dotNetRef) return;
+        window.bmkUnwatchEnd();
         // The bookmarks content scrolls inside .bmk-col, not the window, so the
         // root is left unset (the viewport): the intersection is then computed
         // against the visible area and the ancestor clipping, which works for
@@ -383,7 +383,7 @@ window.bmkWatchEnd = function (el, dotNetRef) {
         var io = new IntersectionObserver(function (entries) {
             for (var i = 0; i < entries.length; i++) {
                 if (!entries[i].isIntersecting) continue;
-                try { dotNetRef.invokeMethodAsync('OnEndReached'); } catch (e) {}
+                try { dotNetRef.invokeMethodAsync(method || 'OnEndReached'); } catch (e) {}
             }
         }, { root: null, rootMargin: '600px' });
         io.observe(el);
@@ -395,6 +395,29 @@ window.bmkUnwatchEnd = function () {
     try {
         if (window.__bmkEndObserver) { window.__bmkEndObserver.disconnect(); window.__bmkEndObserver = null; }
     } catch (e) {}
+};
+
+// Clipboard tile copy: put an image clip back on the system clipboard as PNG
+// (Chromium only accepts image/png in ClipboardItem, so other formats are
+// converted through a canvas first).
+window.bmkCopyImage = async function (src) {
+    try {
+        if (!src || !navigator.clipboard || !window.ClipboardItem) return false;
+        var res = await fetch(src);
+        var blob = await res.blob();
+        var png = blob;
+        if (blob.type !== 'image/png') {
+            var bitmap = await createImageBitmap(blob);
+            var canvas = document.createElement('canvas');
+            canvas.width = bitmap.width;
+            canvas.height = bitmap.height;
+            canvas.getContext('2d').drawImage(bitmap, 0, 0);
+            png = await new Promise(function (resolve) { canvas.toBlob(resolve, 'image/png'); });
+            if (!png) return false;
+        }
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+        return true;
+    } catch (e) { return false; }
 };
 
 // Masonry ("bubbles") grid: cards are handed out in DOM order (newest first)

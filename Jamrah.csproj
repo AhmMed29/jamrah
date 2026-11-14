@@ -27,8 +27,8 @@
 		<ApplicationId>jamrah.ahmmed29</ApplicationId>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>5.0.3</ApplicationDisplayVersion>
-		<ApplicationVersion>50003</ApplicationVersion>
+		<ApplicationDisplayVersion>5.1.0</ApplicationDisplayVersion>
+		<ApplicationVersion>50100</ApplicationVersion>
 
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
 		<WindowsPackageType>None</WindowsPackageType>

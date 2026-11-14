@@ -162,7 +162,19 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path artifacts | Out-Null
           Get-ChildItem releases -Filter "*-${{ steps.version.outputs.version }}-*" -ErrorAction SilentlyContinue | Remove-Item -Force
-          $notes = "Jamrah ${{ steps.version.outputs.version }}`n`nAutomatic updates are now available. Windows uses delta updates, and Android downloads the full APK."
+          $noteLines = @(
+            "Jamrah ${{ steps.version.outputs.version }} - The Ember of Productivity",
+            "",
+            "- One library grid ordered by date, cards filling every gap",
+            "- Notes with a two-pane reader and text zoom",
+            "- Sidebar folders sorted Arabic-first, plus pinning for folders and sub-folders",
+            "- Clipboard opens instantly: 20 clips at a time, click a card to copy",
+            "- Real video covers, and live sync with your file folder in Explorer",
+            "",
+            "Windows updates with a delta download. Android downloads the full APK.",
+            "Your data and library folder are untouched."
+          )
+          $notes = $noteLines -join "`n"
           Set-Content -LiteralPath artifacts\release-notes.md -Value $notes -Encoding utf8
 
           $icon = Get-ChildItem -Path obj\Release -Recurse -Filter appicon.ico -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -261,20 +273,50 @@ jobs:
             apkUrl = $apkUrl
             sha256 = $hash
             sizeBytes = $size
-            notes = "Jamrah $v"
+            notes = "Jamrah $v - The Ember of Productivity"
           }
           $manifest | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath artifacts\release\version.json -Encoding utf8
           "$hash  $apkName" | Set-Content -LiteralPath artifacts\release\SHA256SUMS.txt -Encoding utf8
 
           $body = @"
-          ## Jamrah $tag
+          ## Jamrah $tag - The Ember of Productivity
 
-          A new automatic update is available.
+          This release changes how the library feels: one unified grid, notes as real
+          items, a sorted and pinnable sidebar, instant clipboard, real video covers,
+          and live sync with your file folder.
 
-          - Windows: delta updates via Velopack.
-          - Android: full APK download with SHA-256 verification.
+          **Library**
 
-          APK SHA-256: ``$hash``
+          - Media and notes in one grid ordered by date, newest first, with cards filling every gap.
+          - Notes: media-shaped card, a two-pane reader with details and body, text zoom from 80% to 200%.
+          - Real cover frames for videos; the play badge is gone; older files are repaired once, automatically.
+
+          **Sidebar**
+
+          - Folders sorted Arabic-first, then English A-Z, then numbers, stable across expand and collapse.
+          - Pin any folder or sub-folder into a Pinned block at the top.
+
+          **Clipboard**
+
+          - Reads 20 clips at a time from the database instead of loading the whole history.
+          - Clips are masonry cards; clicking one copies it.
+
+          **Files**
+
+          - Live sync with Explorer: paste, rename, delete or create a folder and the app updates instantly.
+          - Deleted files are marked missing instead of erased, so restoring them brings the cards back.
+
+          **Fixes**
+
+          - Removed the Blazor error banner about the ResizeObserver loop that appeared while scrolling.
+          - No data migration or reset: your database and library folder are untouched.
+
+          ### Downloads
+
+          - Windows: delta update via Velopack, existing installs update in place.
+          - Android: full APK, with SHA-256 published in version.json and SHA256SUMS.txt.
+
+          APK SHA-256: $hash
           "@
           Set-Content -LiteralPath artifacts\release\release-body.md -Value $body -Encoding utf8
 

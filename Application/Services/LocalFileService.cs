@@ -30,6 +30,28 @@ namespace Jamrah.Application.Services
 
         public LocalFileService(IBookmarkRepository repository) => _repository = repository;
 
+        // LIVE SYNC: the library watcher must never reconcile the database while this
+        // service is midway through its own copy/move/rename (a half-done batch would
+        // look like "files appeared/disappeared" and could duplicate cards).
+        private static int _watchingSuppressed;
+        public static bool WatchingSuppressed => Volatile.Read(ref _watchingSuppressed) > 0;
+
+        private static IDisposable Watching()
+        {
+            Interlocked.Increment(ref _watchingSuppressed);
+            return new WatchingScope();
+        }
+
+        private sealed class WatchingScope : IDisposable
+        {
+            private int _done;
+            public void Dispose()
+            {
+                if (Interlocked.Exchange(ref _done, 1) == 0)
+                    Interlocked.Decrement(ref _watchingSuppressed);
+            }
+        }
+
         public static readonly string[] ImageExts = LocalFileClassifier.ImageExts;
         public static readonly string[] VideoExts = LocalFileClassifier.VideoExts;
         public static readonly string[] AudioExts = LocalFileClassifier.AudioExts;
@@ -69,6 +91,7 @@ namespace Jamrah.Application.Services
         /// <summary>Copies a folder's physical tree to the path of its freshly-created clone.</summary>
         public void CopyFolderDirectory(string oldRelative, string newRelative)
         {
+            using var watching = Watching();
             if (string.IsNullOrEmpty(oldRelative) || string.IsNullOrEmpty(newRelative) || oldRelative == newRelative) return;
             var src = SafePath.ResolveUnderRoot(AppPaths.Layout.LibraryDir, oldRelative);
             var dst = SafePath.ResolveUnderRoot(AppPaths.Layout.LibraryDir, newRelative);
@@ -85,6 +108,7 @@ namespace Jamrah.Application.Services
             IProgress<(int Index, int Total, string FileName, long Bytes, long TotalBytes)>? progress = null,
             CancellationToken ct = default)
         {
+            using var watching = Watching();
             var library = AppPaths.Layout.LibraryDir;
             var folders = foldersProvider().ToList();
             var chain = FolderChainFor(destFolderId, folders);
@@ -477,6 +501,7 @@ namespace Jamrah.Application.Services
 #if WINDOWS
             return Task.Run(() =>
             {
+                using var watching = Watching();
                 try
                 {
                     if (File.Exists(absolutePath))
@@ -493,6 +518,7 @@ namespace Jamrah.Application.Services
 #else
             return Task.Run(() =>
             {
+                using var watching = Watching();
                 try
                 {
                     if (File.Exists(absolutePath)) File.Delete(absolutePath);
@@ -504,7 +530,8 @@ namespace Jamrah.Application.Services
         }
 
         // ADDITIVE: real Windows icon / first-page preview so file cards do not look like notes.
-        private static bool ShouldExtractIcon(string kind) => kind is "generic" or "pdf" or "text";
+        // "video" too: Windows returns a filmstrip frame, which becomes the clip's cover.
+        private static bool ShouldExtractIcon(string kind) => kind is "generic" or "pdf" or "text" or "video";
 
         private static async Task<(string DataUri, string Kind)?> TryExtractIconAsync(
             string absolutePath, string kind, CancellationToken ct)
@@ -552,6 +579,45 @@ namespace Jamrah.Application.Services
                     try { if (File.Exists(temp)) File.Delete(temp); } catch { }
                 }
             }
+        }
+
+        /// <summary>
+        /// LIVE SYNC: turns a file that appeared in the library folder on disk (pasted or
+        /// dropped from Explorer, restored from the recycle bin) into a normal card, with
+        /// the same metadata/cover an imported file would get.
+        /// </summary>
+        public async Task<BookmarkItem?> IndexExistingFileAsync(
+            string relativePath, string? folderId, CancellationToken ct = default)
+        {
+            var clean = relativePath.Replace('\\', '/').TrimStart('/');
+            if (clean.StartsWith("Library/", StringComparison.OrdinalIgnoreCase))
+                clean = clean.Substring("Library/".Length);
+            var abs = SafePath.ResolveUnderRoot(AppPaths.Layout.LibraryDir, clean);
+            if (abs == null || !File.Exists(abs)) return null;
+
+            var kind = KindFor(abs);
+            var item = new BookmarkItem
+            {
+                Type = ItemTypeFor(kind),
+                Title = Path.GetFileNameWithoutExtension(Path.GetFileName(clean)),
+                Url = string.Empty,
+                MetadataJson = "{}",
+            };
+            item.MetadataJson = ItemMeta.Set(item.MetadataJson, "localFile", "Library/" + clean);
+            item.MetadataJson = ItemMeta.Set(item.MetadataJson, "fileKind", kind);
+            item.MetadataJson = ItemMeta.Set(item.MetadataJson, "fileStatus", "ok");
+            var icon = await TryExtractIconAsync(abs, kind, ct);
+            if (icon != null)
+            {
+                item.MetadataJson = ItemMeta.Set(item.MetadataJson, "fileIcon", icon.Value.DataUri);
+                item.MetadataJson = ItemMeta.Set(item.MetadataJson, "fileIconKind", icon.Value.Kind);
+            }
+            await TryAttachPdfCoverAsync(item, abs, kind, ct);
+            if (!string.IsNullOrEmpty(folderId))
+                item.FolderIdsJson = System.Text.Json.JsonSerializer.Serialize(new[] { folderId });
+
+            await _repository.SaveItemAsync(item);
+            return item;
         }
 
         /// <summary>
@@ -615,6 +681,7 @@ namespace Jamrah.Application.Services
         public async Task<bool> MoveFilesIntoFolderAsync(
             IReadOnlyList<BookmarkItem> items, string? folderId, IEnumerable<BookmarkFolder> folders)
         {
+            using var watching = Watching();
             var chain = string.IsNullOrEmpty(folderId) ? string.Empty : FolderChainFor(folderId, folders);
             if (!string.IsNullOrEmpty(folderId) && string.IsNullOrEmpty(chain)) return false;
             var library = AppPaths.Layout.LibraryDir;
@@ -684,6 +751,7 @@ namespace Jamrah.Application.Services
         /// <summary>Renames a managed local file and its card title. Returns the new title.</summary>
         public async Task<string?> RenameLocalFileAsync(BookmarkItem item, string newTitle)
         {
+            using var watching = Watching();
             var rel = ItemMeta.Get(item.MetadataJson, "localFile");
             if (string.IsNullOrEmpty(rel) || Path.IsPathRooted(rel)) return null;
 
@@ -750,6 +818,7 @@ namespace Jamrah.Application.Services
         /// </summary>
         public async Task OnFolderPathChangedAsync(string oldRelative, string newRelative)
         {
+            using var watching = Watching();
             if (string.IsNullOrEmpty(oldRelative) || oldRelative == newRelative) return;
             var oldAbs = SafePath.ResolveUnderRoot(AppPaths.Layout.LibraryDir, oldRelative);
             var newAbs = SafePath.ResolveUnderRoot(AppPaths.Layout.LibraryDir, newRelative);

@@ -60,7 +60,8 @@ namespace Jamrah.Presentation.Bookmarks
         public static BookmarkCardData From(BookmarkItem it, string lang)
         {
             if (it is null) throw new ArgumentNullException(nameof(it));
-            var key = (it.Id ?? string.Empty, it.UpdatedAt.Ticks, lang ?? string.Empty);
+            lang ??= string.Empty;
+            var key = (it.Id ?? string.Empty, it.UpdatedAt.Ticks, lang);
             if (_memo.Count > MemoLimit) _memo.Clear();
             return _memo.GetOrAdd(key, _ => Build(it, lang));
         }
@@ -94,8 +95,14 @@ namespace Jamrah.Presentation.Bookmarks
             var localFileRel = Str("localFile");
             var fileKind = Str("fileKind");
             if (string.IsNullOrEmpty(fileKind)) fileKind = LocalFileService.KindFor(localFileRel);
+            // A local video has no direct image, so its extracted frame is the cover.
+            var fileIcon = Str("fileIcon");
+            var videoCover = fileKind == "video" && fileIcon.StartsWith("data:image", StringComparison.Ordinal)
+                ? fileIcon
+                : null;
             var img = ResolvePdfCover(Str(Jamrah.Files.Core.PdfCover.MetaKey))
                 ?? ResolveLocalImage(First("thumbLocal"))
+                ?? videoCover
                 ?? LibraryImage(localFileRel)
                 ?? ResolveLocalImage(it.Thumb)
                 ?? PickImage(it.Thumb)
@@ -108,7 +115,6 @@ namespace Jamrah.Presentation.Bookmarks
                 : (string.Equals(it.Type, "note", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(it.Notes)
                     ? it.Notes
                     : Str("content"));
-            var fileIcon = Str("fileIcon");
             var host = HostOf(url);
             var siteIcon = PickImage(First("siteIcon", "favicon", "icon")) ?? string.Empty;
             if (string.IsNullOrEmpty(siteIcon) && !string.IsNullOrEmpty(host))

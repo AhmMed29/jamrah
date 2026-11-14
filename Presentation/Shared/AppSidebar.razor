@@ -59,7 +59,20 @@
             </div>
             @if (FoldOpen)
             {
-                @foreach (var f in State.Folders.Where(f => !f.IsArchived && string.IsNullOrEmpty(f.ParentId)))
+                var live = State.Folders.Where(f => !f.IsArchived).ToList();
+                var roots = FolderSort.Sorted(live.Where(f => string.IsNullOrEmpty(f.ParentId)));
+                // Any pinned folder (nested ones too) is repeated here for quick access.
+                var pinnedFolders = FolderSort.Sorted(live.Where(f => f.Pinned));
+                @if (pinnedFolders.Count > 0)
+                {
+                    <div class="sb-pin-hd">@L["nav.pinned"]</div>
+                    @foreach (var f in pinnedFolders)
+                    {
+                        <BookmarkFolderRow Folder="f" OnNavigate="Fwd" OnFolderMenu="OnFolderMenuRequest" />
+                    }
+                    <div class="sb-pin-sep"></div>
+                }
+                @foreach (var f in roots)
                 {
                     <BookmarkFolderRow Folder="f" OnNavigate="Fwd" OnFolderMenu="OnFolderMenuRequest" />
                 }

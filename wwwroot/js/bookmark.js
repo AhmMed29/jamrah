@@ -436,6 +436,19 @@ function bmkMasonryCards(el) {
     return cards;
 }
 
+// Coalesces every resize/load hint into one animation-frame pass. Running the
+// layout straight out of a ResizeObserver callback made the browser fire
+// "ResizeObserver loop completed with undelivered notifications".
+function bmkSchedule(el) {
+    try {
+        if (!el || !el.isConnected || el.__bmkMasonryRaf) return;
+        el.__bmkMasonryRaf = requestAnimationFrame(function () {
+            el.__bmkMasonryRaf = null;
+            try { bmkMasonryLayout(el); } catch (e) {}
+        });
+    } catch (e) {}
+}
+
 function bmkMasonryLayout(el) {
     var cards = bmkMasonryCards(el);
     if (!cards.length) { el.style.height = ''; return; }
@@ -454,9 +467,17 @@ function bmkMasonryLayout(el) {
     var heights = [];
     for (i = 0; i < cols; i++) heights.push(0);
 
+    var cardHeights = [];
+    for (i = 0; i < cards.length; i++) cardHeights.push(cards[i].offsetHeight);
+
+    // Nothing moved since the last pass: skip the writes so the observers settle.
+    var sig = Math.round(width) + '|' + cards.length + '|' + cardHeights.join(',');
+    if (el.__bmkSig === sig) return;
+    el.__bmkSig = sig;
+
     for (i = 0; i < cards.length; i++) {
         var card = cards[i];
-        var h = card.offsetHeight;
+        var h = cardHeights[i];
         var col = 0;
         for (var j = 1; j < cols; j++) if (heights[j] < heights[col]) col = j;
         card.style.left = Math.round(col * (colW + BMK_GAP)) + 'px';
@@ -477,12 +498,12 @@ window.bmkMasonry = function (el) {
 
         // Container: width changes => column count changes.
         if (!el.__bmkMasonryRO) {
-            el.__bmkMasonryRO = new ResizeObserver(function () { window.bmkMasonry(el); });
+            el.__bmkMasonryRO = new ResizeObserver(function () { bmkSchedule(el); });
             el.__bmkMasonryRO.observe(el);
         }
         // Cards: late images / expanded text change a card's height afterwards.
         if (!el.__bmkCardRO) {
-            el.__bmkCardRO = new ResizeObserver(function () { window.bmkMasonry(el); });
+            el.__bmkCardRO = new ResizeObserver(function () { bmkSchedule(el); });
         }
         var cards = bmkMasonryCards(el);
         for (var i = 0; i < cards.length; i++) {
@@ -496,7 +517,7 @@ window.bmkMasonry = function (el) {
         // only get their final height once a thumbnail/font arrives.
         if (!el.__bmkLoadBound) {
             el.__bmkLoadBound = true;
-            el.addEventListener('load', function () { window.bmkMasonry(el); }, true);
+            el.addEventListener('load', function () { bmkSchedule(el); }, true);
         }
         if (!window.__bmkMasonryContainers) window.__bmkMasonryContainers = [];
         if (window.__bmkMasonryContainers.indexOf(el) < 0) window.__bmkMasonryContainers.push(el);
@@ -505,22 +526,18 @@ window.bmkMasonry = function (el) {
             window.addEventListener('resize', function () {
                 var list = window.__bmkMasonryContainers || [];
                 for (var k = list.length - 1; k >= 0; k--) {
-                    if (list[k].isConnected) window.bmkMasonry(list[k]);
+                    if (list[k].isConnected) bmkSchedule(list[k]);
                     else list.splice(k, 1);
                 }
             });
         }
         if (!el.__bmkSettled) {
             el.__bmkSettled = true;
-            setTimeout(function () { if (el.isConnected) window.bmkMasonry(el); }, 250);
-            setTimeout(function () { if (el.isConnected) window.bmkMasonry(el); }, 900);
+            setTimeout(function () { if (el.isConnected) bmkSchedule(el); }, 250);
+            setTimeout(function () { if (el.isConnected) bmkSchedule(el); }, 900);
         }
 
-        if (el.__bmkMasonryRaf) cancelAnimationFrame(el.__bmkMasonryRaf);
-        el.__bmkMasonryRaf = requestAnimationFrame(function () {
-            el.__bmkMasonryRaf = null;
-            try { bmkMasonryLayout(el); } catch (e) {}
-        });
+        bmkSchedule(el);
     } catch (e) {}
 };
 

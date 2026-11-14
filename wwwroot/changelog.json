@@ -1,6 +1,137 @@
 {
   "releases": [
     {
+      "version": "5.1.0",
+      "date": "2026-11-14",
+      "items": [
+        {
+          "type": "feature",
+          "emoji": "📚",
+          "title": {
+            "en": "One library grid, ordered by date",
+            "ar": "شبكة واحدة للمكتبة مرتبة بالتاريخ"
+          },
+          "desc": {
+            "en": "Images, videos and notes now share one grid ordered by date, newest first. Cards pack into the shortest column, so a short card no longer leaves an empty band under it.",
+            "ar": "الصور والفيديوهات والنوتات بقت شبكة واحدة مرتبة بالتاريخ، الأحدث الأول. والكروت بقت بتتملأ الفراغات تحت بعضها زي الفقاقيع، فمفيش كارت صغير واخد صف لوحده ولا فراغ وسط الشبكة."
+          },
+          "tags": [
+            "Library",
+            "Grid"
+          ]
+        },
+        {
+          "type": "feature",
+          "emoji": "📝",
+          "title": {
+            "en": "A note is now a full item",
+            "ar": "النوتة بقت عنصر كامل"
+          },
+          "desc": {
+            "en": "A note is now a media-shaped card, and opening it gives a two-pane reader: details on one side, the written text in a large card on the other, with text zoom from 80% to 200% remembered between sessions.",
+            "ar": "النوتة بقت كارت بنفس مقاس الميديا، والضغط عليها بيفتح قارئ بعمودين: تفاصيل النوتة على اليمين، واللي مكتوب جواها في بطاقة كبيرة على الشمال، مع زوم للنص من 80% لحد 200% وبيتذكر بعد ما تقفل التطبيق."
+          },
+          "tags": [
+            "Notes",
+            "Reader"
+          ]
+        },
+        {
+          "type": "feature",
+          "emoji": "📌",
+          "title": {
+            "en": "Folders sorted properly, and pinning",
+            "ar": "ترتيب الفولدرات + التثبيت"
+          },
+          "desc": {
+            "en": "Sidebar folders are sorted alphabetically: Arabic first, then English A-Z, then numbers, and the order no longer changes when you expand or collapse. Right-click any folder or sub-folder to pin it into a Pinned block at the top.",
+            "ar": "فولدرات السايد بار بقت مرتبة أبجدي عربي الأول (أ ← ي)، وبعدها الإنجليزي (A ← Z)، وبعدهم الأرقام — والترتيب ثابت مش بيتلخبط لما تفتح وتقفل. وكليك يمين على أي فولدر أو فولدر فرعي ويثبت في بلوك Pinned فوق للوصول السريع."
+          },
+          "tags": [
+            "Sidebar"
+          ]
+        },
+        {
+          "type": "improvement",
+          "emoji": "🧹",
+          "title": {
+            "en": "A calmer toolbar",
+            "ar": "شريط أدوات أنضف"
+          },
+          "desc": {
+            "en": "The Library toggle is gone, and the four shortcuts under it are now icon-only square buttons sitting side by side.",
+            "ar": "توجل Library اتشال، والأزرار اللي تحته بقت أربع أزرار مربعة بحواف دائرية بأيقونات بس جنب بعضهم — مساحة أكبر وشكل أهدى."
+          },
+          "tags": [
+            "UI"
+          ]
+        },
+        {
+          "type": "improvement",
+          "emoji": "⚡",
+          "title": {
+            "en": "The clipboard opens instantly",
+            "ar": "Clipboard بيفتح فورًا"
+          },
+          "desc": {
+            "en": "The clipboard page no longer loads everything at once. It reads 20 items at a time from the database as you scroll, so it opens instantly however much you have saved. Clips are cards now, and clicking one copies it back.",
+            "ar": "صفحة الحافظة مبقتش تحمّل كل الكليبس مرة واحدة. بقت بتقرأ 20 عنصر في المرة من الداتا بيز وتكمّل وانت بتنزل، فبتفتح في نفس اللحظة مهما كان عندك كليبس. والكليبس بقت كروت، والضغط على أي كارت بينسخه للحافظة."
+          },
+          "tags": [
+            "Clipboard",
+            "Performance"
+          ]
+        },
+        {
+          "type": "feature",
+          "emoji": "🎞️",
+          "title": {
+            "en": "Videos get a real cover",
+            "ar": "الفيديو بقى له غلاف حقيقي"
+          },
+          "desc": {
+            "en": "Imported videos now use a real frame from the video as their cover, and the play badge is gone. Older files without a cover are repaired once, automatically.",
+            "ar": "الفيديو المستورد بقى بياخد فريم حقيقي من الفيديو نفسه كغلاف بدل الاسم والأيقونة، وعلامة ▶ اتشالت من على الكروت. والملفات القديمة اللي بلا غلاف بتتصلّح مرة واحدة لوحدها."
+          },
+          "tags": [
+            "Files"
+          ]
+        },
+        {
+          "type": "feature",
+          "emoji": "🔄",
+          "title": {
+            "en": "Live sync with your file explorer",
+            "ar": "مزامنة لايف مع الإكسبلورر"
+          },
+          "desc": {
+            "en": "Paste, rename, delete or create a folder in Explorer and Jamrah reflects it on the spot, without a refresh. A missing file is marked missing instead of being erased, so restoring it brings its card back.",
+            "ar": "لو لصقت ملف أو غيّرت اسمه أو مسحته أو عملت فولدر جديد من الإكسبلورر، التطبيق بيحس بيه في نفس اللحظة من غير Refresh. والملف المفقود بيتعلّم «مفقود» مش بيتمسح، فلو رجّعته الكارت بيرجع زي ما كان."
+          },
+          "tags": [
+            "Files",
+            "Library"
+          ]
+        },
+        {
+          "type": "fix",
+          "emoji": "🩹",
+          "title": {
+            "en": "The scroll error banner is gone, and your data is safe",
+            "ar": "شريط الإيرور أثناء السكرول اتشال، وبياناتك في أمان"
+          },
+          "desc": {
+            "en": "The \"Blazor error: ResizeObserver loop...\" banner that appeared while scrolling is gone. None of the above touches your data: same database, same library folder, the update replaces the old version in place.",
+            "ar": "شريط «Blazor error: ResizeObserver loop...» اللي كان بيطلع أثناء السكرول اتشال. وكل اللي فوق ده مش بيلمس بياناتك: نفس الداتا ونفس ملفات المكتبة، والتحديث بيحل مكان القديم على طول."
+          },
+          "tags": [
+            "Fixes",
+            "Data"
+          ]
+        }
+      ]
+    },
+    {
       "version": "5.0.3",
       "date": "2026-11-13",
       "items": [

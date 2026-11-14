@@ -680,10 +680,15 @@
 .bmk .uni-fv{font-size:11.5px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:2px 8px;color:var(--ink2)}
 .bmk .uni-fv b{color:var(--ink);font-weight:700}
 .bmk .tip{padding:14px 16px;background:linear-gradient(180deg,#fdfcf6,#fff)}
+/* Note tiles share the media footprint (16:10) so the grid keeps one rhythm */
+.bmk .card.uni-note{aspect-ratio:16/10;display:flex}
+.bmk .card.uni-note .tip{display:flex;flex-direction:column;width:100%;min-width:0}
+.bmk .card.uni-note .tip-t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bmk .card.uni-note .tip-c{display:-webkit-box;white-space:normal;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-overflow:clip}
+.bmk .card.uni-note .tags{margin-top:auto;padding-top:8px}
 .bmk .tip-t{font-weight:800;font-size:15px;line-height:1.3}
 .bmk .tip-c{font-size:13px;color:var(--ink2);line-height:1.6;margin-top:6px;white-space:nowrap;display:block;overflow:hidden;text-overflow:ellipsis}
 .bmk .vcode{font-family:var(--mono);font-size:11.5px;background:#141311;color:#e8e6e1;border-radius:0 0 10px 10px;padding:10px 13px;white-space:pre-wrap;word-break:break-word;max-height:150px;overflow:hidden}
-.bmk .vplay{position:absolute;inset:0;margin:auto;width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.94);color:var(--ink);display:grid;place-items:center}
 /* ===== v2 parity (#app3): think-capture shell — list column + resizer + preview column ===== */
 .bmk .bmk-app3{flex:1 1 0;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);overflow:hidden}
 .bmk .bmk-app3.hasPv{grid-template-columns:var(--listw,370px) 8px minmax(0,1fr)}
@@ -787,8 +792,13 @@
 .bmk .pvm[data-pvm-wide="0"]:not([data-pvm-editing="1"]) .pvm-grid{grid-template-columns:var(--pvm-mw) var(--pvm-info-w);gap:var(--pvm-gap)}
 .bmk .pvm-grid{display:grid;grid-template-columns:minmax(0,1fr) clamp(220px,36%,400px);gap:18px;align-items:stretch;height:100%;direction:ltr}
 .bmk .pvm[dir="rtl"] .pvm-info{direction:rtl}
-.bmk .pvm-grid.note{display:block;max-width:860px;height:100%;margin:0 auto}
-.bmk .pvm-grid.note .pvm-info{max-width:860px;margin:0 auto}
+/* Notes: written body on the left, details on the right (the grid is direction:ltr,
+   so the first child is the left column and .pvm-info stays on the right). */
+.bmk .pvm[data-pvm-note="1"]{width:min(1100px,calc(94vw / var(--z,1)));max-width:calc(94vw / var(--z,1));height:min(calc((100vh - 32px) / var(--z,1)),880px);max-height:calc((100vh - 32px) / var(--z,1))}
+.bmk .pvm-grid.note{display:grid;grid-template-columns:minmax(0,1fr) clamp(300px,32%,420px);gap:18px;align-items:stretch;height:100%;max-width:none;margin:0}
+.bmk .pvm-grid.note .pvm-info{max-width:100%;margin:0}
+.bmk .pvm-note-pane{display:flex;flex-direction:column;min-width:0;min-height:0;height:100%}
+.bmk .pvm-note-pane .pvm-note-main{flex:1;min-height:0;overflow-y:auto;margin-top:8px;font-size:14.5px}
 .bmk .pvm-media{position:relative;width:100%;height:100%;min-width:0;max-width:100%;border-radius:18px;overflow:hidden;background:#0f0e0d;min-height:0;display:flex;align-items:center;justify-content:center;box-shadow:0 18px 54px rgba(18,16,13,.24)}
 .bmk .pvm-bg{position:absolute;inset:-45px;width:calc(100% + 90px);height:calc(100% + 90px);object-fit:cover;filter:blur(34px) brightness(.46) saturate(.9);transform:scale(1.08);pointer-events:none}
 .bmk .pvm-player{position:relative;z-index:1;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
@@ -820,7 +830,9 @@
 .bmk .pvm-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:7px;font-size:12.5px;color:var(--ink2);font-weight:600}
 .bmk .pvm-dom{color:var(--ink3);font-weight:600}
 .bmk .pvm-dom::before{content:'�';margin-right:8px;color:var(--line2)}
-.bmk .pvm-note-main{margin-top:18px;font-size:14.5px;line-height:1.75;color:var(--ink2);border:1px solid var(--line);background:#fdfcf8;border-radius:12px;padding:18px 20px;unicode-bidi:plaintext}
+.bmk .pvm-note-zoom{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:0;font-size:11.5px;font-weight:700;color:var(--ink3)}
+.bmk .pvm-note-zoom .btn.ic{width:26px;height:26px;padding:0;display:grid;place-items:center;font-size:11.5px;font-weight:800}
+.bmk .pvm-note-main{margin-top:10px;font-size:14.5px;line-height:1.75;color:var(--ink2);border:1px solid var(--line);background:#fdfcf8;border-radius:12px;padding:18px 20px;unicode-bidi:plaintext}
 .bmk .pvm-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
 .bmk .pvm-acts .btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .bmk .pvm-where{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:11px;font-size:12.5px;color:var(--ink2);font-weight:600}

@@ -7,7 +7,30 @@
 <p align="center"><i>Ember of productivity</i></p>
 
 <p align="center">
-  <img src="assets/screenshots/jamrah-showcase.png" alt="Jamrah app showcase" width="900"/>
+  <a href="https://github.com/AhmMed29/jamrah/releases/latest"><img src="https://img.shields.io/github/v/release/AhmMed29/jamrah?label=latest%20release" alt="Latest release"></a>
+  <a href="https://github.com/AhmMed29/jamrah/releases"><img src="https://img.shields.io/github/downloads/AhmMed29/jamrah/total?label=downloads" alt="Downloads"></a>
+  <a href="https://github.com/AhmMed29/jamrah/actions/workflows/build.yml"><img src="https://github.com/AhmMed29/jamrah/actions/workflows/build.yml/badge.svg" alt="Build"></a>
+  <a href="https://github.com/AhmMed29/jamrah/blob/main/LICENSE"><img src="https://img.shields.io/github/license/AhmMed29/jamrah" alt="License"></a>
+  <br/>
+  <img src="https://img.shields.io/badge/.NET%209.0-512BD4?logo=dotnet&logoColor=white" alt=".NET 9.0">
+  <img src="https://img.shields.io/badge/MAUI%209.0.120-512BD4?logo=maui&logoColor=white" alt="MAUI 9.0.120">
+  <img src="https://img.shields.io/badge/C%23-239120?logo=csharp&logoColor=white" alt="C#">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Android-lightgrey" alt="Platforms">
+  <br/>
+  <a href="https://github.com/AhmMed29/jamrah/stargazers"><img src="https://img.shields.io/github/stars/AhmMed29/jamrah" alt="Stars"></a>
+  <a href="https://github.com/AhmMed29/jamrah/forks"><img src="https://img.shields.io/github/forks/AhmMed29/jamrah" alt="Forks"></a>
+  <img src="https://img.shields.io/github/last-commit/AhmMed29/jamrah" alt="Last commit">
+  <img src="https://img.shields.io/github/release-date/AhmMed29/jamrah" alt="Release date">
+</p>
+
+<p align="center">
+  <img src="assets/screenshots/jamrah-ad-1.png" alt="Jamrah ad 1" width="900"/>
+</p>
+<p align="center">
+  <img src="assets/screenshots/jamrah-ad-2.png" alt="Jamrah ad 2" width="900"/>
+</p>
+<p align="center">
+  <img src="assets/screenshots/jamrah-ad-3.png" alt="Jamrah ad 3" width="900"/>
 </p>
 
 ---
